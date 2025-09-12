@@ -278,20 +278,6 @@ with tab_main:
 
     st.info(comentarios or "—")
 
-    st.markdown("### Flujos sugeridos")
-    ca, cb, cc, cd = st.columns(4)
-    ca.metric("Qb (mL/min)", qb)
-    cb.metric("Qp (mL/min)", int(qp))
-    cc.metric("Qe (mL/h)", int(qe))
-    cd.metric("UF (mL/h)", uf)
-
-    ce, cf, cg = st.columns(3)
-    ce.metric("Qr pre (mL/h)", qr_pre)
-    cf.metric("Qr post (mL/h)", qr_post)
-    cg.metric("Qd (mL/h)", int(qd))
-
-    st.info(comentarios or "—")
-
     st.markdown("### Laboratorios (rápido)")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
