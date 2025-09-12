@@ -564,7 +564,8 @@ with tab_rx:
     qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
 
     st.write(f"**Escenarios:** {', '.join(escenarios) if escenarios else '—'}")
-    st.write(f"**Modalidad:** {mod_final or '—'}  |  **Filtro sugerido:** {filtro_final or '—'}  |  **FF (estimada):** {ff:.2% if ff else '—'}")
+    ff_txt = f"{ff:.2%}" if ff is not None else "—"
+    st.write(f"**Modalidad:** {mod_final or '—'}  |  **Filtro sugerido:** {filtro_final or '—'}  |  **FF (estimada):** {ff_txt}")
 
     st.markdown("### Flujos sugeridos")
     ca, cb, cc, cd = st.columns(4)
