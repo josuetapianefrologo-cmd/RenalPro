@@ -14,11 +14,11 @@ PW = st.secrets.get("APP_PASSWORD", DEFAULT_PASSWORD)
 if "auth_ok" not in st.session_state:
     st.session_state.auth_ok = False
 
-# Sidebar: login primero (siempre visible) con keys únicas
+# Sidebar: login primero (siempre visible)
 with st.sidebar:
     st.subheader("Acceso")
-    pw_input = st.text_input("Contraseña", type="password", key="login_password")
-    if st.button("Entrar", key="login_button"):
+    pw_input = st.text_input("Contraseña", type="password")
+    if st.button("Entrar"):
         if pw_input == PW:
             st.session_state.auth_ok = True
         else:
@@ -45,16 +45,15 @@ with col_logo:
 with col_title:
     st.title("TRRC360 by Dr. Tapia")
     st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua (uso académico).")
-    st.success("Acceso autorizado. Bienvenido")
 
 # ---------- Sidebar inputs ----------
 with st.sidebar:
     st.header("Parámetros básicos")
-    peso = st.number_input("Peso (kg)", min_value=10.0, max_value=300.0, value=70.0, step=0.5, key="peso")
-    hto = st.number_input("Hematocrito (fracción)", min_value=0.10, max_value=0.60, value=0.30, step=0.01, format="%.2f", key="hto")
-    qb = st.number_input("Qb (mL/min)", min_value=80, max_value=300, value=200, step=10, key="qb")
-    uf = st.number_input("UF (mL/h)", min_value=0, max_value=2000, value=100, step=10, key="uf")
-    dosis_mlkg = st.slider("Dosis objetivo (mL/kg/h)", 10, 45, 30, key="dosis")
+    peso = st.number_input("Peso (kg)", min_value=10.0, max_value=300.0, value=70.0, step=0.5)
+    hto = st.number_input("Hematocrito (fracción)", min_value=0.10, max_value=0.60, value=0.30, step=0.01, format="%.2f")
+    qb = st.number_input("Qb (mL/min)", min_value=80, max_value=300, value=200, step=10)
+    uf = st.number_input("UF (mL/h)", min_value=0, max_value=2000, value=100, step=10)
+    dosis_mlkg = st.slider("Dosis objetivo (mL/kg/h)", 10, 45, 30)
     st.markdown("---")
     st.subheader("Estado(s) clínico(s)")
     escenarios_catalogo = [
@@ -70,7 +69,7 @@ with st.sidebar:
         "Rabdomiólisis",
         "Síndrome de liberación de citocinas"
     ]
-    escenarios = st.multiselect("Selecciona hasta 3", escenarios_catalogo, max_selections=3, default=["Sepsis / choque séptico"], key="escenarios")
+    escenarios = st.multiselect("Selecciona hasta 3", escenarios_catalogo, max_selections=3, default=["Sepsis / choque séptico"])
 
 # ---------- Helper rules ----------
 def prioridad_modalidad(m):
@@ -82,7 +81,7 @@ def prioridad_modalidad(m):
 def prioridad_filtro(f):
     if f == "Alta adsorción/HCO": return 99
     if "M200" in f: return 3
-    if "M150" in f or "M100–M150" in f or "M100-M150" in f: return 2
+    if "M150" in f or "M100–M150" in f: return 2
     if "M100" in f: return 1
     return 0
 
@@ -138,7 +137,7 @@ def flows_and_ff(qb, hto, dosis_mlkg, peso, uf, modalidad):
         frac_conv = 1.0
     else:
         frac_conv = 0.6  # CVVHDF default
-    qr_total = 0 if frac_conv == 0 else max(qe - uf, 0) * frac_conv
+    qr_total = 0 if frac_conv == 0 else min(qp_h*0.25, max(qe - uf, 0)) * frac_conv
     qr_pre = round(qr_total * 0.7)
     qr_post = round(qr_total * 0.3)
     qd = max(qe - (qr_pre + qr_post + uf), 0)
@@ -198,7 +197,8 @@ with tab_main:
     sugs = []
     if na < 125: sugs.append("Hiponatremia grave → dializado Na bajo (≤10 mEq/L/día)")
     if na > 155: sugs.append("Hipernatremia → dializado Na alto (≤10–12 mEq/L/día)")
-    if k > 6.5: sugs.append("K>6.5 → aumentar difusivo (CVVHD/CVVHDF)")
+    if k < 3.0: sugs.append("K<3 → corregir potasio; evitar altas dosis convectivas")
+    if k > 5.5: sugs.append("K>5.5 → aumentar difusivo (CVVHD/CVVHDF)")
     if amonio > 150: sugs.append("Amonio alto → CVVHD alta dosis")
     if ck > 5000: sugs.append("CK alta → sospecha rabdomiólisis")
     st.markdown("**Sugerencias:** " + (" | ".join(sugs) if sugs else "—"))
@@ -206,15 +206,14 @@ with tab_main:
 # ---------- Kt/V ----------
 with tab_ktv:
     st.subheader("Dosis por objetivos (Kt/V urea)")
-    V = st.number_input("Volumen de distribución V (L) ≈ 0.6×peso", value=round(0.6*peso,1), step=0.1, key="V")
-    C0 = st.number_input("Urea inicial C0 (mg/dL)", value=150.0, step=1.0, key="C0")
-    Ct = st.number_input("Urea objetivo Ct (mg/dL)", value=100.0, step=1.0, key="Ct")
-    horas = st.number_input("Tiempo de tratamiento (h)", value=24, step=1, key="horas")
-    E = st.number_input("Eficiencia del sistema (0.8–1.0)", value=0.9, step=0.05, min_value=0.5, max_value=1.0, key="E")
+    V = st.number_input("Volumen de distribución V (L) ≈ 0.6×peso", value=round(0.6*peso,1), step=0.1)
+    C0 = st.number_input("Urea inicial C0 (mg/dL)", value=150.0, step=1.0)
+    Ct = st.number_input("Urea objetivo Ct (mg/dL)", value=100.0, step=1.0)
+    horas = st.number_input("Tiempo de tratamiento (h)", value=24, step=1)
+    E = st.number_input("Eficiencia del sistema (0.8–1.0)", value=0.9, step=0.05, min_value=0.5, max_value=1.0)
     ktv_req = None
     if C0>0 and Ct>0 and C0>Ct:
-        from math import log as _log
-        ktv_req = _log(C0/Ct)
+        ktv_req = log(C0/Ct)
     st.metric("Kt/V requerido", f"{ktv_req:.2f}" if ktv_req else "—")
     K_Lh = ((ktv_req*V)/horas)/E if ktv_req else None
     dosis_calc = (K_Lh*1000)/peso if K_Lh else None
@@ -227,12 +226,12 @@ with tab_ktv:
 # ---------- Balance dinámico ----------
 with tab_balance:
     st.subheader("Balance dinámico y metas de UF")
-    peso_seco = st.number_input("Peso seco objetivo (kg)", value=max(0.0, peso-5), step=0.5, key="peso_seco")
+    peso_seco = st.number_input("Peso seco objetivo (kg)", value=max(0.0, peso-5), step=0.5)
     fo_actual = (peso - peso_seco)/peso_seco if peso_seco>0 else 0.0
-    fo_obj = st.number_input("FO% objetivo (p. ej. 5%)", value=0.05, step=0.01, key="fo_obj")
-    horas_trrc = st.number_input("Horas de TRRC planificadas (h)", value=24, step=1, key="horas_trrc")
-    ingresos = st.number_input("Ingresos previstos (mL)", value=0, step=50, key="ingresos")
-    uresis_res = st.number_input("Uresis residual 24 h (mL)", value=800, step=50, key="uresis_res")
+    fo_obj = st.number_input("FO% objetivo (p. ej. 5%)", value=0.05, step=0.01)
+    horas_trrc = st.number_input("Horas de TRRC planificadas (h)", value=24, step=1)
+    ingresos = st.number_input("Ingresos previstos (mL)", value=0, step=50)
+    uresis_res = st.number_input("Uresis residual 24 h (mL)", value=uresis24 if 'uresis24' in locals() else 0, step=50)
     uf_obj = ((peso - (1+fo_obj)*peso_seco) * 1000) if (peso_seco>0) else None
     uf_mant = (ingresos - uresis_res)
     uf_total = (uf_obj if uf_obj is not None else 0) + uf_mant
@@ -243,7 +242,7 @@ with tab_balance:
     c3.metric("UF total (mL)", f"{int(uf_total)}")
     c4.metric("UF/h sugerida", f"{int(uf_h)}")
     msg = "OK"
-    if peso>0 and (uf_h/peso) > 0.002:
+    if (uf_h/peso) > 0.002:
         msg = "⚠️ UF/h > 2 mL/kg/h"
     if "⚠️" in msg:
         st.warning(msg)
@@ -254,12 +253,12 @@ with tab_balance:
 with tab_anticoag:
     st.subheader("Anticoagulación – evaluación extendida")
     colA, colB, colC, colD = st.columns(4)
-    plaquetas = colA.number_input("Plaquetas (mil/µL)", min_value=0, max_value=1000, value=200, step=5, key="plt")
-    fib = colB.number_input("Fibrinógeno (mg/dL)", min_value=0, max_value=1000, value=300, step=10, key="fib")
-    sangrado = colC.selectbox("Sangrado activo", ["No","Sí"], key="sangrado")
-    neuro = colD.selectbox("Post-op neuro / riesgo alto", ["No","Sí"], key="neuro")
-    inr = colA.number_input("INR", min_value=0.8, max_value=5.0, value=1.1, step=0.1, key="inr")
-    aptt = colB.number_input("aPTT (s)", min_value=20.0, max_value=120.0, value=35.0, step=1.0, key="aptt")
+    plaquetas = colA.number_input("Plaquetas (mil/µL)", min_value=0, max_value=1000, value=200, step=5)
+    fib = colB.number_input("Fibrinógeno (mg/dL)", min_value=0, max_value=1000, value=300, step=10)
+    sangrado = colC.selectbox("Sangrado activo", ["No","Sí"])
+    neuro = colD.selectbox("Post-op neuro / riesgo alto", ["No","Sí"])
+    inr = colA.number_input("INR", min_value=0.8, max_value=5.0, value=1.1, step=0.1, key="inr_ext")
+    aptt = colB.number_input("aPTT (s)", min_value=20.0, max_value=120.0, value=35.0, step=1.0, key="aptt_ext")
 
     usar_rca = (plaquetas<50) or (fib<150) or (sangrado=="Sí") or (neuro=="Sí") or (inr>=1.5) or (aptt>=45)
     ac = "RCA" if usar_rca else "Heparina"
@@ -270,31 +269,62 @@ with tab_anticoag:
     else:
         st.info("Usar anticoagulación regional con citrato (RCA).")
 
-# ---------- Tendencias ----------
+# ---------- Tendencias (actualizado con umbrales) ----------
 with tab_trends:
     st.subheader("Tendencias (T1–T3)")
-    def row_trend(lbl, key):
+
+    # Reglas clínicas: combinación de valor absoluto + tendencia
+    def evaluar_tendencia(v1, v3, parametro):
+        if parametro == "Na":
+            if v3 < 125 or v3 > 155:
+                return "⚠️ Alerta crítica de sodio"
+            elif 135 <= v3 <= 145:
+                return "✅ Normalizado"
+        if parametro == "K":
+            if v3 < 3.0 or v3 > 5.5:
+                return "⚠️ Alerta crítica de potasio"
+            elif 3.5 <= v3 <= 5.0:
+                return "✅ Normalizado"
+        if parametro == "Lactato":
+            if v3 > 2.5:
+                return "⚠️ Persistencia de hiperlactatemia"
+        if parametro == "Amonio":
+            if v3 > 100:
+                return "⚠️ Hiperamonemia"
+        if parametro == "Urea":
+            if v3 > v1 and v3 > 120:
+                return "⚠️ Empeora: uremia alta"
+        if parametro == "Creatinina":
+            if v3 > v1 and v3 > 2.5:
+                return "⚠️ Empeora: remoción insuficiente"
+
+        # Tendencia si no hay alertas críticas
+        if v3 < v1:
+            return "Mejora"
+        elif v3 > v1:
+            return "Empeora"
+        else:
+            return "Sin cambio"
+
+    def fila_tendencia(etiqueta, key, vmin=0.0, vmax=9999.0, step=0.1):
         c1,c2,c3,c4,c5,c6,c7 = st.columns([2,1,1,1,1,1,3])
-        c1.write(lbl)
-        t1 = c2.number_input("T1", key=f"{key}_t1", value=0.0, step=0.1)
-        t2 = c3.number_input("T2", key=f"{key}_t2", value=0.0, step=0.1)
-        t3 = c4.number_input("T3", key=f"{key}_t3", value=0.0, step=0.1)
+        c1.write(etiqueta)
+        t1 = c2.number_input("T1", key=f"{key}_t1", value=0.0, min_value=vmin, max_value=vmax, step=step)
+        t2 = c3.number_input("T2", key=f"{key}_t2", value=0.0, min_value=vmin, max_value=vmax, step=step)
+        t3 = c4.number_input("T3", key=f"{key}_t3", value=0.0, min_value=vmin, max_value=vmax, step=step)
         d12 = t2 - t1
         d23 = t3 - t2
         c5.write(f"Δ12: {d12:.1f}")
         c6.write(f"Δ23: {d23:.1f}")
-        interp = "—"
-        if t1!=0 or t2!=0 or t3!=0:
-            if (d12>0) or (d23>0): interp = "⬆️ Empeora: considerar ↑ dosis/flujo"
-            else: interp = "⬇️ Mejora"
-        c7.write(interp)
+        msg = evaluar_tendencia(t1, t3, etiqueta.split()[0])
+        c7.write(msg)
 
-    row_trend("Na (mEq/L)","na")
-    row_trend("K (mEq/L)","k")
-    row_trend("Lactato (mmol/L)","lac")
-    row_trend("Amonio (µmol/L)","nh4")
-    row_trend("Urea (mg/dL)","urea")
-    row_trend("Creatinina (mg/dL)","cr")
+    fila_tendencia("Na (mEq/L)", "na", vmin=100.0, vmax=200.0, step=0.5)
+    fila_tendencia("K (mEq/L)", "k", vmin=1.0, vmax=10.0, step=0.1)
+    fila_tendencia("Lactato (mmol/L)", "lac", vmin=0.0, vmax=20.0, step=0.1)
+    fila_tendencia("Amonio (µmol/L)", "nh4", vmin=0.0, vmax=1000.0, step=5.0)
+    fila_tendencia("Urea (mg/dL)", "urea", vmin=0.0, vmax=500.0, step=1.0)
+    fila_tendencia("Creatinina (mg/dL)", "cr", vmin=0.0, vmax=20.0, step=0.1)
 
 # ---------- Resumen / PDF ----------
 with tab_rx:
@@ -331,9 +361,9 @@ with tab_rx:
         c.showPage(); c.save()
         return filename
 
-    if st.button("Exportar a PDF", key="export_pdf"):
+    if st.button("Exportar a PDF"):
         fn = export_pdf()
         with open(fn, "rb") as f:
-            st.download_button("Descargar PDF", data=f, file_name=fn, mime="application/pdf", key="dl_pdf")
+            st.download_button("Descargar PDF", data=f, file_name=fn, mime="application/pdf")
 
 st.caption("© Tapia Nefrología – Uso académico | TRRC360 by Dr. Tapia")
