@@ -659,17 +659,7 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import letter
     from datetime import datetime
-
-    # Datos del UI (persisten en session_state)
-    unidad          = st.session_state.get("unidad", "")
-    nombre_paciente = st.session_state.get("nombre_paciente", "")
-    fecha_nac       = st.session_state.get("fecha_nac", "")
-    edad            = st.session_state.get("edad", "")
-    sexo            = st.session_state.get("sexo", "")
-    expediente      = st.session_state.get("expediente", "")
-    nombre_medico   = st.session_state.get("nombre_medico", "")
-    sello           = st.session_state.get("sello", "")
-
+    
     # Estas variables ya existen/calculan en la app
     global escenarios, mod_final, filtro_final, comentarios
     global qb, qp, qe, qr_pre, qr_post, qd, ff
