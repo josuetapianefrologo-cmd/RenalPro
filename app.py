@@ -269,62 +269,61 @@ with tab_anticoag:
     else:
         st.info("Usar anticoagulación regional con citrato (RCA).")
 
-# ---------- Tendencias (actualizado con umbrales) ----------
+# ---------- Tendencias (robusto) ----------
 with tab_trends:
-    st.subheader("Tendencias (T1–T3)")
+    st.subheader("Tendencias (T1–T3)  |  v1.1")
 
-    # Reglas clínicas: combinación de valor absoluto + tendencia
-    def evaluar_tendencia(v1, v3, parametro):
-        if parametro == "Na":
+    def evaluar_tendencia(v1, v3, tag):
+        tag = tag.lower().strip()
+        if tag.startswith("na"):
             if v3 < 125 or v3 > 155:
-                return "⚠️ Alerta crítica de sodio"
+                return ("warn", "⚠️ Alerta crítica de sodio")
             elif 135 <= v3 <= 145:
-                return "✅ Normalizado"
-        if parametro == "K":
+                return ("ok", "✅ Normalizado")
+        if tag == "k" or tag.startswith("k " ) or tag.startswith("k("):
             if v3 < 3.0 or v3 > 5.5:
-                return "⚠️ Alerta crítica de potasio"
+                return ("warn", "⚠️ Alerta crítica de potasio")
             elif 3.5 <= v3 <= 5.0:
-                return "✅ Normalizado"
-        if parametro == "Lactato":
+                return ("ok", "✅ Normalizado")
+        if tag.startswith("lactato"):
             if v3 > 2.5:
-                return "⚠️ Persistencia de hiperlactatemia"
-        if parametro == "Amonio":
+                return ("warn", "⚠️ Persistencia de hiperlactatemia")
+        if tag.startswith("amonio"):
             if v3 > 100:
-                return "⚠️ Hiperamonemia"
-        if parametro == "Urea":
+                return ("warn", "⚠️ Hiperamonemia")
+        if tag.startswith("urea"):
             if v3 > v1 and v3 > 120:
-                return "⚠️ Empeora: uremia alta"
-        if parametro == "Creatinina":
+                return ("warn", "⚠️ Empeora: uremia alta")
+        if tag.startswith("creatinina"):
             if v3 > v1 and v3 > 2.5:
-                return "⚠️ Empeora: remoción insuficiente"
+                return ("warn", "⚠️ Empeora: remoción insuficiente")
 
-        # Tendencia si no hay alertas críticas
-        if v3 < v1:
-            return "Mejora"
-        elif v3 > v1:
-            return "Empeora"
-        else:
-            return "Sin cambio"
+        if v3 < v1:  return ("info", "Mejora")
+        if v3 > v1:  return ("info", "Empeora")
+        return ("info", "Sin cambio")
 
-    def fila_tendencia(etiqueta, key, vmin=0.0, vmax=9999.0, step=0.1):
+    def fila_tendencia(etiqueta, tag, key, vmin=0.0, vmax=9999.0, step=0.1):
         c1,c2,c3,c4,c5,c6,c7 = st.columns([2,1,1,1,1,1,3])
         c1.write(etiqueta)
         t1 = c2.number_input("T1", key=f"{key}_t1", value=0.0, min_value=vmin, max_value=vmax, step=step)
         t2 = c3.number_input("T2", key=f"{key}_t2", value=0.0, min_value=vmin, max_value=vmax, step=step)
         t3 = c4.number_input("T3", key=f"{key}_t3", value=0.0, min_value=vmin, max_value=vmax, step=step)
-        d12 = t2 - t1
-        d23 = t3 - t2
-        c5.write(f"Δ12: {d12:.1f}")
-        c6.write(f"Δ23: {d23:.1f}")
-        msg = evaluar_tendencia(t1, t3, etiqueta.split()[0])
-        c7.write(msg)
+        d12 = t2 - t1;  d23 = t3 - t2
+        c5.write(f"Δ12: {d12:.1f}");  c6.write(f"Δ23: {d23:.1f}")
+        level, msg = evaluar_tendencia(t1, t3, tag)
+        if level == "warn":
+            c7.warning(msg)
+        elif level == "ok":
+            c7.success(msg)
+        else:
+            c7.info(msg)
 
-    fila_tendencia("Na (mEq/L)", "na", vmin=100.0, vmax=200.0, step=0.5)
-    fila_tendencia("K (mEq/L)", "k", vmin=1.0, vmax=10.0, step=0.1)
-    fila_tendencia("Lactato (mmol/L)", "lac", vmin=0.0, vmax=20.0, step=0.1)
-    fila_tendencia("Amonio (µmol/L)", "nh4", vmin=0.0, vmax=1000.0, step=5.0)
-    fila_tendencia("Urea (mg/dL)", "urea", vmin=0.0, vmax=500.0, step=1.0)
-    fila_tendencia("Creatinina (mg/dL)", "cr", vmin=0.0, vmax=20.0, step=0.1)
+    fila_tendencia("Na (mEq/L)",          "Na",        "na",   vmin=100.0, vmax=200.0, step=0.5)
+    fila_tendencia("K (mEq/L)",           "K",         "k",    vmin=1.0,   vmax=10.0,  step=0.1)
+    fila_tendencia("Lactato (mmol/L)",    "Lactato",   "lac",  vmin=0.0,   vmax=20.0,  step=0.1)
+    fila_tendencia("Amonio (µmol/L)",     "Amonio",    "nh4",  vmin=0.0,   vmax=1000.0,step=5.0)
+    fila_tendencia("Urea (mg/dL)",        "Urea",      "urea", vmin=0.0,   vmax=500.0, step=1.0)
+    fila_tendencia("Creatinina (mg/dL)",  "Creatinina","cr",   vmin=0.0,   vmax=20.0,  step=0.1)
 
 # ---------- Resumen / PDF ----------
 with tab_rx:
