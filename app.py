@@ -5,6 +5,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from datetime import datetime
 
+VERSION = "v1.2"  # etiqueta visible para confirmar despliegue
+
 st.set_page_config(page_title="TRRC360 by Dr. Tapia", layout="wide")
 
 # -------- Password Gate (simple) --------
@@ -36,15 +38,26 @@ if not st.session_state.auth_ok:
     st.stop()
 
 # ---------- Header ----------
-col_logo, col_title = st.columns([1,6])
+col_logo, col_title, col_btn = st.columns([1,6,1])
 with col_logo:
     try:
         st.image("logo.png", width=100)
     except Exception:
         pass
 with col_title:
-    st.title("TRRC360 by Dr. Tapia")
+    st.title(f"TRRC360 by Dr. Tapia — {VERSION}")
     st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua (uso académico).")
+with col_btn:
+    if st.button("🔁 Actualizar", help="Borrar caché y recargar", use_container_width=True, key="btn_refresh"):
+        try:
+            st.cache_data.clear()
+        except Exception:
+            pass
+        try:
+            st.cache_resource.clear()
+        except Exception:
+            pass
+        st.rerun()
 
 # ---------- Sidebar inputs ----------
 with st.sidebar:
@@ -271,7 +284,7 @@ with tab_anticoag:
 
 # ---------- Tendencias (robusto) ----------
 with tab_trends:
-    st.subheader("Tendencias (T1–T3)  |  v1.1")
+    st.subheader("Tendencias (T1–T3)  |  v1.2")
 
     def evaluar_tendencia(v1, v3, tag):
         tag = tag.lower().strip()
