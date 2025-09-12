@@ -14,6 +14,13 @@ PW = st.secrets.get("APP_PASSWORD", DEFAULT_PASSWORD)
 if "auth_ok" not in st.session_state:
     st.session_state.auth_ok = False
 
+if not st.session_state,auth_ok:
+    st.title("Bienvenido a TRRC360 by Dr. Tapia")
+    st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua")
+    st.image("logo.png", width=200) 
+    st.warning("Por favor, ingresa la contraseña en el panel izquierdo para continuar.")
+    st.stop()
+
 with st.sidebar:
     st.subheader("Acceso")
     pw_input = st.text_input("Contraseña", type="password")
@@ -22,12 +29,6 @@ with st.sidebar:
             st.session_state.auth_ok = True
         else:
             st.error("Contraseña incorrecta")
-
-if not st.session_state.auth_ok:
-    st.title("TRRC360 by Dr. Tapia")
-    st.caption("Asistente clínico integral para prescripción de TRRC — Acceso restringido")
-    st.warning("Ingresa la contraseña en el panel izquierdo para continuar.")
-    st.stop()
 
 # ---------- Header ----------
 col_logo, col_title = st.columns([1,6])
