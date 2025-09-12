@@ -354,6 +354,63 @@ def evaluar_tendencia(v1, v3, tag):
     # Por defecto
     return ("ok", "Sin regla específica")
 
+# -------- Tendencias de laboratorio (UI + reglas) --------
+with tab_trends:
+    st.subheader("Tendencias (T1–T3) | v1.2.2")
+
+    # Valores por defecto (puedes cambiarlos si quieres)
+    DEF = {
+        "na":  (140.0, 130.0, 120.0),   # mEq/L
+        "k":   (4.0,   3.0,   2.0),     # mEq/L
+        "lact":(1.0,   0.8,   0.4),     # mmol/L
+        "nh4": (80.0,  70.0,  60.0),    # µmol/L
+        "ure": (130.0, 100.0, 80.0),    # mg/dL
+        "crn": (4.0,   3.0,   2.0),     # mg/dL
+    }
+
+    # Helper: number_input con límites seguros
+    def num_input_safe(label, key, vmin, vmax, step=0.5, default=None):
+        if default is None:
+            default = vmin
+        default = max(vmin, min(default, vmax))
+        return st.number_input(label, key=key, value=default,
+                               min_value=vmin, max_value=vmax, step=step)
+
+    # Helper: fila completa (T1,T2,T3 + Δ12,Δ23 + alerta)
+    def fila_tendencia(etiqueta, base_key, tag, vmin=0.0, vmax=1000.0, step=0.5, defaults=(0.0,0.0,0.0)):
+        st.markdown(f"**{etiqueta}**")
+        c1, c2, c3, c4 = st.columns([1.2, 1.2, 2, 1.2])
+
+        t1 = num_input_safe("T1", key=f"{base_key}_t1", vmin=vmin, vmax=vmax, step=step, default=defaults[0])
+        t2 = num_input_safe("T2", key=f"{base_key}_t2", vmin=vmin, vmax=vmax, step=step, default=defaults[1])
+        t3 = num_input_safe("T3", key=f"{base_key}_t3", vmin=vmin, vmax=vmax, step=step, default=defaults[2])
+
+        d12 = t2 - t1
+        d23 = t3 - t2
+        c5, c6 = st.columns(2)
+        c5.write(f"Δ12: {d12:+.1f}")
+        c6.write(f"Δ23: {d23:+.1f}")
+
+        # Evalúa con las reglas clínicas
+        level, msg = evaluar_tendencia(t1, t3, tag)
+        if level == "warn":
+            st.warning(msg)
+        elif level == "good":
+            st.success(msg)
+        else:
+            st.info(msg)
+
+        st.markdown("---")
+
+    # Rangos de entrada amplios (para evitar errores de límites de Streamlit)
+    # y “tags” para las reglas clínicas:
+    fila_tendencia("Na (mEq/L)",                "na",  "na",       vmin=100.0, vmax=200.0, step=0.5, defaults=DEF["na"])
+    fila_tendencia("K (mEq/L)",                 "k",   "k",        vmin=1.0,   vmax=10.0,  step=0.1, defaults=DEF["k"])
+    fila_tendencia("Lactato (mmol/L)",          "lact","lactato",  vmin=0.0,   vmax=20.0,  step=0.1, defaults=DEF["lact"])
+    fila_tendencia("Amonio (µmol/L)",           "nh4", "amonio",   vmin=0.0,   vmax=1000.0,step=0.5, defaults=DEF["nh4"])
+    fila_tendencia("Urea (mg/dL)",              "ure", "urea",     vmin=0.0,   vmax=500.0, step=0.5, defaults=DEF["ure"])
+    fila_tendencia("Creatinina (mg/dL)",        "crn", "creatinina",vmin=0.0,  vmax=20.0,  step=0.1, defaults=DEF["crn"])
+
 # ---------- Resumen / PDF ----------
 with tab_rx:
     st.subheader("Resumen de prescripción")
