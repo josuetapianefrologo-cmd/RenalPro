@@ -239,13 +239,44 @@ def checar_contraindicaciones(filtro: str,
 # ---------- Main (Prescripción) ----------
 with tab_main:
     st.subheader("Recomendación combinada")
-    mod_final, filtro_final, comentarios = combinar_recomendaciones(escenarios)
-    qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
 
+    # Recomendaciones automáticas (modalidad + comentario)
+    mod_final, filtro_final, comentarios = combinar_recomendaciones(escenarios)
+
+    # Sugerencia automática de filtro según escenarios
+    filtro_sugerido = sugerir_filtro_por_escenarios(escenarios)
+
+    # Catálogo de opciones disponibles (definido arriba en FILTROS)
+    opciones_filtro = list(FILTROS.keys())
+    idx_default = opciones_filtro.index(filtro_sugerido) if filtro_sugerido in opciones_filtro else 0
+
+    # UI: mostrar sugerencia y permitir elegir otro filtro
     c1, c2, c3 = st.columns(3)
     c1.metric("Modalidad", mod_final or "—")
-    c2.metric("Filtro", filtro_final or "—")
-    c3.metric("FF (estimada)", f"{ff:.2%}")
+    c2.metric("Filtro sugerido", filtro_sugerido or "—")
+    filtro_elegido = c3.selectbox("Filtro (puedes cambiarlo)", opciones_filtro, index=idx_default, key="ui_filtro")
+
+    # (Opcional) Contraindicaciones: si en el futuro capturas albúmina o HIT, pásalos aquí.
+    alertas = checar_contraindicaciones(filtro_elegido, albumina_gdl=None, hit=False)
+    if alertas:
+        st.warning(" | ".join(alertas))
+
+    # Flujos (no dependen del filtro para el cálculo)
+    qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
+
+    st.markdown("### Flujos sugeridos")
+    ca, cb, cc, cd = st.columns(4)
+    ca.metric("Qb (mL/min)", qb)
+    cb.metric("Qp (mL/min)", int(qp))
+    cc.metric("Qe (mL/h)", int(qe))
+    cd.metric("UF (mL/h)", uf)
+
+    ce, cf, cg = st.columns(3)
+    ce.metric("Qr pre (mL/h)", qr_pre)
+    cf.metric("Qr post (mL/h)", qr_post)
+    cg.metric("Qd (mL/h)", int(qd))
+
+    st.info(comentarios or "—")
 
     st.markdown("### Flujos sugeridos")
     ca, cb, cc, cd = st.columns(4)
@@ -485,7 +516,7 @@ with tab_rx:
     qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
 
     st.write(f"**Escenarios:** {', '.join(escenarios) if escenarios else '—'}")
-    st.write(f"**Modalidad:** {mod_final or '—'} | **Filtro:** {filtro_final or '—'} | **FF:** {ff:.2%}")
+    st.write(f"**Modalidad:** {mod_final or '—'} | **Filtro:** {st.session_state.get('ui_filtro', filtro_sugerido) or '—'} | **FF:** {ff:.2%}")
     st.write(f"**Qb:** {qb} mL/min | **Qp:** {int(qp)} mL/min | **Qe:** {int(qe)} mL/h | **UF:** {uf} mL/h")
     st.write(f"**Qr pre:** {qr_pre} | **Qr post:** {qr_post} | **Qd:** {int(qd)}")
     st.write(f"**Comentarios:** {comentarios or '—'}")
