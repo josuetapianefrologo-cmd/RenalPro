@@ -45,7 +45,7 @@ with col_logo:
 with col_title:
     st.title("TRRC360 by Dr. Tapia")
     st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua (uso académico).")
-    st.success("Acceso autorizado. Bienvenido, Dr. Tapia.")
+    st.success("Acceso autorizado. Bienvenido")
 
 # ---------- Sidebar inputs ----------
 with st.sidebar:
