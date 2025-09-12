@@ -168,6 +168,73 @@ tab_main, tab_ktv, tab_balance, tab_anticoag, tab_trends, tab_rx = st.tabs([
     "Tendencias de laboratorio",
     "Resumen / PDF",
 ])
+# ========= Catálogo de filtros y funciones =========
+
+from dataclasses import dataclass
+
+@dataclass
+class Filtro:
+    nombre: str
+    tags: list[str]
+    area_m2: float | None
+    comentarios: str
+
+# Catálogo de filtros disponibles
+FILTROS: dict[str, Filtro] = {
+    "Oxiris (AN69-ST; adsorción alta)": Filtro(
+        nombre="Oxiris (AN69-ST; adsorción alta)",
+        tags=["adsorción","convectivo","difusivo","CVVHDF","endotoxinas","sepsis"],
+        area_m2=1.5,
+        comentarios="Membrana AN69-ST con capacidad de adsorción; útil en sepsis/mediadores."
+    ),
+    "HCO 1100 (alta cut-off)": Filtro(
+        nombre="HCO 1100 (alta cut-off)",
+        tags=["HCO","convectivo","CVVH","CVVHDF","mioglobina"],
+        area_m2=1.1,
+        comentarios="Alta permeabilidad; riesgo de pérdidas de albúmina."
+    ),
+    "HCO 730 (alta cut-off)": Filtro(
+        nombre="HCO 730 (alta cut-off)",
+        tags=["HCO","convectivo","CVVH","CVVHDF","mioglobina"],
+        area_m2=0.7,
+        comentarios="Similar a HCO 1100, menor área."
+    ),
+    "Convectivo estándar (1.3 m²)": Filtro(
+        nombre="Convectivo estándar (1.3 m²)",
+        tags=["convectivo","CVVH","CVVHDF"],
+        area_m2=1.3,
+        comentarios="Uso general; buena opción si no hay HCO/adsorción."
+    ),
+    "Difusivo estándar (2.1 m²)": Filtro(
+        nombre="Difusivo estándar (2.1 m²)",
+        tags=["difusivo","CVVHD","CVVHDF"],
+        area_m2=2.1,
+        comentarios="Si priorizas depuración difusiva (urea/K)."
+    ),
+}
+
+def sugerir_filtro_por_escenarios(escenarios: list[str]) -> str:
+    e = " ".join([s.lower() for s in escenarios])
+    if any(x in e for x in ["sepsis", "choque", "síndrome de liberación de citocinas", "slc"]):
+        return "Oxiris (AN69-ST; adsorción alta)"
+    if any(x in e for x in ["rabdomiolisis", "rabdomiólisis", "mioglobina"]):
+        return "HCO 1100 (alta cut-off)"
+    if any(x in e for x in ["hiperamoniemia", "amonio"]):
+        return "Difusivo estándar (2.1 m²)"
+    if "cvvhd" in e:
+        return "Difusivo estándar (2.1 m²)"
+    return "Convectivo estándar (1.3 m²)"
+
+def checar_contraindicaciones(filtro: str,
+                              albumina_gdl: float | None = None,
+                              hit: bool | None = None) -> list[str]:
+    alerts = []
+    fname = filtro.lower()
+    if "hco" in fname and albumina_gdl is not None and albumina_gdl < 2.5:
+        alerts.append("⚠️ Con HCO vigilar pérdidas de albúmina (Alb < 2.5 g/dL).")
+    if "oxiris" in fname and hit is True:
+        alerts.append("⚠️ Evitar Oxiris si hay antecedente de HIT.")
+    return alerts
 
 # ---------- Main (Prescripción) ----------
 with tab_main:
