@@ -508,31 +508,125 @@ with tab_rx:
     st.write(f"**Comentarios:** {comentarios or '—'}")
 
     def export_pdf(filename="TRRC360_prescripcion.pdf"):
-        c = canvas.Canvas(filename, pagesize=letter)
-        w, h = letter
-        y = h - 50
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(50, y, "TRRC360 by Dr. Tapia — Resumen de prescripción")
-        y -= 20
-        c.setFont("Helvetica", 10)
-        c.drawString(50, y, f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-        y -= 20
-        lines = [
-            f"Escenarios: {', '.join(escenarios) if escenarios else '—'}",
-            f"Modalidad: {mod_final or '—'}    Filtro: {filtro_final or '—'}    FF: {ff:.2%}",
-            f"Qb: {qb} mL/min    Qp: {int(qp)} mL/min    Qe: {int(qe)} mL/h    UF: {uf} mL/h",
-            f"Qr pre: {qr_pre}    Qr post: {qr_post}    Qd: {int(qd)}",
-            f"Comentarios: {comentarios or '—'}",
-            "— Uso académico; no sustituye juicio clínico —"
-        ]
-        for line in lines:
-            c.drawString(50, y, line); y -= 16
-        c.showPage(); c.save()
-        return filename
+    from reportlab.pdfbase.pdfmetrics import stringWidth
 
-    if st.button("Exportar a PDF"):
-        fn = export_pdf()
-        with open(fn, "rb") as f:
-            st.download_button("Descargar PDF", data=f, file_name=fn, mime="application/pdf")
+    # --- Helper para envolver texto en ancho fijo ---
+    def draw_wrapped_text(c, text, x, y, max_width, leading=14, font_name="Helvetica", font_size=11):
+        if not text:
+            return y
+        c.setFont(font_name, font_size)
+        words = str(text).split()
+        line = ""
+        for w in words:
+            test = (line + " " + w).strip()
+            if stringWidth(test, font_name, font_size) <= max_width:
+                line = test
+            else:
+                c.drawString(x, y, line)
+                y -= leading
+                line = w
+        if line:
+            c.drawString(x, y, line)
+            y -= leading
+        return y
+
+    # --- Lienzo ---
+    c = canvas.Canvas(filename, pagesize=letter)
+    w, h = letter
+    margin = 50
+    y = h - margin
+
+    # Logo (opcional)
+    try:
+        c.drawImage("logo.png", w - 120, h - 85, width=70, height=40, preserveAspectRatio=True, mask="auto")
+    except Exception:
+        pass
+
+    # Encabezado principal
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(margin, y, "Prescripción Terapia De Reemplazo Renal Continuo")
+    # Fecha/hora
+    c.setFont("Helvetica", 10)
+    c.drawRightString(w - margin, y, datetime.now().strftime("%Y-%m-%d %H:%M"))
+    y -= 28
+
+    # Unidad hospitalaria
+    if unidad:
+        c.setFont("Helvetica", 12)
+        c.drawString(margin, y, f"Unidad hospitalaria: {unidad}")
+        y -= 20
+
+    # Ficha de identificación (horizontal)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin, y, "Ficha de identificación del paciente")
+    y -= 18
+    c.setFont("Helvetica", 11)
+    # Fila 1
+    c.drawString(margin, y, f"Nombre: {nombre_paciente or '-'}")
+    c.drawString(margin + 250, y, f"Fecha Nac: {fecha_nacimiento}")
+    y -= 16
+    # Fila 2
+    c.drawString(margin, y, f"Edad: {edad if edad is not None else '-'}")
+    c.drawString(margin + 100, y, f"Sexo: {sexo or '-'}")
+    c.drawString(margin + 250, y, f"Expediente: {expediente or '-'}")
+    y -= 22
+
+    # Separador
+    c.setFont("Helvetica", 11)
+    c.drawString(margin, y, "—")
+    y -= 16
+
+    # Resumen de prescripción
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin, y, "Resumen de prescripción")
+    y -= 18
+    c.setFont("Helvetica", 11)
+
+    # Escenarios
+    esc_text = ", ".join(escenarios) if escenarios else "—"
+    y = draw_wrapped_text(c, f"Escenarios: {esc_text}", margin, y, w - 2*margin)
+
+    # Modalidad, filtro, FF
+    c.drawString(margin, y, f"Modalidad: {mod_final or '—'}")
+    y -= 14
+    c.drawString(margin, y, f"Filtro sugerido: {filtro_final or '—'}")
+    y -= 14
+    c.drawString(margin, y, f"FF (estimada): {ff:.1f}%" if isinstance(ff, (int, float)) else f"FF (estimada): {ff or '—'}")
+    y -= 18
+
+    # Flujos (dos filas compactas)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, y, "Flujos sugeridos")
+    y -= 16
+    c.setFont("Helvetica", 11)
+    c.drawString(margin, y,   f"Qb: {int(qb) if 'qb' in locals() else '—'} mL/min")
+    c.drawString(margin+150, y, f"Qp: {int(qp) if isinstance(qp, (int,float)) else '—'} mL/min")
+    c.drawString(margin+300, y, f"Qe: {int(qe) if isinstance(qe, (int,float)) else '—'} mL/h")
+    y -= 16
+    c.drawString(margin, y,   f"Qr pre: {int(qr_pre) if isinstance(qr_pre,(int,float)) else '—'} mL/h")
+    c.drawString(margin+150, y, f"Qr post: {int(qr_post) if isinstance(qr_post,(int,float)) else '—'} mL/h")
+    c.drawString(margin+300, y, f"Qd: {int(qd) if isinstance(qd,(int,float)) else '—'} mL/h")
+    y -= 22
+
+    # Comentarios / recomendaciones
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, y, "Comentarios:")
+    y -= 16
+    y = draw_wrapped_text(c, comentarios or "—", margin, y, w - 2*margin)
+
+    # Espacio para firma
+    y -= 30
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin, y, "Médico tratante:")
+    y -= 18
+    c.setFont("Helvetica", 11)
+    c.drawString(margin, y, (nombre_medico or ""))
+    y -= 16
+    if sello:
+        y = draw_wrapped_text(c, f"Sello / Notas: {sello}", margin, y, w - 2*margin)
+
+    # Guardar
+    c.showPage()
+    c.save()
 
 st.caption("© Tapia Nefrología – Uso académico | TRRC360 by Dr. Tapia")
