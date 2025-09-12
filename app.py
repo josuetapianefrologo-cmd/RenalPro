@@ -1,34 +1,35 @@
-
 import streamlit as st
 from math import log
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from datetime import datetime
 
-VERSION = "v1.2"  # etiqueta visible para confirmar despliegue
+VERSION = "v1.2.1"  # etiqueta visible para confirmar despliegue
 
 st.set_page_config(page_title="TRRC360 by Dr. Tapia", layout="wide")
 
 # -------- Password Gate (simple) --------
-DEFAULT_PASSWORD = "TRRC360"  # Cambia aquí si no usarás secrets
+DEFAULT_PASSWORD = "TRRC360"  # cámbiala si vas a usar secrets
 PW = st.secrets.get("APP_PASSWORD", DEFAULT_PASSWORD)
 
+# Estado de sesión para login
 if "auth_ok" not in st.session_state:
     st.session_state.auth_ok = False
 
-# Sidebar: login primero (siempre visible)
+# Sidebar: login siempre visible (con keys únicas)
 with st.sidebar:
     st.subheader("Acceso")
-    pw_input = st.text_input("Contraseña", type="password")
-    if st.button("Entrar"):
+    pw_input = st.text_input("Contraseña", type="password", key="login_pw")
+    if st.button("Entrar", key="login_btn"):
         if pw_input == PW:
             st.session_state.auth_ok = True
+            st.success("Acceso autorizado. Bienvenido")
         else:
             st.error("Contraseña incorrecta")
 
 # Si aún no hay autenticación, mostrar bienvenida y salir
 if not st.session_state.auth_ok:
-    st.title("Bienvenido a TRRC360 by Dr. Tapia")
+    st.title(f"Bienvenido a TRRC360 by Dr. Tapia — {VERSION}")
     st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua")
     try:
         st.image("logo.png", width=200)
@@ -37,8 +38,8 @@ if not st.session_state.auth_ok:
     st.warning("Por favor, ingresa la contraseña en el panel izquierdo para continuar.")
     st.stop()
 
-# ---------- Header ----------
-col_logo, col_title, col_btn = st.columns([1,6,1])
+# -------- Header --------
+col_logo, col_title = st.columns([1, 6])
 with col_logo:
     try:
         st.image("logo.png", width=100)
@@ -46,18 +47,19 @@ with col_logo:
         pass
 with col_title:
     st.title(f"TRRC360 by Dr. Tapia — {VERSION}")
-    st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua (uso académico).")
-with col_btn:
-    if st.button("🔁 Actualizar", help="Borrar caché y recargar", use_container_width=True, key="btn_refresh"):
-        try:
-            st.cache_data.clear()
-        except Exception:
-            pass
-        try:
-            st.cache_resource.clear()
-        except Exception:
-            pass
-        st.rerun()
+    st.caption("(uso académico)")
+
+# Botón para limpiar caché y recargar
+if st.button("🔁 Actualizar", help="Borrar caché y recargar", use_container_width=False, key="btn_refresh"):
+    try:
+        st.cache_data.clear()
+    except Exception:
+        pass
+    try:
+        st.cache_resource.clear()
+    except Exception:
+        pass
+    st.rerun()
 
 # ---------- Sidebar inputs ----------
 with st.sidebar:
