@@ -285,80 +285,76 @@ with tab_anticoag:
         st.info("Usar anticoagulación regional con citrato (RCA).")
 
 # ---------- Tendencias (robusto) ----------
-with tab_trends:
-    st.subheader("Tendencias (T1–T3) | v1.2.1")
+def evaluar_tendencia(v1, v3, tag):
+    """
+    Devuelve (nivel, mensaje):
+      nivel ∈ {"warn","ok","good"}
+      - "warn": empeora / fuera de rango
+      - "ok": normal / dentro de rango (no llamar "mejora")
+      - "good": mejora clara (solo para urea/creatinina cuando bajan)
+    Reglas solicitadas por Dr. Tapia.
+    """
+    t = tag.lower().strip()
 
-    # defaults clínicos razonables
-    DEF = {
-        "na": 140.0, "k": 4.0, "lact": 1.0, "nh4": 80.0, "ck": 200.0, "ph": 7.35, "ur": 800.0
-    }
+    # Rangos normales
+    R_NA   = (135.0, 145.0)   # mEq/L
+    R_K    = (3.5, 5.1)       # mEq/L
+    R_LAC  = (0.5, 2.2)       # mmol/L
+    R_NH4  = (15.0, 45.0)     # µmol/L
+    R_UREA = (5.0, 45.0)      # mg/dL
+    R_CREA = (0.6, 1.3)       # mg/dL
 
-    def num_input_safe(col, label, key, vmin, vmax, step, default):
-        v0 = default if default is not None else vmin
-        # Clamp por si viene fuera de rango
-        if v0 < vmin: v0 = vmin
-        if v0 > vmax: v0 = vmax
-        fmt = "%.2f" if step not in (1, 10, 100) else None
-        return col.number_input(label, key=key, min_value=vmin, max_value=vmax, value=v0, step=step, format=fmt)
+    def fuera(v, r):  # v fuera de rango r=(low,high)
+        return (v < r[0]) or (v > r[1])
 
-    def fila_tendencia(etiqueta, base_key):
-        st.markdown(f"**{etiqueta}**")
-        c1, c2, c3, c4 = st.columns([1, 1.2, 1.2, 1.2])
-
-        tag = etiqueta.lower().strip()
-        if tag.startswith("na"):
-            vmin, vmax, step, d = 100.0, 200.0, 0.5, DEF["na"]
-        elif tag.startswith("k"):
-            vmin, vmax, step, d = 1.0, 10.0, 0.1, DEF["k"]
-        elif tag.startswith("lact"):
-            vmin, vmax, step, d = 0.0, 20.0, 0.1, DEF["lact"]
-        elif tag.startswith("amon"):
-            vmin, vmax, step, d = 0.0, 1000.0, 5.0, DEF["nh4"]
-        elif tag.startswith("ck"):
-            vmin, vmax, step, d = 0.0, 100000.0, 50.0, DEF["ck"]
-        elif tag.startswith("ph"):
-            vmin, vmax, step, d = 6.80, 7.80, 0.01, DEF["ph"]
-        elif tag.startswith("urea"):
-            vmin, vmax, step, d = 0.0, 2000.0, 10.0, DEF["ur"]
+    # SODIO: si sube o baja fuera de 135–145 = empeora; si está en rango = “ok”
+    if t.startswith("na"):
+        if fuera(v3, R_NA):
+            return ("warn", "Empeora: Na fuera de 135–145 mEq/L")
         else:
-            # fallback
-            vmin, vmax, step, d = 0.0, 9999.0, 1.0, 0.0
+            return ("ok", "Na dentro de 135–145 mEq/L")
 
-        # T1–T3 con keys únicas
-        t1 = num_input_safe(c2, "T1", key=f"{base_key}_t1", vmin=vmin, vmax=vmax, step=step, default=d)
-        t2 = num_input_safe(c3, "T2", key=f"{base_key}_t2", vmin=vmin, vmax=vmax, step=step, default=d)
-        t3 = num_input_safe(c4, "T3", key=f"{base_key}_t3", vmin=vmin, vmax=vmax, step=step, default=d)
-
-        # Deltas y semáforo
-        d12 = t2 - t1
-        d23 = t3 - t2
-        c5, c6 = st.columns(2)
-        c5.write(f"Δ12: {d12:+.1f}")
-        c6.write(f"Δ23: {d23:+.1f}")
-
-        # Reglas de alerta (potasio con 3–5.5)
-        msg = "Mejora"
-        if tag.startswith("na"):
-            if t3 < 120: msg = "⚠️ Alerta crítica de sodio"
-        elif tag.startswith("k"):
-            if t3 < 3.0 or t3 > 5.5: msg = "⚠️ Alerta crítica de potasio"
-        elif tag.startswith("lact"):
-            if t3 >= 2.0: msg = "⚠️ Lactato elevado"
-
-        if msg.startswith("⚠️"):
-            st.warning(msg)
+    # POTASIO: si <3.5 o >5.1 = empeora; en rango = “ok”
+    if t.startswith("k"):
+        if fuera(v3, R_K):
+            return ("warn", "Empeora: K fuera de 3.5–5.1 mEq/L")
         else:
-            st.info(msg)
+            return ("ok", "K dentro de 3.5–5.1 mEq/L")
 
-    # Llama a las filas en el orden que usas en tu UI
-    fila_tendencia("Na (mEq/L)", "na")
-    fila_tendencia("K (mEq/L)", "k")
-    fila_tendencia("Lactato (mmol/L)", "lact")
-    fila_tendencia("Amonio (µmol/L)", "nh4")
-    fila_tendencia("Urea (mg/dL)", "urea")
-    fila_tendencia("Creatinina (mg/dL)", "cr")   # si la usas aquí
-    # Si muestras pH en tendencias:
-    # fila_tendencia("pH", "ph")
+    # LACTATO: si sube por encima de 2.2 = empeora; si baja/no está alto -> “ok”
+    if t.startswith("lactato"):
+        if v3 > R_LAC[1]:
+            return ("warn", "Empeora: lactato > 2.2 mmol/L")
+        else:
+            return ("ok", "Lactato ≤ 2.2 mmol/L")
+
+    # AMONIO: si >45 = empeora; si ≤45 (aunque baje de 15) = “ok”
+    if t.startswith("amonio"):
+        if v3 > R_NH4[1]:
+            return ("warn", "Empeora: amonio > 45 µmol/L")
+        else:
+            return ("ok", "Amonio ≤ 45 µmol/L")
+
+    # UREA: si baja = mejora; si sube = empeora; si igual = “ok”
+    if t.startswith("urea"):
+        if v3 < v1:
+            return ("good", "Mejora: urea en descenso")
+        elif v3 > v1:
+            return ("warn", "Empeora: urea en ascenso")
+        else:
+            return ("ok", "Urea sin cambio")
+
+    # CREATININA: si baja = mejora; si sube = empeora; si igual = “ok”
+    if t.startswith("creatinina"):
+        if v3 < v1:
+            return ("good", "Mejora: creatinina en descenso")
+        elif v3 > v1:
+            return ("warn", "Empeora: creatinina en ascenso")
+        else:
+            return ("ok", "Creatinina sin cambio")
+
+    # Por defecto
+    return ("ok", "Sin regla específica")
 
 # ---------- Resumen / PDF ----------
 with tab_rx:
