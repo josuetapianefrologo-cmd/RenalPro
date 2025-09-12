@@ -232,8 +232,12 @@ with tab_balance:
     c3.metric("UF total (mL)", f"{int(uf_total)}")
     c4.metric("UF/h sugerida", f"{int(uf_h)}")
     msg = "OK"
-    if (uf_h/peso) > 0.002: msg = "⚠️ UF/h > 2 mL/kg/h"
-    st.warning(msg) if "⚠️" in msg else st.success(msg)
+    if (uf_h/peso) > 0.002:
+       msg = "⚠️ UF/h > 2 mL/kg/h"
+    if "⚠️" in msg: 
+        st.warning(msg)
+    else:
+        st.success(msg)
 
 # ---------- Anticoagulación extendida ----------
 with tab_anticoag:
