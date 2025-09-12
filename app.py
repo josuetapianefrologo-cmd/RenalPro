@@ -7,17 +7,28 @@ from datetime import datetime
 
 st.set_page_config(page_title="TRRC360 by Dr. Tapia", layout="wide")
 
-# -------- Password Gate (simple) --------
-DEFAULT_PASSWORD = "TRRC360"  # Cambia aquí si no usarás secrets
+# ----- Password Gate -----
+DEFAULT_PASSWORD = "TRRC360"
 PW = st.secrets.get("APP_PASSWORD", DEFAULT_PASSWORD)
 
 if "auth_ok" not in st.session_state:
     st.session_state.auth_ok = False
 
+# Sidebar: login primero
+with st.sidebar:
+    st.subheader("Acceso")
+    pw_input = st.text_input("Contraseña", type="password")
+    if st.button("Entrar"):
+        if pw_input == PW:
+            st.session_state.auth_ok = True
+        else:
+            st.error("Contraseña incorrecta")
+
+# Si todavía no está autenticado, mostrar bienvenida + logo
 if not st.session_state.auth_ok:
     st.title("Bienvenido a TRRC360 by Dr. Tapia")
     st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua")
-    st.image("logo.png", width=200) 
+    st.image("logo.png", width=200)
     st.warning("Por favor, ingresa la contraseña en el panel izquierdo para continuar.")
     st.stop()
 
@@ -33,7 +44,7 @@ with st.sidebar:
 # ---------- Header ----------
 col_logo, col_title = st.columns([1,6])
 with col_logo:
-    st.image("logo.png", width=100)
+    st.image("logo.png", width=300)
 with col_title:
     st.title("TRRC360 by Dr. Tapia")
     st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua (uso académico).")
