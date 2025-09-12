@@ -14,7 +14,7 @@ PW = st.secrets.get("APP_PASSWORD", DEFAULT_PASSWORD)
 if "auth_ok" not in st.session_state:
     st.session_state.auth_ok = False
 
-if not st.session_state,auth_ok:
+if not st.session_state.auth_ok:
     st.title("Bienvenido a TRRC360 by Dr. Tapia")
     st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua")
     st.image("logo.png", width=200) 
