@@ -628,13 +628,39 @@ def draw_wrapped_text(
 
     return y
 
-# ---------- Exportación a PDF con encabezados y ficha ----------
+# ----------- Resumen / PDF -----------
+
+# --- Helper para envolver texto en ancho fijo (para PDF) ---
+def draw_wrapped_text(
+    c, text, x, y, max_width,
+    font_name="Helvetica", font_size=11, leading=14
+):
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    if not text:
+        return y
+    c.setFont(font_name, font_size)
+    words = str(text).split()
+    line = ""
+    for w in words:
+        test = (line + " " + w).strip()
+        if stringWidth(test, font_name, font_size) <= max_width:
+            line = test
+        else:
+            c.drawString(x, y, line)
+            y -= leading
+            line = w
+    if line:
+        c.drawString(x, y, line)
+        y -= leading
+    return y
+
+# --- Exportación a PDF con encabezados y ficha ---
 def export_pdf(filename="TRRC360_prescripcion.pdf"):
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import letter
     from datetime import datetime
 
-    # Datos de UI (si no existen, dejar vacío)
+    # Datos del UI (persisten en session_state)
     unidad          = st.session_state.get("unidad", "")
     nombre_paciente = st.session_state.get("nombre_paciente", "")
     fecha_nac       = st.session_state.get("fecha_nac", "")
@@ -644,11 +670,10 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
     nombre_medico   = st.session_state.get("nombre_medico", "")
     sello           = st.session_state.get("sello", "")
 
-    # Variables clínicas calculadas / elegidas (definidas arriba)
+    # Estas variables ya existen/calculan en la app
     global escenarios, mod_final, filtro_final, comentarios
     global qb, qp, qe, qr_pre, qr_post, qd, ff
 
-    # Lienzo
     c = canvas.Canvas(filename, pagesize=letter)
     w, h = letter
     margin = 50
@@ -660,10 +685,9 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
     except Exception:
         pass
 
-    # Encabezado principal
+    # Encabezado principal y fecha/hora
     c.setFont("Helvetica-Bold", 14)
     c.drawString(margin, y, "Prescripción Terapia De Reemplazo Renal Continuo")
-    # Fecha/hora a la derecha
     c.setFont("Helvetica", 10)
     c.drawRightString(w - margin, y, datetime.now().strftime("Fecha: %Y-%m-%d  Hora: %H:%M"))
     y -= 28
@@ -673,16 +697,14 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
         c.setFont("Helvetica", 12)
         y = draw_wrapped_text(c, f"Unidad hospitalaria: {unidad}", margin, y, max_width=w - 2*margin)
 
-    # Ficha de identificación (horizontal, dos filas)
+    # Ficha de identificación (horizontal)
     c.setFont("Helvetica-Bold", 12)
     c.drawString(margin, y, "Ficha de identificación")
     y -= 18
     c.setFont("Helvetica", 11)
-    # Fila 1
     c.drawString(margin, y, f"Nombre: {nombre_paciente or ''}")
     c.drawString(margin + 250, y, f"Fecha Nac.: {fecha_nac or ''}")
     y -= 16
-    # Fila 2
     c.drawString(margin, y, f"Edad: {edad or ''}")
     c.drawString(margin + 100, y, f"Sexo: {sexo or ''}")
     c.drawString(margin + 250, y, f"Expediente: {expediente or ''}")
@@ -699,52 +721,100 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
     y -= 18
     c.setFont("Helvetica", 11)
 
-    # Escenarios
     esc_texto = ", ".join(escenarios) if escenarios else "—"
     y = draw_wrapped_text(c, f"Escenarios: {esc_texto}", margin, y, max_width=w - 2*margin)
 
-    # Modalidad, filtro, FF
-    c.drawString(margin, y,  f"Modalidad: {mod_final or '—'}")
-    y -= 14
-    c.drawString(margin, y,  f"Filtro sugerido: {filtro_final or '—'}")
-    y -= 14
-    c.drawString(margin, y,  f"FF (estimada): {ff:.0%}" if isinstance(ff, float) else f"FF (estimada): {ff}")
-    y -= 18
+    c.drawString(margin, y, f"Modalidad: {mod_final or '—'}"); y -= 14
+    c.drawString(margin, y, f"Filtro sugerido: {filtro_final or '—'}"); y -= 14
+    c.drawString(margin, y, f"FF (estimada): {ff:.0%}" if isinstance(ff, float) else f"FF (estimada): {ff}"); y -= 18
 
     # Flujos (dos filas compactas)
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(margin, y, "Flujos sugeridos")
-    y -= 16
+    c.drawString(margin, y, "Flujos sugeridos"); y -= 16
     c.setFont("Helvetica", 11)
-    c.drawString(margin,        y, f"Qb: {int(qb) if qb is not None else '—'} mL/min")
-    c.drawString(margin + 150,  y, f"Qp: {int(qp) if qp is not None else '—'} mL/h")
-    c.drawString(margin + 300,  y, f"Qe: {int(qe) if qe is not None else '—'} mL/h")
+    c.drawString(margin,       y, f"Qb: {int(qb) if qb is not None else '—'} mL/min")
+    c.drawString(margin+150,   y, f"Qp: {int(qp) if qp is not None else '—'} mL/h")
+    c.drawString(margin+300,   y, f"Qe: {int(qe) if qe is not None else '—'} mL/h")
     y -= 16
-    c.drawString(margin,        y, f"Qr pre: {int(qr_pre) if qr_pre is not None else '—'} mL/h")
-    c.drawString(margin + 150,  y, f"Qr post: {int(qr_post) if qr_post is not None else '—'} mL/h")
-    c.drawString(margin + 300,  y, f"Qd: {int(qd) if qd is not None else '—'} mL/h")
+    c.drawString(margin,       y, f"Qr pre: {int(qr_pre) if qr_pre is not None else '—'} mL/h")
+    c.drawString(margin+150,   y, f"Qr post: {int(qr_post) if qr_post is not None else '—'} mL/h")
+    c.drawString(margin+300,   y, f"Qd: {int(qd) if qd is not None else '—'} mL/h")
     y -= 22
 
-    # Comentarios / recomendaciones
+    # Comentarios y firma
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(margin, y, "Comentarios:")
-    y -= 16
+    c.drawString(margin, y, "Comentarios:"); y -= 16
     y = draw_wrapped_text(c, comentarios or "—", margin, y, max_width=w - 2*margin)
 
-    # Espacio para firma y sello
     y -= 30
     c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, y, "Médico tratante:")
-    y -= 18
+    c.drawString(margin, y, "Médico tratante:"); y -= 18
     c.setFont("Helvetica", 11)
     y = draw_wrapped_text(c, (nombre_medico or "____________________________"), margin, y, max_width=w - 2*margin)
     y -= 16
     if sello:
         y = draw_wrapped_text(c, f"Sello / Notas: {sello}", margin, y, max_width=w - 2*margin)
 
-    # Guardar
-    c.showPage()
-    c.save()
+    c.showPage(); c.save()
     return filename
 
-st.caption("© Tapia Nefrología – Uso académico | TRRC360 by Dr. Tapia")
+# --- UI del tab (ahora SÍ podemos llamar export_pdf) ---
+with tab_rx:
+    st.subheader("Resumen de prescripción")
+
+    # Sección de datos administrativos
+    st.markdown("#### Unidad hospitalaria y ficha de identificación")
+    cU, _ = st.columns([3, 1])
+    with cU:
+        st.text_input("Unidad hospitalaria", key="unidad", value=st.session_state.get("unidad", ""))
+
+    r1c1, r1c2, r1c3 = st.columns([2, 1, 1])
+    with r1c1:
+        st.text_input("Nombre del paciente", key="nombre_paciente", value=st.session_state.get("nombre_paciente", ""))
+    with r1c2:
+        st.text_input("Fecha de nacimiento", key="fecha_nac", value=st.session_state.get("fecha_nac", ""))
+    with r1c3:
+        st.text_input("Edad", key="edad", value=st.session_state.get("edad", ""))
+
+    r2c1, r2c2 = st.columns([1, 2])
+    with r2c1:
+        st.text_input("Sexo", key="sexo", value=st.session_state.get("sexo", ""))
+    with r2c2:
+        st.text_input("Expediente", key="expediente", value=st.session_state.get("expediente", ""))
+
+    st.markdown("---")
+
+    # Cálculos/summary ya existentes
+    mod_final, filtro_final, comentarios = combinar_recomendaciones(escenarios)
+    qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Modalidad", mod_final or "—")
+    c2.metric("Filtro sugerido", filtro_final or "—")
+    c3.metric("FF (estimada)", f"{ff:.0%}" if isinstance(ff, float) else f"{ff}")
+
+    st.markdown("### Flujos sugeridos")
+    ca, cb, cc, cd = st.columns(4)
+    ca.metric("Qb (mL/min)", qb)
+    cb.metric("Qp (mL/h)", int(qp))
+    cc.metric("Qe (mL/h)", int(qe))
+    cd.metric("UF (mL/h)", uf)
+
+    ce, cf, cg = st.columns(3)
+    ce.metric("Qr pre (mL/h)", qr_pre)
+    cf.metric("Qr post (mL/h)", qr_post)
+    cg.metric("Qd (mL/h)", int(qd))
+
+    st.info(comentarios or "—")
+
+    st.markdown("#### Datos del médico tratante")
+    m1, m2 = st.columns([2, 3])
+    m1.text_input("Nombre del médico", key="nombre_medico", value=st.session_state.get("nombre_medico", ""))
+    m2.text_input("Sello / Notas (opcional)", key="sello", value=st.session_state.get("sello", ""))
+
+    if st.button("Exportar a PDF"):
+        fn = export_pdf()
+        with open(fn, "rb") as f:
+            st.download_button("Descargar PDF", f, file_name=fn)
+
+st.caption("© Tapia Nefrología — Uso académico | TRRC360 by Dr. Tapia")
