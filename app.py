@@ -581,12 +581,23 @@ with tab_rx:
 
     st.info(comentarios or "—")
 
-    # ====== Exportar PDF ======
+    # ---- Botón: Exportar a PDF ----
+col_btn, _ = st.columns([1, 3])
+with col_btn:
     if st.button("Exportar a PDF"):
-        fn = export_pdf()
-        with open(fn, "rb") as f:
-            st.download_button("Descargar PDF", f, file_name=fn, mime="application/pdf")
-
+        try:
+            fn = export_pdf()  # Genera el archivo
+            with open(fn, "rb") as f:
+                st.download_button(
+                    "Descargar PDF",
+                    data=f,
+                    file_name=fn,
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+        except Exception as e:
+            st.error(f"Error al generar PDF: {e}")
+            
 # ---------------- Helpers PDF ----------------
 
 def draw_wrapped_text(c, text, x, y, max_width, font_name="Helvetica", font_size=11, leading=14):
