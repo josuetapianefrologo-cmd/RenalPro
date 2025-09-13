@@ -610,43 +610,44 @@ def draw_wrapped_text(c, text, x, y, max_width, font_name="Helvetica", font_size
         y -= leading
     return y
 
+# === Exportación a PDF con encabezados y ficha del paciente ===
 def export_pdf(filename="TRRC360_prescripcion.pdf"):
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import letter
     from datetime import datetime
 
-    # Datos del UI (persisten en session_state) — TODOS con prefijo rx_ para no chocar
-    unidad           = st.session_state.get("rx_unidad", "")
-    nombre_paciente  = st.session_state.get("rx_nombre_paciente", "")
-    fecha_nac        = st.session_state.get("rx_fecha_nac", "")
-    edad             = st.session_state.get("rx_edad", "")
-    sexo             = st.session_state.get("rx_sexo", "")
-    expediente       = st.session_state.get("rx_expediente", "")
-    nombre_medico    = st.session_state.get("rx_nombre_medico", "")
-    sello            = st.session_state.get("rx_sello", "")
+    s = st.session_state
+    # Datos administrativos (persisten en session_state por los text_input)
+    unidad           = s.get("unidad", "")
+    nombre_paciente  = s.get("nombre_paciente", "")
+    fecha_nac        = s.get("fecha_nac", "")
+    edad             = s.get("edad", "")
+    sexo             = s.get("sexo", "")
+    expediente       = s.get("expediente", "")
+    nombre_medico    = s.get("rx_nombre_medico", "") or s.get("nombre_medico", "")
+    sello            = s.get("rx_sello", "") or s.get("sello", "")
+    comentarios      = s.get("rx_comentarios", "") or s.get("comentarios", "")
 
-    # Estas variables ya existen/calculan en la app principal
-    global escenarios, mod_final, filtro_final, comentarios
-    global qb, qp, qe, qr_pre, qr_post, qd, ff
+    # Variables clínicas ya calculadas en la app
+    global escenarios, mod_final, filtro_final, qb, qp, qe, qr_pre, qr_post, qd, ff
 
-    # --- Lienzo ---
+    # Lienzo
     c = canvas.Canvas(filename, pagesize=letter)
     w, h = letter
     margin = 50
     y = h - margin
 
-    # Logo (opcional)
+    # (Opcional) Logo si existe en el repo
     try:
         c.drawImage("logo.png", x=margin, y=y-35, width=120, height=85, preserveAspectRatio=True, mask='auto')
     except Exception:
         pass
 
-    # Título principal
+    # Título y fecha/hora
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(margin, y, "Prescripción terapia de reemplazo renal continuo")
-    # Fecha/hora
+    c.drawString(margin, y, "Prescripción Terapia de Reemplazo Renal Continuo")
     c.setFont("Helvetica", 10)
-    c.drawRightString(w - margin, y, datetime.now().strftime("Fecha: %Y-%m-%d  %H:%M"))
+    c.drawRightString(w - margin, y, datetime.now().strftime("%d/%m/%Y %H:%M"))
     y -= 28
 
     # Unidad hospitalaria
@@ -656,19 +657,15 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
         y -= 20
 
     # Ficha de identificación (horizontal)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, y, "Ficha de identificación")
-    y -= 18
+    c.setFont("Helvetica-Bold", 12); c.drawString(margin, y, "Ficha de identificación"); y -= 18
     c.setFont("Helvetica", 11)
-    # Fila 1
-    c.drawString(margin, y, f"Nombre: {nombre_paciente or '—'}")
-    c.drawString(margin + 280, y, f"Fecha Nac: {fecha_nac or '—'}")
-    y -= 16
-    # Fila 2
-    c.drawString(margin, y, f"Edad: {edad or '—'}")
-    c.drawString(margin + 140, y, f"Sexo: {sexo or '—'}")
-    c.drawString(margin + 240, y, f"Expediente: {expediente or '—'}")
-    y -= 22
+    c.drawString(margin,          y, f"Nombre: {nombre_paciente}")
+    c.drawString(margin + 250,    y, f"Fecha Nac: {fecha_nac}")
+    y -= 14
+    c.drawString(margin,          y, f"Edad: {edad}")
+    c.drawString(margin + 100,    y, f"Sexo: {sexo}")
+    c.drawString(margin + 250,    y, f"Expediente: {expediente}")
+    y -= 18
 
     # Separador
     c.setFont("Helvetica", 11)
@@ -676,58 +673,57 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
     y -= 16
 
     # Resumen de prescripción
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, y, "Resumen de prescripción")
-    y -= 18
+    c.setFont("Helvetica-Bold", 12); c.drawString(margin, y, "Resumen de prescripción"); y -= 16
     c.setFont("Helvetica", 11)
-
-    # Escenarios
     esc_text = ", ".join(escenarios) if escenarios else "—"
-    y = draw_wrapped_text(c, f"Escenarios: {esc_text}", margin, y, max_width=w - 2*margin)
-
-    # Modalidad, filtro, FF
-    c.drawString(margin, y, f"Modalidad: {mod_final or '—'}")
-    y -= 14
-    c.drawString(margin, y, f"Filtro sugerido: {filtro_final or '—'}")
-    y -= 14
-    c.drawString(margin, y, f"FF (estimada): {ff:.2%}" if ff else "FF (estimada): —")
+    c.drawString(margin, y, f"Escenarios: {esc_text}"); y -= 14
+    ff_txt = f"{ff:.2%}" if ff is not None else "—"
+    c.drawString(margin, y, f"Modalidad: {mod_final or '—'}  |  Filtro sugerido: {filtro_final or '—'}  |  FF (estimada): {ff_txt}")
     y -= 18
 
-    # Flujos (dos filas compactas)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(margin, y, "Flujos sugeridos")
-    y -= 16
+    # Flujos (2 renglones compactos)
+    c.setFont("Helvetica-Bold", 11); c.drawString(margin, y, "Flujos sugeridos"); y -= 16
     c.setFont("Helvetica", 11)
-    c.drawString(margin, y,     f"Qb: {int(qb) if qb is not None else '—'} mL/min")
-    c.drawString(margin+150, y, f"Qp: {int(qp) if qp is not None else '—'} mL/min")
-    c.drawString(margin+300, y, f"Qe: {int(qe) if qe is not None else '—'} mL/h")
-    y -= 16
-    c.drawString(margin, y,     f"Qr pre: {int(qr_pre) if qr_pre is not None else '—'} mL/h")
-    c.drawString(margin+150, y, f"Qr post: {int(qr_post) if qr_post is not None else '—'} mL/h")
-    c.drawString(margin+300, y, f"Qd: {int(qd) if qd is not None else '—'} mL/h")
+    try_qb  = str(qb)
+    try_qp  = str(int(qp))  if qp is not None else "—"
+    try_qe  = str(int(qe))  if qe is not None else "—"
+    try_qr0 = str(qr_pre)   if qr_pre is not None else "—"
+    try_qr1 = str(qr_post)  if qr_post is not None else "—"
+    try_qd  = str(int(qd))  if qd is not None else "—"
+
+    c.drawString(margin,       y, f"Qb: {try_qb}")
+    c.drawString(margin+150,   y, f"Qp: {try_qp}")
+    c.drawString(margin+300,   y, f"Qe: {try_qe}")
+    y -= 14
+    c.drawString(margin,       y, f"Qr pre: {try_qr0}")
+    c.drawString(margin+150,   y, f"Qr post: {try_qr1}")
+    c.drawString(margin+300,   y, f"Qd: {try_qd}")
     y -= 22
 
     # Comentarios
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(margin, y, "Comentarios:")
-    y -= 16
-    y = draw_wrapped_text(c, comentarios or "—", margin, y, max_width=w - 2*margin)
+    if comentarios:
+        c.setFont("Helvetica-Bold", 11); c.drawString(margin, y, "Comentarios:"); y -= 14
+        c.setFont("Helvetica", 11)
+        c.drawString(margin, y, comentarios[:1000])  # simple; una línea
+        y -= 18
 
-    # Espacio para firma
+    # Firma
     y -= 30
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, y, "Médico tratante:")
-    y -= 18
-    c.setFont("Helvetica", 11)
-    c.drawString(margin, y, (nombre_medico or "____________________________"))
-    y -= 16
+    c.setFont("Helvetica-Bold", 12); c.drawString(margin, y, "Médico tratante:"); y -= 18
+    c.setFont("Helvetica", 11);      c.drawString(margin, y, (nombre_medico or "")); y -= 16
     if sello:
-        y = draw_wrapped_text(c, f"Sello / Notas: {sello}", margin, y, max_width=w - 2*margin)
+        c.drawString(margin, y, f"Sello / Notas: {sello}"); y -= 16
 
     # Guardar
     c.showPage()
     c.save()
     return filename
+
+# Botón de exportación (¡usar exactamente este, y no duplicarlo!)
+if st.button("Exportar a PDF"):
+    fn = export_pdf()
+    with open(fn, "rb") as f:
+        st.download_button("Descargar PDF", data=f, file_name=fn, mime="application/pdf")
 
 # (Opcional) pie de página de la app
 st.caption("© Tapia Nefrología — Uso académico | TRRC360 by Dr. Tapia")
