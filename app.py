@@ -581,12 +581,12 @@ with tab_rx:
 
     st.info(comentarios or "—")
 
-    # ---- Botón: Exportar a PDF ----
+  # ---- Botón: Exportar a PDF ----
 col_btn, _ = st.columns([1, 3])
 with col_btn:
-    if st.button("Exportar a PDF"):
+    if st.button("Exportar a PDF", key="btn_export_pdf"):
         try:
-            fn = export_pdf()  # Genera el archivo
+            fn = export_pdf()   # genera el archivo
             with open(fn, "rb") as f:
                 st.download_button(
                     "Descargar PDF",
@@ -594,6 +594,7 @@ with col_btn:
                     file_name=fn,
                     mime="application/pdf",
                     use_container_width=True,
+                    key="btn_download_pdf",
                 )
         except Exception as e:
             st.error(f"Error al generar PDF: {e}")
@@ -729,12 +730,6 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
     c.showPage()
     c.save()
     return filename
-
-# Botón de exportación (¡usar exactamente este, y no duplicarlo!)
-if st.button("Exportar a PDF"):
-    fn = export_pdf()
-    with open(fn, "rb") as f:
-        st.download_button("Descargar PDF", data=f, file_name=fn, mime="application/pdf")
 
 # (Opcional) pie de página de la app
 st.caption("© Tapia Nefrología — Uso académico | TRRC360 by Dr. Tapia")
