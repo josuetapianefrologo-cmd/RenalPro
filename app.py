@@ -580,7 +580,24 @@ with tab_rx:
     cg.metric("Qd (mL/h)", int(qd))
 
     st.info(comentarios or "—")
-           
+    # --- Botón Exportar a PDF ---
+    col_btn, _ = st.columns([1, 3])
+    with col_btn:
+        if st.button("Exportar a PDF", key="btn_export_pdf"):
+            try:
+                fn = export_pdf()  # Genera el PDF
+                with open(fn, "rb") as f:
+                    st.download_button(
+                        "Descargar PDF",
+                        data=f,
+                        file_name=fn,
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="btn_download_pdf"
+                    )
+            except Exception as e:
+                st.error(f"Error al generar PDF: {e}")
+
 # ---------------- Helpers PDF ----------------
 
 def draw_wrapped_text(c, text, x, y, max_width, font_name="Helvetica", font_size=11, leading=14):
