@@ -606,109 +606,146 @@ def draw_wrapped_text(c, text, x, y, max_width, font_name="Helvetica", font_size
 
 # === Exportación a PDF con encabezados y ficha del paciente ===
 def export_pdf(filename="TRRC360_prescripcion.pdf"):
+    """
+    PDF compacto y ordenado:
+      1) Encabezado + Unidad
+      2) Ficha de identificación del paciente (horizontal)
+      3) Diagnóstico / Escenarios
+      4) Prescripción (Modalidad, Filtro sugerido, FF)
+      5) Flujos y Soluciones (Qb, Qp, Qe, Qr pre/post, Qd, UF)
+      6) Comentarios (útil p/anticoagulación u otros)
+      7) Firma del médico + Sello/Notas
+    """
     from reportlab.pdfgen import canvas
     from reportlab.lib.pagesizes import letter
     from datetime import datetime
 
     s = st.session_state
-    # Datos administrativos (persisten en session_state por los text_input)
-    unidad           = s.get("unidad", "")
-    nombre_paciente  = s.get("nombre_paciente", "")
-    fecha_nac        = s.get("fecha_nac", "")
-    edad             = s.get("edad", "")
-    sexo             = s.get("sexo", "")
-    expediente       = s.get("expediente", "")
-    nombre_medico    = s.get("rx_nombre_medico", "") or s.get("nombre_medico", "")
-    sello            = s.get("rx_sello", "") or s.get("sello", "")
-    comentarios      = s.get("rx_comentarios", "") or s.get("comentarios", "")
 
-    # Variables clínicas ya calculadas en la app
-    global escenarios, mod_final, filtro_final, qb, qp, qe, qr_pre, qr_post, qd, ff
+    # ---------- Datos de la UI (persisten en session_state) ----------
+    unidad          = s.get("rx_unidad", "") or s.get("unidad", "")
+    nombre_paciente = s.get("rx_nombre_paciente", "") or s.get("nombre_paciente", "")
+    fecha_nac       = s.get("rx_fecha_nac", "") or s.get("fecha_nac", "")
+    edad            = s.get("rx_edad", "") or s.get("edad", "")
+    sexo            = s.get("rx_sexo", "") or s.get("sexo", "")
+    expediente      = s.get("rx_expediente", "") or s.get("expediente", "")
+    nombre_medico   = s.get("rx_nombre_medico", "") or s.get("nombre_medico", "")
+    sello           = s.get("rx_sello", "") or s.get("sello", "")
+    comentarios     = s.get("rx_comentarios", "") or s.get("comentarios", "")
 
-    # Lienzo
+    # ---------- Variables clínicas calculadas en la app ----------
+    global escenarios, mod_final, filtro_final, ff
+    global qb, qp, qe, qr_pre, qr_post, qd, uf
+
+    # ---------- Lienzo ----------
     c = canvas.Canvas(filename, pagesize=letter)
     w, h = letter
     margin = 50
     y = h - margin
 
-    # (Opcional) Logo si existe en el repo
+    # ---------- Logo (opcional si existe en el repo) ----------
     try:
-        c.drawImage("logo.png", x=margin, y=y-35, width=120, height=85, preserveAspectRatio=True, mask='auto')
+        c.drawImage("logo.png", x=margin, y=y-35, width=120, height=85,
+                    preserveAspectRatio=True, mask="auto")
     except Exception:
         pass
 
-    # Título y fecha/hora
+    # ---------- Título principal ----------
     c.setFont("Helvetica-Bold", 14)
     c.drawString(margin, y, "Prescripción Terapia de Reemplazo Renal Continuo")
+    # Fecha / hora a la derecha
     c.setFont("Helvetica", 10)
     c.drawRightString(w - margin, y, datetime.now().strftime("%d/%m/%Y %H:%M"))
     y -= 28
 
-    # Unidad hospitalaria
+    # ---------- Unidad ----------
     if unidad:
         c.setFont("Helvetica", 12)
         c.drawString(margin, y, f"Unidad hospitalaria: {unidad}")
         y -= 20
 
-    # Ficha de identificación (horizontal)
-    c.setFont("Helvetica-Bold", 12); c.drawString(margin, y, "Ficha de identificación"); y -= 18
-    c.setFont("Helvetica", 11)
-    c.drawString(margin,          y, f"Nombre: {nombre_paciente}")
-    c.drawString(margin + 250,    y, f"Fecha Nac: {fecha_nac}")
-    y -= 14
-    c.drawString(margin,          y, f"Edad: {edad}")
-    c.drawString(margin + 100,    y, f"Sexo: {sexo}")
-    c.drawString(margin + 250,    y, f"Expediente: {expediente}")
+    # ---------- Ficha de identificación (horizontal) ----------
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin, y, "Ficha de identificación")
     y -= 18
+    c.setFont("Helvetica", 11)
+    # Fila 1
+    c.drawString(margin,         y, f"Nombre: {nombre_paciente}")
+    c.drawString(margin + 280,   y, f"Fecha Nac: {fecha_nac}")
+    y -= 16
+    # Fila 2
+    c.drawString(margin,         y, f"Edad: {edad}")
+    c.drawString(margin + 140,   y, f"Sexo: {sexo}")
+    c.drawString(margin + 240,   y, f"Expediente: {expediente}")
+    y -= 22
 
     # Separador
     c.setFont("Helvetica", 11)
-    c.drawString(margin, y, "—")
+    c.drawString(margin, y, "—" * 95)
     y -= 16
 
-    # Resumen de prescripción
-    c.setFont("Helvetica-Bold", 12); c.drawString(margin, y, "Resumen de prescripción"); y -= 16
+    # ---------- Diagnóstico / Escenarios ----------
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin, y, "Diagnóstico / escenarios")
+    y -= 16
     c.setFont("Helvetica", 11)
     esc_text = ", ".join(escenarios) if escenarios else "—"
-    c.drawString(margin, y, f"Escenarios: {esc_text}"); y -= 14
+    y = draw_wrapped_text(c, f"Escenarios: {esc_text}", margin, y, max_width=w - 2*margin)
+
+    # ---------- Prescripción (Modalidad, Filtro, FF) ----------
+    c.setFont("Helvetica", 11)
     ff_txt = f"{ff:.2%}" if ff is not None else "—"
-    c.drawString(margin, y, f"Modalidad: {mod_final or '—'}  |  Filtro sugerido: {filtro_final or '—'}  |  FF (estimada): {ff_txt}")
+    c.drawString(margin, y, f"Modalidad: {mod_final or '—'}")
+    y -= 14
+    c.drawString(margin, y, f"Filtro sugerido: {filtro_final or '—'}")
+    y -= 14
+    c.drawString(margin, y, f"FF (estimada): {ff_txt}")
     y -= 18
 
-    # Flujos (2 renglones compactos)
-    c.setFont("Helvetica-Bold", 11); c.drawString(margin, y, "Flujos sugeridos"); y -= 16
-    c.setFont("Helvetica", 11)
-    try_qb  = str(qb)
-    try_qp  = str(int(qp))  if qp is not None else "—"
-    try_qe  = str(int(qe))  if qe is not None else "—"
-    try_qr0 = str(qr_pre)   if qr_pre is not None else "—"
-    try_qr1 = str(qr_post)  if qr_post is not None else "—"
-    try_qd  = str(int(qd))  if qd is not None else "—"
+    # ---------- Flujos y soluciones (dos filas compactas) ----------
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, y, "Flujos y soluciones")
+    y -= 16
 
-    c.drawString(margin,       y, f"Qb: {try_qb}")
-    c.drawString(margin+150,   y, f"Qp: {try_qp}")
-    c.drawString(margin+300,   y, f"Qe: {try_qe}")
-    y -= 14
-    c.drawString(margin,       y, f"Qr pre: {try_qr0}")
-    c.drawString(margin+150,   y, f"Qr post: {try_qr1}")
-    c.drawString(margin+300,   y, f"Qd: {try_qd}")
+    c.setFont("Helvetica", 11)
+    try_qb     = str(int(qb)) if qb     is not None else "—"
+    try_qp     = str(int(qp)) if qp     is not None else "—"
+    try_qe     = str(int(qe)) if qe     is not None else "—"
+    try_qr_pre = str(int(qr_pre)) if qr_pre is not None else "—"
+    try_qr_post= str(int(qr_post))if qr_post is not None else "—"
+    try_qd     = str(int(qd)) if qd     is not None else "—"
+    try_uf     = str(int(uf)) if uf     is not None else "—"
+
+    # Fila 1
+    c.drawString(margin,       y, f"Qb (mL/min): {try_qb}")
+    c.drawString(margin+180,   y, f"Qp (mL/min): {try_qp}")
+    c.drawString(margin+360,   y, f"Qe (mL/h): {try_qe}")
+    y -= 16
+    # Fila 2
+    c.drawString(margin,       y, f"Qr pre (mL/h): {try_qr_pre}")
+    c.drawString(margin+180,   y, f"Qr post (mL/h): {try_qr_post}")
+    c.drawString(margin+360,   y, f"Qd (mL/h): {try_qd}    UF (mL/h): {try_uf}")
     y -= 22
 
-    # Comentarios
-    if comentarios:
-        c.setFont("Helvetica-Bold", 11); c.drawString(margin, y, "Comentarios:"); y -= 14
-        c.setFont("Helvetica", 11)
-        c.drawString(margin, y, comentarios[:1000])  # simple; una línea
-        y -= 18
+    # ---------- Comentarios / Recomendaciones (útil p/anticoag.) ----------
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(margin, y, "Comentarios / recomendaciones")
+    y -= 16
+    c.setFont("Helvetica", 11)
+    y = draw_wrapped_text(c, comentarios or "—", margin, y, max_width=w - 2*margin)
 
-    # Firma
+    # ---------- Firma ----------
     y -= 30
-    c.setFont("Helvetica-Bold", 12); c.drawString(margin, y, "Médico tratante:"); y -= 18
-    c.setFont("Helvetica", 11);      c.drawString(margin, y, (nombre_medico or "")); y -= 16
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin, y, "Médico tratante:")
+    y -= 18
+    c.setFont("Helvetica", 11)
+    c.drawString(margin, y, (nombre_medico or ""))
+    y -= 16
     if sello:
-        c.drawString(margin, y, f"Sello / Notas: {sello}"); y -= 16
+        y = draw_wrapped_text(c, f"Sello / Notas: {sello}", margin, y, max_width=w - 2*margin)
 
-    # Guardar
+    # ---------- Guardar ----------
     c.showPage()
     c.save()
     return filename
