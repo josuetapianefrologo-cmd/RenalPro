@@ -714,6 +714,7 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
     return filename
 
     st.info(comentarios or "—")
+    
     # --- Botón Exportar a PDF ---
     col_btn, _ = st.columns([1, 3])
     with col_btn:
