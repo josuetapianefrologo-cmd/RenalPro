@@ -579,24 +579,7 @@ with tab_rx:
     cf.metric("Qr post (mL/h)", qr_post)
     cg.metric("Qd (mL/h)", int(qd))
 
-    st.info(comentarios or "—")
-    # --- Botón Exportar a PDF ---
-    col_btn, _ = st.columns([1, 3])
-    with col_btn:
-        if st.button("Exportar a PDF", key="btn_export_pdf"):
-            try:
-                fn = export_pdf()  # Genera el PDF
-                with open(fn, "rb") as f:
-                    st.download_button(
-                        "Descargar PDF",
-                        data=f,
-                        file_name=fn,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key="btn_download_pdf"
-                    )
-            except Exception as e:
-                st.error(f"Error al generar PDF: {e}")
+    
 
 # ---------------- Helpers PDF ----------------
 
@@ -729,6 +712,25 @@ def export_pdf(filename="TRRC360_prescripcion.pdf"):
     c.showPage()
     c.save()
     return filename
+
+    st.info(comentarios or "—")
+    # --- Botón Exportar a PDF ---
+    col_btn, _ = st.columns([1, 3])
+    with col_btn:
+        if st.button("Exportar a PDF", key="btn_export_pdf"):
+            try:
+                fn = export_pdf()  # Genera el PDF
+                with open(fn, "rb") as f:
+                    st.download_button(
+                        "Descargar PDF",
+                        data=f,
+                        file_name=fn,
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key="btn_download_pdf"
+                    )
+            except Exception as e:
+                st.error(f"Error al generar PDF: {e}")
 
 # (Opcional) pie de página de la app
 st.caption("© Tapia Nefrología — Uso académico | TRRC360 by Dr. Tapia")
