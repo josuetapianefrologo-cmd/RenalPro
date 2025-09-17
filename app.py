@@ -21,7 +21,7 @@ MATPLOTLIB_OK = REPORTLAB_OK = True
 MATPLOTLIB_ERR = REPORTLAB_ERR = ""
 
 try:
-
+    import pandas as pd  # ← solo para que no quede vacío
 except Exception as e:
     MATPLOTLIB_OK = False
     MATPLOTLIB_ERR = str(e)
