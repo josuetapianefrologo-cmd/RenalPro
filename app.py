@@ -64,7 +64,7 @@ except Exception as e:
     REPORTLAB_ERR = str(e)
 # ================================================================
 
-VERSION = "v1.19.2"
+VERSION = "v1.19.3"
 DB_PATH = "patients_trrc360.json"
 
 # --------------------------------- Utilidades de persistencia -------------------
@@ -324,8 +324,8 @@ El autor no asume responsabilidad por daños derivados del uso o interpretación
 
 
 with st.sidebar:
-    if not MATPLOTLIB_OK or not REPORTLAB_OK:
-        st.warning("Faltan dependencias opcionales: " + ("matplotlib " if not MATPLOTLIB_OK else "") + ("reportlab" if not REPORTLAB_OK else "") + ". Revisa README o requirements.txt")
+    if not REPORTLAB_OK:
+        st.warning("Exportar PDF requiere reportlab. Instala con: pip install reportlab")
     st.header("🧮 Parámetros")
     st.caption(f"TRRC360 — {VERSION}")
     st.toggle("Modo docente (vista extendida)", key="modo_docente", value=False)
@@ -971,5 +971,3 @@ THE SOFTWARE.
 """, language="text")
 
 st.caption("© Dr. Tapia | Ayuda a la decisión clínica; no sustituye el juicio médico.")
-
-
