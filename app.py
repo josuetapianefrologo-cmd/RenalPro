@@ -538,6 +538,47 @@ with st.sidebar:
     st.session_state["pdf_extendido"] = bool(doc_mode)
     st.session_state["mostrar_fund_extendido"] = bool(doc_mode)
 
+    # ===== Perfiles de unidad =====
+    st.header("Perfil de unidad")
+    PERFILES = {
+        "Personalizado": {},
+        "León SJD": {"qb": 200, "uf": 50,  "dosis": 30},
+        "IMSS (tarde)": {"qb": 180, "uf": 0,   "dosis": 25},
+        "HGR (fin de semana)": {"qb": 220, "uf": 100, "dosis": 30},
+    }
+    perfil_sel = st.selectbox("Selecciona un perfil", list(PERFILES.keys()), index=0, key="perfil_unidad", help="Atajos para ajustar Qb/UF/Dosis según tu unidad.")
+    if st.button("Aplicar perfil", key="btn_aplicar_perfil", help="Sobrescribe Qb/UF/Dosis con el perfil seleccionado."):
+        p = PERFILES.get(perfil_sel, {})
+        if "qb" in p:   st.session_state["sb_qb"] = p["qb"]
+        if "uf" in p:   st.session_state["sb_uf"] = p["uf"]
+        if "dosis" in p:st.session_state["sb_dosis"] = p["dosis"]
+        st.success(f"Perfil '{perfil_sel}' aplicado.")
+
+    st.header("Parámetros básicos")
+    peso = st.number_input("Peso (kg)", 10.0, 300.0, 70.0, 0.5, key="sb_peso", help="Peso actual estimado del paciente.")
+    hto  = st.number_input("Hematocrito (fracción)", 0.10, 0.60, 0.30, 0.01, format="%.2f", key="sb_hto", help="Fracción de 0 a 1 (ej. 0.30 = 30%).")
+    qb   = st.number_input("Qb (mL/min)", 80, 300, st.session_state.get("sb_qb", 200), 10, key="sb_qb", help="Flujo sanguíneo de bomba (mL/min).")
+    uf   = st.number_input("UF (mL/h)", 0, 2000, st.session_state.get("sb_uf", 100), 10, key="sb_uf", help="Ultrafiltración neta deseada (mL/h).")
+    dosis_mlkg = st.slider("Dosis objetivo (mL/kg/h)", 10, 45, st.session_state.get("sb_dosis", 30), key="sb_dosis", help="Dosis de efluente: objetivo usual 20–25 mL/kg/h; prescribir ~10–20% extra si hay pausas.")
+
+    st.markdown("---")
+    st.subheader("Estado(s) clínico(s)")
+    escenarios_catalogo = [
+        "Sepsis / choque séptico",
+        "Choque cardiogénico",
+        "Post infarto",
+        "Neurocrítico / TCE",
+        "Sobrecarga hídrica aislada",
+        "Intoxicación / sobredosis",
+        "Hiponatremia severa",
+        "Hipernatremia",
+        "Hiperamonemia",
+        "Rabdomiólisis",
+        "Síndrome de liberación de citocinas"
+    ]
+    escenarios = st.multiselect("Selecciona hasta 3", escenarios_catalogo, max_selections=3,
+                                default=["Sepsis / choque séptico"], key="sb_escenarios", help="Afecta modalidad, filtro y reglas de ajuste.")
+
 # ========== LÓGICA BASE ==========
 def prioridad_modalidad(m):
     if m in ["CVVHDF", "CVVHDF (flujos bajos)", "CVVHDF + HCO"]: return 3
