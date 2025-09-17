@@ -1080,6 +1080,7 @@ with tab_trends:
         level,msg = evaluar_tendencia(t1,t3,tag)
         st.warning(msg) if level=="warn" else (st.success(msg) if level=="good" else st.info(msg))
         st.markdown("---")
+        return None
     fila_tendencia("Na (mEq/L)","na","na",100.0,200.0,0.5,DEF["na"])
     fila_tendencia("K (mEq/L)","k","k",1.0,10.0,0.1,DEF["k"])
     fila_tendencia("Lactato (mmol/L)","lact","lactato",0.0,20.0,0.1,DEF["lact"])
