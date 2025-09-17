@@ -1,1268 +1,934 @@
-# app.py — TRRC360 by Dr. Tapia (v1.8.0)
-import streamlit as st
-from math import log
+# TRRC360 by Dr. Tapia — app.py (v1.14.0)
+# ---------------------------------------------------------------------------------
+# Novedades vs v1.13.0
+# - Selector de ESCENARIO CLÍNICO.
+# - Recomendación automática de modalidad basada en ESCENARIO + LABS (docente y transparente).
+# - Siempre editable manualmente por juicio clínico (override).
+# - Conserva: guardado/carga de pacientes (JSON), gráficos, avisos, privacidad, referencias (DOI/PMID).
+# - Sin ternarios que impriman DeltaGenerator; sin st.write(st.info/…).
+# ---------------------------------------------------------------------------------
+
+from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
-from dataclasses import dataclass
-from typing import List, Dict  # para bibliografía
+import io
+import json
+import os
 
-# ReportLab para PDF
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+import streamlit as st
 
-VERSION = "v1.8.1"
+# PDF opcional
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+    REPORTLAB_OK = True
+except Exception:
+    REPORTLAB_OK = False
 
-st.set_page_config(page_title="TRRC360 by Dr. Tapia", layout="wide")
+# Charts (sin estilos/colores especificados; 1 gráfica por analito)
+import matplotlib.pyplot as plt
 
-# ================== HELPERS PDF (al inicio para evitar NameError) ==================
-def _s_int(x):
+VERSION = "v1.19.1"
+DB_PATH = "patients_trrc360.json"
+
+# --------------------------------- Utilidades de persistencia -------------------
+def _load_db() -> Dict[str, Any]:
+    if os.path.exists(DB_PATH):
+        try:
+            with open(DB_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def _save_db(data: Dict[str, Any]) -> None:
+    with open(DB_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def pack_patient_payload(nombre: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    keep_keys = [
+        "nombre","peso_kg","hto","talla_cm","urea_pre","urea_post",
+        "modalidad","qb","qp_mlkgh","qd_mlkgh","qe_mlkgh","qrep_mlkgh","uf_ml_h",
+        "anticoag","tendencias_defaults","escenario"
+    ]
+    return {k: payload.get(k) for k in keep_keys}
+
+def unpack_patient_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    d = dict(payload or {})
+    d.setdefault("peso_kg", 70.0)
+    d.setdefault("hto", 30.0)
+    d.setdefault("talla_cm", 170.0)
+    d.setdefault("urea_pre", 140.0)
+    d.setdefault("urea_post", 60.0)
+    d.setdefault("modalidad", "CVVHDF")
+    d.setdefault("qb", 150.0)
+    d.setdefault("qp_mlkgh", 25.0)
+    d.setdefault("qd_mlkgh", 15.0)
+    d.setdefault("qe_mlkgh", 10.0)
+    d.setdefault("qrep_mlkgh", 15.0)
+    d.setdefault("uf_ml_h", 100.0)
+    d.setdefault("anticoag", "Heparina")
+    d.setdefault("escenario", "—")
+    d.setdefault("tendencias_defaults", {
+        "na": (140.0, 138.0, 139.0),
+        "k": (4.8, 4.6, 4.4),
+        "lact": (2.1, 2.0, 1.8),
+        "nh4": (35.0, 40.0, 30.0),
+        "ure": (150.0, 120.0, 100.0),
+        "crn": (9.0, 8.5, 7.8),
+    })
+    return d
+
+# --------------------------------- Cálculos ------------------------------------
+def bsa_mosteller(kg: float, cm: float) -> float:
+    return ((kg * cm) / 3600.0) ** 0.5
+
+def dosis_crrt_total_mlkgh(qp: float, qd: float, qe: float, qr: float) -> float:
+    return qp + qd + qe + qr
+
+def dosis_l_h(mlkgh: float, kg: float) -> float:
+    return (mlkgh * kg) / 1000.0
+
+def fraccion_filtracion(qp_mlkgh: float, qb_ml_min: float, hto_pct: float, peso_kg: float) -> Optional[float]:
     try:
-        return str(int(round(float(x))))
+        qp_ml_min = (qp_mlkgh * peso_kg) / 60.0
+        qb_plasma = qb_ml_min * (1.0 - (hto_pct / 100.0))
+        if qb_plasma <= 0:
+            return None
+        return qp_ml_min / qb_plasma
     except Exception:
-        return "—"
+        return None
 
-def _draw_wrapped_text(c, text, x, y, max_width, font_name="Helvetica", font_size=11, leading=14):
-    from reportlab.pdfbase.pdfmetrics import stringWidth
-    if not text:
-        return y
-    c.setFont(font_name, font_size)
-    words = str(text).split()
-    line = ""
-    for w in words:
-        test = (line + " " + w).strip()
-        if stringWidth(test, font_name, font_size) <= max_width:
-            line = test
-        else:
-            c.drawString(x, y, line)
-            y -= leading
-            line = w
-    if line:
-        c.drawString(x, y, line)
-        y -= leading
-    return y
+def urr(urea_pre: float, urea_post: float) -> Optional[float]:
+    try:
+        if urea_pre <= 0:
+            return None
+        return (1 - (urea_post / urea_pre)) * 100.0
+    except Exception:
+        return None
 
-def _fundamento_texto_resumen(qb, hto, qp, qp_h, qe, qr_pre, qr_post, qd, uf, ff_txt):
-    bloques = [
-        "• Dosis objetivo: Qe = dosis (mL/kg/h) × peso (kg).",
-        "• Qp = Qb × (1 − Hto). Qp·h = Qp × 60.",
-        "• Límite convectivo: ≤25% de Qp·h para proteger el filtro (FF y coagulación).",
-        "• Fracción convectiva (según modalidad): CVVHD=0, CVVHF=1, CVVHDF≈0.6.",
-        "• Qr_total = min(Qp·h×0.25, max(Qe − UF, 0)) × fracción_convectiva.",
-        "• División 70/30 (pre/post) para balancear depuración y protección de filtro.",
-        "• Qd = max(Qe − (Qr_pre + Qr_post + UF), 0).",
-        "• FF = (Qr_post + UF) / (Qp·h + Qr_pre). Recomendado mantener FF < 25%.",
-        f"Contexto actual: Qb={_s_int(qb)} mL/min, Hto={hto:.2f}, Qp={_s_int(qp)} mL/min, Qp·h={_s_int(qp_h)} mL/h, "
-        f"Qe={_s_int(qe)} mL/h, Qr_pre={_s_int(qr_pre)}, Qr_post={_s_int(qr_post)}, Qd={_s_int(qd)}, "
-        f"UF={_s_int(uf)}, FF≈{ff_txt}."
-    ]
-    return bloques
+def divider():
+    st.write("---")
 
-def _fundamento_texto_extendido(na, k, ph, pam, vasopresor_alto, lactato_desc, albumina,
-                                anticoag_tipo, r_targets, filtro_final):
-    partes = [
-        "— Selección de modalidad —",
-        "• CVVHDF en sepsis/choque: mezcla convección (medianas) y difusión (pequeñas) para depurar mediadores y controlar urea/electrolitos.",
-        "• CVVHD si la prioridad es difusión rápida (hiperK grave) o no hay capacidad convectiva.",
-        "• CVVHF cuando se busca convección predominante (no típico si la hemodinamia es lábil).",
-        "",
-        "— Límite convectivo y FF —",
-        "• Limitar convección a ≤25% de Qp·h disminuye hemoconcentración intrafiltro y riesgo de coagulación; ayuda a mantener FF <25%.",
-        "• FF = (Qr_post + UF)/(Qp·h + Qr_pre). Si FF sube, aumenta predilución o reduce Qr_post/UF.",
-        "",
-        "— División 70/30 (pre/post) —",
-        "• 70% predilución: reduce viscosidad intrafiltro → protege la membrana.",
-        "• 30% postdilución: asegura depuración efectiva (menor dilución de solutos postfiltro).",
-        "",
-        "— Ajustes por laboratorio —",
-        "• K ≥6.0 mmol/L: incrementar Qd (2–3 L/h) con solución de dializado K 0–2 mmol/L; repetir K cada 2–4 h hasta <5.5.",
-        "• pH <7.20 y/o HCO3 bajo: usar soluciones con bicarbonato y subir Qd/Qe (2–3 L/h); evitar lactato.",
-        "• Hiponatremia: no exceder 8–10 mmol/L en 24 h (≤8 si alto riesgo de ODS); ajustar Na en solución.",
-        "• Hipernatremia: objetivo ≈ 0.5 mmol/L/h (8–10 mmol/día) con dializado de Na más alto; corrección gradual.",
-        "• Amonio elevado: priorizar difusión continua (CVVHD) y buffer adecuado; la dosis/flujo es más determinante que la modalidad.",
-        "• Rabdomiólisis: considerar membranas HCO si la albúmina lo permite; vigilar pérdidas proteicas.",
-        "",
-        "— Anticoagulación —",
-        "• RCA si hay trombocitopenia, coagulopatía, sangrado o neuro-riesgo, HIT previa o HBPM reciente.",
-        "• HNF si bajo riesgo hemorrágico y con monitoreo de aPTT confiable.",
-        f"• Objetivos RCA: iCa post-filtro ≈ {r_targets.get('iCa_post','0.25–0.40')} mmol/L; iCa sistémico ≈ {r_targets.get('iCa_sist','1.0–1.2')} mmol/L (ajustes 10–20%).",
-        "",
-        "— Hemodinamia y UF —",
-        "• PAM <60 mmHg o vasopresor en aumento: UF mínima o 0.",
-        "• PAM ≥65 mmHg con lactato en descenso: escalar UF 25–50 mL/h cada 4–6 h.",
-        "",
-        "— Membranas y albúmina —",
-        f"• Si se utiliza HCO y albúmina <3.0 g/dL (actual: {albumina:.2f} g/dL), vigilar pérdidas y/o reponer; si Alb <2.5 g/dL, cuestionar HCO.",
-        f"• Filtro seleccionado/sugerido: {filtro_final or '—'}.",
-        "",
-        "— Reglas de bolsillo (operativas) —",
-        "• Mantener FF <25%. Si sube: ↑ predilución, ↓ Qr_post/UF, y/o ↑ Qb.",
-        "• Hiperkalemia: Qd alto + solución K baja + re-labs de K cada 2–4 h.",
-        "• Acidosis: bicarbonato; evitar lactato; Qd/Qe 2–3 L/h.",
-        "• Na: corrección guiada a 0.5 mmol/L/h aprox.; límites diarios según hipo/hiperNa.",
-        "• UF: supeditada a PAM y tendencia del lactato.",
-        "• RCA: iCa post 0.25–0.40; iCa sist 1.0–1.2; ajustes 10–20%.",
-        "• HCO: vigilar pérdidas de albúmina y objetivos clínicos (mioglobina/citoquinas); beneficio en resultados duros incierto para filtros adsorptivos.",
-        "",
-        f"— Contexto actual — Na={na:.1f} mEq/L, K={k:.1f} mEq/L, pH={ph:.2f}, PAM={pam:.0f} mmHg, "
-        f"Vasopresor alto={'Sí' if vasopresor_alto else 'No'}, Lactato descendiendo={'Sí' if lactato_desc else 'No'}, Albúmina={albumina:.2f} g/dL, Anticoagulación={anticoag_tipo}."
-    ]
-    return partes
+# --------------------------------- Reglas de recomendación ---------------------
+def recommend_modality_from_labs(na_t: Optional[float], k_t: Optional[float], lact_t: Optional[float],
+                                 nh4_t: Optional[float], urea_t: Optional[float], cr_t: Optional[float],
+                                 dose_mlkgh: Optional[float], ff: Optional[float]) -> str:
+    """Reglas docentes basadas en LABS."""
+    try:
+        if k_t is not None and k_t >= 6.0:
+            return "CVVHD"
+        if urea_t is not None and urea_t >= 200.0:
+            return "CVVHD"
+        if (lact_t is not None and lact_t > 2.2) or (nh4_t is not None and nh4_t > 45.0):
+            return "CVVHDF"
+        if ff is not None and ff <= 0.25 and (dose_mlkgh or 0) >= 25.0:
+            return "CVVH"
+    except Exception:
+        pass
+    return "CVVHDF"
 
-# ======== BIBLIOGRAFÍA (últimos años y claves históricas) ========
-Ref = Dict[str, str]
-BIBLIO: List[Ref] = [
-    # Dosis CRRT ~20–25 mL/kg/h
-    {
-        "id": "dose_core_2024_statpearls",
-        "yr": "2024",
-        "title": "Continuous Renal Replacement Therapy - StatPearls",
-        "where": "NCBI/StatPearls",
-        "url": "https://www.ncbi.nlm.nih.gov/books/NBK556028/",
-        "tags": "dosis,crrt,revision",
-        "blurb": "Revisión práctica: dosis entregada 20–25 mL/kg/h; sin beneficio claro >25."
-    },
-    {
-        "id": "dose_review_2021_karger",
-        "yr": "2021",
-        "title": "Dose of Continuous Renal Replacement Therapy in Critically Ill Patients",
-        "where": "Karger (Nephron)",
-        "url": "https://karger.com/nef/article/145/2/91/227459/Dose-of-Continuous-Renal-Replacement-Therapy-in",
-        "tags": "dosis,crrt,revision",
-        "blurb": "Revisión de evidencia de dosis y métricas de calidad."
-    },
-
-    # Anticoagulación con citrato (RCA)
-    {
-        "id": "rca_review_2023_pmc",
-        "yr": "2023",
-        "title": "Regional Citrate Anticoagulation in CRRT",
-        "where": "PMC (Review)",
-        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10221969/",
-        "tags": "rca,anticoagulacion,crrt,revision",
-        "blurb": "RCA es segura/efectiva; recomendada como primera línea si no hay contraindicaciones."
-    },
-    {
-        "id": "rca_consensus_2023_biomed",
-        "yr": "2023",
-        "title": "Management of RCA for CRRT",
-        "where": "Military Medical Research",
-        "url": "https://mmrjournal.biomedcentral.com/articles/10.1186/s40779-023-00457-9",
-        "tags": "rca,anticoagulacion,consenso",
-        "blurb": "Consenso operativo de RCA en CKRT."
-    },
-
-    # Filtration fraction (FF) ~<25%
-    {
-        "id": "ff_practical_2025_openaccess",
-        "yr": "2025",
-        "title": "Renal replacement therapy in ICU (practical)",
-        "where": "Annals of Intensive Care",
-        "url": "https://annalsofintensivecare.springeropen.com/articles/10.1186/s13613-025-01517-0",
-        "tags": "ff,crrt,practica",
-        "blurb": "Resumen práctico: FF <25% como objetivo para proteger el filtro."
-    },
-    {
-        "id": "ff_formula_2025_review",
-        "yr": "2025",
-        "title": "Continuous RRT: What Have We Learned?",
-        "where": "Surg Clin",
-        "url": "https://www.sciencedirect.com/science/article/pii/S0034837625001639",
-        "tags": "ff,crrt,revision",
-        "blurb": "Actualiza principios; recuerda RENAL/ATN para dosis y pragmática de FF."
-    },
-
-    # Oxiris / adsorción en sepsis (evidencia mixta)
-    {
-        "id": "oxiris_meta_2024_jcm",
-        "yr": "2024",
-        "title": "Does CRRT with oXiris improve outcomes in septic shock?",
-        "where": "J Clin Med",
-        "url": "https://www.mdpi.com/2077-0383/13/24/7527",
-        "tags": "oxiris,sepsis,adsorcion",
-        "blurb": "Serie/meta reciente; señales favorables pero heterogeneidad/riesgo de sesgo."
-    },
-    {
-        "id": "oxiris_rct_protocol_2025_bmjopen",
-        "yr": "2025",
-        "title": "RCT protocol oXiris in abdominal septic shock",
-        "where": "BMJ Open",
-        "url": "https://bmjopen.bmj.com/content/bmjopen/15/7/e094792.full.pdf",
-        "tags": "oxiris,sepsis,ensayo",
-        "blurb": "Protocolo RCT multicéntrico; evidencia de alta calidad en curso."
-    },
-    {
-        "id": "oxiris_effect_2025_pmc",
-        "yr": "2025",
-        "title": "Effects of oXiris® blood purification in Septic Shock",
-        "where": "PMC",
-        "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12181899/",
-        "tags": "oxiris,sepsis,adsorcion",
-        "blurb": "Estudio contemporáneo con resultados clínicos; no definitivo."
-    },
-
-    # HCO para rabdomiólisis / medianas (albúmina)
-    {
-        "id": "hco_rhabdo_2025_bmcneph",
-        "yr": "2025",
-        "title": "KRT modes and myoglobin removal in rhabdomyolysis (pilot)",
-        "where": "BMC Nephrol",
-        "url": "https://bmcnephrol.biomedcentral.com/articles/10.1186/s12882-025-03945-3",
-        "tags": "hco,rabdomiolisis,medianas",
-        "blurb": "Piloto comparando modalidades (incluye HCO); vigilar pérdidas proteicas."
-    },
-
-    # Revisiones de síntesis recientes
-    {
-        "id": "crrt_corecurr_2025_ajkd",
-        "yr": "2025",
-        "title": "CKRT Core Curriculum",
-        "where": "AJKD",
-        "url": "https://www.ajkd.org/article/S0272-6386%2824%2901120-X/fulltext",
-        "tags": "crrt,revision,general",
-        "blurb": "Currículo núcleo 2025: cuándo y cómo prescribir CKRT."
-    },
+SCENARIOS = [
+    "—",
+    "Sepsis/AKI",
+    "Intoxicación dializable",
+    "Hiperpotasemia (crisis)",
+    "Hiperamonemia",
+    "Acidosis láctica",
+    "Lesión cerebral aguda",
+    "Síndrome hepatorrenal",
+    "Inestabilidad hemodinámica",
+    "Sobrecarga hídrica aislada",
+    "Rabdomiólisis",
 ]
 
-def filtrar_refs_por_contexto(escenarios_sel: List[str], anticoag_tipo: str) -> List[Ref]:
-    """Devuelve referencias relevantes a los escenarios y anticoagulación actuales."""
-    e = " ".join([s.lower() for s in escenarios_sel])
-    tags_req = set()
+SCENARIO_REFS = {
+    "—": [
+        "**Marco general de TRRC/AKI**",
+        "KDIGO AKI 2023 — DOI: 10.1016/j.kint.2023.02.014; PMID: 36889692",
+        "Bellomo/Ronco/Kellum — NEJM CRRT Review — DOI: 10.1056/NEJMra1814522; PMID: 31483967",
+    ],
+    "Sepsis/AKI": [
+        "**Sepsis/AKI**",
+        "KDIGO AKI 2023 — DOI: 10.1016/j.kint.2023.02.014; PMID: 36889692",
+        "Surviving Sepsis Campaign 2021 — DOI: 10.1007/s00134-021-06506-y; PMID: 34599691",
+        "NEJM CRRT Review — DOI: 10.1056/NEJMra1814522; PMID: 31483967",
+    ],
+    "Intoxicación dializable": [
+        "**Intoxicaciones dializables**",
+        "EXTRIP Workgroup (2019) — DOI: 10.1097/CCM.0000000000003951; PMID: 31599846",
+        "Principles of ECT in toxicology (KI 2019) — DOI: 10.1016/j.kint.2018.11.031; PMID: 30771662",
+        "KDIGO AKI 2023 — DOI: 10.1016/j.kint.2023.02.014",
+    ],
+    "Hiperpotasemia (crisis)": [
+        "**Hiperpotasemia severa**",
+        "NEJM Review (2021) — DOI: 10.1056/NEJMra2031459; PMID: 33369332",
+        "KDIGO AKI 2023 — DOI: 10.1016/j.kint.2023.02.014",
+    ],
+    "Hiperamonemia": [
+        "**Hiperamonemia**",
+        "Pediatric/Neonatal CRRT for hyperammonemia — DOI: 10.1007/s00467-010-1463-2; PMID: 20130899",
+        "KDIGO AKI 2023 — DOI: 10.1016/j.kint.2023.02.014",
+    ],
+    "Acidosis láctica": [
+        "**Acidosis láctica**",
+        "NEJM Review (2014) — DOI: 10.1056/NEJMra1309483; PMID: 24521108",
+        "CRRT & lactate clearance (ICU) — DOI: 10.1007/s00134-014-3501-6; PMID: 25190002",
+    ],
+    "Lesión cerebral aguda": [
+        "**Lesión cerebral aguda**",
+        "Brain Trauma Foundation — DOI: 10.1227/NEU.0000000000001432; PMID: 27654000",
+        "CRRT en neurocrítico (Nefrología 2020) — DOI: 10.1016/j.nefro.2020.07.005; PMID: 32800408",
+    ],
+    "Síndrome hepatorrenal": [
+        "**Síndrome hepatorrenal**",
+        "EASL/Diagnosis & Management of HRS — DOI: 10.1016/j.jhep.2019.07.002; PMID: 31326410",
+        "Decompensated cirrhosis guidance — DOI: 10.1016/j.jhep.2018.03.024; PMID: 29653741",
+    ],
+    "Inestabilidad hemodinámica": [
+        "**Inestabilidad hemodinámica**",
+        "CRRT in shock/ICU (2020) — DOI: 10.1007/s00134-020-06089-3; PMID: 32056064",
+        "KDIGO AKI 2023 — DOI: 10.1016/j.kint.2023.02.014",
+    ],
+    "Sobrecarga hídrica aislada": [
+        "**Sobrecarga hídrica**",
+        "Fluid balance & CRRT (2010) — DOI: 10.1007/s00134-010-2071-7; PMID: 20458469",
+    ],
+    "Rabdomiólisis": [
+        "**Rabdomiólisis**",
+        "AKI from rhabdomyolysis (KI 2015) — DOI: 10.1016/j.kint.2014.12.017; PMID: 25662347",
+        "KDIGO AKI 2023 — DOI: 10.1016/j.kint.2023.02.014",
+    ],
+}
+def recommend_modality_from_scenario(escenario: str, dose_mlkgh: Optional[float], ff: Optional[float]) -> str:
+    """Reglas docentes basadas en ESCENARIO."""
+    if escenario == "Intoxicación dializable":
+        return "CVVHD"          # difusión predominante
+    if escenario == "Hiperpotasemia (crisis)":
+        return "CVVHD"          # difusión rápida de K+
+    if escenario in ("Hiperamonemia", "Acidosis láctica"):
+        return "CVVHDF"         # mezcla difusivo-convectiva
+    if escenario == "Lesión cerebral aguda":
+        return "CVVHD"          # control difusivo estable (docente)
+    if escenario == "Síndrome hepatorrenal":
+        return "CVVHDF"
+    if escenario == "Inestabilidad hemodinámica":
+        return "CVVHDF"
+    if escenario == "Sobrecarga hídrica aislada":
+        return "CVVHDF"         # por balance cuidadoso
+    if escenario == "Rabdomiólisis":
+        # si se planea convección y FF permisible
+        if ff is not None and ff <= 0.25 and (dose_mlkgh or 0) >= 25.0:
+            return "CVVH"
+        return "CVVHDF"
+    if escenario == "Sepsis/AKI":
+        return "CVVHDF"
+    return "CVVHDF"
 
-    # Dosis/FF casi siempre relevantes
-    tags_req.update(["dosis", "ff", "crrt", "revision"])
+def combined_recommendation(escenario: str, na_t: Optional[float], k_t: Optional[float], lact_t: Optional[float],
+                            nh4_t: Optional[float], urea_t: Optional[float], cr_t: Optional[float],
+                            dose_mlkgh: Optional[float], ff: Optional[float]) -> Tuple[str, str]:
+    """
+    Combina ESCENARIO + LABS con prioridades claras.
+    Prioridad (mayor a menor):
+    1) Flags críticos de labs: K≥6 o Urea≥200 → CVVHD.
+    2) Escenarios dominantes (Intoxicación, Crisis K, Hiperamonemia/Lactato, LCA, HRS, etc.).
+    3) Heurística de convección por FF baja → CVVH.
+    4) Default: CVVHDF.
+    Devuelve (modalidad_sugerida, explicación).
+    """
+    # Paso 1: labs críticos
+    if k_t is not None and k_t >= 6.0:
+        return "CVVHD", "Prioridad laboratorio: K≥6 mmol/L → predominio difusivo"
+    if urea_t is not None and urea_t >= 200.0:
+        return "CVVHD", "Prioridad laboratorio: Urea≥200 mg/dL → predominio difusivo"
 
-    # Por escenarios
-    if any(x in e for x in ["sepsis", "choque"]):
-        tags_req.update(["sepsis", "oxiris", "adsorcion"])
-    if any(x in e for x in ["rabdomiolisis", "rabdomiólisis"]):
-        tags_req.update(["hco", "rabdomiolisis"])
-    if any(x in e for x in ["hiperamoniemia", "amonio"]):
-        tags_req.update(["crrt", "revision"])  # enfoque difusivo/dosis
+    # Paso 2: escenario
+    esc_base = recommend_modality_from_scenario(escenario, dose_mlkgh, ff)
 
-    # Anticoagulación
-    if "RCA" in (anticoag_tipo or ""):
-        tags_req.update(["rca", "anticoagulacion"])
+    # Paso 3: refuerzo por labs no críticos
+    labs_base = recommend_modality_from_labs(na_t, k_t, lact_t, nh4_t, urea_t, cr_t, dose_mlkgh, ff)
 
-    # Selección
-    out = []
-    for ref in BIBLIO:
-        rtags = set(ref.get("tags", "").split(","))
-        if rtags & tags_req:
-            out.append(ref)
-    # Evita duplicados y limita a 12 para el PDF
-    seen = set(); sel = []
-    for r in out:
-        if r["id"] not in seen:
-            sel.append(r); seen.add(r["id"])
-    return sel[:12]
+    # Resolución: si cualquiera sugiere CVVHD por motivos docentes, preferir CVVHD;
+    # si alguno sugiere CVVH por convección con FF≤0.25, respetar CVVH; en else → CVVHDF.
+    if "CVVHD" in (esc_base, labs_base):
+        return "CVVHD", f"Escenario/Labs orientan a difusión rápida ({escenario})"
+    if "CVVH" in (esc_base, labs_base):
+        return "CVVH", f"Convección razonable (FF≤0.25 y dosis adecuada) ({escenario})"
+    return "CVVHDF", f"Combinación de escenario y labs sugiere mezcla (docente) ({escenario})"
 
-# ================== FIN BLOQUE BIBLIO ==================
+# --------------------------------- Config y Sidebar ----------------------------
+st.set_page_config(page_title=f"TRRC360 by Dr. Tapia — {VERSION}", layout="wide")
 
-def export_pdf():
-    """Genera PDF con opción de fundamento RESUMEN o EXTENDIDO (conmutado globalmente en la UI) + Referencias."""
-    s = st.session_state
+# -------- Aceptación legal obligatoria --------
+if "accepted_legal" not in st.session_state:
+    st.session_state.accepted_legal = False
 
-    # ===== Recoger parámetros seguros desde sesión =====
-    peso = float(s.get("sb_peso", 70.0))
-    hto  = float(s.get("sb_hto", 0.30))
-    qb   = int(s.get("sb_qb", 200))
-    uf   = int(s.get("sb_uf", 100))
-    dosis_mlkg = int(s.get("sb_dosis", 30))
-    escenarios = s.get("sb_escenarios", s.get("escenarios", ["Sepsis / choque séptico"]))
-
-    # Reusar funciones ya definidas (estarán disponibles más abajo)
-    mod_final, filtro_final, comentarios = combinar_recomendaciones(escenarios)
-    qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
-    ff_txt = f"{ff:.2%}" if ff is not None else "—"
-
-    # Labs/estado (para fundamento)
-    na = float(s.get("na_main", 140.0))
-    k  = float(s.get("k_main", 4.0))
-    ph = float(s.get("ph_main", 7.35))
-    pam = float(s.get("pam", 65.0))
-    vasopresor_alto = True if s.get("vaso_alto_sel","No") == "Sí" else False
-    lactato_desc = True if s.get("lactato_desc_sel","No") == "Sí" else False
-    albumina = float(s.get("alb_main", 3.0))
-    anticoag_tipo = s.get("anticoagulacion_tipo","—")
-    r_targets = s.get("rca_targets", {})
-
-    # Datos de identificación
-    unidad = s.get("rx_unidad", "")
-    nombre_paciente = s.get("rx_nombre_paciente", "")
-    fecha_nac = s.get("rx_fecha_nac", "")
-    edad = s.get("rx_edad", "")
-    sexo = s.get("rx_sexo", "")
-    expediente = s.get("rx_expediente", "")
-    nombre_medico = s.get("rx_nombre_medico", "")
-    sello = s.get("rx_sello", "")
-
-    # Nombre de archivo
-    ts = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    safe_name = "".join(ch for ch in (nombre_paciente or "").replace(" ", "") if ch.isalnum())
-    base = f"TRRC360_{safe_name}_" if safe_name else "TRRC360_"
-    filename = f"{base}{ts}.pdf"
-
-    # ===== Construcción del PDF =====
-    c = canvas.Canvas(filename, pagesize=letter)
-    w, h = letter
-    margin = 50
-    y = h - margin
-
-    # Logo (opcional)
-    try:
-        c.drawImage("logo.png", x=margin, y=y-35, width=120, height=85, preserveAspectRatio=True, mask="auto")
-    except Exception:
-        pass
-
-    # Título y fecha
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(margin, y, "Prescripción Terapia de Reemplazo Renal Continua")
-    c.setFont("Helvetica", 10)
-    c.drawRightString(w - margin, y, datetime.now().strftime("%d/%m/%Y %H:%M"))
-    y -= 28
-
-    # Unidad hospitalaria
-    if unidad:
-        c.setFont("Helvetica", 12)
-        c.drawString(margin, y, f"Unidad hospitalaria: {unidad}")
-        y -= 20
-
-    # Ficha de identificación
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, y, "Ficha de identificación")
-    y -= 18
-    c.setFont("Helvetica", 11)
-    c.drawString(margin,     y, f"Nombre: {nombre_paciente}")
-    c.drawString(margin+280, y, f"Fecha Nac: {fecha_nac}")
-    y -= 16
-    c.drawString(margin,     y, f"Edad: {edad}")
-    c.drawString(margin+140, y, f"Sexo: {sexo}")
-    c.drawString(margin+240, y, f"Expediente: {expediente}")
-    y -= 22
-    c.setFont("Helvetica", 11)
-    c.drawString(margin, y, "—"*95)
-    y -= 16
-
-    # Diagnóstico / escenarios
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, y, "Diagnóstico / escenarios")
-    y -= 16
-    c.setFont("Helvetica", 11)
-    esc_text = ", ".join(escenarios) if escenarios else "—"
-    y = _draw_wrapped_text(c, f"Escenarios: {esc_text}", margin, y, w-2*margin)
-
-    # Prescripción básica
-    c.setFont("Helvetica", 11)
-    c.drawString(margin, y, f"Modalidad: {mod_final or '—'}")
-    y -= 14
-    c.drawString(margin, y, f"Filtro sugerido: {filtro_final or '—'}")
-    y -= 14
-    c.drawString(margin, y, f"FF (estimada): {ff_txt} (objetivo <25%)")
-    y -= 18
-
-    # Flujos
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(margin, y, "Flujos y soluciones")
-    y -= 16
-    c.setFont("Helvetica", 11)
-    c.drawString(margin,     y, f"Qb (mL/min): {_s_int(qb)}")
-    c.drawString(margin+180, y, f"Qp (mL/min): {_s_int(qp)}")
-    c.drawString(margin+360, y, f"Qe (mL/h): {_s_int(qe)}")
-    y -= 16
-    c.drawString(margin,     y, f"Qr pre (mL/h): {_s_int(qr_pre)}")
-    c.drawString(margin+180, y, f"Qr post (mL/h): {_s_int(qr_post)}")
-    c.drawString(margin+360, y, f"Qd (mL/h): {_s_int(qd)}    UF (mL/h): {_s_int(uf)}")
-    y -= 22
-
-    # Anticoagulación
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(margin, y, "Anticoagulación")
-    y -= 16
-    c.setFont("Helvetica", 11)
-    if anticoag_tipo == "HNF":
-        iu_h = s.get("hnf_ui_h", max(1, int(peso*5)))
-        c.drawString(margin, y, f"Tipo: Heparina no fraccionada (HNF)  |  Dosis inicial: {_s_int(iu_h)} UI/h")
-        y -= 16
-        c.drawString(margin, y, "Ajustar a aPTT según protocolo; considerar HBPM previa antes de escalar dosis.")
-        y -= 16
-    elif anticoag_tipo == "RCA":
-        iCa_post = r_targets.get("iCa_post", "—")
-        iCa_sist = r_targets.get("iCa_sist", "—")
-        cit_ml = s.get("rca_citrato_ml_h", None)
-        ca_ml  = s.get("rca_calcio_ml_h", None)
-        c.drawString(margin, y, f"Tipo: RCA  |  Citrato: {_s_int(cit_ml)} mL/h  |  Calcio: {_s_int(ca_ml)} mL/h")
-        y -= 16
-        c.drawString(margin, y, f"Dianas: iCa post-filtro {iCa_post} mmol/L; iCa sistémico {iCa_sist} mmol/L (ajustes 10–20%)")
-        y -= 16
-        y = _draw_wrapped_text(c, "Vigilar Na, HCO₃⁻, pH, anión gap; sospechar acumulación de citrato si iCa bajo pese a ↑ Ca e incremento del anión gap.", margin, y, w-2*margin)
-    else:
-        c.drawString(margin, y, "—")
-        y -= 16
-
-    # Comentarios / recomendaciones (libre)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(margin, y, "Comentarios / recomendaciones")
-    y -= 16
-    c.setFont("Helvetica", 11)
-    comentarios_txt = s.get("rx_comentarios", "") or s.get("comentarios", "") or "—"
-    y = _draw_wrapped_text(c, comentarios_txt, margin, y, w-2*margin)
-
-    # Firma
-    y -= 30
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, y, "Médico tratante:")
-    y -= 18
-    c.setFont("Helvetica", 11)
-    c.drawString(margin, y, nombre_medico or "")
-    y -= 16
-    if sello:
-        y = _draw_wrapped_text(c, f"Sello / Notas: {sello}", margin, y, w-2*margin)
-
-    # ===== Segunda página: Fundamento =====
-    c.showPage()
-    y = h - 50
-    c.setFont("Helvetica-Bold", 13)
-    c.drawString(50, y, "Fundamento y Cálculos")
-    y -= 22
-    c.setFont("Helvetica", 11)
-
-    pdf_extendido = bool(s.get("pdf_extendido", False))
-
-    if not pdf_extendido:
-        for linea in _fundamento_texto_resumen(qb, hto, qp, qp_h, qe, qr_pre, qr_post, qd, uf, ff_txt):
-            y = _draw_wrapped_text(c, linea, 50, y, w-100)
-    else:
-        bloques_resumen = _fundamento_texto_resumen(qb, hto, qp, qp_h, qe, qr_pre, qr_post, qd, uf, ff_txt)
-        for linea in bloques_resumen:
-            y = _draw_wrapped_text(c, linea, 50, y, w-100)
-        y -= 8
-        if y < 120:
-            c.showPage(); y = h - 50; c.setFont("Helvetica", 11)
-
-        partes_ext = _fundamento_texto_extendido(na, k, ph, pam, vasopresor_alto, lactato_desc, albumina,
-                                                 anticoag_tipo, r_targets, filtro_final)
-        for linea in partes_ext:
-            y = _draw_wrapped_text(c, linea, 50, y, w-100)
-            if y < 80:
-                c.showPage(); y = h - 50; c.setFont("Helvetica", 11)
-
-    # ===== Página final: Referencias seleccionadas =====
-    try:
-        refs_pdf = filtrar_refs_por_contexto(escenarios, anticoag_tipo)
-    except Exception:
-        refs_pdf = []
-
-    if refs_pdf:
-        c.showPage()
-        w, h = letter
-        y = h - 50
-        c.setFont("Helvetica-Bold", 13)
-        c.drawString(50, y, "Referencias")
-        y -= 24
-        c.setFont("Helvetica", 10)
-
-        for idx, r in enumerate(refs_pdf, 1):
-            linea = f"[{idx}] {r['title']} — {r['where']} ({r['yr']})"
-            y = _draw_wrapped_text(c, linea, 50, y, w-100, font_size=10, leading=12)
-            if r.get("url"):
-                y = _draw_wrapped_text(c, f"URL: {r['url']}", 60, y, w-110, font_size=9, leading=11)
-            y -= 4
-            if y < 80:
-                c.showPage(); y = h - 50; c.setFont("Helvetica", 10)
-
-    c.showPage()
-    c.save()
-    return filename
-# ================== FIN HELPERS PDF ==================
+if not st.session_state.accepted_legal:
+    st.title("TRRC360 — Asistente para TRRC (CRRT)")
+    st.warning("**Uso docente:** Esta herramienta es para **enseñanza médica** y apoyo a la decisión. "
+               "**No sustituye** el juicio clínico. El uso e interpretación dependen exclusivamente de quien la utiliza.")
+    with st.expander("Ver aviso legal completo", expanded=True):
+        st.markdown("""
+**Aviso legal (obligatorio):**  
+TRRC360 se ofrece con fines educativos. No es dispositivo médico ni reemplaza el juicio clínico.  
+Las decisiones terapéuticas son responsabilidad exclusiva de los profesionales tratantes y deben apegarse a guías y normativa aplicables.  
+El autor no asume responsabilidad por daños derivados del uso o interpretación de esta herramienta.
+""")
+    st.checkbox("He leído y acepto el aviso legal anterior", key="accepted_legal")
+    if not st.session_state.accepted_legal:
+        st.info("Para continuar, marca la casilla de aceptación.")
+        st.stop()
 
 
-# -------- Password Gate --------
-DEFAULT_PASSWORD = "TRRC360"
-PW = st.secrets.get("APP_PASSWORD", DEFAULT_PASSWORD)
 
-if "auth_ok" not in st.session_state:
-    st.session_state.auth_ok = False
 
-with st.sidebar:
-    st.subheader("Acceso")
-    pw_input = st.text_input("Contraseña", type="password", key="login_pw")
-    if st.button("Entrar", key="login_btn"):
-        if pw_input == PW:
-            st.session_state.auth_ok = True
-            st.success("Acceso autorizado. Bienvenido")
-        else:
-            st.error("Contraseña incorrecta")
-
-if not st.session_state.auth_ok:
-    st.title(f"Bienvenido a TRRC360 by Dr. Tapia — {VERSION}")
-    st.caption("Asistente clínico integral para prescripción de Terapias de Reemplazo Renal Continua")
-    try:
-        st.image("logo.png", width=200)
-    except Exception:
-        pass
-    st.warning("Por favor, ingresa la contraseña en el panel izquierdo para continuar.")
     st.stop()
+# ---------------------------------------------------------------
 
-# -------- Header --------
-col_logo, col_title = st.columns([1, 6])
-with col_logo:
-    try:
-        st.image("logo.png", width=100)
-    except Exception:
-        pass
-with col_title:
-    st.title(f"TRRC360 by Dr. Tapia — {VERSION}")
-    st.caption("(uso académico)")
 
-if st.button("🔁 Actualizar", help="Borrar caché y recargar", key="btn_refresh"):
-    try:
-        st.cache_data.clear()
-    except Exception:
-        pass
-    try:
-        st.cache_resource.clear()
-    except Exception:
-        pass
-    st.rerun()
-
-# ---------- Sidebar inputs ----------
 with st.sidebar:
-# ===== Switch global de modo docente (sincroniza UI extendida + PDF extendido) =====
-    st.header("Modo")
-    doc_mode = st.checkbox(
-        "Modo docente extendido (UI y PDF)",
-        value=st.session_state.get("doc_mode", False),
-        key="doc_mode",
-        help="Activa explicación extendida en la app y en el PDF exportado."
-    )
-    # Sincronizar flags derivados
-    st.session_state["pdf_extendido"] = bool(doc_mode)
-    st.session_state["mostrar_fund_extendido"] = bool(doc_mode)
+    st.header("🧮 Parámetros")
+    st.caption(f"TRRC360 — {VERSION}")
+    st.toggle("Modo docente (vista extendida)", key="modo_docente", value=False)
 
-    # ===== Perfiles de unidad =====
-    st.header("Parámetros básicos")
-    peso = st.number_input("Peso (kg)", 10.0, 300.0, 70.0, 0.5, key="sb_peso", help="Peso actual estimado del paciente.")
-    hto  = st.number_input("Hematocrito (fracción)", 0.10, 0.60, 0.30, 0.01, format="%.2f", key="sb_hto", help="Fracción de 0 a 1 (ej. 0.30 = 30%).")
-    qb   = st.number_input("Qb (mL/min)", 80, 300, st.session_state.get("sb_qb", 200), 10, key="sb_qb", help="Flujo sanguíneo de bomba (mL/min).")
-    uf   = st.number_input("UF (mL/h)", 0, 2000, st.session_state.get("sb_uf", 100), 10, key="sb_uf", help="Ultrafiltración neta deseada (mL/h).")
-    dosis_mlkg = st.slider("Dosis objetivo (mL/kg/h)", 10, 45, st.session_state.get("sb_dosis", 30), key="sb_dosis", help="Dosis de efluente: objetivo usual 20–25 mL/kg/h; prescribir ~10–20% extra si hay pausas.")
+    # --- Gestión de pacientes + privacidad
+    st.subheader("👤 Paciente")
+    db = _load_db()
+    existing = sorted(list(db.keys()))
+    nombre = st.text_input("Nombre/ID", "Paciente 001")
 
-    st.markdown("---")
-    st.subheader("Estado(s) clínico(s)")
-    escenarios_catalogo = [
-        "Sepsis / choque séptico",
-        "Choque cardiogénico",
-        "Post infarto",
-        "Neurocrítico / TCE",
-        "Sobrecarga hídrica aislada",
-        "Intoxicación / sobredosis",
-        "Hiponatremia severa",
-        "Hipernatremia",
-        "Hiperamonemia",
-        "Rabdomiólisis",
-        "Síndrome de liberación de citocinas"
-    ]
-    escenarios = st.multiselect("Selecciona hasta 3", escenarios_catalogo, max_selections=3,
-                                default=["Sepsis / choque séptico"], key="sb_escenarios", help="Afecta modalidad, filtro y reglas de ajuste.")
+    st.caption("**Aviso de privacidad (resumen):** Si capturas nombre/ID y otros datos, se guardarán localmente "
+               "en este equipo dentro de `patients_trrc360.json`. No se comparten a terceros. Usa identificadores "
+               "no nominales cuando sea posible. Adapta este aviso a tu normativa vigente.")
+    consentimiento = st.checkbox("He leído y acepto el aviso de privacidad")
 
-# ========== LÓGICA BASE ==========
-def prioridad_modalidad(m):
-    if m in ["CVVHDF", "CVVHDF (flujos bajos)", "CVVHDF + HCO"]: return 3
-    if m == "CVVHD": return 2
-    if m == "CVVHF": return 1
-    return 0
+    col_save, col_load = st.columns([1,1])
+    with col_save:
+        save_click = st.button("💾 Guardar")
+    with col_load:
+        to_load = st.selectbox("Cargar existente", ["—"] + existing, index=0)
+        load_click = st.button("⬇️ Cargar seleccionado")
 
-def prioridad_filtro(f):
-    if f == "Alta adsorción/HCO": return 99
-    if "M200" in f: return 3
-    if "M150" in f or "M100–M150" in f: return 2
-    if "M100" in f: return 1
-    return 0
+    col_exp, col_imp = st.columns([1,1])
+    with col_exp:
+        if st.download_button(
+            "Exportar DB (.json)",
+            data=json.dumps(db, ensure_ascii=False, indent=2).encode("utf-8"),
+            file_name="patients_trrc360.json",
+            mime="application/json"
+        ):
+            pass
+    with col_imp:
+        up = st.file_uploader("Importar DB (.json)", type=["json"], accept_multiple_files=False)
+        if up is not None:
+            try:
+                db_in = json.loads(up.read().decode("utf-8"))
+                if isinstance(db_in, dict):
+                    _save_db(db_in)
+                    st.success("Base importada.")
+                    db = db_in
+                    existing = sorted(list(db.keys()))
+                else:
+                    st.error("Estructura inválida; se esperaba dict JSON.")
+            except Exception as e:
+                st.error(f"Error al importar: {e}")
 
-def sugerir_por_escenario(esc):
-    if esc == "Sepsis / choque séptico":
-        return ("CVVHDF", "Alta adsorción/HCO", "Mixto conv/dif; FF≤25%. Adsorción opcional; beneficio clínico duro incierto.")
-    if esc == "Choque cardiogénico":
-        return ("CVVHDF", "M150 (~1.5 m²)", "Evitar cambios bruscos; UF conservadora; vigilar FF.")
-    if esc == "Post infarto":
-        return ("CVVHD", "M100–M150", "Difusivo; control fino de electrolitos; UF cauta.")
-    if esc == "Neurocrítico / TCE":
-        return ("CVVHDF (flujos bajos)", "M100 (~1.0 m²)", "Evitar oscilaciones osmóticas; corrección Na guiada.")
-    if esc == "Sobrecarga hídrica aislada":
-        return ("CVVHF", "M200 (~2.0 m²)", "Convectivo favorece UF; vigilar FF y tolerancia hemodinámica.")
-    if esc == "Intoxicación / sobredosis":
-        return ("CVVHD (alta dosis)", "M200 (~2.0 m²)", "Difusión alta; evaluar unión a proteínas. Considerar IHD si hemodinámicamente posible.")
-    if esc == "Hiponatremia severa":
-        return ("CVVHDF", "M100 (~1.0 m²)", "Dializado Na bajo; no exceder 8–10 mEq/L/24h (≤8 si alto riesgo ODS).")
-    if esc == "Hipernatremia":
-        return ("CVVHDF", "M100–M150", "Dializado Na alto; ≈0.5 mEq/L/h (8–10 mEq/L/día) de corrección.")
-    if esc == "Hiperamonemia":
-        return ("CVVHD", "M150 (~1.5 m²)", "Difusión continua; prioriza dosis/flujo; buffer adecuado.")
-    if esc == "Rabdomiólisis":
-        return ("CVVHDF", "M200 (~2.0 m²)", "Elimina mioglobina; considerar HCO con vigilancia de albúmina.")
-    if esc == "Síndrome de liberación de citocinas":
-        return ("CVVHDF + HCO", "Alta adsorción/HCO", "Adsorción de mediadores (beneficio duro incierto); usar en protocolos.")
-    return ("", "", "")
+    
+    st.subheader("📄 Documentación")
+    try:
+        with open("README.md", "r", encoding="utf-8") as f:
+            readme_data = f.read()
+    except Exception:
+        readme_data = "README no disponible."
+    try:
+        with open("LICENSE", "r", encoding="utf-8") as f:
+            license_data = f.read()
+    except Exception:
+        license_data = "LICENSE no disponible."
+    st.download_button("⬇️ Descargar README.md", data=readme_data, file_name="README.md", mime="text/markdown")
+    st.download_button("⬇️ Descargar LICENSE (MIT)", data=license_data, file_name="LICENSE", mime="text/plain")
 
-def combinar_recomendaciones(escenarios_sel):
-    mods, filts, coments = [], [], []
-    for e in escenarios_sel:
-        m, f, c = sugerir_por_escenario(e)
-        if m: mods.append(m)
-        if f: filts.append(f)
-        if c: coments.append(c)
-    mod_final = ""
-    if mods:
-        prio = {m: prioridad_modalidad(m) for m in mods}
-        mod_final = sorted(mods, key=lambda x: prio[x], reverse=True)[0]
-    filtro_final = ""
-    if filts:
-        filtro_final = sorted(filts, key=lambda x: prioridad_filtro(x), reverse=True)[0]
-    comentarios = " | ".join(coments)
-    return mod_final, filtro_final, comentarios
+    st.subheader("Datos biométricos")
+    colA, colB = st.columns(2)
+    with colA:
+        peso_kg = st.number_input("Peso (kg)", min_value=1.0, max_value=400.0, value=70.0, step=0.5)
+        hto = st.number_input("Hematocrito (%)", min_value=0.0, max_value=80.0, value=30.0, step=0.5)
+    with colB:
+        talla_cm = st.number_input("Talla (cm)", min_value=40.0, max_value=250.0, value=170.0, step=0.5)
+        urea_pre = st.number_input("Urea pre (mg/dL)", min_value=0.0, max_value=500.0, value=140.0, step=0.1)
+        urea_post = st.number_input("Urea post (mg/dL)", min_value=0.0, max_value=500.0, value=60.0, step=0.1)
 
-def flows_and_ff(qb, hto, dosis_mlkg, peso, uf, modalidad):
-    qp = qb * (1 - hto)
-    qp_h = qp * 60
-    qe = dosis_mlkg * peso
-    if "CVVHD" in modalidad and "CVVHDF" not in modalidad:
-        frac_conv = 0.0
-    elif "CVVHF" in modalidad:
-        frac_conv = 1.0
+    st.subheader("Cálculo de CRRT")
+    # Origen de modalidad (auto/manual)
+    modo_modalidad = st.radio("Origen de modalidad", ["Recomendación automática", "Elegir manualmente"], index=0)
+    if modo_modalidad == "Elegir manualmente":
+        modalidad = st.selectbox("Modalidad", ["CVVH", "CVVHD", "CVVHDF"], index=2)
     else:
-        frac_conv = 0.6  # CVVHDF default
-    qr_total = 0 if frac_conv == 0 else max(min(qp_h * 0.25, max(qe - uf, 0)), 0) * frac_conv
-    qr_pre = round(qr_total * 0.7)
-    qr_post = round(qr_total * 0.3)
-    qd = max(qe - (qr_pre + qr_post + uf), 0)
-    denom = max(qp_h + qr_pre, 1e-9)
-    ff = (qr_post + uf) / denom
-    return qp, qp_h, qe, qr_pre, qr_post, qd, ff
+        modalidad = "AUTO"  # se resuelve en la sección principal
 
-# ========= Catálogo de filtros =========
-@dataclass
-class Filtro:
-    nombre: str
-    tags: list[str]
-    area_m2: float | None
-    comentarios: str
+    # Escenario clínico
+    escenario = st.selectbox("Escenario clínico (docente)", SCENARIOS, index=SCENARIOS.index("Sepsis/AKI"))
 
-FILTROS: dict[str, Filtro] = {
-    "Oxiris (AN69-ST; adsorción alta)": Filtro(
-        nombre="Oxiris (AN69-ST; adsorción alta)",
-        tags=["adsorción","convectivo","difusivo","CVVHDF","endotoxinas","sepsis"],
-        area_m2=1.5,
-        comentarios="Membrana con capacidad de adsorción de mediadores. Uso opcional/protocolo; beneficio en desenlaces duros aún incierto."
-    ),
-    "HCO 1100 (alta cut-off)": Filtro(
-        nombre="HCO 1100 (alta cut-off)",
-        tags=["HCO","convectivo","CVVH","CVVHDF","mioglobina"],
-        area_m2=1.1,
-        comentarios="Alta permeabilidad para medianas/mioglobina; vigilar pérdidas de albúmina (reponer si Alb <3.0; cuestionar si Alb <2.5)."
-    ),
-    "HCO 730 (alta cut-off)": Filtro(
-        nombre="HCO 730 (alta cut-off)",
-        tags=["HCO","convectivo","CVVH","CVVHDF","mioglobina"],
-        area_m2=0.7,
-        comentarios="Similar a HCO 1100, menor área; mismas precauciones de albúmina."
-    ),
-    "Convectivo estándar (1.3 m²)": Filtro(
-        nombre="Convectivo estándar (1.3 m²)",
-        tags=["convectivo","CVVH","CVVHDF"],
-        area_m2=1.3,
-        comentarios="Uso general; alternativa cuando no hay HCO/adsorción."
-    ),
-    "Difusivo estándar (2.1 m²)": Filtro(
-        nombre="Difusivo estándar (2.1 m²)",
-        tags=["difusivo","CVVHD","CVVHDF"],
-        area_m2=2.1,
-        comentarios="Útil si se prioriza depuración difusiva (urea/K)."
-    ),
+    col1, col2 = st.columns(2)
+    with col1:
+        qb = st.number_input("Qb (mL/min)", min_value=20.0, max_value=400.0, value=150.0, step=5.0)
+        qp_mlkgh = st.number_input("Qp (mL/kg/h)", min_value=0.0, max_value=120.0, value=25.0, step=1.0)
+        qd_mlkgh = st.number_input("Qd (mL/kg/h)", min_value=0.0, max_value=120.0, value=15.0, step=1.0)
+    with col2:
+        qe_mlkgh = st.number_input("Qe (mL/kg/h)", min_value=0.0, max_value=120.0, value=10.0, step=1.0)
+        qrep_mlkgh = st.number_input("Reposición (mL/kg/h)", min_value=0.0, max_value=120.0, value=15.0, step=1.0)
+        uf_ml_h = st.number_input("UF objetivo (mL/h)", min_value=0.0, max_value=5000.0, value=100.0, step=10.0)
+
+    anticoag = st.selectbox("Anticoagulación", ["Sin anticoagulación", "Heparina", "Citrato", "Otros"], index=1)
+
+    # Downtime para calcular dosis entregada
+    st.subheader("Eficiencia de entrega")
+    downtime_pct = st.number_input("Downtime estimado (%)", min_value=0.0, max_value=80.0, value=15.0, step=1.0)
+
+    # Anticoagulación docente
+    st.subheader("Anticoagulación (docente)")
+    candidato_citrato = st.checkbox("Candidato a citrato", value=True)
+    cc_falla_hepatica = st.checkbox("Falla hepática severa", value=False)
+    cc_hipoperfusion = st.checkbox("Hipoperfusión/shock grave", value=False)
+    cc_hipocalcemia = st.checkbox("Hipocalcemia refractaria", value=False)
+
+
+# Cargar paciente (nota: para hidratar controles completos, habría que usar session_state; opcional)
+if load_click and to_load != "—":
+    payload = unpack_patient_payload(db.get(to_load, {}))
+    st.info(f"Cargado: {to_load}. (Hidratación automática de controles completa disponible en versión futura).")
+
+# Guardar paciente (requiere consentimiento)
+if save_click and consentimiento:
+    payload = {
+        "nombre": nombre,
+        "peso_kg": peso_kg,
+        "hto": hto,
+        "talla_cm": talla_cm,
+        "urea_pre": urea_pre,
+        "urea_post": urea_post,
+        "modalidad": modalidad if modalidad != "AUTO" else None,
+        "qb": qb,
+        "qp_mlkgh": qp_mlkgh,
+        "qd_mlkgh": qd_mlkgh,
+        "qe_mlkgh": qe_mlkgh,
+        "qrep_mlkgh": qrep_mlkgh,
+        "uf_ml_h": uf_ml_h,
+        "anticoag": anticoag,
+        "escenario": escenario,
+        "tendencias_defaults": {
+            "na": (140.0, 138.0, 139.0),
+            "k": (4.8, 4.6, 4.4),
+            "lact": (2.1, 2.0, 1.8),
+            "nh4": (35.0, 40.0, 30.0),
+            "ure": (150.0, 120.0, 100.0),
+            "crn": (9.0, 8.5, 7.8),
+        }
+    }
+    db[nombre] = pack_patient_payload(nombre, payload)
+    _save_db(db)
+    st.success(f"Paciente '{nombre}' guardado.")
+elif save_click and not consentimiento:
+    st.error("Para guardar datos, primero acepta el aviso de privacidad.")
+
+# --------------------------------- Main ---------------------------------------
+st.title("TRRC360 — Asistente para TRRC (CRRT)")
+st.caption("Diseñado por Dr. Tapia | Escenarios clínicos + recomendación docente (auto/manual)")
+st.warning("**Aviso clínico:** Esta herramienta es para **enseñanza médica** y apoyo a la decisión. "
+           "**No sustituye** el juicio clínico. El uso, interpretación y aplicación corresponden exclusivamente "
+           "a quien la utiliza, aun cuando la app esté fundamentada en guías y literatura.")
+
+# Mensaje de fundamentos sin ternario
+if st.session_state.get("modo_docente", False):
+    st.info("Vista extendida ACTIVADA (usa el switch en la barra lateral para ocultar).")
+else:
+    st.caption("Vista extendida DESACTIVADA (actívala en la barra lateral).")
+
+divider()
+
+# -------- Cálculos principales --------
+st.header("⚙️ Prescripción y cálculos")
+# Guardrails de entrada
+if peso_kg <= 0:
+    st.error("Peso inválido (≤0). Ajusta para continuar con cálculos.")
+if qb <= 0:
+    st.warning("Qb es 0 o negativo; FF y otros cálculos pueden no ser válidos.")
+
+
+bsa = bsa_mosteller(peso_kg, talla_cm)
+dosis_total_mlkgh = dosis_crrt_total_mlkgh(qp_mlkgh, qd_mlkgh, qe_mlkgh, qrep_mlkgh)
+dosis_total_lh = dosis_l_h(dosis_total_mlkgh, peso_kg)
+ff = fraccion_filtracion(qp_mlkgh, qb, hto, peso_kg)
+urr_val = urr(urea_pre, urea_post)
+
+c1, c2, c3, c4 = st.columns(4)
+with c1: st.metric("BSA (Mosteller)", f"{bsa:.2f} m²")
+with c2: st.metric("Dosis total", f"{dosis_total_mlkgh:.0f} mL/kg/h")
+with c3: st.metric("Dosis (L/h)", f"{dosis_total_lh:.2f} L/h")
+with c4: st.metric("URR (%)", f"{urr_val:.1f}%" if urr_val is not None else "—")
+
+st.metric("Fracción de filtración (aprox)", f"{ff:.2f}" if ff is not None else "—")
+
+# Dosis entregada (ajuste por downtime)
+dosis_entregada_mlkgh = max(dosis_total_mlkgh * (1.0 - (downtime_pct/100.0)), 0.0)
+st.metric("Dosis entregada (estimada)", f"{dosis_entregada_mlkgh:.0f} mL/kg/h")
+
+# Alertas por FF
+if ff is None:
+    st.info("FF no calculable: revisa Qb y Hto.")
+elif ff > 0.30:
+    st.error("FF > 0.30: alto riesgo de hemoconcentración; considera ↓Qp o ↑Qb.")
+elif ff >= 0.25:
+    st.warning("FF 0.25–0.30: advertencia de hemoconcentración; optimiza parámetros.")
+else:
+    st.success("FF ≤ 0.25: objetivo docente razonable.")
+
+# Sugerencia docente de anticoagulación
+if candidato_citrato and not (cc_falla_hepatica or cc_hipoperfusion or cc_hipocalcemia):
+    sug_anticoag = "Citrato"
+    st.caption("Sugerencia docente de anticoagulación: Citrato (si hay experiencia y monitoreo adecuados).")
+else:
+    sug_anticoag = "Heparina"
+    st.caption("Sugerencia docente de anticoagulación: Heparina (si citrato no es candidato o está contraindicado).")
+
+
+# Alerta de UF/h con umbral de 2 mL/kg/h (sin ternario)
+uf_por_kg_h = uf_ml_h / peso_kg if peso_kg > 0 else 0.0
+if uf_por_kg_h > 2:
+    st.warning("⚠️ UF/h > 2 mL/kg/h")
+else:
+    st.success("OK")
+
+if st.session_state.get("modo_docente", False):
+    with st.expander("Fundamentos y notas de cálculo"):
+        st.markdown("""
+**Dosis (mL/kg/h)** = Qp + Qd + Qe + Reposición.  
+**Dosis (L/h)** = (mL/kg/h × peso)/1000.  
+**FF** ≈ (Qp·peso/60) / [Qb·(1−Hto)].  
+**URR** = (1 − Urea_post/Urea_pre) × 100.
+        """)
+
+divider()
+
+# -------- Tendencias de laboratorio (T1–T3) --------
+st.header("📈 Tendencias de laboratorio (T1–T3)")
+st.caption("Cada gráfica muestra T1, T2, T3. Ajusta los valores para alimentar la recomendación.")
+
+def num_input_safe(label: str, key: str, vmin: float, vmax: float, step: float = 0.5, default: float = None) -> float:
+    default = vmin if default is None else max(vmin, min(default, vmax))
+    return st.number_input(label, key=key, value=default, min_value=vmin, max_value=vmax, step=step)
+
+def evaluar_tendencia(v1: float, v3: float, tag: str) -> Tuple[str, str]:
+    rangos = {
+        "na": (135.0, 145.0),
+        "k": (3.5, 5.1),
+        "lactato": (0.0, 2.2),
+        "amonio": (0.0, 45.0),
+        "urea": (0.0, 500.0),
+        "creatinina": (0.0, 20.0),
+    }
+    low, high = rangos.get(tag, (None, None))
+    if low is not None and high is not None:
+        if tag == "lactato" and v3 > high:
+            return ("warn", "Lactato elevado (>2.2 mmol/L)")
+        if tag == "amonio" and v3 > high:
+            return ("warn", "Amonio elevado")
+        if tag in ("na", "k") and (v3 < low or v3 > high):
+            return ("warn", f"{tag.upper()} fuera de rango")
+    if v3 < v1: return ("good", f"{tag.capitalize()} en descenso")
+    if v3 > v1: return ("warn", f"{tag.capitalize()} en ascenso")
+    return ("ok", f"{tag.capitalize()} sin cambio")
+
+def plot_trend(title: str, t1: float, t2: float, t3: float, y_label: str = ""):
+    fig, ax = plt.subplots()
+    xs = [1, 2, 3]
+    ys = [t1, t2, t3]
+    ax.plot(xs, ys, marker="o")
+    ax.set_title(title)
+    ax.set_xlabel("Tiempo")
+    if y_label:
+        ax.set_ylabel(y_label)
+    ax.grid(True)
+    st.pyplot(fig)
+    plt.close(fig)
+
+def fila_tendencia(etq: str, key: str, tag: str, vmin: float = 0.0, vmax: float = 1000.0, step: float = 0.5, defaults=(0.0, 0.0, 0.0)):
+    st.markdown(f"**{etq}**")
+    c1, c2, c3, _ = st.columns([1.2, 1.2, 2, 1.2])
+    t1 = num_input_safe("T1", f"{key}_t1", vmin, vmax, step, defaults[0])
+    t2 = num_input_safe("T2", f"{key}_t2", vmin, vmax, step, defaults[1])
+    t3 = num_input_safe("T3", f"{key}_t3", vmin, vmax, step, defaults[2])
+
+    d12 = t2 - t1
+    d23 = t3 - t2
+    c5, c6 = st.columns(2)
+    c5.write(f"Δ12: {d12:+.1f}")
+    c6.write(f"Δ23: {d23:+.1f}")
+
+    level, msg = evaluar_tendencia(t1, t3, tag)
+    if level == "warn":
+        st.warning(msg)
+    elif level == "good":
+        st.success(msg)
+    else:
+        st.info(msg)
+
+    plot_trend(etq, t1, t2, t3, etq)
+    st.markdown("---")
+    return None
+
+# Defaults de tendencias
+defaults = {
+    "na": (140.0, 138.0, 139.0),
+    "k": (4.8, 4.6, 4.4),
+    "lact": (2.1, 2.0, 1.8),
+    "nh4": (35.0, 40.0, 30.0),
+    "ure": (150.0, 120.0, 100.0),
+    "crn": (9.0, 8.5, 7.8),
 }
 
-def sugerir_filtro_por_escenarios(escenarios_sel: list[str]) -> str:
-    e = " ".join([s.lower() for s in escenarios_sel])
-    if any(x in e for x in ["sepsis", "choque", "síndrome de liberación de citocinas", "slc"]):
-        return "Oxiris (AN69-ST; adsorción alta)"
-    if any(x in e for x in ["rabdomiolisis", "rabdomiólisis", "mioglobina"]):
-        return "HCO 1100 (alta cut-off)"
-    if any(x in e for x in ["hiperamoniemia", "amonio"]):
-        return "Difusivo estándar (2.1 m²)"
-    if "cvvhd" in e:
-        return "Difusivo estándar (2.1 m²)"
-    return "Convectivo estándar (1.3 m²)"
+_ = fila_tendencia("Na (mEq/L)", "na", "na", 100.0, 200.0, 0.5, defaults["na"])
+_ = fila_tendencia("K (mEq/L)", "k", "k", 1.0, 10.0, 0.1, defaults["k"])
+_ = fila_tendencia("Lactato (mmol/L)", "lact", "lactato", 0.0, 20.0, 0.1, defaults["lact"])
+_ = fila_tendencia("Amonio (µmol/L)", "nh4", "amonio", 0.0, 1000.0, 0.5, defaults["nh4"])
+_ = fila_tendencia("Urea (mg/dL)", "ure", "urea", 0.0, 500.0, 0.5, defaults["ure"])
+_ = fila_tendencia("Creatinina (mg/dL)", "crn", "creatinina", 0.0, 20.0, 0.1, defaults["crn"])
 
-def checar_contraindicaciones(filtro: str, albumina_gdl: float | None = None, hit: bool | None = None):
-    alerts = []
-    fname = filtro.lower()
-    if "hco" in fname and albumina_gdl is not None and albumina_gdl < 2.5:
-        alerts.append("⚠️ Con HCO vigilar pérdidas de albúmina (Alb < 2.5 g/dL): reconsiderar su uso.")
-    if "oxiris" in fname and hit is True:
-        alerts.append("⚠️ Evitar Oxiris si hay antecedente de HIT.")
-    return alerts
-
-# ========= Sepsis/Choque helpers =========
-def sepsis_presente(escs: list[str]) -> bool:
-    e = " ".join([s.lower() for s in escs or []])
-    return any(x in e for x in ["sepsis", "séptico", "choque séptico", "shock séptico", "choque"])
-
-def rec_mod_sepsis(disponibilidad_oxiris=True, disponibilidad_hco=True):
-    rec = {"modalidad": "CVVHDF", "opciones": ["CVVHDF (preferente)", "CVVHD (si no hay convectivo alto)"], "filtros": []}
-    if disponibilidad_oxiris: rec["filtros"].append("Oxiris® (adsorción; beneficio clínico duro incierto)")
-    if disponibilidad_hco:    rec["filtros"].append("HCO alta cut-off (mioglobina/medianas; vigilar albúmina)")
-    return rec
-
-def rec_dosis_trrc(peso_kg: float | None):
-    return {"inicio_mlkg_h": (25, 30), "mantenimiento_mlkg_h": (20, 25)}
-
-def rec_uf(map_mmHg: float | None, vasopresor_alta_dosis: bool | None, lactato_baja: bool | None):
-    plan = {"inicio": "UF 0–50 mL/h (o 0 si choque franco)",
-            "progresión": "↑ 25–50 mL/h cada 4–6 h si PAM ≥65 y lactato ↓",
-            "suspender_si": "Suspender UF si PAM <60 o ↑ vasopresores"}
-    if map_mmHg is not None:
-        if map_mmHg < 60 or (vasopresor_alta_dosis is True):
-            plan["estado"] = "Suspender/UF mínima"
-        elif map_mmHg >= 65 and lactato_baja:
-            plan["estado"] = "Puede aumentar UF gradualmente"
-        else:
-            plan["estado"] = "Mantener UF baja/neutra"
-    return plan
-
-def rec_labs(k: float | None, ph: float | None, na: float | None):
-    ajustes = []
-    if k is not None and k >= 6.0: ajustes.append("Hiperkalemia: ↑ difusivo (Qd 2–3 L/h) y dializado K 0–2, hasta K <5.5.")
-    if ph is not None and ph < 7.20: ajustes.append("Acidosis severa: solución con bicarbonato (no lactato) y ↑ Qd/Qe hasta 2–3 L/h.")
-    if na is not None and na < 125: ajustes.append("Hiponatremia: no exceder 8–10 mmol/L/24 h (≤8 si alto riesgo ODS); ajustar Na en solución.")
-    if na is not None and na > 155: ajustes.append("Hipernatremia: ≈0.5 mmol/L/h (8–10 mmol/d) con dializado Na más alto; corrección gradual.")
-    return ajustes or ["Sin ajustes críticos automáticos por laboratorio."]
-
-def rec_balance_predil_postdil(htc_alto: bool | None):
-    base = {"pre": 30, "post": 70, "nota": "Postdilución prioriza depuración; predilución protege filtro."}
-    if htc_alto: return {"pre": 50, "post": 50, "nota": "↑ predilución si Hto >35% o coagulación del filtro."}
-    return base
-
-def alertas_sepsis(ph: float | None, map_mmHg: float | None, na: float | None, k: float | None,
-                   vasopresor_alta_dosis: bool | None):
-    al = []
-    if ph is not None and ph < 7.20: al.append("Confirmar solución con bicarbonato (no lactato) si pH <7.20.")
-    if (map_mmHg is not None and map_mmHg < 60) or vasopresor_alta_dosis: al.append("Suspender UF si PAM <60 mmHg o vasopresor en aumento.")
-    if na is not None: al.append("Velocidad de corrección de Na: hipoNa ≤8–10 mmol/L/24h (≤8 si alto riesgo ODS); hiperNa ≈0.5 mmol/L/h.")
-    if k is not None and k >= 6.0: al.append("K≥6: aumentar Qd a 2–3 L/h con dializado K 0–2; labs cada 2–4 h.")
-    return al
-
-def checklist_final(modalidad: str, dosis_txt: str, uf_txt: str, solucion: str, filtro: str,
-                    balance_txt: str):
-    return [
-        f"Modalidad: {modalidad}",
-        f"Dosis efectiva (ml/kg/h): {dosis_txt}",
-        f"Ultrafiltración: {uf_txt}",
-        f"Solución: {solucion}",
-        f"Filtro: {filtro}",
-        f"Pre/Post: {balance_txt}"
-    ]
-
-# ---------- Tabs ----------
-tab_main, tab_ktv, tab_balance, tab_anticoag, tab_trends, tab_fund, tab_rx, tab_refs = st.tabs([
-    "Prescripción",
-    "Dosis por objetivos (Kt/V)",
-    "Balance dinámico",
-    "Anticoagulación extendida",
-    "Tendencias de laboratorio",
-    "Fundamento y Cálculos",
-    "Resumen / PDF",
-    "Referencias",
-])
-
-# ---------- Main (Prescripción) ----------
-with tab_main:
-    st.subheader("Recomendación combinada")
-
-    cP1, cP2, cP3 = st.columns(3)
-    with cP1:
-        pam = st.number_input("PAM (mmHg)", 30.0, 130.0, 65.0, 1.0, key="pam", help="Presión arterial media actual.")
-    with cP2:
-        vasopresor_alto = st.selectbox("Vasopresor en dosis altas", ["No", "Sí"], 0, key="vaso_alto_sel")
-        vasopresor_alto_bool = (vasopresor_alto == "Sí")
-    with cP3:
-        lactato_desc = st.selectbox("Lactato en descenso", ["No", "Sí"], 0, key="lactato_desc_sel")
-        lactato_desc_bool = (lactato_desc == "Sí")
-
-    mod_final, filtro_final, comentarios = combinar_recomendaciones(escenarios)
-    filtro_sugerido = sugerir_filtro_por_escenarios(escenarios)
-
-    opciones_filtro = list(FILTROS.keys())
-    idx_default = opciones_filtro.index(filtro_sugerido) if filtro_sugerido in opciones_filtro else 0
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Modalidad", mod_final or "—")
-    c2.metric("Filtro sugerido", filtro_sugerido or "—")
-    filtro_elegido = c3.selectbox("Filtro (puedes cambiarlo)", opciones_filtro, index=idx_default, key="ui_filtro",
-                                  help=FILTROS[opciones_filtro[idx_default]].comentarios)
-
-    # ===== Laboratorios (rápido) – con Albúmina =====
-    st.markdown("### Laboratorios (rápido)")
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        na = st.number_input("Na (mEq/L)", 100.0, 200.0, 140.0, 0.5, key="na_main", help="Objetivo de corrección: hipoNa ≤8–10 mEq/L/24h (≤8 si alto riesgo ODS).")
-        k  = st.number_input("K (mEq/L)", 1.0, 10.0, 4.0, 0.1, key="k_main", help="K≥6: sugerir Qd 2–3 L/h con dializado K bajo/0 y re-labs cada 2–4 h.")
-    with col2:
-        hco3    = st.number_input("HCO₃⁻ (mEq/L)", 5.0, 45.0, 20.0, 0.5, key="hco3_main", help="Si acidosis: usar soluciones con bicarbonato; evitar lactato.")
-        lactato = st.number_input("Lactato (mmol/L)", 0.0, 20.0, 2.0, 0.1, key="lac_main")
-    with col3:
-        amonio = st.number_input("Amonio (µmol/L)", 0.0, 1000.0, 80.0, 5.0, key="nh4_main", help="En inestables, CRRT continua; dosis/flujo condicionan el clearance.")
-        ck     = st.number_input("CK (U/L)", 0.0, 100000.0, 200.0, 50.0, key="ck_main", help=">5000 sugiere rabdomiólisis → considerar HCO con vigilancia de albúmina.")
-    with col4:
-        ph        = st.number_input("pH", 6.80, 7.80, 7.35, 0.01, format="%.2f", key="ph_main")
-        uresis24  = st.number_input("Uresis 24 h (mL)", 0, 20000, 800, 50, key="ur_main")
-        albumina  = st.number_input("Albúmina (g/dL)", 1.0, 5.5, 3.0, 0.1, key="alb_main", help="Si HCO y Alb <3.0: vigilar y reponer; si Alb <2.5, cuestionar HCO.")
-
-    # Alertas por filtro considerando albúmina y HIT
-    hit_bool = bool(st.session_state.get("hit_previa_bool", False))
-    alertas = checar_contraindicaciones(filtro_elegido, albumina_gdl=albumina, hit=hit_bool)
-    extra_hco_note = []
-    if "HCO" in filtro_elegido and albumina < 3.0:
-        extra_hco_note.append("💡 HCO con Alb <3.0: considerar reposición de albúmina y reevaluación de objetivos.")
-    if alertas or extra_hco_note:
-        st.warning(" | ".join(alertas + extra_hco_note))
-
-    # ===== Flujos base =====
-    qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
-
-    st.markdown("### Flujos sugeridos (base)")
-    ca, cb, cc, cd = st.columns(4)
-    ca.metric("Qb (mL/min)", qb); cb.metric("Qp (mL/min)", int(qp))
-    cc.metric("Qe (mL/h)", int(qe)); cd.metric("UF (mL/h)", uf)
-    ce, cf, cg = st.columns(3)
-    ce.metric("Qr pre (mL/h)", qr_pre); cf.metric("Qr post (mL/h)", qr_post); cg.metric("Qd (mL/h)", int(qd))
-    st.info(comentarios or "—")
-    st.caption("Dosis objetivo 20–25 mL/kg/h; sin beneficio consistente por encima de 25 (ver Referencias).")
-    st.caption("Usar FF <25% para proteger el filtro y mantener estabilidad (ver Referencias).")
-
-    # ===== Semáforo de FF y acciones sugeridas =====
-    st.markdown("#### Estado del filtro (FF)")
-    ff_pct = ff * 100 if ff is not None else 0.0
-    acciones = []
-    if ff_pct <= 20:
-        st.success(f"FF ≈ {ff_pct:.1f}% (Verde): óptima.")
-        acciones = ["Mantener configuración.", "Monitorizar coagulación del filtro y presiones transmembrana."]
-    elif 20 < ff_pct <= 25:
-        st.warning(f"FF ≈ {ff_pct:.1f}% (Ámbar): límite prudencial.")
-        acciones = ["Considerar ↑ predilución (mover de post a pre).", "Valorar ↑ Qb si hemodinámicamente tolerado.", "Evitar ↑ de UF si no es indispensable."]
-    else:
-        st.error(f"FF ≈ {ff_pct:.1f}% (Rojo): alto riesgo de coagulación.")
-        acciones = ["↑ predilución (disminuir postdilución).", "↓ Qr_post y/o ↓ UF.", "Considerar ↑ Qb si tolera.", "Revisar anticoagulación (RCA/HNF)."]
-    st.caption("Acciones sugeridas: " + " · ".join(acciones))
-
-    # Sugerencias automáticas por laboratorio
-    sugs = []
-    if na < 125: sugs.append("HipoNa: no exceder 8–10 mmol/L/24 h (≤8 si alto riesgo ODS); ajustar Na en solución.")
-    if na > 155: sugs.append("HiperNa: ≈0.5 mmol/L/h (8–10 mmol/día) con dializado Na más alto; corrección gradual.")
-    if k < 3.0: sugs.append("K<3: corregir potasio; evitar convección alta hasta normalizar.")
-    if k > 5.5: sugs.append("K>5.5: aumentar difusivo (CVVHD/CVVHDF) y usar dializado K bajo.")
-    if amonio > 150: sugs.append("Amonio alto: CVVHD alta dosis; prioriza flujo/dosis más que modalidad.")
-    if ck > 5000: sugs.append("CK alta: sospecha rabdomiólisis; considerar HCO con vigilancia de albúmina.")
-    st.markdown("**Sugerencias:** " + (" | ".join(sugs) if sugs else "—"))
-
-    # ===== Banner Hiperkalemia/Acidosis ⇒ Autopropuesta =====
-    cond_qd_alto = (k >= 6.0) or (ph < 7.20)
-    if cond_qd_alto:
-        st.warning("🔴 Condición crítica (K≥6.0 y/o pH<7.20) → proponer **Qd 2,000–3,000 mL/h** con **dializado K 0–2 mmol/L** y re-labs de K cada **2–4 h**.")
-        aplicar_auto = st.checkbox("Aplicar autosugerencia Qd≥2000 mL/h (ajusta dosis efectiva)", value=False, key="chk_auto_qd")
-        if aplicar_auto:
-            qd_auto = max(2000, int(qd))
-            qe_auto = qd_auto + qr_pre + qr_post + uf
-            dosis_auto = qe_auto / max(peso, 1e-6)
-            cA, cB, cC = st.columns(3)
-            cA.metric("Qd (mL/h) autosugerido", qd_auto)
-            cB.metric("Qe (mL/h) resultante", int(qe_auto))
-            cC.metric("Dosis (mL/kg/h) resultante", f"{dosis_auto:.1f}")
-            st.caption("Nota: ajusta las soluciones a **K 0–2 mmol/L** hasta K <5.5; confirma electrolitos cada 2–4 h.")
-
-    # ===== Sepsis / Choque – bloque dinámico =====
-    if sepsis_presente(escenarios):
-        st.divider()
-        st.markdown("### Recomendaciones automáticas – Sepsis / choque séptico")
-
-        colA, colB = st.columns([2, 1])
-        with colA:
-            rec_mod = rec_mod_sepsis(True, True)
-            st.markdown(f"**Modalidad sugerida:** {rec_mod['modalidad']}")
-            if rec_mod["opciones"]: st.caption("Alternativas: " + " · ".join(rec_mod["opciones"]))
-            if rec_mod["filtros"]:  st.caption("Filtros opcionales: " + " · ".join(rec_mod["filtros"]))
-
-            dosis = rec_dosis_trrc(peso)
-            st.markdown(f"**Dosis:** Inicio {dosis['inicio_mlkg_h'][0]}–{dosis['inicio_mlkg_h'][1]} y mantenimiento {dosis['mantenimiento_mlkg_h'][0]}–{dosis['mantenimiento_mlkg_h'][1]} mL/kg/h.")
-
-            plan_uf = rec_uf(pam, vasopresor_alta_dosis=vasopresor_alto_bool, lactato_baja=lactato_desc_bool)
-            st.markdown(f"**UF – inicio:** {plan_uf['inicio']}")
-            st.caption(f"Progresión: {plan_uf['progresión']}")
-            st.caption(f"Suspender si: {plan_uf['suspender_si']}")
-            if "estado" in plan_uf: st.info(f"Sugerencia dinámica UF: {plan_uf['estado']}")
-
-            ajustes_lab = rec_labs(k, ph, na)
-            with st.expander("Ajustes por laboratorio (automático)"):
-                for a in ajustes_lab: st.write("- " + a)
-
-            htc_alto = True if hto > 0.35 else False
-            bal = rec_balance_predil_postdil(htc_alto)
-            st.markdown(f"**Pre/Post sugerido:** {bal['pre']}% / {bal['post']}%")
-            st.caption(bal["nota"])
-
-        with colB:
-            al = alertas_sepsis(ph, pam, na, k, vasopresor_alto_bool)
-            if al: st.warning("**Alertas de seguridad:**\n\n- " + "\n- ".join(al))
-
-        st.markdown("#### Checklist previo a validar")
-        modalidad_txt = rec_mod['modalidad']
-        dosis_txt = f"{dosis['inicio_mlkg_h'][0]}–{dosis['inicio_mlkg_h'][1]} / {dosis['mantenimiento_mlkg_h'][0]}–{dosis['mantenimiento_mlkg_h'][1]}"
-        uf_txt = f"{plan_uf['inicio']} → {plan_uf['progresión']}"
-        solucion_txt = "Con bicarbonato si pH<7.2; evitar lactato en acidosis"
-        filtro_txt = (rec_mod['filtros'][0] if rec_mod['filtros'] else "Convencional")
-        balance_txt = f"{bal['pre']}% pre / {bal['post']}% post"
-        items = checklist_final(modalidad_txt, dosis_txt, uf_txt, solucion_txt, filtro_txt, balance_txt)
-        st.write("\n".join([f"✅ {x}" for x in items]))
-
-        st.session_state["sepsis_checklist_txt"] = items
-        st.session_state["sepsis_alertas_txt"] = al if 'al' in locals() else []
-
-# ---------- Kt/V ----------
-with tab_ktv:
-    st.subheader("Dosis por objetivos (Kt/V urea)")
-    V = st.number_input("Volumen de distribución V (L) ≈ 0.6×peso", value=round(0.6*peso,1), step=0.1, help="Aproximación: 0.6×peso (L).")
-    C0 = st.number_input("Urea inicial C0 (mg/dL)", value=150.0, step=1.0)
-    Ct = st.number_input("Urea objetivo Ct (mg/dL)", value=100.0, step=1.0)
-    horas = st.number_input("Tiempo de tratamiento (h)", value=24, step=1)
-    E = st.number_input("Eficiencia del sistema (0.8–1.0)", value=0.9, step=0.05, min_value=0.5, max_value=1.0,
-                        help="Incluye interrupciones/coagulaciones (eficiencia real).")
-    ktv_req = log(C0/Ct) if (C0>0 and Ct>0 and C0>Ct) else None
-    st.metric("Kt/V requerido", f"{ktv_req:.2f}" if ktv_req else "—")
-    K_Lh = ((ktv_req*V)/horas)/E if ktv_req else None
-    dosis_calc = (K_Lh*1000)/peso if K_Lh else None
-    colx, coly = st.columns(2)
-    colx.metric("K requerido (L/h)", f"{K_Lh:.2f}" if K_Lh else "—")
-    coly.metric("Dosis estimada (mL/kg/h)", f"{dosis_calc:.1f}" if dosis_calc else "—")
-    if dosis_calc:
-        st.info("Sugerencia: " + ("Aumentar dosis (<20 mL/kg/h)" if dosis_calc<20 else ("Reducir dosis (>35 mL/kg/h)" if dosis_calc>35 else "Dentro de 20–35 mL/kg/h")))
-    st.caption("Relación entre Kt/V objetivo y dosis de efluente para facilitar prescripción (ver Referencias).")
-
-# ---------- Balance dinámico ----------
-with tab_balance:
-    st.subheader("Balance dinámico y metas de UF")
-    peso_seco = st.number_input("Peso seco objetivo (kg)", value=max(0.0, peso-5), step=0.5)
-    fo_actual = (peso - peso_seco)/peso_seco if peso_seco>0 else 0.0
-    fo_obj = st.number_input("FO% objetivo (p. ej. 5%)", value=0.05, step=0.01, help="Fracción de sobrecarga relativa al peso seco.")
-    horas_trrc = st.number_input("Horas de TRRC planificadas (h)", value=24, step=1)
-    ingresos = st.number_input("Ingresos previstos (mL)", value=0, step=50)
-    uresis_res = st.number_input("Uresis residual 24 h (mL)", value=st.session_state.get("ur_main", 0), step=50)
-    uf_obj = ((peso - (1+fo_obj)*peso_seco) * 1000) if (peso_seco>0) else None
-    uf_mant = (ingresos - uresis_res)
-    uf_total = (uf_obj if uf_obj is not None else 0) + uf_mant
-    uf_h = uf_total/horas_trrc if horas_trrc>0 else 0
-    c1,c2,c3,c4 = st.columns(4)
-    c1.metric("FO% actual", f"{fo_actual:.1%}")
-    c2.metric("UF objetivo (mL)", f"{int(uf_obj) if uf_obj is not None else 0}")
-    c3.metric("UF total (mL)", f"{int(uf_total)}")
-    c4.metric("UF/h sugerida", f"{int(uf_h)}")
-    st.warning("⚠️ UF/h > 2 mL/kg/h") if (uf_h/peso) > 0.002 else st.success("OK")
-
-# ---------- Anticoagulación extendida ----------
-with tab_anticoag:
-    st.subheader("Anticoagulación – evaluación extendida")
-
-    colA, colB, colC, colD = st.columns(4)
-    plaquetas = colA.number_input("Plaquetas (mil/µL)", 0, 1000, 200, 5)
-    fib = colB.number_input("Fibrinógeno (mg/dL)", 0, 1000, 300, 10)
-    sangrado = colC.selectbox("Sangrado activo", ["No","Sí"])
-    neuro = colD.selectbox("Post-op neuro / riesgo alto", ["No","Sí"])
-    inr = colA.number_input("INR", 0.8, 5.0, 1.1, 0.1, key="inr_ext")
-    aptt = colB.number_input("aPTT (s)", 20.0, 120.0, 35.0, 1.0, key="aptt_ext")
-    hbpm_12h = colC.selectbox("HBPM en últimas 12 h", ["No","Sí"], index=0, help="Si 'Sí', iniciar HNF con prudencia o preferir RCA.")
-    hit_previa = colD.selectbox("Antecedente de HIT", ["No","Sí"], index=0)
-    st.session_state["hit_previa_bool"] = (hit_previa == "Sí")
-
-    usar_rca = (
-        (plaquetas<50) or (fib<150) or (sangrado=="Sí") or (neuro=="Sí") or
-        (inr>=1.5) or (aptt>=45) or (hbpm_12h=="Sí") or (hit_previa=="Sí")
-    )
-    ac = "RCA (citrato)" if usar_rca else "Heparina no fraccionada (HNF)"
-    st.success(f"Anticoagulación sugerida: **{ac}**")
-    st.caption("RCA suele ser preferente si no hay contraindicaciones (ver Referencias).")
-
-    if ac == "Heparina no fraccionada (HNF)":
-        if hbpm_12h == "Sí":
-            st.warning("HBPM reciente: valora diferir HNF o iniciar con dosis reducida y vigilancia estrecha de aPTT.")
-        iu_h = peso * 5  # base 5 UI/kg/h (ajustar a aPTT)
-        st.info(f"Dosis inicial HNF sugerida: **{iu_h:.0f} UI/h** (ajustar a aPTT objetivo).")
-        st.session_state["anticoagulacion_tipo"] = "HNF"
-        st.session_state["hnf_ui_h"] = float(iu_h)
-    else:
-        st.markdown("### RCA – citrato y calcio (configurable)")
-        st.caption("Usa la **concentración real** de tus soluciones (como aparece en la etiqueta). "
-                   "Valores típicos: Citrato 4% ≈ **0.136 mmol/mL**. La concentración de calcio depende de si usas Cloruro o Gluconato.")
-
-        rc1, rc2, rc3 = st.columns(3)
-        with rc1:
-            citrato_mmol_por_ml = st.number_input(
-                "Concentración de citrato (mmol/mL)", min_value=0.05, max_value=0.25, value=0.136,
-                step=0.001, format="%.3f", help="Ejemplo: citrato 4% ≈ 0.136 mmol/mL"
-            )
-            objetivo_mmol_L_sangre = st.number_input(
-                "Objetivo citrato (mmol/L sangre)", min_value=2.0, max_value=5.0, value=3.0, step=0.1,
-                help="Dosis inicial habitual 3–4 mmol/L de sangre"
-            )
-        with rc2:
-            post_filter_ica_obj = st.slider("iCa post-filtro diana (mmol/L)", 0.20, 0.50, 0.35, 0.01,
-                                            help="Diana habitual 0.25–0.40")
-            system_ica_obj = st.slider("iCa sistémico diana (mmol/L)", 0.90, 1.30, 1.10, 0.01,
-                                       help="Diana habitual 1.0–1.2")
-        with rc3:
-            calcio_mmol_por_ml = st.number_input(
-                "Concentración de calcio (mmol/mL)", min_value=0.05, max_value=1.00, value=0.5,
-                step=0.01, help="Introduce lo que diga tu ampolla (ejemplos orientativos: Gluconato o Cloruro)"
-            )
-
-        citrato_ml_h = (qb * 60.0 * objetivo_mmol_L_sangre / 1000.0) / max(citrato_mmol_por_ml, 1e-6)
-        citrato_mmol_h = qb * 60.0 * (objetivo_mmol_L_sangre / 1000.0)
-        calcio_mmol_h_ini = 0.7 * citrato_mmol_h
-        calcio_ml_h_ini = calcio_mmol_h_ini / max(calcio_mmol_por_ml, 1e-6)
-
-        rca1, rca2, rca3 = st.columns(3)
-        rca1.metric("Citrato inicial (mL/h)", f"{citrato_ml_h:.0f}")
-        rca2.metric("Reposición Ca²⁺ (mL/h, estimado)", f"{calcio_ml_h_ini:.0f}")
-        rca3.metric("Citrato (mmol/h)", f"{citrato_mmol_h:.1f}")
-
-        st.caption("**Ajustes:** iCa post 0.25–0.40 → ±10–20% citrato; iCa sist 1.0–1.2 → ±10–20% calcio. Monitorizar 30–60 min y luego cada 4–6 h.")
-
-        st.session_state["anticoagulacion_tipo"] = "RCA"
-        st.session_state["rca_citrato_ml_h"] = float(citrato_ml_h)
-        st.session_state["rca_calcio_ml_h"] = float(calcio_ml_h_ini)
-        st.session_state["rca_targets"] = {
-            "iCa_post": float(post_filter_ica_obj),
-            "iCa_sist": float(system_ica_obj),
-            "citrato_obj_mmolL": float(objetivo_mmol_L_sangre)
-        }
-
-# ----------- Tendencias (reglas) -----------
-def evaluar_tendencia(v1, v3, tag):
-    t = tag.lower().strip()
-    R_NA   = (135.0, 145.0)
-    R_K    = (3.5, 5.1)
-    R_LAC  = (0.5, 2.2)
-    R_NH4  = (15.0, 45.0)
-    R_UREA = (5.0, 45.0)
-    R_CREA = (0.6, 1.3)
-
-    if t.startswith("na"):
-        return ("warn", "Na fuera de 135-145 mEq/L") if (v3 < R_NA[0] or v3 > R_NA[1]) else ("ok","Na dentro de 135-145 mEq/L")
-    if t.startswith("k"):
-        return ("warn", "K fuera de 3.5-5.1 mEq/L") if (v3 < R_K[0] or v3 > R_K[1]) else ("ok","K dentro de 3.5-5.1 mEq/L")
-    if t.startswith("lact"):
-        return ("warn","Lactato > 2.2 mmol/L") if v3 > R_LAC[1] else ("ok","Lactato ≤ 2.2 mmol/L")
-    if t.startswith("amonio"):
-        return ("warn","Amonio > 45 µmol/L") if v3 > R_NH4[1] else ("ok","Amonio ≤ 45 µmol/L")
-    if t.startswith("urea"):
-        return ("good","Urea en descenso") if v3 < v1 else (("warn","Urea en ascenso") if v3 > v1 else ("ok","Urea sin cambio"))
-    if t.startswith("creatinina"):
-        return ("good","Creatinina en descenso") if v3 < v1 else (("warn","Creatinina en ascenso") if v3 > v1 else ("ok","Creatinina sin cambio"))
-    return ("ok", "Sin regla específica")
-
-with tab_trends:
-    st.subheader("Tendencias (T1–T3) | v1.8.0")
-    DEF = {"na":(140.0,130.0,120.0),"k":(4.0,3.0,2.0),"lact":(1.0,0.8,0.4),"nh4":(80.0,70.0,60.0),"ure":(130.0,100.0,80.0),"crn":(4.0,3.0,2.0)}
-    def num_input_safe(label, key, vmin, vmax, step=0.5, default=None):
-        default = vmin if default is None else max(vmin, min(default, vmax))
-        return st.number_input(label, key=key, value=default, min_value=vmin, max_value=vmax, step=step)
-    def fila_tendencia(etq, key, tag, vmin=0.0, vmax=1000.0, step=0.5, defaults=(0.0,0.0,0.0)):
-        st.markdown(f"**{etq}**")
-        c1,c2,c3,_ = st.columns([1.2,1.2,2,1.2])
-        t1=num_input_safe("T1",f"{key}_t1",vmin,vmax,step,defaults[0]); t2=num_input_safe("T2",f"{key}_t2",vmin,vmax,step,defaults[1]); t3=num_input_safe("T3",f"{key}_t3",vmin,vmax,step,defaults[2])
-        d12=t2-t1; d23=t3-t2
-        c5,c6=st.columns(2); c5.write(f"Δ12: {d12:+.1f}"); c6.write(f"Δ23: {d23:+.1f}")
-        level,msg = evaluar_tendencia(t1,t3,tag)
-        st.warning(msg) if level=="warn" else (st.success(msg) if level=="good" else st.info(msg))
-        st.markdown("---")
+# --- Recomendación automática de modalidad combinada (escenario + labs) ---
+def _get_v(key):
+    try:
+        return float(st.session_state.get(f"{key}_t3"))
+    except Exception:
         return None
-    fila_tendencia("Na (mEq/L)","na","na",100.0,200.0,0.5,DEF["na"])
-    fila_tendencia("K (mEq/L)","k","k",1.0,10.0,0.1,DEF["k"])
-    fila_tendencia("Lactato (mmol/L)","lact","lactato",0.0,20.0,0.1,DEF["lact"])
-    fila_tendencia("Amonio (µmol/L)","nh4","amonio",0.0,1000.0,0.5,DEF["nh4"])
-    fila_tendencia("Urea (mg/dL)","ure","urea",0.0,500.0,0.5,DEF["ure"])
-    fila_tendencia("Creatinina (mg/dL)","crn","creatinina",0.0,20.0,0.1,DEF["crn"])
 
-# ---------- Fundamento y Cálculos ----------
-with tab_fund:
-    st.subheader("Fundamento y Cálculos — transparencia pedagógica")
-    st.caption("Explicación del *por qué* y *cómo* de cada cálculo, con fórmulas y justificación clínica para enseñanza y auditoría.")
+na_t3  = _get_v("na")
+k_t3   = _get_v("k")
+lact_t3= _get_v("lact")
+nh4_t3 = _get_v("nh4")
+ure_t3 = _get_v("ure")
+crn_t3 = _get_v("crn")
 
-    # Vista extendida controlada globalmente
-    mostrar_ext = bool(st.session_state.get("mostrar_fund_extendido", False))
-    st.info("Vista extendida ACTIVADA por el switch global de la barra lateral.") if mostrar_ext else st.caption("Vista extendida desactivada (usa el switch global en la barra lateral).")
+sugerida, motivo = combined_recommendation(
+    escenario, na_t3, k_t3, lact_t3, nh4_t3, ure_t3, crn_t3, dosis_total_mlkgh, ff
+)
 
-    # Traer valores corrientes
-    mod_for_fund, filtro_for_fund, _coment = combinar_recomendaciones(escenarios)
-    qp_f, qp_h_f, qe_f, qr_pre_f, qr_post_f, qd_f, ff_f = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_for_fund or "CVVHDF")
+if modalidad == "AUTO":
+    modalidad = sugerida
 
-    st.markdown("### Fórmulas (LaTeX)")
-    st.latex(r"Q_p = Q_b \times (1 - Hto)")
-    st.latex(r"Q_{p,h} = Q_p \times 60")
-    st.latex(r"Q_e = \text{dosis (mL/kg/h)} \times \text{peso (kg)}")
-    st.latex(r"\text{Límite convectivo} \le 0.25 \times Q_{p,h}")
-    st.latex(r"\text{fracción convectiva} = \begin{cases}0 & \text{CVVHD}\\ 1 & \text{CVVHF}\\ 0.6 & \text{CVVHDF (por defecto)}\end{cases}")
-    st.latex(r"Q_{r,\text{total}} = \min\left(0.25\times Q_{p,h},\ \max(Q_e - UF,\ 0)\right)\times \text{fracción convectiva}")
-    st.latex(r"Q_{r,\text{pre}} = 0.7 \times Q_{r,\text{total}},\quad Q_{r,\text{post}} = 0.3 \times Q_{r,\text{total}}")
-    st.latex(r"Q_d = \max\left(Q_e - (Q_{r,\text{pre}} + Q_{r,\text{post}} + UF),\ 0\right)")
-    st.latex(r"FF = \dfrac{Q_{r,\text{post}} + UF}{Q_{p,h} + Q_{r,\text{pre}}}\quad (<25\% \text{ recomendado})")
+st.caption(f"**Modalidad sugerida (escenario + labs):** {sugerida} — {motivo}. (Puedes cambiarla en la barra lateral)")
 
-    st.markdown("### Sustitución numérica (con tus valores actuales)")
-    c1,c2,c3 = st.columns(3)
-    with c1:
-        st.write(f"**Qb** = {int(qb)} mL/min")
-        st.write(f"**Hto** = {hto:.2f}")
-        st.write(f"**Qp** = {int(qp_f)} mL/min")
-        st.write(f"**Qp·h** = {int(qp_h_f)} mL/h")
-    with c2:
-        st.write(f"**Dosis** = {int(dosis_mlkg)} mL/kg/h")
-        st.write(f"**Peso** = {peso:.1f} kg")
-        st.write(f"**Qe** = {int(qe_f)} mL/h")
-        st.write(f"**UF** = {int(uf)} mL/h")
-    with c3:
-        st.write(f"**Qr_pre** = {int(qr_pre_f)} mL/h")
-        st.write(f"**Qr_post** = {int(qr_post_f)} mL/h")
-        st.write(f"**Qd** = {int(qd_f)} mL/h")
-        st.write(f"**FF** ≈ {ff_f:.2%}")
 
-    st.markdown("### Justificación clínica estructurada (resumen)")
+# ---- Sugerencias clínicas docentes por escenario ----
+with st.expander("🧠 Sugerencias clínicas (docentes) para el escenario"):
+    if escenario == "Lesión cerebral aguda":
+        st.markdown(
+            "- Evitar cambios osmolares rápidos; preferir CVVHD con metas estables de Na.\n"
+            "- Corregir Na ≤ 8–10 mEq/L/24h; monitorear osmolaridad.\n"
+            "- Revisar Brain Trauma Foundation (PMID: 27654000)."
+        )
+    elif escenario == "Intoxicación dializable":
+        st.markdown(
+            "- En tóxicos dializables, prioriza difusión (CVVHD) salvo inestabilidad extrema.\n"
+            "- Consulta EXTRIP para molécula específica (PMID: 31599846)."
+        )
+    elif escenario == "Hiperamonemia":
+        st.markdown(
+            "- Objetivo docente: reducción rápida de NH4+ (p.ej., <100 μmol/L).\n"
+            "- Considera CVVHDF/CVVHD según hemodinámica (refs pediátricas/adulto; PMID: 20130899)."
+        )
+    elif escenario == "Hiperpotasemia (crisis)":
+        st.markdown(
+            "- En K≥6, la difusión (CVVHD) acelera la depuración de K+.\n"
+            "- Corregir causas subyacentes y monitorizar ritmo; ver revisión NEJM (PMID: 33369332)."
+        )
+    elif escenario == "Sepsis/AKI":
+        st.markdown(
+            "- Dosis entregada razonable 20–25 mL/kg/h (docente); optimiza balance y hemodinamia.\n"
+            "- Apóyate en Surviving Sepsis y KDIGO AKI 2023 (PMID: 34599691; 36889692)."
+        )
+    elif escenario == "Síndrome hepatorrenal":
+        st.markdown(
+            "- Manejo hepático integral (vasoconstrictores/albumina) + TRRC si hay AKI/hiperazoemia.\n"
+            "- Revisa guías EASL/JHEP (PMID: 31326410; 29653741)."
+        )
+    elif escenario == "Rabdomiólisis":
+        st.markdown(
+            "- Convección puede ayudar a depurar mioglobina si FF ≤0.25 y dosis ≥25 (CVVH).\n"
+            "- Vigila K, Ca y CK; ref KI 2015 (PMID: 25662347)."
+        )
+    elif escenario == "Inestabilidad hemodinámica":
+        st.markdown(
+            "- Balance cuidadoso y dosis entregada conservadora al inicio.\n"
+            "- Revisa Ostermann & Joannidis (PMID: 32056064)."
+        )
+    elif escenario == "Sobrecarga hídrica aislada":
+        st.markdown(
+            "- Meta docente de UF 1.0–1.5 mL/kg/h; hasta 2.0 mL/kg/h si buena tolerancia.\n"
+            "- Monitoriza signos de hipoperfusión."
+        )
+    elif escenario == "Acidosis láctica":
+        st.markdown(
+            "- Metas de perfusión y control de fuente; TRRC como soporte.\n"
+            "- Revisa NEJM 2014 y estudios ICU sobre lactato (PMID: 24521108; 25190002)."
+        )
+    else:
+        st.markdown("- Selecciona un escenario para ver sugerencias docentes.")
+
+
+divider()
+
+# -------- Resumen y exportación --------
+st.header("🧾 Resumen y exportación")
+resumen = f"""
+Paciente: {nombre}
+Fecha/hora: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+
+Escenario clínico: {escenario}
+Modalidad final: {modalidad} (sugerida: {sugerida})
+Anticoagulación: {anticoag}
+
+Peso: {peso_kg:.1f} kg | Talla: {talla_cm:.1f} cm | BSA: {bsa:.2f} m²
+Hto: {hto:.1f}% | Qb: {qb:.0f} mL/min
+URR: {f"{urr_val:.1f}%" if urr_val is not None else "No calculable"} | FF: {f"{ff:.2f}" if ff is not None else "No calculable"}
+
+Dosis total: {dosis_total_mlkgh:.0f} mL/kg/h ({dosis_total_lh:.2f} L/h)\nDosis entregada (est.): {dosis_entregada_mlkgh:.0f} mL/kg/h (downtime {downtime_pct:.0f}%)
+Qp: {qp_mlkgh:.0f} | Qd: {qd_mlkgh:.0f} | Qe: {qe_mlkgh:.0f} | Reposición: {qrep_mlkgh:.0f} (mL/kg/h)
+UF objetivo: {uf_ml_h:.0f} mL/h
+
+TRRC360 {VERSION}
+""".strip()
+
+with st.expander("Ver resumen en texto"):
+    st.code(resumen, language="markdown")
+
+colL, colR = st.columns(2)
+with colL:
+    st.download_button(
+        "💾 Descargar resumen .txt",
+        data=resumen.encode("utf-8"),
+        file_name=f"TRRC360_resumen_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+        mime="text/plain"
+    )
+
+with colR:
+    if REPORTLAB_OK:
+        if st.button("🖨️ Exportar PDF (sin logo)"):
+            buffer = io.BytesIO()
+            c = canvas.Canvas(buffer, pagesize=letter)
+            w, h = letter
+            y = h - 50
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(50, y, f"TRRC360 — Resumen de Prescripción ({VERSION})")
+            y -= 20
+            c.setFont("Helvetica", 10)
+            for line in resumen.splitlines():
+                if not line.strip():
+                    y -= 8
+                    continue
+                c.drawString(50, y, line[:110])
+                y -= 14
+                if y < 50:
+                    c.showPage()
+                    y = h - 50
+                    c.setFont("Helvetica", 10)
+            c.showPage()
+            c.save()
+            buffer.seek(0)
+            st.download_button(
+                "Descargar PDF",
+                data=buffer,
+                file_name=f"TRRC360_resumen_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
+                mime="application/pdf"
+            )
+    else:
+        st.caption("Para PDF instala reportlab: `pip install reportlab`")
+
+divider()
+
+
+# -------- Referencias y notas --------
+st.header("📚 Referencias y notas")
+st.caption("La app sugiere modalidad con fines docentes; **el clínico decide** y puede cambiarla. "
+           "Se recomienda respaldar cada decisión con referencias locales/actualizadas.")
+
+# Dinámicas por escenario
+with st.expander(f"Referencias para el escenario: {escenario}"):
+    refs = SCENARIO_REFS.get(escenario, SCENARIO_REFS["—"])
+    st.markdown("\n".join([f"- {item}" for item in refs]))
+
+# Marco general adicional
+with st.expander("Marco general (siempre visible)"):
+    st.markdown(
+        """
+- **KDIGO AKI 2023** — DOI: [10.1016/j.kint.2023.02.014](https://doi.org/10.1016/j.kint.2023.02.014) — PMID: [36889692](https://pubmed.ncbi.nlm.nih.gov/36889692)
+- **NEJM — Continuous Renal Replacement Therapy in Critically Ill Patients** — DOI: [10.1056/NEJMra1814522](https://doi.org/10.1056/NEJMra1814522) — PMID: [31483967](https://pubmed.ncbi.nlm.nih.gov/31483967)
+- **KDIGO BP in CKD (2021)** — DOI: [10.1016/j.kint.2021.05.021](https://doi.org/10.1016/j.kint.2021.05.021) — PMID: [34614362](https://pubmed.ncbi.nlm.nih.gov/34614362)
+- **KDIGO Anemia (2025 borrador)** — https://kdigo.org/guidelines/anemia-in-ckd/
+- **Protocolos locales/NOM** — agrega tus guías internas y GPC mexicanas aplicables.
+        """
+    )
+
+st.info("**Divulgación:** Esta herramienta es para enseñanza médica y apoyo a la decisión. "
+        "No sustituye el juicio clínico. El uso e interpretación dependen exclusivamente de quien la utiliza.")
+
+with st.expander("📘 Manual de uso de TRRC360 (README)", expanded=False):
     st.markdown("""
-**1) Modalidad:** CVVHDF para sepsis/choque por clearance mixto.  
-**2) Límite 25% Qp·h:** reduce hemoconcentración/TPM y coagulación.  
-**3) Fracción convectiva por modalidad:** CVVHD=0, CVVHF=1, CVVHDF≈0.6 (equilibrio).  
-**4) Pre/Post 70/30:** protege filtro (pre) y mantiene depuración (post).  
-**5) FF <25%:** seguridad del filtro y hemodinamia.  
-**6) Laboratorio:** K≥6 → Qd 2–3 L/h con K 0–2; pH<7.20 → bicarbonato y Qd/Qe alto; Na (hipo) ≤8–10/d (≤8 alto riesgo ODS); Na (hiper) ≈0.5/h.  
-**7) Anticoagulación:** RCA si coagulopatía/sangrado/HIT/HBPM reciente; HNF si bajo riesgo y monitoreo simple.  
-**8) UF por PAM/lactato:** UF mínima si PAM<60 o vasopresor ↑; escalar si PAM≥65 y lactato ↓.
-    """)
+# TRRC360 — CRRT Teaching Assistant (v1.18.0)
 
-    if mostrar_ext:
-        st.markdown("---")
-        st.markdown("### Versión extendida (docente)")
-        for linea in _fundamento_texto_extendido(
-            na=float(st.session_state.get("na_main", 140.0)),
-            k=float(st.session_state.get("k_main", 4.0)),
-            ph=float(st.session_state.get("ph_main", 7.35)),
-            pam=float(st.session_state.get("pam", 65.0)),
-            vasopresor_alto=bool(st.session_state.get("vaso_alto_sel","No")=="Sí"),
-            lactato_desc=bool(st.session_state.get("lactato_desc_sel","No")=="Sí"),
-            albumina=float(st.session_state.get("alb_main", 3.0)),
-            anticoag_tipo=st.session_state.get("anticoagulacion_tipo","—"),
-            r_targets=st.session_state.get("rca_targets", {}),
-            filtro_final=filtro_for_fund
-        ):
-            st.write(linea)
+**Autor:** Dr. Josué Wigberto Tapia López  
+**Licencia:** MIT (ver `LICENSE`)  
+**Propósito:** Herramienta **docente** para apoyar la prescripción y seguimiento de **Terapia de Reemplazo Renal Continua (TRRC/CRRT)**. **No sustituye** el juicio clínico.
 
-# ----------- Resumen / PDF -----------
-with tab_rx:
-    st.subheader("Resumen de prescripción")
+---
 
-    st.markdown("#### Unidad hospitalaria y ficha de identificación")
-    cU,_ = st.columns([3,1])
-    with cU:
-        st.text_input("Unidad hospitalaria", key="rx_unidad", value=st.session_state.get("rx_unidad",""))
+## 👟 Instalación rápida
 
-    r1c1,r1c2,r1c3 = st.columns([2,1,1])
-    with r1c1:
-        st.text_input("Nombre del paciente", key="rx_nombre_paciente", value=st.session_state.get("rx_nombre_paciente",""))
-    with r1c2:
-        st.text_input("Fecha de nacimiento", key="rx_fecha_nac", value=st.session_state.get("rx_fecha_nac",""))
-    with r1c3:
-        st.text_input("Edad", key="rx_edad", value=st.session_state.get("rx_edad",""))
+Requisitos: Python 3.9+
 
-    r2c1,r2c2 = st.columns([1,2])
-    with r2c1:
-        _sexo_opts=["","F","M"]; _sexo_val=st.session_state.get("rx_sexo","")
-        st.selectbox("Sexo", _sexo_opts, index=_sexo_opts.index(_sexo_val) if _sexo_val in _sexo_opts else 0, key="rx_sexo")
-    with r2c2:
-        st.text_input("Expediente", key="rx_expediente", value=st.session_state.get("rx_expediente",""))
+```bash
+pip install streamlit matplotlib reportlab
+```
 
-    st.markdown("#### Datos del médico tratante")
-    st.text_input("Nombre del médico", key="rx_nombre_medico", value=st.session_state.get("rx_nombre_medico",""))
-    st.text_input("Sello / Notas (opcional)", key="rx_sello", value=st.session_state.get("rx_sello",""))
+> `reportlab` es opcional (solo para exportar PDF).
 
-    # Resumen pantalla
-    mod_final, filtro_final, comentarios = combinar_recomendaciones(escenarios)
-    qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
-    ff_txt = f"{ff:.2%}" if ff is not None else "—"
+---
 
-    st.write(f"**Escenarios:** {', '.join(escenarios) if escenarios else '—'}")
-    st.write(f"**Modalidad:** {mod_final or '—'}  |  **Filtro sugerido:** {filtro_final or '—'}  |  **FF (estimada):** {ff_txt} (objetivo <25%)")
+## 🚀 Ejecución
 
-    st.markdown("### Flujos sugeridos")
-    ca, cb, cc, cd = st.columns(4)
-    ca.metric("Qb (mL/min)", qb); cb.metric("Qp (mL/min)", int(qp))
-    cc.metric("Qe (mL/h)", int(qe)); cd.metric("UF (mL/h)", uf)
-    ce, cf, cg = st.columns(3)
-    ce.metric("Qr pre (mL/h)", qr_pre); cf.metric("Qr post (mL/h)", qr_post); cg.metric("Qd (mL/h)", int(qd))
-    st.info(comentarios or "—")
+```bash
+streamlit run app.py
+```
 
-    # Anticoagulación (resumen)
-    st.markdown("### Anticoagulación (resumen)")
-    ac_tipo = st.session_state.get("anticoagulacion_tipo", "—")
-    if ac_tipo == "HNF":
-        st.write(f"**Tipo:** HNF  |  **Dosis inicial sugerida:** {int(st.session_state.get('hnf_ui_h', max(1,int(peso*5))))} UI/h (ajustar a aPTT)")
-    elif ac_tipo == "RCA":
-        rca_cit = st.session_state.get("rca_citrato_ml_h", None)
-        rca_ca  = st.session_state.get("rca_calcio_ml_h", None)
-        r_targets = st.session_state.get("rca_targets", {})
-        st.write("**Tipo:** RCA")
-        st.write(f"**Citrato inicial:** {int(rca_cit) if rca_cit else '—'} mL/h  |  **Calcio inicial:** {int(rca_ca) if rca_ca else '—'} mL/h")
-        st.write(f"**Dianas:** iCa post-filtro {r_targets.get('iCa_post','—')} mmol/L · iCa sistémico {r_targets.get('iCa_sist','—')} mmol/L (ajustes 10–20%)")
-        st.caption("Monitorizar iCa a 30–60 min y luego cada 4–6 h; vigilar Na, HCO₃⁻, pH y anión gap.")
-    else:
-        st.write("—")
+Al abrirse en el navegador:
+1) Acepta el **aviso legal** (uso docente / no sustituye juicio clínico).  
+2) Revisa la barra lateral (**Sidebar**) para configurar al paciente y la prescripción.
 
-    # Comentarios para exportar
-    st.text_area("Comentarios para el PDF", key="rx_comentarios", value=st.session_state.get("rx_comentarios",""), height=120)
+---
 
-    # Opciones de PDF (ligadas al switch global)
-    st.markdown("### Opciones de PDF")
-    st.caption("El PDF extendido se controla con el switch global en la barra lateral.")
-    st.write(f"PDF extendido: **{'Sí' if st.session_state.get('pdf_extendido', False) else 'No'}**")
+## 🧭 Flujo de uso (paso a paso)
 
-    # Botón Exportar a PDF
-    col_btn,_ = st.columns([1,3])
-    with col_btn:
-        if st.button("Exportar a PDF", key="btn_export_pdf"):
-            try:
-                fn = export_pdf()
-                with open(fn, "rb") as f:
-                    st.download_button("Descargar PDF", data=f, file_name=fn, mime="application/pdf",
-                                       use_container_width=True, key="btn_download_pdf")
-            except Exception as e:
-                st.error(f"Error al generar PDF: {e}")
+### 1) Sidebar (parámetros y privacidad)
+- **Paciente:** Nombre/ID (se recomienda usar identificadores no nominales).  
+- **Privacidad:** Marca la casilla para **aceptar el aviso de privacidad** si quieres **guardar** datos localmente (archivo `patients_trrc360.json`).  
+- **Datos biométricos:** `Peso (kg)`, `Talla (cm)`, `Hto (%)`, `Urea pre/post`.  
+- **Cálculo TRRC:** `Qb`, `Qp`, `Qd`, `Qe`, `Reposición`, `UF objetivo`, **Anticoagulación**.  
+- **Escenario clínico:** Selección docente (Sepsis/AKI, Intoxicación, HiperK, Hiperamonemia, Láctica, LCA, HRS, Inestabilidad, Sobrecarga hídrica, Rabdomiólisis…).  
+- **Origen de modalidad:** `Recomendación automática` o `Elegir manualmente`.
+- **Eficiencia de entrega:** `Downtime (%)` para **calcular la dosis entregada**.
+- **Anticoagulación (docente):** *checkboxes* para evaluar si es **candidato a citrato** y **contraindicaciones** (falla hepática severa, hipoperfusión grave, hipocalcemia refractaria).
+- **Guardar/Cargar:**  
+  - Botón **Guardar** → guarda el paciente (si aceptaste privacidad).  
+  - Combo **Cargar existente** → carga pacientes guardados.  
+  - **Exportar/Importar DB** (`.json`) desde la barra lateral.
 
-# ---------- Referencias (pestaña nueva) ----------
-with tab_refs:
-    st.subheader("Referencias (filtradas por tu contexto)")
-    escenarios_sel = st.session_state.get("sb_escenarios", [])
-    anticoag_tipo = st.session_state.get("anticoagulacion_tipo", "—")
+### 2) Prescripción y cálculos (panel principal)
+- **Métricas:** `BSA`, `Dosis total (mL/kg/h)`, `Dosis (L/h)`, `URR`, `FF`.  
+- **Dosis entregada (estimada):** `dosis total × (1 − downtime%)` (p.ej. 20–25 mL/kg/h **entregados**).  
+- **Alertas FF:**  
+  - `≤ 0.25` → ✅ objetivo docente razonable.  
+  - `0.25–0.30` → ⚠️ advertencia (riesgo de hemoconcentración).  
+  - `> 0.30` → 🚨 alto riesgo (considera ↓Qp o ↑Qb).  
+- **Anticoagulación (docente):** sugerencia de `Citrato` (si candidato y sin contraindicaciones) o `Heparina`.
 
-    colf1, colf2 = st.columns([2,1])
-    query = colf1.text_input("Buscar en títulos/resumen (opcional)", "")
-    solo_contexto = colf2.checkbox("Solo relevantes al contexto actual", value=True)
+### 3) Tendencias de laboratorio (T1–T3)
+- Captura `Na`, `K`, `Lactato`, `Amonio`, `Urea`, `Creatinina` en **T1–T3**.  
+- Se grafican automáticamente (matplotlib).  
+- La **recomendación de modalidad** usa los **valores T3** + **FF** + **dosis** y el **escenario**.
 
-    refs = filtrar_refs_por_contexto(escenarios_sel, anticoag_tipo) if solo_contexto else BIBLIO
+### 4) Recomendación de modalidad (docente)
+- **Automática combinada (escenario + labs + FF + dosis)** con **motivo transparente**.  
+  - Ejemplos:  
+    - `K ≥ 6` o `Urea ≥ 200` → **CVVHD** (difusión rápida).  
+    - `Lactato > 2.2` o `NH4 > 45` → **CVVHDF** (mixta).  
+    - `Rabdomiólisis` con **FF ≤ 0.25** y **dosis ≥ 25** → **CVVH** (convección predominante).  
+- **Override manual:** cambia a “Elegir manualmente” en la barra lateral para fijar la modalidad.
 
-    if query.strip():
-        ql = query.lower()
-        refs = [r for r in refs if ql in r["title"].lower() or ql in r["blurb"].lower() or ql in r["where"].lower()]
+### 5) Sugerencias clínicas por escenario
+- Expander “**🧠 Sugerencias clínicas (docentes) para el escenario**” con bullets y **PMID/DOI** (LCA, Intoxicación, Hiperamonemia, HiperK, Sepsis/AKI, HRS, Rabdomiólisis, Inestabilidad, Sobrecarga, Láctica).
 
-    if not refs:
-        st.info("No hay referencias que coincidan. Ajusta filtros o añade más términos.")
-    else:
-        for i, r in enumerate(refs, 1):
-            st.markdown(f"**[{i}] {r['title']}**  \n*{r['where']}* ({r['yr']}) — {r['blurb']}  \n[Ver fuente]({r['url']})")
-            st.markdown("---")
+### 6) Referencias y notas
+- **Referencias dinámicas** por escenario (`SCENARIO_REFS`) con **DOI/PMID**.
+- **Marco general** (KDIGO AKI 2023, NEJM CRRT, etc.) siempre visible.
 
-    st.caption("Las referencias se actualizan al cambiar escenarios, anticoagulación o parámetros clave.")
+### 7) Exportación
+- **TXT**: descarga un resumen en texto plano.  
+- **PDF (sin logo)**: descarga un PDF limpio con `reportlab` (solo texto).
 
-# Pie
-st.caption("© Tapia Nefrología — Uso académico | TRRC360 by Dr. Tapia")
+---
+
+## ✏️ Personalización rápida
+
+### Editar referencias por escenario
+En `app.py`, busca el diccionario `SCENARIO_REFS` y edita/agrega entradas.  
+Formato recomendado por línea:  
+`"Título — DOI: 10.xxxx/xxxxx; PMID: 12345678"`
+
+### Ajustar reglas docentes
+- **Recomendación por labs:** función `recommend_modality_from_labs(...)`  
+- **Por escenario:** `recommend_modality_from_scenario(...)`  
+- **Combinada:** `combined_recommendation(...)` (prioridad: labs críticos → escenario → heurística FF/dosis → default)
+
+### PDF sin logo
+La exportación usa `reportlab` con **solo texto**. No hay imágenes (`drawImage`).
+
+---
+
+## 🧪 Troubleshooting
+
+- **No carga PDF:** instala `reportlab` → `pip install reportlab`  
+- **Gráficas no se ven:** confirma `matplotlib` instalado.  
+- **No guarda pacientes:** debes **aceptar el aviso de privacidad** en la barra lateral.  
+- **FF no calculable:** revisa que `Qb > 0` y `Hto` estén definidos.  
+- **URR “No calculable”:** `urea_pre` debe ser `> 0`.
+
+---
+
+## ⚖️ Avisos legales
+
+- **Uso docente**: no es dispositivo médico ni sustituye el juicio clínico.  
+- **Privacidad local**: los datos se guardan **solo** en tu equipo (`patients_trrc360.json`).  
+- **Licencia**: MIT. El software se proporciona “**tal cual**” sin garantías (ver `LICENSE`).
+
+---
+
+## 📸 Capturas sugeridas (para tu repo)
+1) Pantalla principal con métricas y recomendación.  
+2) Barra lateral mostrando escenario, downtime y anticoagulación.  
+3) Tendencias T1–T3 con una gráfica.  
+4) Bloque de referencias dinámicas por escenario.  
+5) Exportación PDF (sin logo) y TXT.
+
+---
+
+¿Dudas o mejoras? Abre un *issue* o envía PR en tu repositorio.
+
+""")
+
+
+with st.expander("⚖️ Licencia MIT", expanded=False):
+    st.code("""
+MIT License
+
+Copyright (c) 2025 Dr. Josué Wigberto Tapia López
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+""", language="text")
+
+st.caption("© Dr. Tapia | Ayuda a la decisión clínica; no sustituye el juicio médico.")
