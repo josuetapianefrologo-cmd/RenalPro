@@ -9,7 +9,7 @@ from typing import List, Dict  # para bibliografía
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-VERSION = "v1.8.1-clean"
+VERSION = "v1.8.1"
 
 st.set_page_config(page_title="TRRC360 by Dr. Tapia", layout="wide")
 
