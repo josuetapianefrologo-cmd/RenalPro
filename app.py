@@ -21,7 +21,7 @@ MATPLOTLIB_OK = REPORTLAB_OK = True
 MATPLOTLIB_ERR = REPORTLAB_ERR = ""
 
 try:
-    import matplotlib.pyplot as plt
+
 except Exception as e:
     MATPLOTLIB_OK = False
     MATPLOTLIB_ERR = str(e)
@@ -41,8 +41,6 @@ except Exception:
     REPORTLAB_OK = False
 
 # Charts (sin estilos/colores especificados; 1 gráfica por analito)
-import matplotlib.pyplot as plt
-
 
 # ================== DEPENDENCIAS OPCIONALES SEGURAS ==================
 MATPLOTLIB_OK = True
@@ -51,7 +49,7 @@ MATPLOTLIB_ERR = ""
 REPORTLAB_ERR = ""
 
 try:
-    import matplotlib.pyplot as plt
+
 except Exception as e:
     MATPLOTLIB_OK = False
     MATPLOTLIB_ERR = str(e)
@@ -64,7 +62,7 @@ except Exception as e:
     REPORTLAB_ERR = str(e)
 # ================================================================
 
-VERSION = "v1.19.3"
+VERSION = "v1.19.3-hotfix1"
 DB_PATH = "patients_trrc360.json"
 
 # --------------------------------- Utilidades de persistencia -------------------
