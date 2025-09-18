@@ -17,6 +17,44 @@ st.set_page_config(page_title="TRRC360 by Dr. Tapia", layout="wide")
 if "auth_ok" not in st.session_state:
     st.session_state.auth_ok = True
 
+# ---------- Gate de confidencialidad (obligatorio para usar la app) ----------
+if "consent_ok" not in st.session_state:
+    st.session_state.consent_ok = False
+
+def _consent_gate():
+    st.title("⚖️ Aviso de confidencialidad y descargo de responsabilidad")
+    st.markdown(
+        """
+Esta herramienta es de **uso académico** y **no sustituye** el juicio clínico profesional ni constituye una prescripción médica formal.
+Los datos introducidos se tratan de forma **confidencial** dentro de esta sesión y **no** se almacenan de forma permanente por la aplicación.
+
+Para continuar, confirma que has leído y aceptas este aviso.
+        """
+    )
+
+    agree = st.checkbox("He leído y acepto el aviso de confidencialidad y el descargo de responsabilidad.", key="consent_chk")
+    col_a, col_b = st.columns([1, 1])
+    with col_a:
+        st.button(
+            "Aceptar y continuar",
+            type="primary",
+            disabled=not agree,
+            on_click=lambda: st.session_state.update({"consent_ok": True})
+        )
+    with col_b:
+        st.button(
+            "Salir (no aceptar)",
+            help="Si no aceptas, no podrás usar la aplicación en esta sesión.",
+            on_click=lambda: st.session_state.update({"consent_ok": False})
+        )
+
+    # Si aún no aceptan, detenemos la ejecución del resto de la app
+    if not st.session_state.get("consent_ok", False):
+        st.stop()
+
+# Mostrar el gate si no han aceptado aún
+if not st.session_state.get("consent_ok", False):
+    _consent_gate()
 
 # ================== HELPERS PDF (al inicio para evitar NameError) ==================
 def _s_int(x):
