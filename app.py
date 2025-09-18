@@ -962,7 +962,15 @@ with tab_balance:
     c2.metric("UF objetivo (mL)", f"{int(uf_obj) if uf_obj is not None else 0}")
     c3.metric("UF total (mL)", f"{int(uf_total)}")
     c4.metric("UF/h sugerida", f"{int(uf_h)}")
-    st.warning("⚠️ UF/h > 2 mL/kg/h") if (uf_h/peso) > 0.002 else st.success("OK")
+    # Evaluación segura de UF/h por kg (sin expresión ternaria)
+if peso is None or peso <= 0:
+    st.info("Ingresa un peso válido para evaluar la UF/h por kg.")
+else:
+    uf_mLkg_h = uf_h / peso  # mL/kg/h
+    if uf_mLkg_h > 2:
+        st.warning(f"⚠️ UF/h > 2 mL/kg/h (actual: {uf_mLkg_h:.2f} mL/kg/h)")
+    else:
+        st.success(f"OK (UF: {uf_mLkg_h:.2f} mL/kg/h)")
 
 # ---------- Anticoagulación extendida ----------
 with tab_anticoag:
