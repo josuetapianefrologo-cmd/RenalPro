@@ -1113,7 +1113,10 @@ with tab_fund:
 
     # Vista extendida controlada globalmente
     mostrar_ext = bool(st.session_state.get("mostrar_fund_extendido", False))
-    st.info("Vista extendida ACTIVADA por el switch global de la barra lateral.") if mostrar_ext else st.caption("Vista extendida desactivada (usa el switch global en la barra lateral).")
+    if mostrar_ext:
+        st.info("Vista extendida ACTIVADA por el switch global de la barra lateral.")
+    else:
+        st.caption("Vista extendida desactivada (usa el switch global en la barra lateral).")
 
     # Traer valores corrientes y RESPETAR el filtro elegido en la UI
     mod_for_fund, filtro_for_fund, _coment = combinar_recomendaciones(escenarios)
@@ -1178,7 +1181,7 @@ with tab_fund:
             albumina=float(st.session_state.get("alb_main", 3.0)),
             anticoag_tipo=st.session_state.get("anticoagulacion_tipo", "—"),
             r_targets=st.session_state.get("rca_targets", {}),
-            filtro_final=filtro_for_fund  # <- ya refleja la selección del usuario
+            filtro_final=filtro_for_fund
         ):
             st.write(linea)
 
