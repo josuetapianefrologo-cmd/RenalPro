@@ -1004,21 +1004,30 @@ with tab_ktv:
 with tab_balance:
     st.subheader("Balance dinámico y metas de UF")
     peso_seco = st.number_input("Peso seco objetivo (kg)", value=max(0.0, peso-5), step=0.5)
-    fo_actual = (peso - peso_seco)/peso_seco if peso_seco>0 else 0.0
-    fo_obj = st.number_input("FO% objetivo (p. ej. 5%)", value=0.05, step=0.01, help="Fracción de sobrecarga relativa al peso seco.")
+    fo_actual = (peso - peso_seco)/peso_seco if peso_seco > 0 else 0.0
+    fo_obj = st.number_input("FO% objetivo (p. ej. 5%)", value=0.05, step=0.01,
+                             help="Fracción de sobrecarga relativa al peso seco.")
     horas_trrc = st.number_input("Horas de TRRC planificadas (h)", value=24, step=1)
     ingresos = st.number_input("Ingresos previstos (mL)", value=0, step=50)
     uresis_res = st.number_input("Uresis residual 24 h (mL)", value=st.session_state.get("ur_main", 0), step=50)
-    uf_obj = ((peso - (1+fo_obj)*peso_seco) * 1000) if (peso_seco>0) else None
+
+    uf_obj = ((peso - (1 + fo_obj) * peso_seco) * 1000) if peso_seco > 0 else None
     uf_mant = (ingresos - uresis_res)
     uf_total = (uf_obj if uf_obj is not None else 0) + uf_mant
-    uf_h = uf_total/horas_trrc if horas_trrc>0 else 0
-    c1,c2,c3,c4 = st.columns(4)
+    uf_h = uf_total / horas_trrc if horas_trrc > 0 else 0
+
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("FO% actual", f"{fo_actual:.1%}")
     c2.metric("UF objetivo (mL)", f"{int(uf_obj) if uf_obj is not None else 0}")
     c3.metric("UF total (mL)", f"{int(uf_total)}")
     c4.metric("UF/h sugerida", f"{int(uf_h)}")
-    st.warning("⚠️ UF/h > 2 mL/kg/h") if (uf_h/peso) > 0.002 else st.success("OK")
+
+    # ✅ NO usar ternario con st.*
+    ratio_uf_peso = (uf_h / max(float(peso), 1e-9))  # mL/h por kg
+    if ratio_uf_peso > 0.002:   # 2 mL/kg/h
+        st.warning("⚠️ UF/h > 2 mL/kg/h")
+    else:
+        st.success("OK")
 
 # ---------- Anticoagulación extendida ----------
 with tab_anticoag:
