@@ -364,12 +364,6 @@ def export_pdf():
     margin = 50
     y = h - margin
 
-    # Logo (opcional)
-    try:
-        c.drawImage("logo.png", x=margin, y=y-35, width=120, height=85, preserveAspectRatio=True, mask="auto")
-    except Exception:
-        pass
-
     # Título y fecha
     c.setFont("Helvetica-Bold", 14)
     c.drawString(margin, y, "Prescripción Terapia de Reemplazo Renal Continua")
