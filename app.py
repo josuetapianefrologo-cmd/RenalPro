@@ -801,6 +801,7 @@ tab_main, tab_ktv, tab_balance, tab_anticoag, tab_fund, tab_rx, tab_refs = st.ta
 with tab_main:
     st.subheader("Recomendación combinada")
 
+    # --- Signos/hemodinamia superiores ---
     cP1, cP2, cP3 = st.columns(3)
     with cP1:
         pam = st.number_input("PAM (mmHg)", 30.0, 130.0, 65.0, 1.0, key="pam", help="Presión arterial media actual.")
@@ -811,36 +812,62 @@ with tab_main:
         lactato_desc = st.selectbox("Lactato en descenso", ["No", "Sí"], 0, key="lactato_desc_sel")
         lactato_desc_bool = (lactato_desc == "Sí")
 
+    # --- Reglas combinadas por escenarios ---
     mod_final, filtro_final, comentarios = combinar_recomendaciones(escenarios)
     filtro_sugerido = sugerir_filtro_por_escenarios(escenarios)
 
     opciones_filtro = list(FILTROS.keys())
     idx_default = opciones_filtro.index(filtro_sugerido) if filtro_sugerido in opciones_filtro else 0
 
+    # --- Cálculos base (para mostrar FF arriba, estilo v1.8.0) ---
+    qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(
+        qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF"
+    )
+    ff_txt = f"{ff:.1%}" if ff is not None else "—"
+
+    # --- Tarjetas superiores (Modalidad / Filtro sugerido / FF estimada) ---
     c1, c2, c3 = st.columns(3)
     c1.metric("Modalidad", mod_final or "—")
     c2.metric("Filtro sugerido", filtro_sugerido or "—")
-    filtro_elegido = c3.selectbox("Filtro (puedes cambiarlo)", opciones_filtro, index=idx_default, key="ui_filtro",
-                                  help=FILTROS[opciones_filtro[idx_default]].comentarios)
+    c3.metric("FF estimada", ff_txt)
+
+    # --- Selector de filtro (respetado en toda la app) ---
+    try:
+        filtro_elegido = st.selectbox(
+            "Filtro (puedes cambiarlo)",
+            opciones_filtro,
+            index=idx_default,
+            key="ui_filtro",
+            help=FILTROS[opciones_filtro[idx_default]].comentarios
+        )
+    except Exception:
+        filtro_elegido = opciones_filtro[0]
+        st.session_state["ui_filtro"] = filtro_elegido
 
     # ===== Laboratorios (rápido) – con Albúmina =====
     st.markdown("### Laboratorios (rápido)")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        na = st.number_input("Na (mEq/L)", 100.0, 200.0, 140.0, 0.5, key="na_main", help="Objetivo de corrección: hipoNa ≤8–10 mEq/L/24h (≤8 si alto riesgo ODS).")
-        k  = st.number_input("K (mEq/L)", 1.0, 10.0, 4.0, 0.1, key="k_main", help="K≥6: sugerir Qd 2–3 L/h con dializado K bajo/0 y re-labs cada 2–4 h.")
+        na = st.number_input("Na (mEq/L)", 100.0, 200.0, 140.0, 0.5, key="na_main",
+                             help="Objetivo de corrección: hipoNa ≤8–10 mEq/L/24h (≤8 si alto riesgo ODS).")
+        k  = st.number_input("K (mEq/L)", 1.0, 10.0, 4.0, 0.1, key="k_main",
+                             help="K≥6: sugerir Qd 2–3 L/h con dializado K bajo/0 y re-labs cada 2–4 h.")
     with col2:
-        hco3    = st.number_input("HCO₃⁻ (mEq/L)", 5.0, 45.0, 20.0, 0.5, key="hco3_main", help="Si acidosis: usar soluciones con bicarbonato; evitar lactato.")
+        hco3    = st.number_input("HCO₃⁻ (mEq/L)", 5.0, 45.0, 20.0, 0.5, key="hco3_main",
+                                  help="Si acidosis: usar soluciones con bicarbonato; evitar lactato.")
         lactato = st.number_input("Lactato (mmol/L)", 0.0, 20.0, 2.0, 0.1, key="lac_main")
     with col3:
-        amonio = st.number_input("Amonio (µmol/L)", 0.0, 1000.0, 80.0, 5.0, key="nh4_main", help="En inestables, CRRT continua; dosis/flujo condicionan el clearance.")
-        ck     = st.number_input("CK (U/L)", 0.0, 100000.0, 200.0, 50.0, key="ck_main", help=">5000 sugiere rabdomiólisis → considerar HCO con vigilancia de albúmina.")
+        amonio = st.number_input("Amonio (µmol/L)", 0.0, 1000.0, 80.0, 5.0, key="nh4_main",
+                                 help="En inestables, CRRT continua; dosis/flujo condicionan el clearance.")
+        ck     = st.number_input("CK (U/L)", 0.0, 100000.0, 200.0, 50.0, key="ck_main",
+                                 help=">5000 sugiere rabdomiólisis → considerar HCO con vigilancia de albúmina.")
     with col4:
         ph        = st.number_input("pH", 6.80, 7.80, 7.35, 0.01, format="%.2f", key="ph_main")
         uresis24  = st.number_input("Uresis 24 h (mL)", 0, 20000, 800, 50, key="ur_main")
-        albumina  = st.number_input("Albúmina (g/dL)", 1.0, 5.5, 3.0, 0.1, key="alb_main", help="Si HCO y Alb <3.0: vigilar y reponer; si Alb <2.5, cuestionar HCO.")
+        albumina  = st.number_input("Albúmina (g/dL)", 1.0, 5.5, 3.0, 0.1, key="alb_main",
+                                    help="Si HCO y Alb <3.0: vigilar y reponer; si Alb <2.5, cuestionar HCO.")
 
-    # Alertas por filtro considerando albúmina y HIT
+    # Alertas por filtro considerando Albúmina y HIT
     hit_bool = bool(st.session_state.get("hit_previa_bool", False))
     alertas = checar_contraindicaciones(filtro_elegido, albumina_gdl=albumina, hit=hit_bool)
     extra_hco_note = []
@@ -849,15 +876,19 @@ with tab_main:
     if alertas or extra_hco_note:
         st.warning(" | ".join(alertas + extra_hco_note))
 
-    # ===== Flujos base =====
-    qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
-
+    # ===== Flujos sugeridos (base) =====
     st.markdown("### Flujos sugeridos (base)")
     ca, cb, cc, cd = st.columns(4)
-    ca.metric("Qb (mL/min)", qb); cb.metric("Qp (mL/min)", int(qp))
-    cc.metric("Qe (mL/h)", int(qe)); cd.metric("UF (mL/h)", uf)
+    ca.metric("Qb (mL/min)", qb)
+    cb.metric("Qp (mL/min)", int(qp))
+    cc.metric("Qe (mL/h)", int(qe))
+    cd.metric("UF (mL/h)", uf)
+
     ce, cf, cg = st.columns(3)
-    ce.metric("Qr pre (mL/h)", qr_pre); cf.metric("Qr post (mL/h)", qr_post); cg.metric("Qd (mL/h)", int(qd))
+    ce.metric("Qr pre (mL/h)", qr_pre)
+    cf.metric("Qr post (mL/h)", qr_post)
+    cg.metric("Qd (mL/h)", int(qd))
+
     st.info(comentarios or "—")
     st.caption("Dosis objetivo 20–25 mL/kg/h; sin beneficio consistente por encima de 25 (ver Referencias).")
     st.caption("Usar FF <25% para proteger el filtro y mantener estabilidad (ver Referencias).")
