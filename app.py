@@ -420,6 +420,7 @@ tab_main, tab_ktv, tab_balance, tab_anticoag, tab_fund, tab_rx, tab_refs = st.ta
     "Referencias",
 ])
 # ---------- Main (Prescripción) ----------
+# ---------- Main (Prescripción) ----------
 with tab_main:
     st.subheader("Recomendación combinada")
 
@@ -433,6 +434,7 @@ with tab_main:
         lactato_desc = st.selectbox("Lactato en descenso", ["No", "Sí"], 0, key="lactato_desc_sel")
         lactato_desc_bool = (lactato_desc == "Sí")
 
+    # Recomendación por escenarios
     mod_final, filtro_final, comentarios = combinar_recomendaciones(st.session_state.get("sb_escenarios", []))
     filtro_sugerido = sugerir_filtro_por_escenarios(st.session_state.get("sb_escenarios", []))
 
@@ -462,7 +464,7 @@ with tab_main:
         uresis24  = st.number_input("Uresis 24 h (mL)", 0, 20000, 800, 50, key="ur_main")
         albumina  = st.number_input("Albúmina (g/dL)", 1.0, 5.5, 3.0, 0.1, key="alb_main")
 
-    # Alertas por filtro
+    # Alertas por filtro / condiciones
     hit_bool = bool(st.session_state.get("hit_previa_bool", False))
     alertas = checar_contraindicaciones(filtro_elegido, albumina_gdl=albumina, hit=hit_bool)
     extra_hco_note = []
@@ -471,7 +473,7 @@ with tab_main:
     if alertas or extra_hco_note:
         st.warning(" | ".join(alertas + extra_hco_note))
 
-    # Flujos base
+    # Flujos base y FF (AQUÍ aparecen los cálculos)
     qb = st.session_state.get("sb_qb", 200)
     hto = st.session_state.get("sb_hto", 0.30)
     peso = st.session_state.get("sb_peso", 70.0)
@@ -482,91 +484,34 @@ with tab_main:
 
     st.markdown("### Flujos sugeridos (base)")
     ca, cb, cc, cd = st.columns(4)
-    ca.metric("Qb (mL/min)", qb); cb.metric("Qp (mL/min)", int(qp))
-    cc.metric("Qe (mL/h)", int(qe)); cd.metric("UF (mL/h)", uf)
+    ca.metric("Qb (mL/min)", qb)
+    cb.metric("Qp (mL/min)", int(qp))
+    cc.metric("Qe (mL/h)", int(qe))
+    cd.metric("UF (mL/h)", uf)
     ce, cf, cg = st.columns(3)
-    ce.metric("Qr pre (mL/h)", qr_pre); cf.metric("Qr post (mL/h)", qr_post); cg.metric("Qd (mL/h)", int(qd))
+    ce.metric("Qr pre (mL/h)", qr_pre)
+    cf.metric("Qr post (mL/h)", qr_post)
+    cg.metric("Qd (mL/h)", int(qd))
+
     st.info(comentarios or "—")
-    st.caption("Dosis objetivo 20–25 mL/kg/h; sin beneficio consistente por encima de 25 (ver Referencias).")
-    st.caption("Usar FF <25% para proteger el filtro y mantener estabilidad (ver Referencias).")
+    st.caption("Dosis objetivo 20–25 mL/kg/h; sin beneficio consistente por encima de 25.")
+    st.caption("Usar FF <25% para proteger el filtro y mantener estabilidad.")
 
     # Semáforo de FF
     st.markdown("#### Estado del filtro (FF)")
     ff_pct = ff * 100 if ff is not None else 0.0
-    acciones = []
     if ff_pct <= 20:
         st.success(f"FF ≈ {ff_pct:.1f}% (Verde): óptima.")
-        acciones = ["Mantener configuración.", "Monitorizar coagulación del filtro y presiones transmembrana."]
     elif 20 < ff_pct <= 25:
         st.warning(f"FF ≈ {ff_pct:.1f}% (Ámbar): límite prudencial.")
-        acciones = ["Considerar ↑ predilución (mover de post a pre).", "Valorar ↑ Qb si tolera.", "Evitar ↑ de UF si no es indispensable."]
     else:
         st.error(f"FF ≈ {ff_pct:.1f}% (Rojo): alto riesgo de coagulación.")
-        acciones = ["↑ predilución (↓ postdilución).", "↓ Qr_post y/o ↓ UF.", "↑ Qb si tolera.", "Revisar anticoagulación (RCA/HNF)."]
-    st.caption("Acciones sugeridas: " + " · ".join(acciones))
+    st.caption("Acciones: ↑ predilución si FF sube; ↓ Qr_post/UF; ↑ Qb si tolera; revisar anticoagulación.")
 
-    # Banner crítico
-    cond_qd_alto = (k >= 6.0) or (ph < 7.20)
-    if cond_qd_alto:
-        st.warning("🔴 Condición crítica (K≥6.0 y/o pH<7.20) → **Qd 2,000–3,000 mL/h** con **K 0–2 mmol/L** y re-labs cada **2–4 h**.")
-        aplicar_auto = st.checkbox("Aplicar autosugerencia Qd≥2000 mL/h (ajusta dosis efectiva)", value=False, key="chk_auto_qd")
-        if aplicar_auto:
-            qd_auto = max(2000, int(qd))
-            qe_auto = qd_auto + qr_pre + qr_post + uf
-            dosis_auto = qe_auto / max(peso, 1e-6)
-            cA, cB, cC = st.columns(3)
-            cA.metric("Qd (mL/h) autosugerido", qd_auto)
-            cB.metric("Qe (mL/h) resultante", int(qe_auto))
-            cC.metric("Dosis (mL/kg/h) resultante", f"{dosis_auto:.1f}")
-            st.caption("Ajusta soluciones a **K 0–2 mmol/L** hasta K <5.5; confirma electrolitos cada 2–4 h.")
-
-    # Bloque sepsis/choque
-    if sepsis_presente(st.session_state.get("sb_escenarios", [])):
-        st.divider()
-        st.markdown("### Recomendaciones automáticas – Sepsis / choque séptico")
-
-        colA, colB = st.columns([2, 1])
-        with colA:
-            rec_mod = rec_mod_sepsis(True, True)
-            st.markdown(f"**Modalidad sugerida:** {rec_mod['modalidad']}")
-            if rec_mod["opciones"]: st.caption("Alternativas: " + " · ".join(rec_mod["opciones"]))
-            if rec_mod["filtros"]:  st.caption("Filtros opcionales: " + " · ".join(rec_mod["filtros"]))
-
-            dosis = rec_dosis_trrc(peso)
-            st.markdown(f"**Dosis:** Inicio {dosis['inicio_mlkg_h'][0]}–{dosis['inicio_mlkg_h'][1]} y mantenimiento {dosis['mantenimiento_mlkg_h'][0]}–{dosis['mantenimiento_mlkg_h'][1]} mL/kg/h.")
-
-            plan_uf = rec_uf(pam, vasopresor_alta_dosis=vasopresor_alto_bool, lactato_baja=lactato_desc_bool)
-            st.markdown(f"**UF – inicio:** {plan_uf['inicio']}")
-            st.caption(f"Progresión: {plan_uf['progresión']}")
-            st.caption(f"Suspender si: {plan_uf['suspender_si']}")
-            if "estado" in plan_uf: st.info(f"Sugerencia dinámica UF: {plan_uf['estado']}")
-
-            ajustes_lab = rec_labs(k, ph, na)
-            with st.expander("Ajustes por laboratorio (automático)"):
-                for a in ajustes_lab: st.write("- " + a)
-
-            htc_alto = True if hto > 0.35 else False
-            bal = rec_balance_predil_postdil(htc_alto)
-            st.markdown(f"**Pre/Post sugerido:** {bal['pre']}% / {bal['post']}%")
-            st.caption(bal["nota"])
-
-        with colB:
-            al = alertas_sepsis(ph, pam, na, k, vasopresor_alto_bool)
-            if al: st.warning("**Alertas de seguridad:**\n\n- " + "\n- ".join(al))
-
-        st.markdown("#### Checklist previo a validar")
-        modalidad_txt = rec_mod['modalidad']
-        dosis_txt = f"{dosis['inicio_mlkg_h'][0]}–{dosis['inicio_mlkg_h'][1]} / {dosis['mantenimiento_mlkg_h'][0]}–{dosis['mantenimiento_mlkg_h'][1]}"
-        uf_txt = f"{plan_uf['inicio']} → {plan_uf['progresión']}"
-        solucion_txt = "Con bicarbonato si pH<7.2; evitar lactato en acidosis"
-        filtro_txt = (rec_mod['filtros'][0] if rec_mod['filtros'] else "Convencional")
-        balance_txt = f"{bal['pre']}% pre / {bal['post']}% post"
-        items = checklist_final(modalidad_txt, dosis_txt, uf_txt, solucion_txt, filtro_txt, balance_txt)
-        st.write("\n".join([f"✅ {x}" for x in items]))
-
-        st.session_state["sepsis_checklist_txt"] = items
-        st.session_state["sepsis_alertas_txt"] = al if 'al' in locals() else []
-
+    # Banner crítico (hiperK/acidosis)
+    if (k >= 6.0) or (ph < 7.20):
+        st.warning("🔴 K≥6.0 y/o pH<7.20 → **Qd 2,000–3,000 mL/h** con **K 0–2 mmol/L**; labs cada **2–4 h**.")
+        
 # ---------- Kt/V ----------
 with tab_ktv:
     st.subheader("Dosis por objetivos (Kt/V urea)")
