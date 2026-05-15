@@ -2826,7 +2826,8 @@ elif nav == "presc":
         save1, save2 = st.columns([2, 1])
         with save1:
             alias_pac = st.text_input("Nombre / clave del paciente (opcional)",
-                                      placeholder="Ej: Paciente UCI-01 o sin nombre",
+                                      placeholder="Ej: Paciente UCI-01",
+                                      value=st.session_state.get("presc_alias_cargado", ""),
                                       key="presc_alias")
             notas_pac = st.text_input("Notas clínicas (opcional)",
                                       placeholder="Ej: sepsis foco pulmonar, inicio día 2",
@@ -2836,21 +2837,43 @@ elif nav == "presc":
             st.markdown(" ")
             if st.button("💾 Guardar prescripción", type="primary",
                          key="btn_guardar_presc", use_container_width=True):
+                # Calcular datos actuales para guardar
+                _esc  = list(st.session_state.get("sb_escenarios", []))
+                _mod, _filt, _ = combinar_recomendaciones(_esc)
+                _qb   = int(st.session_state.get("sb_qb", 200))
+                _hto  = float(st.session_state.get("sb_hto", 0.30))
+                _dosis = float(st.session_state.get("sb_dosis", 30))
+                _peso = float(st.session_state.get("sb_peso", 70))
+                _uf   = int(st.session_state.get("sb_uf", 100))
+                _, _, _qe, _, _, _, _ = flows_and_ff(_qb, _hto, _dosis, _peso, _uf, _mod or "CVVHDF")
+
                 datos = {
                     "alias":       alias_pac or "Paciente sin nombre",
-                    "modality":    st.session_state.get("presc_modality", "—"),
-                    "peso":        float(st.session_state.get("sb_peso", 70)),
-                    "hto":         float(st.session_state.get("sb_hto", 0.30)),
-                    "qb":          int(st.session_state.get("sb_qb", 200)),
-                    "qeff":        float(st.session_state.get("sb_qb", 200)) * 3,
-                    "uf":          int(st.session_state.get("sb_uf", 100)),
-                    "dosis_mlkgh": float(st.session_state.get("sb_dosis", 30)),
+                    "modality":    _mod or "—",
+                    "peso":        _peso,
+                    "hto":         _hto,
+                    "qb":          _qb,
+                    "qeff":        float(_qe) if _qe else _qb * 3.0,
+                    "uf":          _uf,
+                    "dosis_mlkgh": _dosis,
                     "anticoag":    st.session_state.get("anticoagulacion_tipo", "—"),
-                    "escenarios":  list(st.session_state.get("sb_escenarios", [])),
+                    "escenarios":  _esc,
                     "notas":       notas_pac or "",
                 }
+                # Guardar todos los parámetros del session_state relevantes
+                datos_json_keys = [
+                    "sb_peso","sb_hto","sb_qb","sb_uf","sb_dosis","sb_escenarios",
+                    "anticoagulacion_tipo","rx_nombre_paciente","rx_expediente",
+                    "rx_edad","rx_sexo","rx_unidad","rx_nombre_medico","rx_sello",
+                    "na_main","k_main","ph_main","an_hgb","an_sex",
+                ]
+                datos_json_dict = {k: st.session_state.get(k) for k in datos_json_keys}
+                datos_json_dict["alias"] = alias_pac or "Paciente sin nombre"
+                datos["datos_json"] = _json.dumps(datos_json_dict, default=str)
+
                 ok = _db.save_prescription(_user_id(), datos)
                 if ok:
+                    st.session_state.pop("presc_alias_cargado", None)
                     st.success(f"✅ Prescripción de **{datos['alias']}** guardada correctamente.")
                 else:
                     st.error("Error al guardar. Verifica la conexión con Railway.")
@@ -6256,9 +6279,11 @@ elif nav == "pacientes":
                         try:
                             datos = _json.loads(sel_pac.get("datos_json", "{}"))
                             for k, v in datos.items():
-                                st.session_state[k] = v
+                                if k != "alias":
+                                    st.session_state[k] = v
+                            st.session_state["presc_alias_cargado"] = sel_pac.get("alias", "")
                             st.session_state["nav_sel"] = "presc"
-                            st.success("✅ Parámetros cargados.")
+                            st.session_state.pop("sel_pac_id", None)
                             st.rerun()
                         except Exception:
                             st.error("Error al cargar parámetros.")
@@ -6321,8 +6346,8 @@ elif nav == "pacientes":
                             sg_bun = st.number_input("BUN (mg/dL)", 0.0, 200.0, 0.0, 1.0, key="sg_bun")
                         with sg2:
                             sg_diur = st.number_input("Diuresis (mL/24h)", 0.0, 5000.0, 0.0, 50.0, key="sg_diur")
-                            sg_k = st.number_input("K (mEq/L)", 0.0, 10.0, 0.0, 0.1, key="sg_k")
-                            sg_na = st.number_input("Na (mEq/L)", 100.0, 180.0, 0.0, 1.0, key="sg_na")
+                            sg_k = st.number_input("K (mEq/L) — 0 si no disponible", 0.0, 10.0, 0.0, 0.1, key="sg_k")
+                            sg_na = st.number_input("Na (mEq/L) — 0 si no disponible", 0.0, 180.0, 0.0, 1.0, key="sg_na")
                             sg_p = st.number_input("Fósforo (mg/dL)", 0.0, 10.0, 0.0, 0.1, key="sg_p")
                         with sg3:
                             sg_sofa = st.number_input("SOFA score", 0, 24, 0, 1, key="sg_sofa")
@@ -6518,6 +6543,13 @@ elif nav == "pacientes":
                     st.markdown("### 🚦 Semáforo de Criterios para Suspender TRRC")
                     st.caption("Basado en KDIGO 2012 + Wald R, NEJM 2020. El semáforo se actualiza con los datos del seguimiento.")
 
+                    if not sessions:
+                        st.info("📋 **¿Cómo funciona?** — Los criterios se calculan automáticamente usando los datos "
+                                "que registres en la sección **📈 Seguimiento**. Agrega al menos una sesión con "
+                                "diuresis, creatinina, PAM y SOFA para ver el semáforo actualizado.")
+                    else:
+                        st.caption(f"Calculado con datos de {len(sessions)} sesión(es) registrada(s).")
+
                     sessions = _db.get_sessions(sel_pac["id"])
                     last = sessions[-1] if sessions else {}
                     prev = sessions[-2] if len(sessions) >= 2 else {}
@@ -6563,19 +6595,26 @@ elif nav == "pacientes":
                         st.markdown(f"""
 <div style="border-left:4px solid {border};background:{color};
      padding:10px 14px;border-radius:0 8px 8px 0;margin:4px 0;">
-  <b>{icono} {nombre}:</b> {descripcion}<br>
-  <small style="color:#64748B;">{detalle}</small>
+  <b style="color:#1E293B;-webkit-text-fill-color:#1E293B;">{icono} {nombre}: {descripcion}</b><br>
+  <small style="color:#64748B;-webkit-text-fill-color:#64748B;">{detalle}</small>
 </div>""", unsafe_allow_html=True)
 
                     st.divider()
                     if todos_verde:
-                        st.success("🟢 **TODOS LOS CRITERIOS CUMPLIDOS** — Puede considerarse el weaning de TRRC. "
-                                   "Suspender TRRC 24–48h en prueba y monitorear creatinina y diuresis.")
+                        st.markdown("""<div style="background:#F0FDF4;border-left:4px solid #16A34A;padding:12px 16px;border-radius:0 8px 8px 0;">
+<b style="color:#166534;-webkit-text-fill-color:#166534;">🟢 TODOS LOS CRITERIOS CUMPLIDOS</b><br>
+<span style="color:#166534;-webkit-text-fill-color:#166534;">Puede considerarse el weaning de TRRC. Suspender TRRC 24–48h en prueba y monitorear creatinina y diuresis.</span>
+</div>""", unsafe_allow_html=True)
                     elif algun_verde >= 3:
-                        st.warning(f"🟡 **{algun_verde}/4 criterios + causa resuelta={'✅' if causa_resuelta else '❌'}** — "
-                                   "En evaluación. Continuar TRRC y reevaluar en 24h.")
+                        st.markdown(f"""<div style="background:#FFFBEB;border-left:4px solid #D97706;padding:12px 16px;border-radius:0 8px 8px 0;">
+<b style="color:#92400E;-webkit-text-fill-color:#92400E;">🟡 {algun_verde}/4 criterios + causa resuelta={'✅' if causa_resuelta else '❌'}</b><br>
+<span style="color:#92400E;-webkit-text-fill-color:#92400E;">En evaluación. Continuar TRRC y reevaluar en 24h.</span>
+</div>""", unsafe_allow_html=True)
                     else:
-                        st.error("🔴 **Criterios insuficientes** — Continuar TRRC. Reevaluar en 12–24h.")
+                        st.markdown("""<div style="background:#FEF2F2;border-left:4px solid #DC2626;padding:12px 16px;border-radius:0 8px 8px 0;">
+<b style="color:#991B1B;-webkit-text-fill-color:#991B1B;">🔴 Criterios insuficientes</b><br>
+<span style="color:#991B1B;-webkit-text-fill-color:#991B1B;">Continuar TRRC. Reevaluar en 12–24h.</span>
+</div>""", unsafe_allow_html=True)
 
                     st.info("**Trial de suspensión:** suspender TRRC 24–48h. Si creatinina no sube >0.3 mg/dL "
                             "y diuresis ≥500 mL/día → éxito. Si deteriora → reiniciar.")
@@ -6641,9 +6680,15 @@ Uso académico y de apoyo clínico. No reemplaza el juicio clínico."""
                                        file_name=f"Nota_TRRC_{alias_n}_{ts_nota[:10]}.txt",
                                        mime="text/plain", key="btn_dl_nota")
 
-            # ── LISTA DE PACIENTES ─────────────────────────────────────────────
             else:
                 total = len(prescriptions)
+
+                # Limpiar selección si el paciente ya no existe
+                if st.session_state.get("sel_pac_id") and not any(
+                    p["id"] == st.session_state["sel_pac_id"] for p in prescriptions
+                ):
+                    st.session_state.pop("sel_pac_id", None)
+
                 buscar = st.text_input("🔍 Buscar paciente", key="pac_buscar", placeholder="Nombre o alias...")
                 filtradas = [p for p in prescriptions
                              if buscar.lower() in (p.get("alias") or "").lower()] if buscar else prescriptions
@@ -6664,13 +6709,13 @@ Uso académico y de apoyo clínico. No reemplaza el juicio clínico."""
 <div style="background:#fff;border:1px solid #BFDBFE;border-left:4px solid #2563EB;
      border-radius:10px;padding:12px 16px;margin:6px 0;">
   <div style="display:flex;justify-content:space-between;align-items:center;">
-    <span style="font-size:16px;font-weight:700;color:#1E3A8A;">🩺 {p.get('alias','—')}</span>
-    <span style="font-size:12px;color:#64748B;">{fecha_str} · {n_sess} sesión(es)</span>
+    <span style="font-size:16px;font-weight:700;color:#1E3A8A;-webkit-text-fill-color:#1E3A8A;">🩺 {p.get('alias','—')}</span>
+    <span style="font-size:12px;color:#64748B;-webkit-text-fill-color:#64748B;">{fecha_str} · {n_sess} sesión(es)</span>
   </div>
-  <div style="color:#475569;font-size:13px;margin-top:4px;">
+  <div style="color:#475569;-webkit-text-fill-color:#475569;font-size:13px;margin-top:4px;">
     {p.get('modality','—')} · {p.get('peso','—')} kg · {p.get('anticoag','—')}
     {' · Cr: ' + str(last_p.get('creatinina','')) + ' mg/dL' if last_p.get('creatinina') else ''}
-    {' · Diuresis: ' + str(last_p.get('diuresis_ml',''))[:5] + ' mL' if last_p.get('diuresis_ml') else ''}
+    {' · Diuresis: ' + str(int(last_p.get('diuresis_ml',0))) + ' mL' if last_p.get('diuresis_ml') else ''}
   </div>
 </div>""", unsafe_allow_html=True)
 
@@ -6686,13 +6731,17 @@ Uso académico y de apoyo clínico. No reemplaza el juicio clínico."""
                                 try:
                                     datos = _json.loads(p.get("datos_json","{}"))
                                     for k, v in datos.items():
-                                        st.session_state[k] = v
+                                        if k != "alias":
+                                            st.session_state[k] = v
+                                    # Pre-cargar nombre del paciente en el formulario de guardado
+                                    st.session_state["presc_alias_cargado"] = p.get("alias","")
                                     st.session_state["nav_sel"] = "presc"
                                     st.rerun()
                                 except Exception:
                                     st.error("Error al cargar.")
                         with bc3:
-                            if st.button("🗑️", key=f"del_{p['id']}", use_container_width=True):
+                            if st.button("🗑️", key=f"del_{p['id']}", use_container_width=True,
+                                         help="Eliminar este paciente"):
                                 _db.delete_prescription(p["id"], uid)
                                 st.rerun()
 
