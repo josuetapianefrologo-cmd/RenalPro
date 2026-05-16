@@ -37,6 +37,26 @@ try:
 except ImportError:
     _DB_ON = False
 
+# ── Caché de consultas DB (evita ir a Railway en cada clic) ───────────────────
+@st.cache_data(ttl=15)
+def _cached_prescriptions(uid: int):
+    """Consulta prescripciones con caché de 15s."""
+    return _db.get_prescriptions(uid) if _DB_ON else []
+
+@st.cache_data(ttl=15)
+def _cached_sessions(presc_id: int):
+    """Consulta sesiones con caché de 15s."""
+    return _db.get_sessions(presc_id) if _DB_ON else []
+
+@st.cache_data(ttl=20)
+def _cached_all_users():
+    """Consulta todos los usuarios con caché de 20s."""
+    return _db.get_all_users() if _DB_ON else []
+
+def _clear_cache():
+    """Invalida todos los cachés tras una escritura."""
+    st.cache_data.clear()
+
 VERSION = "v3.0.0"
 
 # ─── PAGE CONFIG ──────────────────────────────────────────────────────────────
@@ -508,6 +528,9 @@ def _do_login(username: str, password: str):
                 "sess_rol": rol,
                 "sess_nombre": user_db.get("nombre", uname),
                 "sess_dias": _db.get_dias_restantes(user_db),
+                "sess_avatar": user_db.get("avatar", "👨‍⚕️"),
+                "sess_institucion": user_db.get("institucion", ""),
+                "sess_email": user_db.get("email", ""),
                 "using_db": True,
             })
             return True, rol
@@ -526,6 +549,9 @@ def _do_login(username: str, password: str):
             "sess_rol": rol,
             "sess_nombre": user["nombre"],
             "sess_dias": _days_left_local(user),
+            "sess_avatar": user.get("avatar", "👨‍⚕️"),
+            "sess_institucion": user.get("institucion", ""),
+            "sess_email": user.get("email", ""),
             "using_db": False,
         })
         return True, rol
@@ -661,12 +687,14 @@ section[data-testid="stSidebar"]{display:none!important;}
     st.stop()
 
 # ─── BANNER DE ESTADO DE USUARIO ──────────────────────────────────────────────
+def _avatar():
+    """Retorna el avatar del usuario actual."""
+    return st.session_state.get("sess_avatar", "👨‍⚕️")
+
 def _status_banner():
     rol    = _rol()
     nombre = _nombre()
-    _init_db()
-    users  = st.session_state.get("auth_users", {})
-    user   = users.get(st.session_state.get("sess_user", ""))
+    av     = _avatar()
     days   = st.session_state.get("sess_dias", 0)
 
     if rol == "guest":
@@ -683,7 +711,7 @@ def _status_banner():
         tc    = "#1E40AF" if days > 2 else "#92400E"
         st.markdown(f"""<div style="background:{color};border:1px solid {bc};border-radius:10px;
             padding:8px 16px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
-            <span>⏱️</span>
+            <span style="font-size:18px;">{av}</span>
             <span style="color:{tc};font-size:13px;"><strong>{nombre}</strong> —
             Prueba gratuita: <strong>{days} día(s) restante(s)</strong></span>
             </div>""", unsafe_allow_html=True)
@@ -691,7 +719,7 @@ def _status_banner():
     elif rol == "pro":
         st.markdown(f"""<div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:10px;
             padding:8px 16px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
-            <span>⭐</span>
+            <span style="font-size:18px;">{av}</span>
             <span style="color:#166534;font-size:13px;"><strong>{nombre} — Premium</strong> ·
             {days} días restantes</span>
             </div>""", unsafe_allow_html=True)
@@ -701,7 +729,7 @@ def _status_banner():
         st.markdown(f"""<div style="background:linear-gradient(90deg,#0D9488,#0891B2);
             border-radius:10px;padding:8px 16px;margin-bottom:8px;
             display:flex;align-items:center;gap:10px;">
-            <span style="font-size:18px;">🎓</span>
+            <span style="font-size:18px;">{av}</span>
             <span style="color:#fff;font-size:13px;">
             <strong>{nombre} — Beca Académica</strong> ·
             Dr. Josué Tapia Nefrólogo · {dias_txt}</span>
@@ -710,7 +738,7 @@ def _status_banner():
     elif rol == "admin":
         st.markdown(f"""<div style="background:#1E3A8A;border-radius:10px;
             padding:8px 16px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
-            <span>🛡️</span>
+            <span style="font-size:18px;">{av}</span>
             <span style="color:#fff;font-size:13px;"><strong>{nombre}</strong> ·
             Administrador · Acceso total</span>
             </div>""", unsafe_allow_html=True)
@@ -2054,6 +2082,7 @@ with st.sidebar:
     _navbtn("📖 Referencias", "refs")
 
     _navsec("CUENTA")
+    _navbtn("👤 Mi Cuenta", "micuenta")
     _navbtn("💳 Premium", "premium")
     _navbtn("🛡️ Admin" if _rol() == "admin" else "👤 Mi Cuenta", "admin")
 
@@ -2835,48 +2864,77 @@ elif nav == "presc":
         with save2:
             st.markdown(" ")
             st.markdown(" ")
-            if st.button("💾 Guardar prescripción", type="primary",
-                         key="btn_guardar_presc", use_container_width=True):
-                # Calcular datos actuales para guardar
-                _esc  = list(st.session_state.get("sb_escenarios", []))
-                _mod, _filt, _ = combinar_recomendaciones(_esc)
-                _qb   = int(st.session_state.get("sb_qb", 200))
-                _hto  = float(st.session_state.get("sb_hto", 0.30))
-                _dosis = float(st.session_state.get("sb_dosis", 30))
-                _peso = float(st.session_state.get("sb_peso", 70))
-                _uf   = int(st.session_state.get("sb_uf", 100))
-                _, _, _qe, _, _, _, _ = flows_and_ff(_qb, _hto, _dosis, _peso, _uf, _mod or "CVVHDF")
-
-                datos = {
-                    "alias":       alias_pac or "Paciente sin nombre",
-                    "modality":    _mod or "—",
-                    "peso":        _peso,
-                    "hto":         _hto,
-                    "qb":          _qb,
-                    "qeff":        float(_qe) if _qe else _qb * 3.0,
-                    "uf":          _uf,
-                    "dosis_mlkgh": _dosis,
-                    "anticoag":    st.session_state.get("anticoagulacion_tipo", "—"),
-                    "escenarios":  _esc,
-                    "notas":       notas_pac or "",
-                }
-                # Guardar todos los parámetros del session_state relevantes
-                datos_json_keys = [
-                    "sb_peso","sb_hto","sb_qb","sb_uf","sb_dosis","sb_escenarios",
-                    "anticoagulacion_tipo","rx_nombre_paciente","rx_expediente",
-                    "rx_edad","rx_sexo","rx_unidad","rx_nombre_medico","rx_sello",
-                    "na_main","k_main","ph_main","an_hgb","an_sex",
-                ]
-                datos_json_dict = {k: st.session_state.get(k) for k in datos_json_keys}
-                datos_json_dict["alias"] = alias_pac or "Paciente sin nombre"
-                datos["datos_json"] = _json.dumps(datos_json_dict, default=str)
-
-                ok = _db.save_prescription(_user_id(), datos)
-                if ok:
-                    st.session_state.pop("presc_alias_cargado", None)
-                    st.success(f"✅ Prescripción de **{datos['alias']}** guardada correctamente.")
-                else:
-                    st.error("Error al guardar. Verifica la conexión con Railway.")
+            update_id = st.session_state.get("update_presc_id")
+            if update_id:
+                st.info(f"↩️ Actualizando prescripción existente — ID {update_id}. "
+                        "Los parámetros se guardarán sobre el registro original.")
+                if st.button("🔄 Actualizar prescripción", type="primary",
+                             key="btn_guardar_presc", use_container_width=True):
+                    _esc  = list(st.session_state.get("sb_escenarios", []))
+                    _mod, _, _ = combinar_recomendaciones(_esc)
+                    _qb   = int(st.session_state.get("sb_qb", 200))
+                    _hto  = float(st.session_state.get("sb_hto", 0.30))
+                    _dosis = float(st.session_state.get("sb_dosis", 30))
+                    _peso = float(st.session_state.get("sb_peso", 70))
+                    _uf   = int(st.session_state.get("sb_uf", 100))
+                    _, _, _qe, _, _, _, _ = flows_and_ff(_qb, _hto, _dosis, _peso, _uf, _mod or "CVVHDF")
+                    datos = {
+                        "alias": alias_pac or "Paciente sin nombre",
+                        "modality": _mod or "—", "peso": _peso, "hto": _hto,
+                        "qb": _qb, "qeff": float(_qe) if _qe else _qb * 3.0,
+                        "uf": _uf, "dosis_mlkgh": _dosis,
+                        "anticoag": st.session_state.get("anticoagulacion_tipo", "—"),
+                        "escenarios": _esc, "notas": notas_pac or "",
+                    }
+                    datos_j = {k: st.session_state.get(k) for k in [
+                        "sb_peso","sb_hto","sb_qb","sb_uf","sb_dosis","sb_escenarios",
+                        "anticoagulacion_tipo","rx_nombre_paciente","rx_expediente",
+                        "rx_edad","rx_sexo","rx_unidad","rx_nombre_medico","rx_sello",
+                    ]}
+                    datos_j["alias"] = alias_pac or "Paciente sin nombre"
+                    datos["datos_json"] = _json.dumps(datos_j, default=str)
+                    if _db.update_prescription(update_id, _user_id(), datos):
+                        st.session_state.pop("update_presc_id", None)
+                        st.session_state.pop("presc_alias_cargado", None)
+                        _clear_cache()
+                        st.success(f"✅ Prescripción de **{datos['alias']}** actualizada.")
+                    else:
+                        st.error("Error al actualizar.")
+                if st.button("❌ Cancelar y guardar como nuevo", key="btn_cancel_update"):
+                    st.session_state.pop("update_presc_id", None)
+                    st.rerun()
+            else:
+                if st.button("💾 Guardar prescripción", type="primary",
+                             key="btn_guardar_presc", use_container_width=True):
+                    _esc  = list(st.session_state.get("sb_escenarios", []))
+                    _mod, _, _ = combinar_recomendaciones(_esc)
+                    _qb   = int(st.session_state.get("sb_qb", 200))
+                    _hto  = float(st.session_state.get("sb_hto", 0.30))
+                    _dosis = float(st.session_state.get("sb_dosis", 30))
+                    _peso = float(st.session_state.get("sb_peso", 70))
+                    _uf   = int(st.session_state.get("sb_uf", 100))
+                    _, _, _qe, _, _, _, _ = flows_and_ff(_qb, _hto, _dosis, _peso, _uf, _mod or "CVVHDF")
+                    datos = {
+                        "alias": alias_pac or "Paciente sin nombre",
+                        "modality": _mod or "—", "peso": _peso, "hto": _hto,
+                        "qb": _qb, "qeff": float(_qe) if _qe else _qb * 3.0,
+                        "uf": _uf, "dosis_mlkgh": _dosis,
+                        "anticoag": st.session_state.get("anticoagulacion_tipo", "—"),
+                        "escenarios": _esc, "notas": notas_pac or "",
+                    }
+                    datos_j = {k: st.session_state.get(k) for k in [
+                        "sb_peso","sb_hto","sb_qb","sb_uf","sb_dosis","sb_escenarios",
+                        "anticoagulacion_tipo","rx_nombre_paciente","rx_expediente",
+                        "rx_edad","rx_sexo","rx_unidad","rx_nombre_medico","rx_sello",
+                    ]}
+                    datos_j["alias"] = alias_pac or "Paciente sin nombre"
+                    datos["datos_json"] = _json.dumps(datos_j, default=str)
+                    if _db.save_prescription(_user_id(), datos):
+                        st.session_state.pop("presc_alias_cargado", None)
+                        _clear_cache()
+                        st.success(f"✅ Prescripción de **{datos['alias']}** guardada.")
+                    else:
+                        st.error("Error al guardar.")
     elif _can_save() and not (_DB_ON and _db.db_ok()):
         st.info("💡 Conecta Railway para habilitar el guardado de prescripciones.")
     elif not _can_save():
@@ -4589,7 +4647,7 @@ elif nav == "admin":
         # ── Datos según origen (DB o local) ──────────────────────────────────
         using_db = _DB_ON and _db.db_ok()
         if using_db:
-            all_users_db = _db.get_all_users()
+            all_users_db = _cached_all_users()
         else:
             all_users_db = []
         users_adm = st.session_state.get("auth_users", {})
@@ -4762,58 +4820,224 @@ elif nav == "admin":
         # ═══════════════════════════════════════════════════════════════════
         # GESTIÓN DE USUARIOS
         # ═══════════════════════════════════════════════════════════════════
+        # ═══════════════════════════════════════════════════════════════════
+        # GESTIÓN DE USUARIOS — usa Railway DB si está conectado
+        # ═══════════════════════════════════════════════════════════════════
         st.divider()
         st.markdown("### 👥 Gestión de usuarios")
 
-        for uname, udata in list(users_adm.items()):
-            rol_u = _get_role(udata)
-            icon_map = {"admin":"🛡️","pro":"⭐","beca":"🎓","trial":"⏱️",
-                        "expirado":"⚠️","inactivo":"🔴"}
-            rol_color = icon_map.get(rol_u, "❓")
-            days_u = _days_left_local(udata)
-            days_txt = f" · {days_u}d restantes" if days_u > 0 else ""
+        if using_db and all_users_db:
+            # ── Vista Railway DB (usuarios reales) ───────────────────────────
+            buscar_adm = st.text_input("🔍 Buscar usuario", key="adm_buscar",
+                                       placeholder="Nombre o username...")
+            usuarios_filtrados = [u for u in all_users_db
+                if buscar_adm.lower() in (u.get("username","") + u.get("nombre","")).lower()
+            ] if buscar_adm else all_users_db
 
-            with st.expander(f"{rol_color} **{uname}** — {udata['nombre']} ({rol_u}{days_txt})"):
-                col_i, col_a = st.columns([2, 1])
-                with col_i:
-                    st.write(f"**Email:** {udata.get('email', '—')}")
-                    st.write(f"**Especialidad:** {udata.get('especialidad', '—')}")
-                    st.write(f"**Rol actual:** {rol_u}")
-                    st.write(f"**Creado:** {udata.get('created', '—')}")
-                    st.write(f"**Último acceso:** {udata.get('last_login', 'Nunca')}")
-                    if udata.get("trial_end"): st.write(f"**Trial vence:** {udata['trial_end']}")
-                    if udata.get("sub_end"): st.write(f"**Acceso vence:** {udata['sub_end']}")
-                with col_a:
-                    if uname != st.session_state.get("sess_user"):
-                        new_end = st.date_input("Activar Premium hasta:", key=f"end_{uname}")
-                        if st.button(f"⭐ Activar Premium", key=f"pro_{uname}"):
-                            udata["rol"] = "pro"
-                            udata["sub_end"] = new_end.strftime("%Y-%m-%d")
-                            udata["is_active"] = True
-                            st.success(f"✅ {uname} activado como Premium hasta {new_end}")
-                            st.rerun()
-                        if st.button(f"🎓 Dar beca indef.", key=f"beca_{uname}"):
-                            udata["rol"] = "beca"
-                            udata["sub_end"] = "2099-12-31"
-                            st.success(f"🎓 {uname} tiene beca académica indefinida.")
-                            st.rerun()
-                        st.markdown("")
-                        if udata.get("is_active", True):
-                            if st.button(f"🔴 Desactivar", key=f"deact_{uname}"):
-                                udata["is_active"] = False
-                                st.warning(f"{uname} desactivado.")
-                                st.rerun()
+            for u in usuarios_filtrados:
+                uid_u   = u.get("id")
+                uname_u = u.get("username","")
+                rol_u   = _db.get_effective_rol(u)
+                nom_u   = u.get("nombre","—")
+                av_u    = u.get("avatar","👤")
+                dias_u  = _db.get_dias_restantes(u)
+                icon_m  = {"admin":"🛡️","pro":"⭐","beca":"🎓","trial":"⏱️","free":"👁️"}.get(rol_u,"❓")
+                dias_txt = f" · {dias_u}d" if dias_u and dias_u < 365 else ""
+
+                with st.expander(f"{av_u} {icon_m} **{uname_u}** — {nom_u} ({rol_u}{dias_txt})"):
+                    ci1, ci2 = st.columns([2,1])
+                    with ci1:
+                        st.write(f"**Email:** {u.get('email','—')}")
+                        st.write(f"**Institución:** {u.get('institucion','—')}")
+                        st.write(f"**Rol:** {rol_u}")
+                        st.write(f"**Creado:** {str(u.get('created_at',''))[:10]}")
+                        st.write(f"**Último acceso:** {str(u.get('last_login','Nunca'))[:16] if u.get('last_login') else 'Nunca'}")
+                        if u.get("subscription_end"):
+                            st.write(f"**Acceso hasta:** {str(u['subscription_end'])[:10]}")
+                    with ci2:
+                        if uname_u != st.session_state.get("sess_user"):
+                            # Dar beca
+                            if rol_u != "beca":
+                                if st.button(f"🎓 Dar beca indef.", key=f"beca_db_{uid_u}",
+                                             use_container_width=True):
+                                    _db.grant_beca(uid_u, 0)
+                                    _clear_cache()
+                                    st.success(f"🎓 Beca otorgada a {uname_u}")
+                                    st.rerun()
+                            else:
+                                if st.button(f"Revocar beca", key=f"rev_db_{uid_u}",
+                                             use_container_width=True):
+                                    _db.revoke_beca(uid_u)
+                                    _clear_cache()
+                                    st.warning(f"Beca revocada de {uname_u}")
+                                    st.rerun()
+                            # Activar Premium
+                            end_d = st.date_input("Premium hasta:", key=f"end_db_{uid_u}")
+                            if st.button(f"⭐ Activar Premium", key=f"pro_db_{uid_u}",
+                                         use_container_width=True):
+                                import psycopg2
+                                from datetime import datetime as _dt
+                                conn_adm = _db.get_conn()
+                                if conn_adm:
+                                    try:
+                                        cur_adm = conn_adm.cursor()
+                                        cur_adm.execute("""UPDATE users SET rol='pro',
+                                            subscription_end=%s, grace_until=%s WHERE id=%s""",
+                                            (end_d, end_d, uid_u))
+                                        conn_adm.commit()
+                                        cur_adm.close()
+                                        _clear_cache()
+                                        st.success(f"✅ {uname_u} activado Premium hasta {end_d}")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Error: {e}")
+                            # Hacer admin
+                            if rol_u != "admin":
+                                if st.button(f"🛡️ Hacer admin", key=f"adm_db_{uid_u}",
+                                             use_container_width=True):
+                                    conn_adm = _db.get_conn()
+                                    if conn_adm:
+                                        try:
+                                            cur_adm = conn_adm.cursor()
+                                            cur_adm.execute("UPDATE users SET rol='admin' WHERE id=%s", (uid_u,))
+                                            conn_adm.commit()
+                                            cur_adm.close()
+                                            _clear_cache()
+                                            st.success(f"🛡️ {uname_u} ahora es admin")
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"Error: {e}")
                         else:
-                            if st.button(f"🟢 Reactivar", key=f"react_{uname}"):
-                                udata["is_active"] = True
-                                st.success(f"{uname} reactivado.")
-                                st.rerun()
-                        if st.button(f"🗑️ Eliminar", key=f"del_{uname}", type="primary"):
-                            del users_adm[uname]
-                            st.error(f"{uname} eliminado.")
+                            st.caption("Tu propia cuenta")
+        else:
+            # ── Vista local (sin Railway) ─────────────────────────────────────
+            users_adm = st.session_state.get("auth_users", {})
+            for uname_l, udata_l in list(users_adm.items()):
+                rol_l = _get_role(udata_l)
+                with st.expander(f"**{uname_l}** — {udata_l.get('nombre','—')} ({rol_l})"):
+                    st.write(f"**Email:** {udata_l.get('email','—')}")
+                    st.write(f"**Rol:** {rol_l}")
+                    if uname_l != st.session_state.get("sess_user"):
+                        if st.button(f"🎓 Dar beca", key=f"beca_local_{uname_l}"):
+                            udata_l["rol"] = "beca"
+                            udata_l["sub_end"] = "2099-12-31"
+                            st.success(f"🎓 Beca otorgada a {uname_l}")
                             st.rerun()
+
+elif nav == "micuenta":
+    # ══════════════════════════════════════════════════════════════════════════
+    # MI CUENTA — Perfil, avatar y contraseña
+    # ══════════════════════════════════════════════════════════════════════════
+    if not _is_auth():
+        st.warning("Inicia sesión para ver tu perfil.")
+    else:
+        st.subheader("👤 Mi Cuenta")
+        uid_mc  = _user_id()
+        rol_mc  = _rol()
+        db_mc   = _DB_ON and _db.db_ok() and uid_mc
+
+        AVATARES = [
+            "👨‍⚕️","👩‍⚕️","🧑‍⚕️","👨‍🔬","👩‍🔬","🧑‍💻",
+            "🫀","🩺","🔬","🏥","🩻","💊","🧬","🫁","⚕️","🩸",
+            "😊","😎","🤓","🧐","💪","🌟",
+        ]
+
+        mc1, mc2 = st.columns([1, 2])
+
+        with mc1:
+            st.markdown("### Avatar")
+            av_actual = st.session_state.get("sess_avatar", "👨‍⚕️")
+            st.markdown(f"""
+<div style="background:#1E3A8A;width:100px;height:100px;border-radius:50%;
+     display:flex;align-items:center;justify-content:center;margin:0 auto 12px auto;
+     font-size:52px;">{av_actual}</div>""", unsafe_allow_html=True)
+            st.caption("Selecciona tu avatar:")
+            av_sel = av_actual
+            cols_av = st.columns(6)
+            for i, av in enumerate(AVATARES):
+                with cols_av[i % 6]:
+                    border = "3px solid #2563EB" if av == av_actual else "1px solid #CBD5E1"
+                    if st.button(av, key=f"av_{i}",
+                                 help=f"Seleccionar {av}"):
+                        av_sel = av
+                        st.session_state["sess_avatar"] = av
+
+        with mc2:
+            st.markdown("### Información del perfil")
+            nom_mc    = st.text_input("Nombre completo",
+                                      value=st.session_state.get("sess_nombre",""),
+                                      key="mc_nombre")
+            email_mc  = st.text_input("Email",
+                                      value=st.session_state.get("sess_email",""),
+                                      key="mc_email")
+            esp_mc    = st.text_input("Especialidad",
+                                      value=st.session_state.get("sess_especialidad",""),
+                                      key="mc_esp",
+                                      placeholder="Ej: Nefrología, Medicina Crítica")
+            inst_mc   = st.text_input("Institución / Hospital",
+                                      value=st.session_state.get("sess_institucion",""),
+                                      key="mc_inst",
+                                      placeholder="Ej: IMSS CMN del Bajío, UMAE Bajío")
+
+            if st.button("💾 Guardar cambios", type="primary", key="btn_mc_save",
+                         use_container_width=True):
+                av_nuevo = st.session_state.get("sess_avatar", av_actual)
+                if db_mc:
+                    ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
+                                                 esp_mc, inst_mc, av_nuevo)
+                    if ok:
+                        st.session_state["sess_nombre"]     = nom_mc
+                        st.session_state["sess_email"]      = email_mc
+                        st.session_state["sess_institucion"]= inst_mc
+                        st.session_state["sess_especialidad"]= esp_mc
+                        _clear_cache()
+                        st.success("✅ Perfil actualizado correctamente.")
                     else:
-                        st.info("Tu propia cuenta.")
+                        st.error("Error al guardar. Verifica la conexión con Railway.")
+                else:
+                    # Local fallback
+                    st.session_state["sess_nombre"]     = nom_mc
+                    st.session_state["sess_email"]      = email_mc
+                    st.session_state["sess_institucion"]= inst_mc
+                    st.success("✅ Perfil actualizado (sesión actual).")
+
+        st.divider()
+        st.markdown("### 🔒 Cambiar contraseña")
+        if db_mc:
+            cp1, cp2, cp3 = st.columns(3)
+            with cp1:
+                pwd_old = st.text_input("Contraseña actual", type="password", key="mc_old_pwd")
+            with cp2:
+                pwd_new = st.text_input("Nueva contraseña (mín. 6 car.)", type="password", key="mc_new_pwd")
+            with cp3:
+                pwd_conf = st.text_input("Confirmar nueva", type="password", key="mc_conf_pwd")
+            if st.button("🔒 Cambiar contraseña", key="btn_mc_pwd"):
+                if not pwd_old or not pwd_new:
+                    st.warning("Completa todos los campos.")
+                elif len(pwd_new) < 6:
+                    st.warning("La nueva contraseña debe tener al menos 6 caracteres.")
+                elif pwd_new != pwd_conf:
+                    st.warning("Las contraseñas no coinciden.")
+                else:
+                    import bcrypt as _bcrypt
+                    new_hash = _bcrypt.hashpw(pwd_new.encode(), _bcrypt.gensalt()).decode()
+                    ok = _db.change_password(uid_mc, pwd_old, new_hash)
+                    if ok:
+                        st.success("✅ Contraseña actualizada correctamente.")
+                    else:
+                        st.error("Contraseña actual incorrecta.")
+        else:
+            st.info("Conecta Railway para cambiar tu contraseña.")
+
+        st.divider()
+        st.markdown("### 📊 Información de cuenta")
+        r1, r2, r3 = st.columns(3)
+        r1.metric("Rol actual", rol_mc)
+        r2.metric("Usuario", st.session_state.get("sess_user","—"))
+        dias_mc = st.session_state.get("sess_dias", 0)
+        r3.metric("Días restantes",
+                  "Indefinido" if rol_mc in ("admin","beca") and dias_mc > 365*5
+                  else str(dias_mc) if dias_mc else "—")
 
         st.divider()
         st.markdown("### ➕ Crear usuario manualmente")
@@ -4862,44 +5086,6 @@ elif nav == "admin":
                     "`ADMIN_PASSWORD` en **Streamlit Secrets** para que el cambio persista "
                     "después de un redeploy.")
 
-    else:
-        # Mi cuenta (usuario no admin)
-        st.subheader("👤 Mi cuenta")
-        _init_db()
-        users_mc = st.session_state.get("auth_users", {})
-        user_mc = users_mc.get(st.session_state.get("sess_user", ""), {})
-        rol_mc = _rol()
-
-        if rol_mc == "guest":
-            st.info("Estás en modo invitado. Regístrate para guardar tus prescripciones.")
-        else:
-            st.write(f"**Nombre:** {user_mc.get('nombre', '—')}")
-            st.write(f"**Email:** {user_mc.get('email', '—')}")
-            st.write(f"**Especialidad:** {user_mc.get('especialidad', '—')}")
-            st.write(f"**Estado:** {rol_mc}")
-            if rol_mc == "trial":
-                st.info(f"⏱️ Prueba gratuita: **{_days_left(user_mc)} día(s) restante(s)**. "
-                        f"Ve a **💳 Premium** para activar tu suscripción.")
-            elif rol_mc == "expirado":
-                st.warning("⚠️ Tu período de prueba expiró. Ve a **💳 Premium** para activar.")
-            elif rol_mc == "pro":
-                st.success(f"⭐ Premium activo hasta: **{user_mc.get('sub_end', '—')}**")
-
-            # Cambiar contraseña
-            st.divider()
-            st.markdown("### 🔑 Cambiar contraseña")
-            old_p = st.text_input("Contraseña actual", type="password", key="mc_old")
-            new_p1 = st.text_input("Nueva contraseña", type="password", key="mc_new1")
-            new_p2 = st.text_input("Confirmar nueva", type="password", key="mc_new2")
-            if st.button("Cambiar contraseña", key="btn_chg_pass"):
-                if _verify(old_p, user_mc.get("password_hash", "")):
-                    if new_p1 == new_p2 and len(new_p1) >= 6:
-                        user_mc["password_hash"] = _hash(new_p1)
-                        st.success("✅ Contraseña actualizada.")
-                    else:
-                        st.error("Las contraseñas no coinciden o son muy cortas.")
-                else:
-                    st.error("Contraseña actual incorrecta.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 12: REFERENCIAS
@@ -6241,7 +6427,13 @@ elif nav == "pacientes":
         elif uid is None:
             st.warning("⚠️ Inicia sesión con tu cuenta Railway para ver tus pacientes.")
         else:
-            prescriptions = _db.get_prescriptions(uid)
+            prescriptions = _cached_prescriptions(uid)
+
+            # Limpiar selección si el paciente ya no existe
+            if st.session_state.get("sel_pac_id") and not any(
+                p["id"] == st.session_state["sel_pac_id"] for p in prescriptions
+            ):
+                st.session_state.pop("sel_pac_id", None)
 
             # ── VISTA DETALLE DE UN PACIENTE ──────────────────────────────────
             sel_id = st.session_state.get("sel_pac_id")
@@ -6282,17 +6474,19 @@ elif nav == "pacientes":
                                 if k != "alias":
                                     st.session_state[k] = v
                             st.session_state["presc_alias_cargado"] = sel_pac.get("alias", "")
+                            st.session_state["update_presc_id"] = sel_pac["id"]
                             st.session_state["nav_sel"] = "presc"
                             st.session_state.pop("sel_pac_id", None)
                             st.rerun()
                         except Exception:
                             st.error("Error al cargar parámetros.")
                 with ba3:
-                    sessions = _db.get_sessions(sel_pac["id"])
+                    sessions = _cached_sessions(sel_pac["id"])
                     st.metric("Sesiones registradas", len(sessions))
                 with ba4:
                     if st.button("🗑️ Eliminar paciente", key="btn_del_pac"):
                         _db.delete_prescription(sel_pac["id"], uid)
+                        _clear_cache()
                         st.session_state.pop("sel_pac_id", None)
                         st.rerun()
 
@@ -6316,6 +6510,21 @@ elif nav == "pacientes":
                     m5.metric("Dosis", f"{dose:.0f} mL/kg/h" if dose else "—")
                     m6.metric("UF", f"{sel_pac.get('uf','—')} mL/h")
 
+                    # Detalles de anticoagulación
+                    anticoag_r = sel_pac.get("anticoag","")
+                    datos_r = {}
+                    try: datos_r = _json.loads(sel_pac.get("datos_json","{}"))
+                    except Exception: pass
+                    if "RCA" in anticoag_r or "Citrato" in anticoag_r:
+                        cit_r = datos_r.get("rca_citrato_ml_h") or datos_r.get("cit_ml_h")
+                        ca_r  = datos_r.get("rca_calcio_ml_h")  or datos_r.get("ca_ml_h")
+                        st.info(f"🧪 **RCA:** Citrato trisódico 4% → **{cit_r or '—'} mL/h** · "
+                                f"Ca-gluconato → **{ca_r or '—'} mL/h** (líneas pre/post-filtro)")
+                    elif "HNF" in anticoag_r:
+                        hnf_r = datos_r.get("hnf_ui_h")
+                        if hnf_r:
+                            st.info(f"💉 **HNF:** {hnf_r:.0f} UI/h IV continuo · Meta aPTT: 45–80 s · Control c/4–6h")
+
                     if sel_pac.get("escenarios"):
                         st.info(f"📋 **Escenarios:** {sel_pac['escenarios']}")
                     if sel_pac.get("notas"):
@@ -6324,35 +6533,35 @@ elif nav == "pacientes":
                     if sessions:
                         st.markdown("#### Última sesión registrada")
                         last = sessions[-1]
+                        ts_last = str(last.get("created_at",""))[:16].replace("T"," ")
+                        st.caption(f"📅 {ts_last} UTC (hora local León = restar 6h)")
                         ls1,ls2,ls3,ls4,ls5 = st.columns(5)
                         ls1.metric("Creatinina", f"{last.get('creatinina','—')} mg/dL" if last.get('creatinina') else "—")
-                        ls2.metric("Diuresis", f"{last.get('diuresis_ml','—')} mL/24h" if last.get('diuresis_ml') else "—")
-                        ls3.metric("K", f"{last.get('k_val','—')} mEq/L" if last.get('k_val') else "—")
-                        ls4.metric("SOFA", str(last.get('sofa_val','—')) if last.get('sofa_val') else "—")
-                        ls5.metric("Balance", f"{last.get('diuresis_ml',0):.0f} mL" if last.get('diuresis_ml') else "—")
+                        ls2.metric("Diuresis",   f"{float(last.get('diuresis_ml',0)):.0f} mL/24h" if last.get('diuresis_ml') else "—")
+                        ls3.metric("K",          f"{last.get('k_val','—')} mEq/L" if last.get('k_val') else "—")
+                        ls4.metric("SOFA",       str(last.get('sofa_val','—')) if last.get('sofa_val') else "—")
+                        ls5.metric("PAM",        f"{float(last.get('pam_val',0)):.0f} mmHg" if last.get('pam_val') else "—")
 
                 # ── SEGUIMIENTO ────────────────────────────────────────────────
                 elif pac_sec == "📈 Seguimiento":
                     import pandas as pd
-
-                    # Agregar nueva sesión
                     with st.expander("➕ Registrar nueva sesión / turno", expanded=len(sessions)==0):
-                        st.markdown("**Datos del turno actual:**")
+                        st.markdown("**Datos del turno** — deja en 0 los no disponibles:")
                         sg1,sg2,sg3 = st.columns(3)
                         with sg1:
-                            sg_label = st.text_input("Etiqueta", value=f"Hora {len(sessions)*24}", key="sg_label")
-                            sg_horas = st.number_input("Horas de TRRC en este período", 1.0, 48.0, 24.0, 1.0, key="sg_horas")
-                            sg_cr = st.number_input("Creatinina (mg/dL)", 0.0, 30.0, 0.0, 0.1, key="sg_cr")
-                            sg_bun = st.number_input("BUN (mg/dL)", 0.0, 200.0, 0.0, 1.0, key="sg_bun")
+                            sg_label  = st.text_input("Etiqueta", value=f"Hora {len(sessions)*24}", key="sg_label")
+                            sg_horas  = st.number_input("Horas de TRRC en este período", 1.0, 48.0, 24.0, 1.0, key="sg_horas")
+                            sg_cr     = st.number_input("Creatinina (mg/dL)", 0.0, 30.0, 0.0, 0.1, key="sg_cr")
+                            sg_bun    = st.number_input("BUN (mg/dL)", 0.0, 200.0, 0.0, 1.0, key="sg_bun")
                         with sg2:
-                            sg_diur = st.number_input("Diuresis (mL/24h)", 0.0, 5000.0, 0.0, 50.0, key="sg_diur")
-                            sg_k = st.number_input("K (mEq/L) — 0 si no disponible", 0.0, 10.0, 0.0, 0.1, key="sg_k")
-                            sg_na = st.number_input("Na (mEq/L) — 0 si no disponible", 0.0, 180.0, 0.0, 1.0, key="sg_na")
-                            sg_p = st.number_input("Fósforo (mg/dL)", 0.0, 10.0, 0.0, 0.1, key="sg_p")
+                            sg_diur   = st.number_input("Diuresis (mL/24h)", 0.0, 5000.0, 0.0, 50.0, key="sg_diur")
+                            sg_k      = st.number_input("K (mEq/L)", 0.0, 10.0, 0.0, 0.1, key="sg_k")
+                            sg_na     = st.number_input("Na (mEq/L) — 0 si no disponible", 0.0, 180.0, 0.0, 1.0, key="sg_na")
+                            sg_p      = st.number_input("Fósforo (mg/dL)", 0.0, 10.0, 0.0, 0.1, key="sg_p")
                         with sg3:
-                            sg_sofa = st.number_input("SOFA score", 0, 24, 0, 1, key="sg_sofa")
-                            sg_pam = st.number_input("PAM (mmHg)", 0.0, 150.0, 0.0, 1.0, key="sg_pam")
-                            sg_nore = st.number_input("Norepinefrina (mcg/kg/min)", 0.0, 5.0, 0.0, 0.01, key="sg_nore", format="%.2f")
+                            sg_sofa   = st.number_input("SOFA score", 0, 24, 0, 1, key="sg_sofa")
+                            sg_pam    = st.number_input("PAM (mmHg)", 0.0, 150.0, 0.0, 1.0, key="sg_pam")
+                            sg_nore   = st.number_input("Norepinefrina (mcg/kg/min)", 0.0, 5.0, 0.0, 0.01, key="sg_nore", format="%.2f")
                             sg_filtros = st.number_input("Filtros cambiados en este turno", 0, 5, 0, 1, key="sg_filtros")
                         sg_notas = st.text_area("Notas del turno", key="sg_notas", height=60)
                         if st.button("💾 Guardar sesión", type="primary", key="btn_sg_save"):
@@ -6361,60 +6570,56 @@ elif nav == "pacientes":
                                 "creatinina": sg_cr or None, "bun": sg_bun or None,
                                 "diuresis_ml": sg_diur or None,
                                 "k_val": sg_k or None, "na_val": sg_na or None,
-                                "fosfato": sg_p or None,
-                                "sofa_val": sg_sofa or None, "pam_val": sg_pam or None,
-                                "norepinefrina": sg_nore or None,
-                                "filtros_cambiados": sg_filtros,
-                                "notas_sesion": sg_notas,
+                                "fosfato": sg_p or None, "sofa_val": sg_sofa or None,
+                                "pam_val": sg_pam or None, "norepinefrina": sg_nore or None,
+                                "filtros_cambiados": sg_filtros, "notas_sesion": sg_notas,
                             }
                             if _db.add_session(sel_pac["id"], uid, data_sg):
-                                st.success("✅ Sesión guardada."); st.rerun()
+                                _clear_cache()
+                                st.success("✅ Sesión guardada.")
+                                st.rerun()
                             else:
                                 st.error("Error al guardar.")
 
-                    # Gráficas de tendencia
-                    sessions = _db.get_sessions(sel_pac["id"])
+                    sessions = _cached_sessions(sel_pac["id"])
                     if len(sessions) >= 2:
                         df_s = pd.DataFrame(sessions)
                         df_s["turno"] = [s.get("session_label", f"T{i+1}") for i, s in enumerate(sessions)]
                         df_s = df_s.set_index("turno")
-
                         st.markdown("#### 📈 Tendencias")
                         g1, g2 = st.columns(2)
                         with g1:
                             if df_s["creatinina"].notna().any():
-                                st.markdown("**Creatinina (mg/dL)**")
-                                st.line_chart(df_s["creatinina"].dropna())
+                                st.markdown("**Creatinina (mg/dL)**"); st.line_chart(df_s["creatinina"].dropna())
                             if df_s["diuresis_ml"].notna().any():
-                                st.markdown("**Diuresis (mL/24h)**")
-                                st.line_chart(df_s["diuresis_ml"].dropna())
+                                st.markdown("**Diuresis (mL/24h)**"); st.line_chart(df_s["diuresis_ml"].dropna())
                         with g2:
                             if df_s["k_val"].notna().any():
-                                st.markdown("**Potasio (mEq/L)**")
-                                st.line_chart(df_s["k_val"].dropna())
+                                st.markdown("**Potasio (mEq/L)**"); st.line_chart(df_s["k_val"].dropna())
                             if df_s["sofa_val"].notna().any():
-                                st.markdown("**SOFA score**")
-                                st.line_chart(df_s["sofa_val"].dropna())
-
-                        # Tabla de sesiones
-                        st.markdown("#### Historial de sesiones")
-                        for i, sess in enumerate(sessions):
-                            with st.expander(f"📋 {sess.get('session_label','Sesión')} — {str(sess.get('created_at',''))[:16]}"):
-                                sc1,sc2,sc3,sc4 = st.columns(4)
-                                sc1.metric("Creatinina", f"{sess.get('creatinina','—')} mg/dL" if sess.get('creatinina') else "—")
-                                sc2.metric("Diuresis", f"{sess.get('diuresis_ml','—'):.0f} mL" if sess.get('diuresis_ml') else "—")
-                                sc3.metric("K", f"{sess.get('k_val','—')} mEq/L" if sess.get('k_val') else "—")
-                                sc4.metric("SOFA", str(sess.get('sofa_val','—')) if sess.get('sofa_val') else "—")
-                                if sess.get("notas_sesion"):
-                                    st.caption(f"📝 {sess['notas_sesion']}")
-                                if sess.get("filtros_cambiados"):
-                                    st.caption(f"🔄 Filtros cambiados: {sess['filtros_cambiados']}")
-                                if st.button("🗑️ Eliminar sesión", key=f"del_sess_{sess['id']}"):
-                                    _db.delete_session(sess["id"], uid); st.rerun()
+                                st.markdown("**SOFA score**"); st.line_chart(df_s["sofa_val"].dropna())
                     elif len(sessions) == 1:
                         st.info("Agrega al menos 2 sesiones para ver las gráficas de tendencia.")
-                    else:
-                        st.info("Aún no hay sesiones registradas para este paciente.")
+
+                    st.markdown("#### Historial de sesiones")
+                    for i, sess in enumerate(sessions):
+                        ts_s = str(sess.get("created_at",""))[:16].replace("T"," ")
+                        with st.expander(f"📋 {sess.get('session_label',f'Sesión {i+1}')} — {ts_s} UTC"):
+                            sc1,sc2,sc3,sc4,sc5 = st.columns(5)
+                            sc1.metric("Creatinina", f"{sess.get('creatinina','—')} mg/dL" if sess.get('creatinina') else "—")
+                            sc2.metric("Diuresis",   f"{float(sess.get('diuresis_ml',0)):.0f} mL" if sess.get('diuresis_ml') else "—")
+                            sc3.metric("K",          f"{sess.get('k_val','—')} mEq/L" if sess.get('k_val') else "—")
+                            sc4.metric("SOFA",       str(sess.get('sofa_val','—')) if sess.get('sofa_val') else "—")
+                            sc5.metric("PAM",        f"{float(sess.get('pam_val',0)):.0f}" if sess.get('pam_val') else "—")
+                            if sess.get("notas_sesion"):
+                                st.caption(f"📝 {sess['notas_sesion']}")
+                            if sess.get("filtros_cambiados"):
+                                st.caption(f"🔄 Filtros cambiados: {sess['filtros_cambiados']}")
+                            if st.button("🗑️ Eliminar", key=f"del_sess_{sess['id']}"):
+                                _db.delete_session(sess["id"], uid)
+                                _clear_cache(); st.rerun()
+                    if not sessions:
+                        st.info("Aún no hay sesiones. Usa el formulario de arriba para registrar el primer turno.")
 
                 # ── NUTRICIÓN ──────────────────────────────────────────────────
                 elif pac_sec == "🧬 Nutrición":
@@ -6551,47 +6756,55 @@ elif nav == "pacientes":
                         st.caption(f"Calculado con datos de {len(sessions)} sesión(es) registrada(s).")
 
                     sessions = _db.get_sessions(sel_pac["id"])
-                    last = sessions[-1] if sessions else {}
-                    prev = sessions[-2] if len(sessions) >= 2 else {}
+                    last  = sessions[-1] if sessions else {}
+                    prev  = sessions[-2] if len(sessions) >= 2 else {}
+                    una_sesion = len(sessions) == 1
 
-                    diuresis = last.get("diuresis_ml", 0) or 0
-                    cr_last = last.get("creatinina") or 0
-                    cr_prev = prev.get("creatinina") or 0
-                    pam = last.get("pam_val") or 0
-                    nore = last.get("norepinefrina") or 0
-                    sofa_last = last.get("sofa_val") or 0
-                    sofa_prev = prev.get("sofa_val") or 0
+                    diuresis = last.get("diuresis_ml") or 0
+                    cr_last  = last.get("creatinina") or 0
+                    cr_prev  = prev.get("creatinina") or 0
+                    pam      = last.get("pam_val") or 0
+                    nore     = last.get("norepinefrina") or 0
+                    sofa_l   = last.get("sofa_val") or 0
+                    sofa_p   = prev.get("sofa_val") or 0
+
+                    causa_resuelta = st.checkbox("✅ Causa desencadenante resuelta o controlada", key="causa_resuelta")
 
                     criterios = [
                         ("Diuresis espontánea",
                          "Diuresis >500 mL/día sin diuréticos",
-                         diuresis >= 500, diuresis,
+                         diuresis >= 500,
+                         bool(diuresis),
                          f"{diuresis:.0f} mL/24h (meta >500)" if diuresis else "Sin datos"),
                         ("Creatinina",
                          "Creatinina estable o en descenso",
-                         cr_last <= cr_prev and cr_prev > 0, cr_last,
-                         f"{cr_prev:.1f}→{cr_last:.1f} mg/dL" if cr_last and cr_prev else "Sin datos"),
+                         (cr_last <= cr_prev and cr_prev > 0) if not una_sesion else False,
+                         bool(cr_last),
+                         (f"{cr_prev:.1f}→{cr_last:.1f} mg/dL" if not una_sesion
+                          else f"{cr_last:.1f} mg/dL — necesita ≥2 sesiones para comparar")),
                         ("Hemodinámica",
-                         "PAM >65 mmHg sin vasopresores (o dosis mínima)",
-                         pam >= 65 and nore <= 0.05, pam,
+                         "PAM >65 mmHg con vasopresores mínimos (NE ≤0.1)",
+                         pam >= 65 and nore <= 0.1,
+                         bool(pam),
                          f"PAM {pam:.0f} mmHg · NE {nore:.2f} mcg/kg/min" if pam else "Sin datos"),
                         ("SOFA",
                          "SOFA en descenso vs sesión anterior",
-                         sofa_last < sofa_prev and sofa_prev > 0, sofa_last,
-                         f"{sofa_prev}→{sofa_last}" if sofa_last and sofa_prev else "Sin datos"),
+                         (sofa_l < sofa_p and sofa_p > 0) if not una_sesion else False,
+                         bool(sofa_l),
+                         (f"{sofa_p}→{sofa_l}" if not una_sesion
+                          else f"SOFA {sofa_l} — necesita ≥2 sesiones para comparar")),
                     ]
 
-                    # Evaluación manual
-                    causa_resuelta = st.checkbox("✅ Causa desencadenante resuelta o controlada",
-                                                  key="causa_resuelta")
+                    todos_verde  = all(c[2] for c in criterios) and causa_resuelta
+                    algun_verde  = sum(1 for c in criterios if c[2])
 
-                    todos_verde = all(c[2] for c in criterios) and causa_resuelta
-                    algun_verde = sum(1 for c in criterios if c[2])
-
-                    for nombre, descripcion, cumple, valor, detalle in criterios:
-                        color = "#F0FDF4" if cumple else "#FEF2F2"
-                        border = "#16A34A" if cumple else "#DC2626"
-                        icono = "🟢" if cumple else ("🟡" if valor else "🔴")
+                    for nombre, descripcion, cumple, tiene_dato, detalle in criterios:
+                        if cumple:
+                            color, border, icono = "#F0FDF4","#16A34A","🟢"
+                        elif tiene_dato and not cumple and not una_sesion:
+                            color, border, icono = "#FEF2F2","#DC2626","🔴"
+                        else:
+                            color, border, icono = "#FFFBEB","#D97706","🟡"
                         st.markdown(f"""
 <div style="border-left:4px solid {border};background:{color};
      padding:10px 14px;border-radius:0 8px 8px 0;margin:4px 0;">
@@ -6603,81 +6816,113 @@ elif nav == "pacientes":
                     if todos_verde:
                         st.markdown("""<div style="background:#F0FDF4;border-left:4px solid #16A34A;padding:12px 16px;border-radius:0 8px 8px 0;">
 <b style="color:#166534;-webkit-text-fill-color:#166534;">🟢 TODOS LOS CRITERIOS CUMPLIDOS</b><br>
-<span style="color:#166534;-webkit-text-fill-color:#166534;">Puede considerarse el weaning de TRRC. Suspender TRRC 24–48h en prueba y monitorear creatinina y diuresis.</span>
+<span style="color:#166534;-webkit-text-fill-color:#166534;">Considerar weaning de TRRC. Suspender 24–48h en prueba y monitorear.</span>
 </div>""", unsafe_allow_html=True)
-                    elif algun_verde >= 3:
+                    elif una_sesion or algun_verde >= 2:
+                        msg = ("Solo 1 sesión registrada — agrega más para evaluación completa del semáforo."
+                               if una_sesion else f"{algun_verde}/4 criterios cumplidos. Reevaluar en 24h.")
                         st.markdown(f"""<div style="background:#FFFBEB;border-left:4px solid #D97706;padding:12px 16px;border-radius:0 8px 8px 0;">
-<b style="color:#92400E;-webkit-text-fill-color:#92400E;">🟡 {algun_verde}/4 criterios + causa resuelta={'✅' if causa_resuelta else '❌'}</b><br>
-<span style="color:#92400E;-webkit-text-fill-color:#92400E;">En evaluación. Continuar TRRC y reevaluar en 24h.</span>
+<b style="color:#92400E;-webkit-text-fill-color:#92400E;">🟡 En evaluación</b><br>
+<span style="color:#92400E;-webkit-text-fill-color:#92400E;">{msg}</span>
 </div>""", unsafe_allow_html=True)
                     else:
                         st.markdown("""<div style="background:#FEF2F2;border-left:4px solid #DC2626;padding:12px 16px;border-radius:0 8px 8px 0;">
 <b style="color:#991B1B;-webkit-text-fill-color:#991B1B;">🔴 Criterios insuficientes</b><br>
 <span style="color:#991B1B;-webkit-text-fill-color:#991B1B;">Continuar TRRC. Reevaluar en 12–24h.</span>
 </div>""", unsafe_allow_html=True)
-
-                    st.info("**Trial de suspensión:** suspender TRRC 24–48h. Si creatinina no sube >0.3 mg/dL "
+                    st.info("**Trial de suspensión:** suspender 24–48h. Si Cr no sube >0.3 mg/dL "
                             "y diuresis ≥500 mL/día → éxito. Si deteriora → reiniciar.")
                     st.caption("Ref: KDIGO AKI 2012 | Wald R et al. NEJM 2020 (STARRT-AKI)")
 
-                # ── NOTA DE EVOLUCIÓN ──────────────────────────────────────────
                 else:
                     st.markdown("### 📝 Nota de Evolución TRRC")
-                    st.caption("Generada automáticamente para copiar al expediente clínico.")
+                    st.caption("Lista para copiar al expediente. Hora en UTC — hora local León, Gto. = restar 6h.")
 
-                    sessions = _db.get_sessions(sel_pac["id"])
-                    last = sessions[-1] if sessions else {}
+                    last_n = sessions[-1] if sessions else {}
 
-                    ts_nota = datetime.now().strftime("%d/%m/%Y %H:%M")
-                    alias_n = sel_pac.get("alias","—")
-                    modal_n = sel_pac.get("modality","—")
-                    escen_n = sel_pac.get("escenarios","—")
+                    def _fmt_n(val, decimals=1, suffix=""):
+                        if val is None or val == 0: return "—"
+                        try: return f"{float(val):.{decimals}f}{suffix}"
+                        except Exception: return str(val)
+
+                    ts_nota   = datetime.now().strftime("%d/%m/%Y %H:%M UTC")
+                    alias_n   = sel_pac.get("alias","—")
+                    modal_n   = sel_pac.get("modality","—")
+                    escen_n   = sel_pac.get("escenarios","—")
                     anticoag_n = sel_pac.get("anticoag","—")
-                    peso_n = sel_pac.get("peso","—")
-                    qe_n = sel_pac.get("qeff","—")
-                    dosis_n = sel_pac.get("dosis_mlkgh","—")
-                    total_horas = sum(s.get("horas_trrc",24) for s in sessions)
+                    peso_n    = _fmt_n(sel_pac.get("peso"),1," kg")
+                    qe_n      = _fmt_n(sel_pac.get("qeff"),0," mL/h")
+                    dosis_n   = _fmt_n(sel_pac.get("dosis_mlkgh"),0," mL/kg/h")
+                    uf_n      = _fmt_n(sel_pac.get("uf"),0," mL/h")
+                    total_h   = sum(s.get("horas_trrc",24) for s in sessions)
 
-                    cr_n = last.get("creatinina","—")
-                    diur_n = last.get("diuresis_ml","—")
-                    k_n = last.get("k_val","—")
-                    na_n = last.get("na_val","—")
-                    sofa_n = last.get("sofa_val","—")
-                    pam_n = last.get("pam_val","—")
-                    nore_n = last.get("norepinefrina","—")
-                    notas_n = last.get("notas_sesion","—")
+                    cr_n   = _fmt_n(last_n.get("creatinina"),1," mg/dL")
+                    bun_n  = _fmt_n(last_n.get("bun"),0," mg/dL")
+                    diur_n = _fmt_n(last_n.get("diuresis_ml"),0," mL/24h")
+                    k_n    = _fmt_n(last_n.get("k_val"),1," mEq/L")
+                    na_n   = _fmt_n(last_n.get("na_val"),0," mEq/L")
+                    p_n    = _fmt_n(last_n.get("fosfato"),1," mg/dL")
+                    sofa_n = str(last_n.get("sofa_val","—")) if last_n.get("sofa_val") else "—"
+                    pam_n  = _fmt_n(last_n.get("pam_val"),0," mmHg")
+                    nore_n = _fmt_n(last_n.get("norepinefrina"),2," mcg/kg/min")
+                    filt_n = last_n.get("filtros_cambiados",0) or 0
+                    notas_n = last_n.get("notas_sesion","") or ""
 
-                    nota_texto = f"""NOTA DE EVOLUCIÓN TRRC — {ts_nota}
-Paciente: {alias_n} · Peso: {peso_n} kg
+                    datos_n = {}
+                    try: datos_n = _json.loads(sel_pac.get("datos_json","{}"))
+                    except Exception: pass
 
-TERAPIA ACTUAL:
-Modalidad: {modal_n} | Dosis prescrita: {dosis_n} mL/kg/h | Qe: {qe_n} mL/h
-Anticoagulación: {anticoag_n}
+                    if "RCA" in anticoag_n:
+                        cit_n = _fmt_n(datos_n.get("rca_citrato_ml_h"),0," mL/h")
+                        ca_n  = _fmt_n(datos_n.get("rca_calcio_ml_h"),0," mL/h")
+                        ac_det = f"RCA citrato trisódico 4% {cit_n} (línea pre-filtro) / Ca-gluconato {ca_n} (post-filtro sistémico)"
+                        monit_ac = (f"iCa post-filtro: {_fmt_n(last_n.get('ica_post'),2,' mmol/L')} "
+                                    f"(meta 0.25–0.40) · iCa sistémico: {_fmt_n(last_n.get('ica_sist'),2,' mmol/L')} (meta 1.0–1.2)")
+                        plan_ac = "Control de iCa post-filtro y sistémico c/4–6h, ajustar citrato y calcio según resultado"
+                    else:
+                        hnf_rate = _fmt_n(datos_n.get("hnf_ui_h"),0," UI/h")
+                        ac_det = f"HNF {hnf_rate} IV infusión continua"
+                        monit_ac = f"aPTT: {_fmt_n(last_n.get('aptt_valor'),0,' s')} (meta 45–80 s) · HNF actual: {_fmt_n(last_n.get('hnf_dosis_actual'),0,' UI/h')}"
+                        plan_ac = "Control de aPTT c/4–6h, ajustar HNF según nomograma. Vigilar plaquetas c/12h (HIT)"
+
+                    nota_texto = f"""NOTA DE EVOLUCIÓN — TERAPIA DE REEMPLAZO RENAL CONTINUA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Fecha/hora: {ts_nota}  (hora local León, Gto. = UTC −6h)
+Paciente: {alias_n}  ·  Peso: {peso_n}
+
+TERAPIA EN CURSO
+━━━━━━━━━━━━━━━━
+Modalidad: {modal_n}
+Dosis prescrita: {dosis_n}  |  Qe: {qe_n}  |  UF neta: {uf_n}
+Anticoagulación: {ac_det}
 Indicación: {escen_n}
-Horas acumuladas de TRRC: {total_horas:.0f} h ({len(sessions)} turnos registrados)
+Horas acumuladas de TRRC: {total_h:.0f} h  ({len(sessions)} turno(s) registrado(s))
+Filtros cambiados en último turno: {filt_n}
 
-LABORATORIO Y CLÍNICA (último turno):
-Creatinina: {cr_n} mg/dL
-Diuresis: {diur_n} mL/24h
-K: {k_n} mEq/L | Na: {na_n} mEq/L
-SOFA: {sofa_n} | PAM: {pam_n} mmHg | NE: {nore_n} mcg/kg/min
+LABORATORIO (último turno registrado)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Función renal:  Creatinina {cr_n}  |  BUN {bun_n}  |  Diuresis {diur_n}
+Electrolitos:   K {k_n}  |  Na {na_n}  |  Fósforo {p_n}
+Clínica:        SOFA {sofa_n}  |  PAM {pam_n}  |  NE {nore_n}
+Anticoagulación: {monit_ac}
+{('Notas del turno: ' + notas_n) if notas_n else ''}
 
-PLAN:
-- Continuar TRRC con parámetros actuales
-- Monitoreo electrolítico c/6–8h (Na, K, Ca, Mg, Fósforo)
-- Reevaluar criterios de suspensión en próximo turno
-- {'Notas: ' + notas_n if notas_n and notas_n != '—' else ''}
+PLAN
+━━━━
+- Continuar TRRC con modalidad {modal_n} y parámetros actuales
+- {plan_ac}
+- Electrolitos c/6–8h (Na, K, Ca, Mg, Fósforo) — ajustar bolsas según resultado
+- Soporte nutricional: reponer pérdidas proteicas del efluente (ver módulo Nutrición TRRC)
+- Reevaluar criterios de suspensión de TRRC en próximo turno (diuresis, creatinina, SOFA, hemodinámica)
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Generado por TRRC360 v3.0.0 — Dr. Josué Tapia Nefrólogo
-Uso académico y de apoyo clínico. No reemplaza el juicio clínico."""
+León, Guanajuato, México — Uso académico y de apoyo clínico
+Este documento no reemplaza el juicio clínico del médico tratante."""
 
                     st.code(nota_texto, language=None)
-                    if st.button("📋 Copiar nota al portapapeles", key="btn_copy_nota"):
-                        st.session_state["_nota_clipboard"] = nota_texto
-                        st.success("Nota copiada — pega con Ctrl+V en el expediente.")
-
                     st.download_button("📥 Descargar como .txt", data=nota_texto,
-                                       file_name=f"Nota_TRRC_{alias_n}_{ts_nota[:10]}.txt",
+                                       file_name=f"Nota_TRRC_{alias_n}_{datetime.now().strftime('%Y%m%d')}.txt",
                                        mime="text/plain", key="btn_dl_nota")
 
             else:
@@ -6733,8 +6978,8 @@ Uso académico y de apoyo clínico. No reemplaza el juicio clínico."""
                                     for k, v in datos.items():
                                         if k != "alias":
                                             st.session_state[k] = v
-                                    # Pre-cargar nombre del paciente en el formulario de guardado
                                     st.session_state["presc_alias_cargado"] = p.get("alias","")
+                                    st.session_state["update_presc_id"] = p["id"]
                                     st.session_state["nav_sel"] = "presc"
                                     st.rerun()
                                 except Exception:
@@ -6743,6 +6988,7 @@ Uso académico y de apoyo clínico. No reemplaza el juicio clínico."""
                             if st.button("🗑️", key=f"del_{p['id']}", use_container_width=True,
                                          help="Eliminar este paciente"):
                                 _db.delete_prescription(p["id"], uid)
+                                _clear_cache()
                                 st.rerun()
 
 
