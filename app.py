@@ -7093,11 +7093,12 @@ elif nav == "enfermeria":
             for nivel, titulo, accion in alertas:
                 color_bg = {"🔴 URGENTE": "#FEF2F2", "🟠 IMPORTANTE": "#FFFBEB", "🟡 MONITOREAR": "#F0F9FF"}.get(nivel, "#F8FAFC")
                 color_brd = {"🔴 URGENTE": "#DC2626", "🟠 IMPORTANTE": "#D97706", "🟡 MONITOREAR": "#0EA5E9"}.get(nivel, "#CBD5E1")
+                tc = {"🔴 URGENTE": "#7F1D1D", "🟠 IMPORTANTE": "#78350F", "🟡 MONITOREAR": "#0C4A6E"}.get(nivel, "#1E293B")
                 st.markdown(f"""
 <div style="border-left:4px solid {color_brd};background:{color_bg};
      padding:10px 14px;border-radius:0 8px 8px 0;margin:4px 0;">
-  <b>{nivel} — {titulo}</b><br>
-  <span style="font-size:14px;">{accion}</span>
+  <b style="color:{tc};-webkit-text-fill-color:{tc};">{nivel} — {titulo}</b><br>
+  <span style="font-size:14px;color:{tc};-webkit-text-fill-color:{tc};">{accion}</span>
 </div>""", unsafe_allow_html=True)
 
         else:
