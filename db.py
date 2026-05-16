@@ -70,7 +70,9 @@ def init_tables() -> bool:
                 subscription_end  TIMESTAMP,
                 grace_until       TIMESTAMP,
                 created_at        TIMESTAMP    DEFAULT NOW(),
-                last_login        TIMESTAMP
+                last_login        TIMESTAMP,
+                avatar            VARCHAR(20)  DEFAULT '👨‍⚕️',
+                institucion       VARCHAR(200)
             );
 
             CREATE TABLE IF NOT EXISTS prescriptions (
@@ -134,6 +136,15 @@ def init_tables() -> bool:
                 created_at        TIMESTAMP DEFAULT NOW()
             );
         """)
+        # Agregar columnas nuevas si ya existe la tabla (migración segura)
+        for alter in [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar VARCHAR(20) DEFAULT '👨‍⚕️'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS institucion VARCHAR(200)",
+        ]:
+            try:
+                cur.execute(alter)
+            except Exception:
+                pass
         cur.execute("CREATE INDEX IF NOT EXISTS idx_prescriptions_user ON prescriptions(user_id, is_deleted);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);")
@@ -380,6 +391,108 @@ def get_all_users() -> List[Dict]:
 
 
 # ── PRESCRIPCIONES ────────────────────────────────────────────────────────────
+def update_user_profile(user_id: int, nombre: str, email: str,
+                        especialidad: str, institucion: str, avatar: str) -> bool:
+    """Actualiza perfil del usuario."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE users SET nombre=%s, email=%s, avatar=%s, institucion=%s
+            WHERE id=%s
+        """, (nombre, email, avatar, institucion, user_id))
+        # Guardar especialidad en el campo existente si existe
+        try:
+            cur.execute("UPDATE users SET especialidad=%s WHERE id=%s", (especialidad, user_id))
+        except Exception:
+            pass  # columna puede no existir
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+def change_password(user_id: int, old_hash: str, new_hash: str) -> bool:
+    """Cambia contraseña verificando la actual."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT password_hash FROM users WHERE id=%s", (user_id,))
+        row = cur.fetchone()
+        if not row:
+            cur.close()
+            return False
+        import bcrypt
+        if not bcrypt.checkpw(old_hash.encode(), row["password_hash"].encode()):
+            cur.close()
+            return False
+        cur.execute("UPDATE users SET password_hash=%s WHERE id=%s", (new_hash, user_id))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+def get_user_by_id(user_id: int) -> Optional[Dict]:
+    conn = get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE id=%s", (user_id,))
+        row = cur.fetchone()
+        cur.close()
+        return dict(row) if row else None
+    except Exception:
+        return None
+
+def update_prescription(presc_id: int, user_id: int, data: Dict) -> bool:
+    """Actualiza una prescripción existente sin crear duplicado."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE prescriptions SET
+                alias=%s, modality=%s, peso=%s, hto=%s, qb=%s, qeff=%s,
+                uf=%s, dosis_mlkgh=%s, anticoag=%s, escenarios=%s,
+                notas=%s, datos_json=%s
+            WHERE id=%s AND user_id=%s AND is_deleted=FALSE
+        """, (
+            data.get("alias", "Paciente"),
+            data.get("modality", "—"),
+            data.get("peso"), data.get("hto"),
+            data.get("qb"), data.get("qeff"),
+            data.get("uf"), data.get("dosis_mlkgh"),
+            data.get("anticoag", "—"),
+            ", ".join(data.get("escenarios", [])) if isinstance(data.get("escenarios"), list) else data.get("escenarios", ""),
+            data.get("notas", ""),
+            json.dumps(data, ensure_ascii=False, default=str),
+            presc_id, user_id
+        ))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
 def save_prescription(user_id: int, data: Dict) -> bool:
     conn = get_conn()
     if not conn:
