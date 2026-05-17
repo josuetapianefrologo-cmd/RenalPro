@@ -48,6 +48,16 @@ def _cached_sessions(presc_id: int):
     """Consulta sesiones con caché de 15s."""
     return _db.get_sessions(presc_id) if _DB_ON else []
 
+@st.cache_data(ttl=15)
+def _cached_patients(uid: int):
+    """Consulta pacientes con caché de 15s."""
+    return _db.get_patients(uid) if _DB_ON else []
+
+@st.cache_data(ttl=15)
+def _cached_clinical_records(patient_id: int):
+    """Consulta registros clínicos con caché de 15s."""
+    return _db.get_clinical_records(patient_id) if _DB_ON else []
+
 @st.cache_data(ttl=20)
 def _cached_all_users():
     """Consulta todos los usuarios con caché de 20s."""
@@ -531,6 +541,8 @@ def _do_login(username: str, password: str):
                 "sess_avatar": user_db.get("avatar", "👨‍⚕️"),
                 "sess_institucion": user_db.get("institucion", ""),
                 "sess_email": user_db.get("email", ""),
+                "sess_cedula": user_db.get("cedula_profesional", ""),
+                "sess_universidad": user_db.get("universidad", ""),
                 "using_db": True,
             })
             return True, rol
@@ -2018,24 +2030,6 @@ with st.sidebar:
     st.session_state["pdf_extendido"] = bool(doc_mode)
     st.session_state["mostrar_fund_extendido"] = bool(doc_mode)
 
-    st.header("Parámetros globales")
-    peso = st.number_input("Peso (kg)", 10.0, 300.0, 70.0, 0.5, key="sb_peso")
-    hto = st.number_input("Hematocrito (fracción)", 0.10, 0.60, 0.30, 0.01, format="%.2f", key="sb_hto")
-    qb = st.number_input("Qb (mL/min)", 80, 300, 200, 10, key="sb_qb")
-    uf = st.number_input("UF neta (mL/h)", 0, 2000, 100, 10, key="sb_uf")
-    dosis_mlkg = st.slider("Dosis objetivo (mL/kg/h)", 10, 45, 30, key="sb_dosis")
-
-    st.markdown("---")
-    st.subheader("Escenarios clínicos")
-    escenarios_catalogo = [
-        "Sepsis / choque séptico", "Choque cardiogénico", "Post infarto",
-        "Neurocrítico / TCE", "Sobrecarga hídrica aislada", "Intoxicación / sobredosis",
-        "Hiponatremia severa", "Hipernatremia", "Hiperamonemia",
-        "Rabdomiólisis", "Síndrome de liberación de citocinas",
-    ]
-    escenarios = st.multiselect("Hasta 3", escenarios_catalogo, max_selections=3,
-                                default=["Sepsis / choque séptico"], key="sb_escenarios")
-
     # ── NAVEGACIÓN ────────────────────────────────────────────────────────────
     st.markdown("---")
     if "nav_sel" not in st.session_state:
@@ -2622,6 +2616,38 @@ if nav == "scores":
 # ══════════════════════════════════════════════════════════════════════════════
 elif nav == "presc":
     st.subheader("Prescripción TRRC — Recomendación combinada")
+
+    # ── PARÁMETROS DEL PACIENTE ────────────────────────────────────────────────
+    st.markdown("#### ⚙️ Parámetros globales")
+    pg1, pg2, pg3, pg4, pg5 = st.columns(5)
+    with pg1:
+        peso = st.number_input("Peso (kg)", 10.0, 300.0,
+                               float(st.session_state.get("sb_peso", 70.0)), 0.5, key="sb_peso")
+    with pg2:
+        hto = st.number_input("Hematocrito (fracción)", 0.10, 0.60,
+                              float(st.session_state.get("sb_hto", 0.30)), 0.01,
+                              format="%.2f", key="sb_hto")
+    with pg3:
+        qb = st.number_input("Qb (mL/min)", 80, 300,
+                             int(st.session_state.get("sb_qb", 200)), 10, key="sb_qb")
+    with pg4:
+        uf = st.number_input("UF neta (mL/h)", 0, 2000,
+                             int(st.session_state.get("sb_uf", 100)), 10, key="sb_uf")
+    with pg5:
+        dosis_mlkg = st.slider("Dosis objetivo (mL/kg/h)", 10, 45,
+                               int(st.session_state.get("sb_dosis", 30)), key="sb_dosis")
+
+    escenarios_catalogo = [
+        "Sepsis / choque séptico", "Choque cardiogénico", "Post infarto",
+        "Neurocrítico / TCE", "Sobrecarga hídrica aislada", "Intoxicación / sobredosis",
+        "Hiponatremia severa", "Hipernatremia", "Hiperamonemia",
+        "Rabdomiólisis", "Síndrome de liberación de citocinas",
+    ]
+    escenarios = st.multiselect("Escenarios clínicos (hasta 3)", escenarios_catalogo,
+                                max_selections=3,
+                                default=st.session_state.get("sb_escenarios", ["Sepsis / choque séptico"]),
+                                key="sb_escenarios")
+    st.divider()
 
     cP1, cP2, cP3 = st.columns(3)
     with cP1:
@@ -4978,19 +5004,30 @@ elif nav == "micuenta":
             inst_mc   = st.text_input("Institución / Hospital",
                                       value=st.session_state.get("sess_institucion",""),
                                       key="mc_inst",
-                                      placeholder="Ej: IMSS CMN del Bajío, UMAE Bajío")
+                                      placeholder="Ej: IMSS CMNO N1, León, Gto.")
+            ced_mc    = st.text_input("Cédula profesional",
+                                      value=st.session_state.get("sess_cedula",""),
+                                      key="mc_cedula",
+                                      placeholder="Ej: 12345678")
+            univ_mc   = st.text_input("Universidad / Institución que expidió el título",
+                                      value=st.session_state.get("sess_universidad",""),
+                                      key="mc_univ",
+                                      placeholder="Ej: Universidad de Guadalajara")
 
             if st.button("💾 Guardar cambios", type="primary", key="btn_mc_save",
                          use_container_width=True):
                 av_nuevo = st.session_state.get("sess_avatar", av_actual)
                 if db_mc:
                     ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
-                                                 esp_mc, inst_mc, av_nuevo)
+                                                 esp_mc, inst_mc, av_nuevo,
+                                                 ced_mc, univ_mc)
                     if ok:
-                        st.session_state["sess_nombre"]     = nom_mc
-                        st.session_state["sess_email"]      = email_mc
-                        st.session_state["sess_institucion"]= inst_mc
+                        st.session_state["sess_nombre"]      = nom_mc
+                        st.session_state["sess_email"]       = email_mc
+                        st.session_state["sess_institucion"] = inst_mc
                         st.session_state["sess_especialidad"]= esp_mc
+                        st.session_state["sess_cedula"]      = ced_mc
+                        st.session_state["sess_universidad"] = univ_mc
                         _clear_cache()
                         st.success("✅ Perfil actualizado correctamente.")
                     else:
