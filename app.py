@@ -7354,7 +7354,7 @@ elif nav == "enfermeria":
 
 elif nav == "trasplante":
     st.subheader("💉 Trasplante Renal — Inmunosupresores")
-    st.caption("Protocolos basados en KDIGO Transplant 2009/2022 e INNSZ. Siempre ajustar según protocolo institucional.")
+    st.caption("Protocolos basados en KDIGO Transplant Work Group 2009 (Am J Transplant 9 Suppl 3:S1-155). Siempre ajustar a protocolo institucional vigente.")
 
     tx_modo = st.radio("Módulo", [
         "🧪 Timoglobulina (ATG-r)",
@@ -7417,7 +7417,7 @@ elif nav == "trasplante":
         """)
         st.warning("⚠️ Profilaxis obligatoria: Cotrimoxazol (PCP), Valganciclovir (CMV si D+/R- o R+), "
                    "Nistatina o Fluconazol (candidiasis)")
-        st.caption("Ref: Brennan DC. Am J Transplant 2011 | INNSZ Protocolo Inmunosupresión 2024")
+        st.caption("Ref: Brennan DC et al. Am J Transplant 2011;11(11):2279–2287 | Noel C et al. Transplantation 2009 | Ficha técnica Timoglobulina® (Sanofi)")
 
     # ── TACROLIMUS ─────────────────────────────────────────────────────────────
     elif "Tacrolimus" in tx_modo:
@@ -7523,7 +7523,7 @@ elif nav == "trasplante":
         st.warning("**Toxicidad principal:** diarrea, náusea, leucopenia · "
                    "Si leucocitos <2,000: reducir 50% o suspender · "
                    "**Teratogénico:** anticoncepción obligatoria en mujeres en edad fértil")
-        st.caption("Ref: Sollinger HW. Transplantation 1995 | KDIGO Transplant 2009")
+        st.caption("Ref: Sollinger HW. Transplantation 1995;60(3):225–232 | KDIGO Transplant Work Group. Am J Transplant 2009;9 Suppl 3:S1-155")
 
     # ── CICLOSPORINA ──────────────────────────────────────────────────────────
     elif "Ciclosporina" in tx_modo:
@@ -7646,7 +7646,7 @@ Si se decide cambiar por toxicidad o falta de eficacia:
 **Post-pulsos:** Retornar a esquema oral habitual o aumentar prednisona VO 0.5 mg/kg/día
 **Si no responde:** biopsia de confirmación + timoglobulina (rechazo celular ≥IB) o IVIG + Rituximab (rechazo humoral)
             """)
-        st.caption("Ref: KDIGO Transplant 2009 | Protocolo INNSZ 2024")
+        st.caption("Ref: KDIGO Transplant Work Group. Am J Transplant 2009;9 Suppl 3:S1-155 | Kasiske BL et al. Am J Transplant 2010;10(6):1293–1338")
 
     # ── PROTOCOLO DE RECHAZO ──────────────────────────────────────────────────
     else:
@@ -7738,7 +7738,7 @@ Creatinina ↑ post-trasplante
                → IVU, obstrucción, deshidratación, fármacos nefrotóxicos
 ```
         """)
-        st.caption("Ref: Banff Classification 2022 | KDIGO Transplant 2022 | INNSZ Protocolo Rechazo 2024")
+        st.caption("Ref: Naesens M et al. (Banff 2022). Am J Transplant 2024;24:338–349 | KDIGO Transplant Work Group. Am J Transplant 2009;9 Suppl 3:S1-155")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
