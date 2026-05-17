@@ -2080,6 +2080,8 @@ with st.sidebar:
     _navsec("DOCUMENTACIÓN")
     _navbtn("📋 Resumen / PDF", "resumen")
     _navbtn("📂 Mis Pacientes", "pacientes")
+    _navbtn("🏥 Expediente Clínico", "expediente")
+    _navbtn("📄 Receta Médica", "receta")
     _navbtn("📚 Fundamento", "fund")
     _navbtn("📖 Referencias", "refs")
 
@@ -5034,9 +5036,14 @@ elif nav == "micuenta":
                          use_container_width=True):
                 av_nuevo = st.session_state.get("sess_avatar", av_actual)
                 if db_mc:
-                    ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
-                                                 esp_mc, inst_mc, av_nuevo,
-                                                 ced_mc, univ_mc)
+                    try:
+                        ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
+                                                     esp_mc, inst_mc, av_nuevo,
+                                                     ced_mc, univ_mc)
+                    except TypeError:
+                        # Fallback para db.py sin parámetros de cédula/universidad
+                        ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
+                                                     esp_mc, inst_mc, av_nuevo)
                     if ok:
                         st.session_state["sess_nombre"]      = nom_mc
                         st.session_state["sess_email"]       = email_mc
@@ -7961,9 +7968,151 @@ elif nav == "glomerulopatias":
         st.info("70–80% primaria (anti-PLA2R+). 20–30% secundaria (lupus, neoplasia, VHB, fármacos). "
                 "Causa más frecuente de SN en adultos >40 años.")
 
-        nm1, nm2, nm3 = st.tabs(["🔬 Diagnóstico & Riesgo", "💊 Tratamiento", "📊 Monitoreo"])
+        nm1, nm2, nm3, nm4 = st.tabs(["🔬 Algoritmo Diagnóstico", "📊 Riesgo & IF", "💊 Tratamiento", "📊 Monitoreo"])
 
         with nm1:
+            st.markdown("#### Algoritmo diagnóstico — Nefropatía Membranosa")
+            st.info("""
+**KDIGO 2021:** La biopsia ya **no es obligatoria** si el anti-PLA2R es positivo
+en un contexto clínico compatible (adulto con SN, sin evidencia de causa secundaria).
+Sin embargo, la biopsia aporta valor pronóstico e información sobre el estadio de la lesión.
+            """)
+
+            st.markdown("##### Paso 1 — Sospecha clínica")
+            st.markdown("""
+| Hallazgo | Valor |
+|---------|-------|
+| Adulto >40 años con SN de inicio gradual | Alta sospecha de NM primaria |
+| Proteinuria >3.5 g/día + hipoalbuminemia + edema | Síndrome nefrótico clásico |
+| Hematuria microscópica | Presente en 30–50% |
+| Función renal | Normal al inicio en la mayoría |
+| Complemento C3/C4 | **Normal** en NM primaria — si bajo → sospechar secundaria (LES) |
+            """)
+
+            st.markdown("##### Paso 2 — Anti-PLA2R (pivote diagnóstico)")
+            nm_pla2r_dx = st.radio("Resultado de Anti-PLA2R sérico:", [
+                "✅ Positivo (cualquier título)",
+                "❌ Negativo o no disponible",
+            ], key="nm_pla2r_dx")
+
+            if "Positivo" in nm_pla2r_dx:
+                st.success("""
+**Anti-PLA2R+ → NM PRIMARIA probable (70–80% de NM primaria)**
+
+✅ Según KDIGO 2021: **biopsia no obligatoria** si:
+- Adulto con SN compatible
+- Anti-PLA2R positivo en lab estandarizado
+- Sin datos clínicos de causa secundaria (sin lupus, sin malignidad obvia, sin drogas)
+
+Aun así, la biopsia aporta:
+- Estadio de la lesión (útil para pronóstico)
+- Confirmación en casos dudosos
+- Anti-PLA2R en tejido si el sérico es bajo
+
+**Siguiente paso:** Estratificar riesgo → Pestaña "📊 Riesgo & IF"
+                """)
+                st.markdown("""
+**Estudio mínimo aún recomendado:**
+- Cuantificar proteinuria (RPCU o 24h)
+- Albúmina, creatinina, TFG (CKD-EPI)
+- Anti-PLA2R cuantitativo (títulos — sirven para monitoreo)
+- Descartar malignidad según edad y factores de riesgo
+- Repetir anti-PLA2R a los 3 meses (útil para guiar tratamiento)
+                """)
+            else:
+                st.warning("""
+**Anti-PLA2R negativo → Investigar causa secundaria + anticuerpos alternativos**
+                """)
+                st.markdown("""
+##### Paso 2b — Descartar causas secundarias (orden prioritario KDIGO 2021)
+
+**1. Malignidad** (especialmente si >60 años, tabaquismo, pérdida de peso)
+| Estudio | Malignidad asociada |
+|---------|-------------------|
+| TC tórax-abdomen-pelvis | Pulmón, colon, riñón, linfoma |
+| PSA (hombre >50 años) | Cáncer de próstata |
+| Mamografía (mujer >40) | Cáncer de mama |
+| Colonoscopía (>45 años o síntomas) | Colon |
+| SPEP + inmunofijación | Linfoma, mieloma |
+| Marcadores tumorales (CEA, CA19-9) | Orientativos |
+
+**2. Enfermedad autoinmune**
+| Estudio | Diagnóstico |
+|---------|------------|
+| ANA, anti-dsDNA | LES (NM = clase V) |
+| FR, anti-CCP | AR con NM |
+| Anti-Ro, anti-La | Sjögren |
+| ANCA (MPO, PR3) | Vasculitis (raramente NM) |
+| Complemento C3, C4 | Bajo en LES activo |
+
+**3. Fármacos nefrotóxicos** (suspender y reevaluar en 3–6 meses)
+- AINEs (ibuprofeno, naproxeno)
+- Sales de oro
+- Penicilamina
+- Mercurio
+- Captopril (a altas dosis, antiguo)
+- Litio (raramente)
+- Nivolumab, pembrolizumab (inmunoterapia oncológica — creciente)
+
+**4. Infección**
+| Estudio | Agente |
+|---------|--------|
+| HBsAg, anti-HBc, DNA VHB | VHB (especialmente en Asia, África) |
+| Anti-VHC + PCR RNA | VHC (más raro que en IC-MPGN) |
+| VDRL/FTA-ABS | Sífilis |
+| Estudio de heces (Schistosoma sp.) | Esquistosomiasis (regiones endémicas) |
+
+**5. Otras causas**
+- Sarcoidosis (ECA sérica, Rx tórax)
+- Tiroiditis autoinmune (TSH, anti-TPO)
+- Diabetes mellitus avanzada (aunque raramente NM pura)
+                """)
+                st.markdown("""
+##### Paso 2c — Anticuerpos alternativos si PLA2R negativo y causa secundaria descartada
+| Anticuerpo | % NM primaria | Contexto |
+|-----------|--------------|---------|
+| **Anti-THSD7A** | 3–5% | A veces asociado a malignidad — descartar |
+| **Anti-NELL-1** | ~5% | Asociado a malignidad (especialmente próstata) |
+| **Anti-SEMA3B** | <3% | Más frecuente en niños |
+| **Anti-EXT1/EXT2** | ~2% | Asociado a LES/enf. autoinmune |
+| **Anti-PCDH7** | Raro | En adultos con NM sin otra causa |
+
+> Si todos negativos y secundaria descartada: **NM idiopática seronegativa**
+> Biopsia obligatoria para confirmar el diagnóstico.
+                """)
+                st.markdown("""
+##### Algoritmo diagnóstico — árbol de decisión:
+```
+SN + proteinuria >3.5 g/día en adulto
+            │
+     Anti-PLA2R sérico
+      │             │
+   Positivo       Negativo
+      │             │
+  NM Primaria   ┌──────────────────────────────┐
+  probable      │ Descartar secundarias:       │
+  (KDIGO 2021:  │ → Malignidad (TC + marcadores)│
+  biopsia no   │ → LES (ANA, dsDNA, C3/C4)   │
+  obligatoria) │ → Fármacos (historia)        │
+               │ → VHB/VHC/sífilis            │
+               └──────────┬───────────────────┘
+                           │
+                    Todos negativos
+                           │
+               ┌───────────┴──────────────┐
+           Anti-THSD7A               Biopsia renal
+           Anti-NELL-1            (IF + MO + ME)
+               │                       │
+            Positivo          IgG subepitelial + spikes
+               │              → NM confirmada
+          NM Primaria         → Búsqueda adicional si
+          seronegativa          IF atípica (IgA, IgM dominante)
+```
+                """)
+                st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276. "
+                           "Beck LH et al. NEJM 2009 (anti-PLA2R). Tomas NM et al. NEJM 2014 (anti-THSD7A).")
+
+        with nm2:
             st.markdown("""
 #### Diagnóstico KDIGO 2021
 - **Biopsia:** engrosamiento de la MBG, depósitos subepiteliales (IF: IgG + C3 granular)
@@ -7992,7 +8141,7 @@ elif nav == "glomerulopatias":
 
             getattr(st, color_r)(f"**Riesgo: {riesgo}** — {plan_r}")
 
-        with nm2:
+        with nm3:
             st.markdown("""
 #### Tratamiento por nivel de riesgo — KDIGO 2021
 > 📌 **Cambio mayor vs 2012:** Rituximab es ahora tratamiento de primera línea para riesgo moderado y alto.
@@ -8042,7 +8191,7 @@ elif nav == "glomerulopatias":
 - Dosis acumulada máxima CYC: 36g (preservar fertilidad: máx 10g)
             """)
 
-        with nm3:
+        with nm4:
             st.markdown("""
 #### Monitoreo KDIGO 2021
 | Momento | Parámetro | Objetivo |
@@ -9230,6 +9379,357 @@ elif nav == "contraste":
 - Volumen contraste ({m_vol:.0f} mL): {vol_pts} pts (1 pt/100 mL)
         """)
         st.caption("Ref: Mehran R et al. A simple risk score for prediction of contrast-induced nephropathy. JACC 2004;44(7):1393-1399.")
+
+elif nav == "expediente":
+    # ══════════════════════════════════════════════════════════════════════════
+    # EXPEDIENTE CLÍNICO — centrado en el paciente
+    # ══════════════════════════════════════════════════════════════════════════
+    st.subheader("🏥 Expediente Clínico Digital")
+    uid = _user_id()
+    db_activa = _DB_ON and _db.db_ok() and uid
+
+    if not _is_auth():
+        st.warning("Inicia sesión para acceder al expediente.")
+    elif not db_activa:
+        st.error("Railway DB no disponible. Verifica la conexión.")
+    else:
+        # ── SELECCIÓN DE PACIENTE ───────────────────────────────────────────
+        pacientes = _cached_patients(uid)
+        sel_exp_id = st.session_state.get("exp_pac_id")
+        sel_exp = next((p for p in pacientes if p["id"] == sel_exp_id), None) if sel_exp_id else None
+
+        if not sel_exp:
+            # ── LISTA DE PACIENTES ──────────────────────────────────────────
+            col_lista, col_nuevo = st.columns([3, 1])
+            with col_lista:
+                buscar_p = st.text_input("🔍 Buscar paciente", placeholder="Nombre o expediente...", key="exp_buscar")
+            with col_nuevo:
+                st.markdown(" ")
+                if st.button("➕ Nuevo paciente", type="primary", use_container_width=True, key="btn_nuevo_pac"):
+                    st.session_state["exp_modo"] = "nuevo"
+
+            if st.session_state.get("exp_modo") == "nuevo":
+                with st.expander("➕ Registrar nuevo paciente", expanded=True):
+                    np1, np2, np3 = st.columns(3)
+                    with np1:
+                        np_nombre = st.text_input("Nombre completo *", key="np_nombre")
+                        np_exp    = st.text_input("N° expediente", key="np_exp")
+                        np_edad   = st.number_input("Edad", 0, 120, 50, 1, key="np_edad")
+                    with np2:
+                        np_sexo   = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="np_sexo")
+                        np_peso   = st.number_input("Peso (kg)", 0.0, 300.0, 70.0, 0.5, key="np_peso")
+                        np_tipo   = st.selectbox("Tipo de paciente", [
+                            "General","TRRC / UCI","Trasplante renal","ERC crónica",
+                            "Hemodiálisis","Diálisis peritoneal","Agudo hospitalizado"
+                        ], key="np_tipo")
+                    with np3:
+                        np_dx     = st.text_area("Diagnóstico principal", height=80, key="np_dx")
+                        np_notas  = st.text_area("Notas adicionales", height=60, key="np_notas")
+
+                    if st.button("💾 Registrar paciente", type="primary", key="btn_reg_pac"):
+                        if not np_nombre:
+                            st.warning("El nombre es obligatorio.")
+                        else:
+                            new_id = _db.create_patient(uid, {
+                                "nombre": np_nombre, "expediente": np_exp,
+                                "edad": int(np_edad), "sexo": np_sexo,
+                                "peso": float(np_peso), "tipo": np_tipo,
+                                "diagnostico": np_dx, "notas": np_notas,
+                            })
+                            if new_id:
+                                _clear_cache()
+                                st.session_state["exp_pac_id"] = new_id
+                                st.session_state.pop("exp_modo", None)
+                                st.success(f"✅ Paciente '{np_nombre}' registrado.")
+                                st.rerun()
+                            else:
+                                st.error("Error al registrar paciente.")
+
+            # Lista de pacientes
+            pacientes_filtrados = [p for p in pacientes
+                if buscar_p.lower() in (p.get("nombre","") + p.get("expediente","")).lower()
+            ] if buscar_p else pacientes
+
+            if pacientes_filtrados:
+                for p in pacientes_filtrados:
+                    records = _cached_clinical_records(p["id"])
+                    tipo_icon = {"TRRC / UCI":"🏥","Trasplante renal":"💉","ERC crónica":"🔵",
+                                 "Hemodiálisis":"⚙️","Diálisis peritoneal":"💧"}.get(p.get("tipo",""),"👤")
+                    with st.expander(f"{tipo_icon} **{p.get('nombre','—')}** · Exp: {p.get('expediente','—')} · "
+                                     f"{p.get('edad','—')} años · {len(records)} registro(s)"):
+                        ec1, ec2 = st.columns([2,1])
+                        with ec1:
+                            st.write(f"**Dx:** {p.get('diagnostico','—')}")
+                            st.write(f"**Tipo:** {p.get('tipo','—')} · **Peso:** {p.get('peso','—')} kg · **Sexo:** {p.get('sexo','—')}")
+                            if p.get("notas"): st.caption(p["notas"])
+                        with ec2:
+                            if st.button("📋 Abrir expediente", key=f"abrir_{p['id']}", use_container_width=True):
+                                st.session_state["exp_pac_id"] = p["id"]
+                                st.rerun()
+                            if st.button("🗑️ Eliminar", key=f"del_exp_{p['id']}", use_container_width=True):
+                                _db.delete_patient(p["id"], uid)
+                                _clear_cache(); st.rerun()
+            else:
+                if not st.session_state.get("exp_modo"):
+                    st.info("No hay pacientes registrados. Usa **➕ Nuevo paciente** para comenzar.")
+
+        else:
+            # ── EXPEDIENTE DEL PACIENTE SELECCIONADO ───────────────────────
+            col_back, col_title = st.columns([1, 5])
+            with col_back:
+                if st.button("← Volver", key="btn_exp_back"):
+                    st.session_state.pop("exp_pac_id", None)
+                    st.rerun()
+            with col_title:
+                tipo_icon = {"TRRC / UCI":"🏥","Trasplante renal":"💉","ERC crónica":"🔵",
+                             "Hemodiálisis":"⚙️"}.get(sel_exp.get("tipo",""),"👤")
+                st.markdown(f"### {tipo_icon} {sel_exp.get('nombre','—')} · "
+                            f"Exp: {sel_exp.get('expediente','—')} · "
+                            f"{sel_exp.get('edad','—')} años · {sel_exp.get('sexo','—')}")
+                st.caption(f"**Dx:** {sel_exp.get('diagnostico','—')} · **Peso:** {sel_exp.get('peso','—')} kg")
+
+            st.divider()
+            records = _cached_clinical_records(sel_exp["id"])
+
+            # Nuevo registro
+            with st.expander("➕ Agregar nuevo registro clínico", expanded=len(records)==0):
+                nr1, nr2 = st.columns(2)
+                with nr1:
+                    nr_tipo   = st.selectbox("Tipo de registro", [
+                        "TRRC / Prescripción","Nefrología / Calculadoras",
+                        "Trasplante / Inmunosupresores","Glomerulopatía",
+                        "Guardia / Urgencias","Consulta externa","Seguimiento","Otro"
+                    ], key="nr_tipo")
+                    nr_titulo = st.text_input("Título del registro", key="nr_titulo",
+                                             placeholder="Ej: Ajuste de tacrolimus por nivel alto")
+                    nr_fecha  = st.date_input("Fecha de consulta", key="nr_fecha")
+                with nr2:
+                    nr_resumen = st.text_area("Resumen clínico / hallazgos", height=100, key="nr_resumen",
+                                             placeholder="Ej: Nivel tacrolimus 18 ng/mL. Se reduce a 2 mg c/12h. K 5.8 mEq/L, se inicia patiromer.")
+                    nr_notas   = st.text_area("Plan / notas adicionales", height=70, key="nr_notas")
+
+                # Datos calculados que se quieran guardar
+                nr_datos = {}
+                with st.expander("📊 Vincular datos de calculadoras actuales (opcional)"):
+                    st.caption("Los valores actuales de las calculadoras se pueden guardar junto al registro:")
+                    if st.checkbox("Incluir parámetros TRRC actuales", key="nr_trrc"):
+                        nr_datos["peso_kg"]     = peso
+                        nr_datos["qb"]          = qb
+                        nr_datos["dosis_mlkgh"] = dosis_mlkg
+                        nr_datos["uf_mlh"]      = uf
+                        nr_datos["modalidad"]   = st.session_state.get("sb_escenarios","")
+                    cr_reg = st.number_input("Creatinina actual (mg/dL) — 0 si no aplica",
+                                            0.0, 30.0, 0.0, 0.1, key="nr_cr")
+                    k_reg  = st.number_input("K sérico (mEq/L) — 0 si no aplica",
+                                            0.0, 10.0, 0.0, 0.1, key="nr_k")
+                    if cr_reg: nr_datos["creatinina"] = cr_reg
+                    if k_reg:  nr_datos["k_meql"]     = k_reg
+
+                if st.button("💾 Guardar registro", type="primary", key="btn_guardar_rec"):
+                    if not nr_titulo:
+                        st.warning("El título es obligatorio.")
+                    else:
+                        rec_id = _db.add_clinical_record(sel_exp["id"], uid, {
+                            "tipo": nr_tipo, "titulo": nr_titulo,
+                            "fecha_consulta": nr_fecha,
+                            "resumen": nr_resumen, "notas": nr_notas,
+                            "datos": nr_datos,
+                        })
+                        if rec_id:
+                            _clear_cache()
+                            st.success("✅ Registro guardado.")
+                            st.rerun()
+                        else:
+                            st.error("Error al guardar registro.")
+
+            # Lista de registros
+            st.markdown(f"#### Registros clínicos ({len(records)})")
+            tipo_icons = {"TRRC / Prescripción":"🏥","Nefrología / Calculadoras":"🔢",
+                          "Trasplante / Inmunosupresores":"💉","Glomerulopatía":"🔵",
+                          "Guardia / Urgencias":"⚡","Consulta externa":"🩺",
+                          "Seguimiento":"📊","Otro":"📋"}
+            for rec in records:
+                fecha_r = str(rec.get("fecha_consulta",""))[:10] or str(rec.get("created_at",""))[:10]
+                icono_r = tipo_icons.get(rec.get("tipo","Otro"), "📋")
+                with st.expander(f"{icono_r} {fecha_r} — **{rec.get('titulo','—')}** · _{rec.get('tipo','—')}_"):
+                    if rec.get("resumen"):
+                        st.markdown(f"**Resumen:** {rec['resumen']}")
+                    if rec.get("notas"):
+                        st.caption(f"**Plan:** {rec['notas']}")
+                    # Show datos_json if any
+                    import json as _json_rec
+                    try:
+                        datos_r = _json_rec.loads(rec.get("datos_json","{}"))
+                        if datos_r:
+                            d1, d2, d3, d4 = st.columns(4)
+                            if datos_r.get("creatinina"):
+                                d1.metric("Creatinina", f"{datos_r['creatinina']} mg/dL")
+                            if datos_r.get("k_meql"):
+                                d2.metric("K", f"{datos_r['k_meql']} mEq/L")
+                            if datos_r.get("peso_kg"):
+                                d3.metric("Peso", f"{datos_r['peso_kg']} kg")
+                            if datos_r.get("dosis_mlkgh"):
+                                d4.metric("Dosis TRRC", f"{datos_r['dosis_mlkgh']} mL/kg/h")
+                    except Exception:
+                        pass
+
+                    rc1, rc2 = st.columns(2)
+                    with rc1:
+                        if st.button("📄 Generar receta", key=f"receta_{rec['id']}", use_container_width=True):
+                            st.session_state["receta_pac"] = sel_exp
+                            st.session_state["receta_rec"] = rec
+                            st.session_state["nav_sel"]    = "receta"
+                            st.rerun()
+                    with rc2:
+                        if st.button("🗑️ Eliminar", key=f"del_rec_{rec['id']}", use_container_width=True):
+                            _db.delete_clinical_record(rec["id"], uid)
+                            _clear_cache(); st.rerun()
+            if not records:
+                st.info("Sin registros aún. Usa el formulario de arriba para agregar el primero.")
+
+elif nav == "receta":
+    # ══════════════════════════════════════════════════════════════════════════
+    # RECETA MÉDICA — generada desde el perfil del médico + registro clínico
+    # ══════════════════════════════════════════════════════════════════════════
+    st.subheader("📄 Receta Médica")
+
+    if not _is_auth():
+        st.warning("Inicia sesión para generar recetas.")
+    else:
+        # Datos del médico desde perfil
+        dr_nombre  = st.session_state.get("sess_nombre","")
+        dr_cedula  = st.session_state.get("sess_cedula","")
+        dr_univ    = st.session_state.get("sess_universidad","")
+        dr_esp     = st.session_state.get("sess_especialidad","")
+        dr_inst    = st.session_state.get("sess_institucion","")
+
+        if not dr_nombre or not dr_cedula:
+            st.warning("⚠️ Tu perfil está incompleto. Ve a **👤 Mi Cuenta** y agrega tu nombre y cédula profesional antes de generar recetas.")
+            if st.button("Ir a Mi Cuenta →"):
+                st.session_state["nav_sel"] = "micuenta"
+                st.rerun()
+        else:
+            # Datos del paciente (desde expediente o manual)
+            pac_data = st.session_state.get("receta_pac", {})
+            rec_data = st.session_state.get("receta_rec", {})
+
+            st.markdown("### Datos del paciente")
+            rx1, rx2, rx3 = st.columns(3)
+            with rx1:
+                rx_nombre = st.text_input("Nombre del paciente", value=pac_data.get("nombre",""), key="rx_nombre")
+                rx_edad   = st.text_input("Edad", value=str(pac_data.get("edad","")) if pac_data.get("edad") else "", key="rx_edad")
+            with rx2:
+                rx_exp    = st.text_input("N° expediente", value=pac_data.get("expediente",""), key="rx_exp")
+                rx_sexo   = st.text_input("Sexo", value=pac_data.get("sexo",""), key="rx_sexo")
+            with rx3:
+                rx_fecha  = st.date_input("Fecha", key="rx_fecha")
+                rx_dx     = st.text_input("Diagnóstico", value=pac_data.get("diagnostico",""), key="rx_dx")
+
+            st.markdown("### Indicaciones / Prescripción")
+            rx_body = st.text_area("Escribe las indicaciones médicas aquí", height=200,
+                                   value=rec_data.get("resumen","") if rec_data else "",
+                                   key="rx_body",
+                                   placeholder="Ej:\n1. Tacrolimus 2 mg c/12h VO\n2. MMF 500 mg c/12h VO\n3. Prednisona 10 mg c/24h VO\n4. Omeprazol 20 mg c/24h VO\n5. Control con niveles de tacrolimus en 7 días")
+            rx_notas = st.text_input("Nota adicional / próxima cita", key="rx_notas",
+                                     placeholder="Ej: Próxima cita en 7 días con niveles de tacrolimus")
+
+            st.divider()
+
+            # Preview de la receta
+            st.markdown("### Vista previa")
+            receta_html = f"""
+<div style="border:2px solid #1E3A8A;border-radius:12px;padding:24px;background:#fff;
+     font-family:'Times New Roman',serif;max-width:600px;margin:0 auto;
+     box-shadow:0 4px 16px rgba(0,0,0,0.1);">
+
+  <!-- Header -->
+  <div style="border-bottom:2px solid #1E3A8A;padding-bottom:12px;margin-bottom:16px;">
+    <div style="font-size:18px;font-weight:bold;color:#1E3A8A;">{dr_nombre}</div>
+    <div style="font-size:13px;color:#374151;">{dr_esp}</div>
+    <div style="font-size:12px;color:#6B7280;">Cédula Profesional: {dr_cedula}</div>
+    <div style="font-size:12px;color:#6B7280;">Universidad: {dr_univ}</div>
+    <div style="font-size:12px;color:#6B7280;">{dr_inst}</div>
+  </div>
+
+  <!-- Datos del paciente -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:16px;font-size:13px;">
+    <div><b>Paciente:</b> {rx_nombre or '_______________'}</div>
+    <div><b>Expediente:</b> {rx_exp or '_______________'}</div>
+    <div><b>Edad:</b> {rx_edad or '___'} años &nbsp; <b>Sexo:</b> {rx_sexo or '___'}</div>
+    <div><b>Fecha:</b> {rx_fecha}</div>
+    <div style="grid-column:span 2"><b>Dx:</b> {rx_dx or '_______________'}</div>
+  </div>
+
+  <!-- Rx symbol -->
+  <div style="font-size:28px;color:#1E3A8A;font-weight:bold;margin-bottom:8px;">℞</div>
+
+  <!-- Indicaciones -->
+  <div style="font-size:14px;color:#111827;min-height:120px;white-space:pre-wrap;
+       border-bottom:1px solid #E5E7EB;padding-bottom:16px;margin-bottom:16px;">
+{rx_body.replace(chr(10), '<br>') if rx_body else '<em style="color:#9CA3AF">Sin indicaciones escritas</em>'}</div>
+
+  <!-- Nota y firma -->
+  <div style="font-size:12px;color:#6B7280;margin-bottom:16px;">{rx_notas}</div>
+  <div style="text-align:right;">
+    <div style="border-top:1px solid #374151;width:180px;margin-left:auto;padding-top:4px;
+         font-size:12px;color:#374151;">Firma del médico</div>
+  </div>
+  <div style="text-align:center;font-size:10px;color:#9CA3AF;margin-top:12px;">
+    Generado por RenalPro v3.1.0 — Uso académico y clínico
+  </div>
+</div>
+            """
+            st.markdown(receta_html, unsafe_allow_html=True)
+
+            # Download as text
+            st.divider()
+            receta_txt = f"""RECETA MÉDICA
+{'='*50}
+{dr_nombre}
+{dr_esp}
+Cédula Profesional: {dr_cedula}
+Universidad: {dr_univ}
+{dr_inst}
+
+{'='*50}
+Paciente: {rx_nombre}   Expediente: {rx_exp}
+Edad: {rx_edad} años   Sexo: {rx_sexo}
+Fecha: {rx_fecha}
+Diagnóstico: {rx_dx}
+{'='*50}
+
+℞
+
+{rx_body}
+
+{'─'*40}
+{rx_notas}
+
+Firma: ___________________
+{dr_nombre}
+Cédula: {dr_cedula}
+
+RenalPro v3.1.0 — Uso académico y clínico
+            """
+            st.download_button("📥 Descargar receta (.txt)",
+                               data=receta_txt,
+                               file_name=f"Receta_{rx_nombre.replace(' ','_')}_{rx_fecha}.txt",
+                               mime="text/plain",
+                               key="btn_dl_receta")
+
+            if rec_data and _DB_ON and _db.db_ok():
+                if st.button("✅ Marcar receta como generada en el expediente", key="btn_mark_receta"):
+                    conn_r = _db.get_conn()
+                    if conn_r:
+                        try:
+                            cur_r = conn_r.cursor()
+                            cur_r.execute("UPDATE clinical_records SET receta_generada=TRUE WHERE id=%s",
+                                         (rec_data["id"],))
+                            conn_r.commit(); cur_r.close()
+                            _clear_cache()
+                            st.success("✅ Marcado en el expediente.")
+                        except Exception:
+                            pass
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
