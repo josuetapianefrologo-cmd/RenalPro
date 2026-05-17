@@ -1,5 +1,5 @@
 # ============================================================
-# app.py — TRRC360 by Dr. Tapia (v2.0.0)
+# app.py — RenalPro by Dr. Tapia (v3.0.0)
 # ============================================================
 # Módulos nuevos v2.0:
 #   + Citrato Regional completo (acumulación, contraindicaciones, monitoreo)
@@ -67,11 +67,11 @@ def _clear_cache():
     """Invalida todos los cachés tras una escritura."""
     st.cache_data.clear()
 
-VERSION = "v3.0.0"
+VERSION = "v3.1.0"
 
 # ─── PAGE CONFIG ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="TRRC360 by Dr. Tapia",
+    page_title="RenalPro by Dr. Tapia",
     layout="wide",
     page_icon="🩺",
     initial_sidebar_state="expanded"
@@ -80,7 +80,7 @@ st.set_page_config(
 # ─── CSS CLÍNICO OSCURO ───────────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* ══ TRRC360 — Tema Médico Claro v3 ══════════════════════════════════════ */
+/* ══ RenalPro — Tema Médico Claro v3 ══════════════════════════════════════ */
 
 /* ── BASE ────────────────────────────────────────────────────────────────── */
 .stApp { background-color: #F0F4F8 !important; }
@@ -621,7 +621,7 @@ section[data-testid="stSidebar"]{display:none!important;}
     TRRC<span style="font-size:28px;vertical-align:super;font-weight:700;letter-spacing:0;">360</span>
   </div>
   <div style="color:rgba(255,255,255,0.85);font-size:16px;font-weight:500;margin-top:8px;">
-    Calculadora Clínica de Terapias Extracorpóreas
+    Plataforma Clínica de Nefrología
   </div>
   <div style="color:rgba(255,255,255,0.55);font-size:12px;margin-top:4px;">
     TRRC · HD · Citrato · Plasmaféresis · Scores UCI
@@ -694,7 +694,7 @@ section[data-testid="stSidebar"]{display:none!important;}
 
     st.markdown("""
 <div style="text-align:center;padding:20px 0;color:rgba(255,255,255,0.4);font-size:11px;">
-  TRRC360 · Dr. Josué Tapia Nefrólogo · León, Gto. · Uso académico · v2.1.0
+  RenalPro · Dr. Josué Tapia Nefrólogo · León, Gto. · Uso académico · v3.1.0
 </div>""", unsafe_allow_html=True)
     st.stop()
 
@@ -1234,13 +1234,13 @@ def export_pdf():
     sello = s.get("rx_sello", "")
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M")
     safe_name = "".join(ch for ch in (nombre_paciente or "").replace(" ", "") if ch.isalnum())
-    filename = f"TRRC360_{safe_name}_{ts}.pdf" if safe_name else f"TRRC360_{ts}.pdf"
+    filename = f"RenalPro_{safe_name}_{ts}.pdf" if safe_name else f"RenalPro_{ts}.pdf"
     c = canvas.Canvas(filename, pagesize=letter)
     w, h = letter
     margin = 50
     y = h - margin
     c.setFont("Helvetica-Bold", 14)
-    c.drawString(margin, y, "TRRC360 — Prescripción Terapia de Reemplazo Renal Continua")
+    c.drawString(margin, y, "RenalPro — Prescripción Terapia de Reemplazo Renal Continua")
     c.setFont("Helvetica", 10)
     c.drawRightString(w - margin, y, datetime.now().strftime("%d/%m/%Y %H:%M"))
     y -= 22
@@ -1311,7 +1311,7 @@ def export_pdf():
     c.showPage()
     y = h - 50
     c.setFont("Helvetica-Bold", 13)
-    c.drawString(50, y, "Fundamento y Cálculos — TRRC360 v2.0.0")
+    c.drawString(50, y, "Fundamento y Cálculos — RenalPro v3.1.0")
     y -= 22
     c.setFont("Helvetica", 11)
     pdf_ext = bool(s.get("pdf_extendido", False))
@@ -1494,7 +1494,7 @@ def export_pdf_pro():
 
     # ── HEADER ────────────────────────────────────────────────────────────────
     hdr = Table([
-        [Paragraph("<b>TRRC360</b>", E_TITULO),
+        [Paragraph("<b>RenalPro</b>", E_TITULO),
          Paragraph(f"Prescripción — Terapia de Reemplazo Renal Continua", E_SUBTIT),
          Paragraph(ts, E_FECHA)],
         [Paragraph(f"{unidad or 'Unidad: —'}", E_SUBTIT),
@@ -1724,14 +1724,14 @@ def export_pdf_pro():
     story.append(firma_t)
     story.append(Spacer(1, 2*mm))
     story.append(Paragraph(
-        f"TRRC360 {VERSION} — Generado {ts} — Uso académico y de apoyo clínico exclusivo. "
+        f"RenalPro {VERSION} — Generado {ts} — Uso académico y de apoyo clínico exclusivo. "
         "No reemplaza el juicio clínico del médico tratante.", E_FOOT))
 
     # ══ PÁGINA 2: PROTOCOLO DE ENFERMERÍA ═════════════════════════════════════
     story.append(PageBreak())
 
     enf_hdr = Table([[
-        Paragraph("<b>TRRC360 — PROTOCOLO DE ENFERMERÍA</b>", E_TITULO),
+        Paragraph("<b>RenalPro — PROTOCOLO DE ENFERMERÍA</b>", E_TITULO),
         Paragraph(f"{ts}", E_FECHA),
     ]], colWidths=[PAGE_W*0.7, PAGE_W*0.3])
     enf_hdr.setStyle(TableStyle([
@@ -1919,7 +1919,7 @@ def export_pdf_pro():
 
     # ══ PÁGINA 3: FUNDAMENTO + REFERENCIAS ════════════════════════════════════
     story.append(PageBreak())
-    story.append(sec_bar(f"▌  FUNDAMENTO Y CÁLCULOS — TRRC360 {VERSION}"))
+    story.append(sec_bar(f"▌  FUNDAMENTO Y CÁLCULOS — RenalPro {VERSION}"))
     story.append(Spacer(1, 3*mm))
 
     for linea in _fundamento_texto_resumen(qb, hto, qp, qp_h, qe, qr_pre, qr_post, qd, uf, ff_txt):
@@ -1988,7 +1988,7 @@ st.markdown(f"""
     </div>
     <div style="flex:1;">
         <div style="font-size:20px; font-weight:800; color:#FFFFFF; letter-spacing:-0.3px; line-height:1.1;">
-            Calculadora Clínica de Terapias Extracorpóreas
+            Plataforma Clínica de Nefrología
         </div>
         <div style="font-size:12px; color:rgba(255,255,255,0.75); margin-top:4px; font-weight:500;">
             Prescripción TRRC · Citrato · HD · Plasmaféresis · Scores UCI
@@ -2064,6 +2064,12 @@ with st.sidebar:
     _navbtn("📊 Scores / Candidatura", "scores")
     _navbtn("💊 Anticoagulación", "anticoag")
     _navbtn("👩‍⚕️ Protocolo Enfermería", "enfermeria")
+
+    _navsec("GUARDIA")
+    _navbtn("⚡ Hiperkalemia", "hiperkalemia")
+    _navbtn("💧 Hiponatremia", "hiponatremia")
+    _navbtn("💊 Diuréticos", "diureticos")
+    _navbtn("🔬 AKI por Contraste", "contraste")
 
     _navsec("NEFROLOGÍA")
     _navbtn("🔢 Calculadoras Nefro", "nefro")
@@ -4515,7 +4521,7 @@ elif nav == "resumen":
                 ts = datetime.now().strftime("%Y-%m-%d_%H-%M")
                 nom = st.session_state.get("rx_nombre_paciente", "").replace(" ", "")
                 safe = "".join(c for c in nom if c.isalnum())
-                fname = f"TRRC360_{safe}_{ts}.pdf" if safe else f"TRRC360_{ts}.pdf"
+                fname = f"RenalPro_{safe}_{ts}.pdf" if safe else f"RenalPro_{ts}.pdf"
                 buf = export_pdf_pro()
                 st.download_button("⬇️ Descargar PDF", data=buf, file_name=fname,
                                    mime="application/pdf", use_container_width=True,
@@ -4558,7 +4564,7 @@ elif nav == "premium":
         st.markdown("""
 <div style="background:linear-gradient(135deg,#1E3A8A,#2563EB);border-radius:16px;
      padding:24px 28px;margin-bottom:16px;text-align:center;">
-  <div style="font-size:32px;font-weight:800;color:#fff;">⭐ TRRC360 Pro</div>
+  <div style="font-size:32px;font-weight:800;color:#fff;">⭐ RenalPro Pro</div>
   <div style="color:rgba(255,255,255,0.85);font-size:15px;margin-top:6px;">
     El asistente clínico de nefrología y terapias extracorpóreas más completo
   </div>
@@ -6672,7 +6678,7 @@ elif nav == "pacientes":
             st.markdown(f"""<div class="card-blur"><b>🩺 {e[0]}</b> · {e[1]} · {e[2]} · {e[3]}<br>
             <small>{e[4]} · {e[5]} · {e[6]}</small></div>""", unsafe_allow_html=True)
         st.markdown("---")
-        st.markdown("### ✨ Con TRRC360 Pro tienes:")
+        st.markdown("### ✨ Con RenalPro Pro tienes:")
         c1, c2 = st.columns(2)
         c1.markdown("""
 - 💾 Guardar prescripciones ilimitadas
@@ -6733,7 +6739,7 @@ elif nav == "pacientes":
                             ts = datetime.now().strftime("%Y%m%d_%H%M")
                             alias_safe = "".join(c for c in (sel_pac.get("alias","pac")) if c.isalnum())
                             st.download_button("⬇️ Descargar", data=buf,
-                                file_name=f"TRRC360_{alias_safe}_{ts}.pdf",
+                                file_name=f"RenalPro_{alias_safe}_{ts}.pdf",
                                 mime="application/pdf", key="btn_dl_reprint")
                         except Exception as e:
                             st.error(f"Error al generar PDF: {e}")
@@ -7187,7 +7193,7 @@ PLAN
 - Reevaluar criterios de suspensión de TRRC en próximo turno (diuresis, creatinina, SOFA, hemodinámica)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Generado por TRRC360 v3.0.0 — Dr. Josué Tapia Nefrólogo
+Generado por RenalPro v3.1.0 — Dr. Josué Tapia Nefrólogo
 León, Guanajuato, México — Uso académico y de apoyo clínico
 Este documento no reemplaza el juicio clínico del médico tratante."""
 
@@ -7387,7 +7393,7 @@ elif nav == "enfermeria":
             """)
             if anticoag_enf == "RCA":
                 st.info("💡 Con RCA: suspender citrato Y calcio de forma simultánea para evitar desequilibrio de iCa sistémico.")
-            st.success("✅ Este protocolo fue generado automáticamente por TRRC360 según la anticoagulación seleccionada. "
+            st.success("✅ Este protocolo fue generado automáticamente por RenalPro según la anticoagulación seleccionada. "
                        "Siempre seguir indicaciones específicas del médico tratante.")
 
 elif nav == "trasplante":
@@ -8307,9 +8313,386 @@ Mayor puntuación = mayor riesgo de progresión.
         st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276. "
                    "Smith RJH et al. Nat Rev Nephrol. 2019.")
 
+elif nav == "hiperkalemia":
+    st.subheader("⚡ Hiperkalemia — Protocolo de Urgencia")
+    st.caption("Ref: Mount DB. NEJM 2016 | Kovesdy CP. Kidney Int 2014 | KDIGO AKI 2012")
+
+    hk1, hk2 = st.columns([1,2])
+    with hk1:
+        hk_k    = st.number_input("K sérico (mEq/L)", 4.0, 10.0, 6.5, 0.1, key="hk_k")
+        hk_peso = st.number_input("Peso (kg)", 20.0, 200.0, 70.0, 1.0, key="hk_peso")
+        hk_ecg  = st.selectbox("Cambios en ECG", [
+            "Sin cambios",
+            "Ondas T picudas",
+            "PR prolongado / QRS ancho",
+            "Patrón sinusoidal / FV inminente",
+        ], key="hk_ecg")
+        hk_cr   = st.number_input("Creatinina (mg/dL)", 0.5, 20.0, 3.0, 0.1, key="hk_cr")
+        hk_diur = st.selectbox("Diuresis", ["Presente (>200 mL/día)", "Oliguria (<200 mL/día)", "Anuria"], key="hk_diur")
+    with hk2:
+        # Severity
+        if hk_k < 5.5:
+            st.success(f"**K {hk_k} — Normal / Límite**\nMonitoreo y reducción de K en dieta.")
+        elif hk_k < 6.0:
+            st.warning(f"**K {hk_k} — Hiperkalemia leve**")
+        elif hk_k < 6.5:
+            st.error(f"**K {hk_k} — Hiperkalemia moderada**")
+        else:
+            st.error(f"**K {hk_k} — ⚠️ HIPERKALEMIA SEVERA — Riesgo de muerte súbita**")
+
+        tiene_ecg = hk_ecg != "Sin cambios"
+        if tiene_ecg or hk_k >= 6.0:
+            st.markdown("---")
+            st.markdown("### Protocolo C-BIG-K")
+
+            # C — Calcium
+            st.markdown(f"""
+**C — Calcio** *(estabilizador de membrana — NO baja el K)*
+- **Gluconato de calcio 10%: 10–30 mL IV** en 2–5 min
+- Puede repetirse en 5 min si persisten cambios en ECG
+- Efecto: inmediato · Duración: 30–60 min
+- ⚠️ Si recibe digoxina: infundir lento (30 min) — riesgo de toxicidad digitálica
+            """)
+
+            # B — Bicarbonate
+            bicarb_amp = round(hk_peso * 1.0 / 50, 1)
+            st.markdown(f"""
+**B — Bicarbonato** *(solo si acidosis metabólica)*
+- NaHCO₃ 8.4%: **50–100 mEq IV** (1–2 ámpulas de 50 mEq)
+- Efecto: 15–30 min · Duración: 1–2h
+- ⚠️ Poco eficaz sin acidosis. No usar si Na elevado o EAP
+            """)
+
+            # I-G — Insulin-Glucose
+            ins_ui = 10
+            glu_g  = 50
+            st.markdown(f"""
+**I-G — Insulina + Glucosa** *(desplazamiento intracelular)*
+- **Insulina regular: 10 UI IV** en bolo
+- **Glucosa 50%: 50 mL IV** (25g) simultánea — o glucosa 10% 250 mL en 15 min
+- Efecto: 15–30 min · Duración: 4–6h · Baja K ~0.5–1 mEq/L
+- Monitorear glucemia c/30 min × 2h (riesgo de hipoglucemia)
+            """)
+
+            # K — Kayexalate / Patiromer / Zirconium
+            st.markdown("""
+**K — Resinas / Quelantes** *(eliminación real de K — efecto tardío)*
+| Agente | Dosis | Inicio |
+|--------|-------|--------|
+| **Poliestireno sulfonato (Kayexalate)** | 15–60g VO o rectal c/6h | 2–4h |
+| **Patiromer** | 8.4g VO c/12h | 7–12h |
+| **Ciclosilicato de Zirconio (ZS-9)** | 10g VO c/8h × 3 dosis | 1h |
+
+> Kayexalate más disponible; evitar en íleo u obstrucción.
+            """)
+
+            # Diuresis
+            if "Presente" in hk_diur:
+                furo = min(80, max(40, int(hk_cr * 20)))
+                st.markdown(f"""
+**+ Furosemida** *(si hay diuresis presente)*
+- **{furo} mg IV** — favorece eliminación renal de K
+- Aumentar dosis si eGFR reducido (CKD: hasta 160–240 mg)
+                """)
+
+            # Dialysis
+            st.markdown("""
+**Diálisis de emergencia** *(más efectiva — elimina ~50 mEq K/h)*
+- Indicada si: K ≥7 con cambios ECG, anuria, fallo renal agudo severo, o sin respuesta a medidas anteriores
+- HD emergencia supera a todas las medidas anteriores en velocidad de corrección
+            """)
+
+            st.info("""
+**Resumen de tiempos:**
+| Medida | Inicio | Duración | Efecto |
+|--------|--------|---------|--------|
+| Calcio IV | <5 min | 30–60 min | Estabiliza membrana |
+| Insulina-Glucosa | 15–30 min | 4–6h | Baja K ~1 mEq/L |
+| Bicarbonato | 15–30 min | 1–2h | Baja K ~0.5 mEq/L |
+| Resinas VO | 2–4h | 6–12h | Elimina K GI |
+| Furosemida | 30–60 min | 4–6h | Elimina K renal |
+| Hemodiálisis | Inmediato | — | Más eficaz |
+            """)
+
+elif nav == "hiponatremia":
+    st.subheader("💧 Hiponatremia — Clasificación y Corrección")
+    st.caption("Ref: Spasovski G et al. Eur J Endocrinol 2014 | Verbalis JG et al. Am J Med 2013 | KDIGO AKI 2012")
+
+    hn1, hn2 = st.columns([1, 2])
+    with hn1:
+        hn_na    = st.number_input("Na sérico actual (mEq/L)", 100.0, 135.0, 122.0, 1.0, key="hn_na")
+        hn_peso  = st.number_input("Peso (kg)", 20.0, 200.0, 70.0, 1.0, key="hn_peso")
+        hn_sexo  = st.selectbox("Sexo", ["Masculino", "Femenino", "Adulto mayor H", "Adulto mayor M"], key="hn_sexo")
+        hn_sint  = st.selectbox("Síntomas", [
+            "Asintomático / síntomas leves",
+            "Moderados (náusea, confusión, mareo)",
+            "Severos (convulsiones, coma, paro respiratorio)",
+        ], key="hn_sint")
+        hn_vol   = st.selectbox("Estado de volumen", [
+            "Hipovolémico (mucosas secas, taquicardia, piel turgente ↓)",
+            "Euvolémico (sin edema, sin hipovolemia — sospechar SIADH)",
+            "Hipervolémico (edema, ascitis — IC/cirrosis/síndrome nefrótico)",
+        ], key="hn_vol")
+        hn_osm_u = st.number_input("Osmolalidad urinaria (mOsm/kg) — si disponible", 0.0, 1200.0, 400.0, 10.0, key="hn_osm_u")
+        hn_na_u  = st.number_input("Na urinario (mEq/L) — si disponible", 0.0, 200.0, 60.0, 1.0, key="hn_na_u")
+
+    with hn2:
+        # Severity
+        if hn_na >= 130:
+            st.success(f"**Na {hn_na:.0f} — Hiponatremia leve**")
+        elif hn_na >= 125:
+            st.warning(f"**Na {hn_na:.0f} — Hiponatremia moderada**")
+        else:
+            st.error(f"**Na {hn_na:.0f} — ⚠️ Hiponatremia severa**")
+
+        # TBW
+        tbw_factor = {"Masculino": 0.6, "Femenino": 0.5,
+                      "Adulto mayor H": 0.5, "Adulto mayor M": 0.45}[hn_sexo]
+        tbw = tbw_factor * hn_peso
+
+        # Correction targets
+        na_target_24h = hn_na + 8   # max 8 mEq/24h (safe)
+        na_target_severe = hn_na + 5  # initial 5 mEq/L for severe symptoms
+        deficit_total = tbw * (na_target_24h - hn_na)
+
+        st.markdown("#### Objetivos de corrección")
+        tc1, tc2, tc3 = st.columns(3)
+        tc1.metric("Agua corporal total", f"{tbw:.1f} L")
+        tc2.metric("Meta segura 24h", f"+8 mEq/L → Na {na_target_24h:.0f}")
+        tc3.metric("⚠️ Límite máximo 24h", "10–12 mEq/L (riesgo ODS si >12)")
+
+        st.warning("⚠️ **Síndrome de desmielinización osmótica (ODS):** corrección rápida >12 mEq/24h en hiponatremia crónica. Irreversible.")
+
+        # By volume status
+        st.markdown("#### Tratamiento por causa")
+        if "Hipovolémico" in hn_vol:
+            st.markdown(f"""
+**HIPOVOLÉMICO — Reposición de volumen con SSF 0.9%**
+- SSF 0.9% a 1–1.5 mL/kg/h IV
+- El Na sube al corregir la depleción de volumen (ADH suprimida)
+- Monitorear Na c/2–4h — riesgo de sobrecorrección
+- Si Na sube >8 mEq en 24h: dar agua libre (desmopresina 2–4 mcg IV o agua VO) para frenar
+            """)
+        elif "Euvolémico" in hn_vol:
+            # SIADH criteria
+            siadh = hn_osm_u > 100 and hn_na_u > 40
+            if siadh:
+                st.success("✅ Compatible con SIADH (Osm_u >100 + Na_u >40 + euvolemia)")
+            st.markdown(f"""
+**EUVOLÉMICO / SIADH**
+- **1ª línea:** Restricción hídrica 500–800 mL/día
+- **Si síntomas moderados:** NaCl 0.9% + furosemida 20 mg IV (crea pérdida de agua libre)
+- **Tolvaptan** (acuarético): 15 mg VO c/24h — solo si restricción falla y na >125. No usar >30 días ni en hepatopatía.
+- Corregir causa subyacente (hipotiroidismo, insuficiencia adrenal, fármacos)
+            """)
+        else:
+            st.markdown("""
+**HIPERVOLÉMICO (IC / cirrosis / SN)**
+- Restricción hídrica 1–1.5 L/día + restricción de sodio
+- Furosemida IV (diuresis = excreción de agua libre)
+- Tratar la causa subyacente (IC → optimizar tratamiento)
+- Tolvaptan puede considerarse en IC refractaria (EVEREST trial)
+- NO SSF — empeoraría el edema
+            """)
+
+        # 3% NaCl for severe
+        if "Severos" in hn_sint or hn_na < 120:
+            vol_3pct_1h = round(hn_peso * 1.5, 0)
+            st.error(f"""
+#### 🚨 NaCl 3% — Síntomas severos o Na <120
+- **Bolo: {vol_3pct_1h:.0f} mL IV** en 20 min (1.5 mL/kg)
+- Repetir hasta mejoría de síntomas o Na sube 5 mEq/L
+- Luego infusión lenta: ajustar para no superar +8 mEq/24h total
+- Na c/2h hasta estabilización
+
+**Preparación NaCl 3%:** 30 mL de ClNa 20% + 70 mL SSF 0.9% = 100 mL de ClNa 3%
+            """)
+
+        st.caption("Monitorear Na c/2h primeras 6h, c/4h siguientes 18h. Meta: corrección 6–8 mEq/24h.")
+
+elif nav == "diureticos":
+    st.subheader("💊 Diuréticos — Optimización y Resistencia")
+    st.caption("Ref: Mullens W et al. JACC 2020 | ADVOR trial: Mullens W et al. NEJM 2022 | Felker GM. NEJM 2011")
+
+    st.markdown("""
+### Bloqueo tubular secuencial
+La resistencia diurética ocurre cuando no hay respuesta adecuada de natriuresis pese a dosis correctas.
+    """)
+
+    du1, du2 = st.columns([1, 2])
+    with du1:
+        du_egfr = st.number_input("TFG estimada (mL/min)", 5.0, 120.0, 35.0, 1.0, key="du_egfr")
+        du_peso = st.number_input("Peso (kg)", 30.0, 200.0, 80.0, 1.0, key="du_peso")
+        du_furo = st.number_input("Furosemida oral actual (mg/día)", 0.0, 1000.0, 80.0, 20.0, key="du_furo")
+        du_resp = st.selectbox("Respuesta a furosemida actual", [
+            "Buena respuesta (diuresis >1L/día sobre ingesta)",
+            "Respuesta parcial (diuresis <1L sobre ingesta)",
+            "Sin respuesta (diuresis ≤ ingesta)",
+        ], key="du_resp")
+        du_hipo = st.checkbox("Hipoalbuminemia (<3 g/dL)", key="du_hipo")
+
+    with du2:
+        # Furosemide IV equivalent
+        furo_iv = du_furo * 2.5 if "Sin respuesta" in du_resp else du_furo * 2
+        if du_egfr < 30:
+            furo_iv = max(furo_iv, 160)
+
+        st.markdown("#### Paso 1 — Optimizar furosemida IV")
+        fm1, fm2, fm3 = st.columns(3)
+        fm1.metric("TFG", f"{du_egfr:.0f} mL/min")
+        fm2.metric("Dosis IV equivalente", f"{furo_iv:.0f} mg/dosis")
+        fm3.metric("Vía recomendada", "IV > VO si edema severo")
+
+        st.markdown(f"""
+| TFG | Dosis furosemida IV sugerida |
+|-----|------------------------------|
+| >60 | 40–80 mg c/12h |
+| 30–60 | 80–160 mg c/12h |
+| 15–30 | 160–240 mg c/12h o infusión continua |
+| <15 | 240–500 mg/día o infusión continua 10–20 mg/h |
+
+{'⚠️ **Hipoalbuminemia:** la furosemida viaja unida a albúmina. Dosis más altas o albúmina IV previa pueden mejorar respuesta.' if du_hipo else ''}
+        """)
+
+        if "Sin respuesta" in du_resp or "parcial" in du_resp:
+            st.markdown("#### Paso 2 — Bloqueo tubular secuencial")
+            st.markdown("""
+Agregar un diurético de segmento diferente al asa:
+
+| Nivel tubular | Agente | Dosis | Nota |
+|--------------|--------|-------|------|
+| **Túbulo proximal** | **Acetazolamida 500 mg IV** | 1 vez antes de furosemida | ADVOR 2022: superior a placebo en descongestión |
+| **TDC / TCD** | **Metolazona 5–10 mg VO** | 30–60 min antes de furosemida | Eficaz incluso con TFG <30 |
+| | Hidroclorotiazida 25–50 mg | VO c/12h | Menos eficaz con TFG <30 |
+| **Colector** | Espironolactona 25–100 mg | VO c/24h | Útil en cirrosis, IC |
+| | Amilorida 5–10 mg | VO c/12h | Alternativa sin acción hormonal |
+
+> 📌 **ADVOR trial (NEJM 2022):** acetazolamida 500 mg IV + furosemida IV fue superior a placebo en descongestión en IC descompensada.
+            """)
+
+        st.markdown("#### Infusión continua de furosemida")
+        st.markdown(f"""
+Evidencia del DOSE trial (NEJM 2011): infusión continua = bolos intermitentes en IC, pero más cómodo.
+
+**Esquema:**
+- Dosis de carga: {min(int(du_furo), 200):.0f} mg IV en 30 min
+- Infusión: **10–20 mg/h** ajustar hasta diuresis meta (3–5 mL/kg/h)
+- Meta de diuresis: 200 mL/h o peso –500 a –1000 g/día
+
+**Si no hay respuesta en 6h:** doblar la infusión o agregar metolazona/acetazolamida.
+        """)
+
+        st.markdown("#### Causas de resistencia diurética")
+        st.info("""
+1. **Incumplimiento** de restricción de sodio (<2g/día) y líquidos
+2. **Dosis insuficiente** — necesidad de ajuste por ERC
+3. **Absorción intestinal reducida** — edema de pared intestinal → preferir IV
+4. **Hipoalbuminemia** — furosemida no llega al túbulo
+5. **Reabsorción de rebote** — el riñón "recupera" Na entre dosis → usar c/8h vs c/12h
+6. **Activación neurohumoral** → añadir espironolactona / sacubitril-valsartán
+7. **AINES / contrastes** → revisar medicación concomitante
+        """)
+
+elif nav == "contraste":
+    st.subheader("🔬 Prevención de AKI por Contraste (CA-AKI)")
+    st.caption("Ref: Weisbord SD et al. (PRESERVE trial) NEJM 2018 | ACR Manual on Contrast Media 2023 | KDIGO AKI 2012")
+
+    st.info("""
+**Terminología actualizada:** CA-AKI (Contrast-Associated AKI) reemplaza al término "nefropatía por contraste" (CIN).
+El contraste IV tiene menor riesgo de lo anteriormente pensado; el contraste intra-arterial tiene mayor riesgo.
+    """)
+
+    ct1, ct2 = st.columns([1, 2])
+    with ct1:
+        ct_egfr  = st.number_input("TFG estimada (mL/min/1.73m²)", 5.0, 120.0, 45.0, 1.0, key="ct_egfr")
+        ct_cr    = st.number_input("Creatinina basal (mg/dL)", 0.5, 15.0, 1.5, 0.1, key="ct_cr")
+        ct_dm    = st.checkbox("Diabetes mellitus", key="ct_dm")
+        ct_ic    = st.checkbox("Insuficiencia cardíaca", key="ct_ic")
+        ct_via   = st.selectbox("Vía de administración del contraste", [
+            "Intravenosa (TAC, uro-TC)",
+            "Intra-arterial 1ª circulación (aortografía, coronaria)",
+            "Intra-arterial 2ª circulación (arteriografía periférica)",
+        ], key="ct_via")
+        ct_vol   = st.number_input("Volumen de contraste planeado (mL)", 50.0, 400.0, 100.0, 10.0, key="ct_vol")
+
+    with ct2:
+        # Risk stratification
+        riesgo_pts = 0
+        if ct_egfr < 30: riesgo_pts += 3
+        elif ct_egfr < 45: riesgo_pts += 2
+        elif ct_egfr < 60: riesgo_pts += 1
+        if ct_dm: riesgo_pts += 1
+        if ct_ic: riesgo_pts += 1
+        if "Intra-arterial 1ª" in ct_via: riesgo_pts += 2
+        ratio_vol_egfr = ct_vol / ct_egfr if ct_egfr > 0 else 99
+        if ratio_vol_egfr > 3.7: riesgo_pts += 1
+
+        if riesgo_pts <= 1:
+            st.success(f"**Riesgo BAJO de CA-AKI** — Hidratación estándar suficiente")
+            riesgo_ca = "bajo"
+        elif riesgo_pts <= 3:
+            st.warning(f"**Riesgo MODERADO de CA-AKI** — Hidratación IV obligatoria")
+            riesgo_ca = "moderado"
+        else:
+            st.error(f"**Riesgo ALTO de CA-AKI** — Hidratación IV + optimización de protocolo")
+            riesgo_ca = "alto"
+
+        # Volume/eGFR ratio
+        st.metric("Ratio Volumen/TFG", f"{ratio_vol_egfr:.1f}",
+                  delta="⚠️ Alto riesgo si >3.7" if ratio_vol_egfr > 3.7 else "✅ Adecuado (<3.7)")
+
+        st.markdown("#### Protocolo de hidratación")
+        if ct_egfr >= 45 and riesgo_ca == "bajo":
+            st.markdown("""
+**TFG ≥45 + riesgo bajo:** hidratación oral suficiente
+- Beber ≥500 mL agua 2h antes del procedimiento
+- Hidratación IV no necesaria de rutina (ACR 2023)
+            """)
+        else:
+            pre_vol  = round(ct_peso if 'ct_peso' in dir() else 70 * 1.0, 0)
+            st.markdown(f"""
+**Hidratación IV con SSF 0.9% (protocolo estándar):**
+- **Pre-procedimiento:** SSF 0.9% a **1 mL/kg/h × 6–12h** antes
+- **Post-procedimiento:** SSF 0.9% a **1 mL/kg/h × 6h** después
+- Para procedimientos urgentes: 3 mL/kg/h × 1h pre + 1 mL/kg/h × 6h post
+
+> 📌 **PRESERVE trial (NEJM 2018):** SSF 0.9% = bicarbonato en prevención de CA-AKI.
+> N-acetilcisteína NO mostró beneficio vs placebo — **no recomendada de rutina** (PRESERVE 2018).
+            """)
+
+        st.markdown("#### Medidas adicionales")
+        st.markdown("""
+| Medida | Recomendación | Evidencia |
+|--------|--------------|-----------|
+| **Contraste iso-osmolar o low-osmolar** | Preferir siempre (evitar alto-osmolar) | Fuerte |
+| **Minimizar volumen de contraste** | Meta: volumen/TFG <3.7 | Fuerte |
+| **Suspender metformina** | 48h antes si TFG <60 (riesgo acidosis láctica) | Moderada |
+| **Suspender AINEs** | 24–48h antes | Moderada |
+| **Suspender aminoglucósidos** | Si es posible | Moderada |
+| **N-acetilcisteína** | ❌ Sin beneficio demostrado (PRESERVE 2018) | No recomendada |
+| **Bicarbonato IV** | No superior a SSF (PRESERVE 2018) | No recomendado |
+| **Hemodiálisis post-contraste** | ❌ No previene CA-AKI — no indicado | No recomendado |
+        """)
+
+        if ct_egfr < 30:
+            st.error("""
+**TFG <30 — Consideraciones especiales:**
+- Balance estricto del riesgo vs beneficio del estudio con contraste
+- Si TFG <15 o diálisis: el riesgo de CA-AKI es irrelevante (ya requieren TRS) — SE PUEDE usar contraste
+- Preferir estudio alternativo sin contraste si la información diagnóstica es equivalente
+- Si se usa: hidratación IV + monitoreo de creatinina 24–48h post
+            """)
+
+        st.markdown("#### Monitoreo post-procedimiento")
+        st.markdown("""
+- Creatinina sérica a las **24h y 48h** post-contraste en pacientes de riesgo
+- Definición CA-AKI: Cr sube ≥0.3 mg/dL o ≥50% en 48h post-contraste
+- Si CA-AKI: suspender nefrotóxicos, optimizar hidratación, monitoreo estrecho
+        """)
+
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
 st.caption(
-    f"© Dr. Josué Tapia Nefrólogo — TRRC360 {VERSION} — Uso académico exclusivo | "
+    f"© Dr. Josué Tapia Nefrólogo — RenalPro {VERSION} — Uso académico exclusivo | "
     "Nefrología / Medicina Crítica | León, Gto., México"
 )
