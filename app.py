@@ -2074,6 +2074,7 @@ with st.sidebar:
     _navsec("NEFROLOGÍA")
     _navbtn("🔢 Calculadoras Nefro", "nefro")
     _navbtn("💉 Trasplante", "trasplante")
+    _navbtn("🧬 Inmunología Tx", "inmuno_tx")
     _navbtn("🦠 Infecciones Tx", "infecciones_tx")
     _navbtn("🔵 Glomerulopatías", "glomerulopatias")
     _navbtn("🩸 Acceso Vascular", "acceso")
@@ -10222,6 +10223,494 @@ EBV DNAemia elevada (sin masa)
             st.caption("Ref: Pappas PG et al. IDSA Candida Guidelines. Clin Infect Dis 2016. "
                        "Patterson TF et al. IDSA Aspergillus Guidelines. Clin Infect Dis 2016. "
                        "Tissot F et al. ESCMID/ECMM Aspergillus. Clin Microbiol Infect 2020.")
+
+elif nav == "inmuno_tx":
+    st.subheader("🧬 Inmunología del Trasplante Renal")
+    st.caption("Ref: OPTN/UNOS Policy 2023 | Delmonico FL, Dew MA. Am J Transplant 2007 | "
+               "Leffell MS et al. Transplantation 2007 | Tambur AR et al. Am J Transplant 2015")
+
+    im_tab = st.radio("Módulo", [
+        "📚 HLA — Conceptos fundamentales",
+        "🧮 Calculadora cPRA",
+        "📊 Interpretador DSA / Luminex",
+        "🔬 Crossmatch — tipos e interpretación",
+        "⚠️ Estratificación de riesgo inmunológico",
+    ], horizontal=True, key="im_tab")
+
+    st.divider()
+
+    # ── HLA CONCEPTOS ──────────────────────────────────────────────────────────
+    if "HLA" in im_tab:
+        st.markdown("### 📚 Sistema HLA — Conceptos fundamentales")
+
+        hla1, hla2, hla3 = st.tabs(["🔬 Estructura HLA", "🔗 Sensibilización", "📋 Terminología clave"])
+
+        with hla1:
+            st.markdown("""
+#### Sistema HLA — Complejo Mayor de Histocompatibilidad (MHC)
+Los antígenos HLA son proteínas de superficie que el sistema inmune usa para distinguir "propio" de "extraño".
+En trasplante, las diferencias HLA entre donante y receptor desencadenan la respuesta de rechazo.
+
+**Clases de HLA relevantes en trasplante renal:**
+
+| Clase | Loci principales | Expresión | Importancia en Tx |
+|-------|-----------------|-----------|-------------------|
+| **Clase I** | HLA-A, HLA-B, HLA-C | Todas las células nucleadas | Anticuerpos anti-clase I preceden rechazo humoral agudo |
+| **Clase II** | HLA-DR, HLA-DQ, HLA-DP | Células presentadoras de Ag | Anti-DQ de novo = causa más frecuente de rechazo crónico activo |
+
+**¿Por qué DQ es tan importante?**
+- Anti-DQ de novo son los DSA más frecuentes post-trasplante
+- Están fuertemente asociados a pérdida crónica del injerto
+- Muchos centros los monitorizan específicamente aunque no se usen como criterio de exclusión inicial
+
+#### HLA Mismatches — ¿cuáles importan más?
+| Mismatch | Impacto relativo | Nota clínica |
+|---------|-----------------|-------------|
+| DR + DQ | ⭐⭐⭐ Mayor impacto | Mejor compatibilizar DR y DQ — definen la respuesta CD4+ |
+| B | ⭐⭐ Impacto moderado | Importante en trasplante pediátrico |
+| A | ⭐ Menor impacto | Relevante en hipersensibilizados |
+| C / DP | Menor evidencia directa | Se incluyen en cPRA pero no en asignación clásica |
+
+> 📌 Máximo 6 mismatches posibles (2 por locus A, B, DR).
+> "0 mismatch" = trasplante idéntico en A+B+DR → mejor sobrevida del injerto a largo plazo.
+            """)
+
+        with hla2:
+            st.markdown("""
+#### Sensibilización — Causas y mecanismo
+El sistema inmune forma anticuerpos anti-HLA cuando es expuesto a HLA extraño:
+
+| Causa | Mecanismo | Importancia |
+|-------|-----------|------------|
+| **Embarazo** | Exposición al HLA paterno del feto | Principal causa en mujeres — hasta 30% después de 1 embarazo |
+| **Transfusiones** | HLA de leucocitos en la sangre | 5–15% de sensibilización por evento |
+| **Trasplante previo** | Respuesta al injerto del donante | 30–90% dependiendo del rechazo |
+| **Infección (raro)** | Mimetismo molecular | Poco documentado |
+
+#### Tipos de anticuerpos anti-HLA
+| Tipo | Definición | Riesgo |
+|------|-----------|--------|
+| **DSA preformados** | Contra antígenos HLA específicos del donante — presentes ANTES del Tx | Contraindicación relativa / crossmatch positivo |
+| **DSA de novo** | Aparecen DESPUÉS del Tx | Marcador de rechazo humoral crónico |
+| **No-DSA** | Contra HLA que el donante no tiene | No directamente dañinos al injerto actual |
+
+> ⚠️ Los DSA de novo anti-DQ son los más frecuentes y más asociados a pérdida crónica del injerto.
+> Muchos centros monitorizan DSA a 1, 3, 6, 12 meses y anualmente.
+            """)
+
+        with hla3:
+            st.markdown("""
+#### Glosario de términos en inmunología del trasplante
+
+| Término | Definición clínica |
+|---------|-------------------|
+| **PRA** *(Panel Reactive Antibody)* | % histórico de reactividad contra un panel de células de donantes — método antiguo, variable entre laboratorios |
+| **cPRA** *(calculated PRA)* | Cálculo estandarizado (OPTN): % de donantes potenciales con los que el receptor sería incompatible, basado en sus anticuerpos anti-HLA identificados |
+| **DSA** *(Donor-Specific Antibodies)* | Anticuerpos contra antígenos HLA específicos del donante actual o potencial |
+| **MFI** *(Mean Fluorescence Intensity)* | Intensidad de señal en Luminex — cuantifica la cantidad de anticuerpo anti-HLA |
+| **SAB** *(Single Antigen Beads)* | Panel de Luminex con un HLA por bead — permite identificar especificidades exactas de anticuerpos |
+| **Crossmatch CDC** | Prueba con suero del receptor + células del donante + complemento — positivo si hay lisis celular |
+| **FCXM** *(Flow Cytometry XM)* | Más sensible que CDC — detecta anticuerpos no citotóxicos |
+| **Virtual Crossmatch** | Comparar anticuerpos del receptor (SAB) vs tipificación HLA del donante — sin células del donante |
+| **Desensibilización** | Protocolo para reducir anticuerpos anti-HLA pre-trasplante (IVIG, rituximab, plasmaféresis) |
+| **Epitopo** | Región específica del HLA reconocida por el anticuerpo — base de la compatibilidad epítopo |
+| **MICA** | MHC class I chain-related protein A — antígeno no-HLA asociado a rechazo |
+            """)
+
+    # ── CALCULADORA cPRA ────────────────────────────────────────────────────────
+    elif "cPRA" in im_tab:
+        st.markdown("### 🧮 Calculadora cPRA")
+        st.info("""
+**cPRA = % de donantes potenciales incompatibles con este receptor.**
+Se calcula con la fórmula OPTN: **cPRA = 1 − ∏(1 − f_i)**
+donde f_i = frecuencia del antígeno i en el pool de donantes (ponderada por etnia).
+
+Las frecuencias usadas son aproximaciones de la tabla de referencia OPTN/NMDP para población Hispana/Latinoamericana.
+        """)
+
+        # HLA antigen frequencies (Hispanic/Latino - OPTN reference approximations)
+        HLA_FREQ = {
+            # HLA-A
+            "A1":0.130, "A2":0.280, "A3":0.100, "A11":0.040, "A23":0.040,
+            "A24":0.130, "A25":0.020, "A26":0.030, "A28":0.040, "A29":0.020,
+            "A30":0.040, "A31":0.040, "A32":0.020, "A33":0.030, "A34":0.010,
+            "A36":0.010, "A43":0.005, "A66":0.010, "A68":0.050, "A69":0.010,
+            "A74":0.020, "A80":0.010,
+            # HLA-B
+            "B7":0.090, "B8":0.060, "B13":0.030, "B14":0.040, "B15":0.060,
+            "B18":0.070, "B27":0.030, "B35":0.130, "B38":0.020, "B39":0.050,
+            "B40":0.050, "B41":0.010, "B42":0.020, "B44":0.080, "B45":0.010,
+            "B47":0.010, "B48":0.020, "B49":0.020, "B50":0.020, "B51":0.070,
+            "B52":0.020, "B53":0.030, "B54":0.010, "B55":0.020, "B56":0.010,
+            "B57":0.030, "B58":0.030, "B60":0.030, "B61":0.030, "B62":0.040,
+            "B63":0.010, "B65":0.010, "B67":0.010, "B71":0.010, "B72":0.010,
+            "B73":0.010, "B75":0.010, "B76":0.010, "B77":0.010,
+            # HLA-C (Cw)
+            "Cw1":0.040, "Cw2":0.080, "Cw3":0.150, "Cw4":0.130, "Cw5":0.090,
+            "Cw6":0.100, "Cw7":0.280, "Cw8":0.060, "Cw9":0.050, "Cw10":0.070,
+            "Cw12":0.050, "Cw14":0.040, "Cw15":0.060, "Cw16":0.040, "Cw17":0.020,
+            "Cw18":0.010,
+            # HLA-DR
+            "DR1":0.070, "DR2":0.080, "DR3":0.090, "DR4":0.150, "DR5":0.090,
+            "DR6":0.100, "DR7":0.130, "DR8":0.050, "DR9":0.020, "DR10":0.020,
+            "DR11":0.110, "DR12":0.020, "DR13":0.100, "DR14":0.060, "DR15":0.080,
+            "DR16":0.020, "DR17":0.060, "DR18":0.020,
+            # HLA-DQ
+            "DQ1":0.250, "DQ2":0.180, "DQ3":0.220, "DQ4":0.050, "DQ5":0.180,
+            "DQ6":0.140, "DQ7":0.150, "DQ8":0.120, "DQ9":0.080,
+        }
+
+        st.markdown("#### Ingresa los anticuerpos anti-HLA del receptor (antígenos inaceptables)")
+        st.caption("Selecciona los HLA contra los que el receptor tiene anticuerpos identificados por Luminex SAB.")
+
+        col_a, col_b, col_c, col_dr, col_dq = st.columns(5)
+        with col_a:
+            st.markdown("**HLA-A**")
+            ags_a = st.multiselect("A", [k for k in HLA_FREQ if k.startswith("A") and not k.startswith("A0")],
+                                   key="cpra_a", label_visibility="collapsed")
+        with col_b:
+            st.markdown("**HLA-B**")
+            ags_b = st.multiselect("B", [k for k in HLA_FREQ if k.startswith("B")],
+                                   key="cpra_b", label_visibility="collapsed")
+        with col_c:
+            st.markdown("**HLA-C (Cw)**")
+            ags_c = st.multiselect("Cw", [k for k in HLA_FREQ if k.startswith("Cw")],
+                                   key="cpra_c", label_visibility="collapsed")
+        with col_dr:
+            st.markdown("**HLA-DR**")
+            ags_dr = st.multiselect("DR", [k for k in HLA_FREQ if k.startswith("DR")],
+                                    key="cpra_dr", label_visibility="collapsed")
+        with col_dq:
+            st.markdown("**HLA-DQ**")
+            ags_dq = st.multiselect("DQ", [k for k in HLA_FREQ if k.startswith("DQ")],
+                                    key="cpra_dq", label_visibility="collapsed")
+
+        todos_ags = ags_a + ags_b + ags_c + ags_dr + ags_dq
+
+        if todos_ags:
+            # cPRA calculation: 1 - product(1 - freq_i)
+            prod = 1.0
+            for ag in todos_ags:
+                freq = HLA_FREQ.get(ag, 0.01)
+                prod *= (1 - freq)
+            cpra_val = (1 - prod) * 100
+
+            cr1, cr2, cr3 = st.columns(3)
+            cr1.metric("Antígenos inaceptables", len(todos_ags))
+            cr2.metric("cPRA calculado", f"{cpra_val:.1f}%")
+
+            if cpra_val < 30:
+                cr3.metric("Riesgo inmunológico", "BAJO")
+                st.success(f"**cPRA {cpra_val:.1f}%** — Bajo riesgo inmunológico. Buenas perspectivas de encontrar donante compatible.")
+            elif cpra_val < 80:
+                cr3.metric("Riesgo inmunológico", "MODERADO")
+                st.warning(f"**cPRA {cpra_val:.1f}%** — Riesgo moderado. Tiempo de espera aumentado.")
+            elif cpra_val < 99:
+                cr3.metric("Riesgo inmunológico", "ALTO")
+                st.error(f"**cPRA {cpra_val:.1f}%** — Altamente sensibilizado. Dificultad significativa para encontrar donante compatible. Considerar desensibilización.")
+            else:
+                cr3.metric("Riesgo inmunológico", "MUY ALTO")
+                st.error(f"**cPRA {cpra_val:.1f}%** — Hipersensibilizado. Candidato prioritario en lista de espera (OPTN). Protocolo de desensibilización obligatorio.")
+
+            st.markdown("**Antígenos seleccionados y su frecuencia en pool hispano:**")
+            freq_data = [(ag, HLA_FREQ.get(ag, 0.01), f"{HLA_FREQ.get(ag,0.01)*100:.1f}%")
+                         for ag in sorted(todos_ags)]
+            import pandas as pd
+            df_freq = pd.DataFrame(freq_data, columns=["Antígeno", "Frecuencia", "% pool"])
+            st.dataframe(df_freq, use_container_width=True, hide_index=True)
+
+            st.caption("""
+⚠️ Este cálculo usa frecuencias aproximadas para población Hispana/Latinoamericana basadas en la tabla OPTN/NMDP.
+El cPRA oficial para asignación de órganos se calcula en el sistema UNOS/OPTN o el equivalente institucional.
+Este módulo es de uso educativo y orientativo para el fellow de trasplante.
+Ref: OPTN Policy 2023 | Leffell MS et al. Transplantation 2007.
+            """)
+        else:
+            st.info("Selecciona al menos un antígeno inaceptable para calcular el cPRA.")
+            st.markdown("""
+**Referencia rápida de estratificación cPRA:**
+| cPRA | Clasificación | Implicación |
+|------|--------------|------------|
+| 0% | No sensibilizado | Sin restricciones para donante |
+| 1–79% | Sensibilizado | Tiempo de espera variable |
+| 80–98% | Altamente sensibilizado | Acceso reducido a donantes compatibles |
+| ≥99% | Hipersensibilizado | Prioridad en lista OPTN · Candidato a desensibilización |
+            """)
+
+    # ── DSA / MFI INTERPRETER ──────────────────────────────────────────────────
+    elif "DSA" in im_tab:
+        st.markdown("### 📊 Interpretador DSA / Luminex (Single Antigen Beads)")
+        st.caption("Ref: Tambur AR et al. Am J Transplant 2015 | ASHI Standards 2022 | Tait BD et al. Transplantation 2013")
+
+        st.info("""
+**Luminex SAB (Single Antigen Beads):** Cada bead contiene un solo antígeno HLA.
+El suero del paciente se incuba con las beads y el MFI indica cuánto anticuerpo hay contra ese HLA específico.
+**MFI alto ≠ siempre daño clínico** — el contexto clínico es fundamental para interpretar.
+        """)
+
+        st.markdown("#### Ingresa los DSA identificados y sus valores de MFI")
+        st.caption("Puedes agregar múltiples DSA:")
+
+        n_dsa = st.number_input("Número de DSA a evaluar", 1, 10, 3, 1, key="n_dsa")
+
+        dsa_entries = []
+        for i in range(int(n_dsa)):
+            dc1, dc2, dc3, dc4 = st.columns([2, 1, 1, 2])
+            with dc1:
+                ag_name = st.text_input(f"HLA {i+1}", placeholder="Ej: DQ7, B35, DR4",
+                                        key=f"dsa_ag_{i}")
+            with dc2:
+                mfi_val = st.number_input("MFI", 0, 25000, 0, 100, key=f"dsa_mfi_{i}")
+            with dc3:
+                clase = st.selectbox("Clase", ["I (A,B,C)", "II (DR,DQ,DP)"],
+                                     key=f"dsa_clase_{i}")
+            with dc4:
+                es_dnovo = st.selectbox("Timing", ["Pre-formado (pre-Tx)", "De novo (post-Tx)"],
+                                        key=f"dsa_timing_{i}")
+            if ag_name:
+                dsa_entries.append({
+                    "hla": ag_name, "mfi": mfi_val,
+                    "clase": clase, "dnovo": "de novo" in es_dnovo.lower()
+                })
+
+        if dsa_entries:
+            st.divider()
+            st.markdown("#### Interpretación clínica")
+
+            riesgo_max = "bajo"
+            for dsa in dsa_entries:
+                mfi = dsa["mfi"]
+                ag  = dsa["hla"]
+                dnovo = dsa["dnovo"]
+
+                if mfi < 500:
+                    nivel = "⬜ Negativo / No significativo"
+                    color = "success"
+                    riesgo = "bajo"
+                    recom  = "Sin relevancia clínica inmediata. Repetir si sospecha clínica."
+                elif mfi < 3000:
+                    nivel = "🟡 Débilmente positivo"
+                    color = "warning"
+                    riesgo = "bajo-moderado"
+                    recom  = "Monitorear función renal y DSA seriados. Bajo riesgo de AMR agudo."
+                elif mfi < 5000:
+                    nivel = "🟠 Moderadamente positivo"
+                    color = "warning"
+                    riesgo = "moderado"
+                    recom  = "Significativo. Biopsia si deterioro de función. Optimizar IS."
+                elif mfi < 10000:
+                    nivel = "🔴 Altamente positivo"
+                    color = "error"
+                    riesgo = "alto"
+                    recom  = "Alto riesgo de rechazo humoral. Biopsia + C4d. Tratamiento de AMR si histología compatible."
+                else:
+                    nivel = "🔴🔴 Muy altamente positivo"
+                    color = "error"
+                    riesgo = "muy alto"
+                    recom  = "Riesgo muy alto de AMR. Tratamiento urgente: plasmaféresis + IVIG ± rituximab."
+
+                dnovo_txt = " ⚠️ **DE NOVO** — mayor riesgo de pérdida crónica" if dnovo else " (pre-formado)"
+                getattr(st, color)(f"**{ag}** (Clase {dsa['clase'].split('(')[0].strip()}) — MFI: {mfi:,} — {nivel}{dnovo_txt}\n\n💊 {recom}")
+
+                if riesgo in ("muy alto", "alto") and (riesgo_max not in ("muy alto")):
+                    riesgo_max = riesgo
+
+            st.divider()
+            st.markdown("""
+#### Tabla de referencia MFI — Umbrales clínicos
+| MFI | Interpretación | Acción sugerida |
+|-----|---------------|----------------|
+| <500 | Negativo / no significativo | Continuar monitoreo rutinario |
+| 500–2,999 | Débilmente positivo | Seriados c/3 meses, monitoreo función |
+| 3,000–4,999 | Moderadamente positivo | Biopsia si función deteriora |
+| 5,000–9,999 | Altamente positivo | Biopsia + C4d, tratar si AMR |
+| ≥10,000 | Muy altamente positivo | Tratamiento urgente de AMR |
+
+> ⚠️ **Contexto crítico:** Los umbrales de MFI varían entre laboratorios y kits.
+> Un MFI alto sin daño histológico no justifica tratamiento agresivo.
+> Siempre correlacionar con: función del injerto (creatinina), proteinuria, biopsia y C4d.
+
+**DSA de novo** — Los más importantes en seguimiento post-trasplante:
+- Anti-DQ de novo: causa más frecuente de pérdida crónica de injerto
+- Aparecen típicamente a 6–24 meses post-Tx
+- Factores de riesgo: incumplimiento, reducción de IS, infección CMV
+            """)
+            st.caption("Ref: Tambur AR et al. Am J Transplant 2015. Crespo M et al. Transplantation 2018.")
+
+    # ── CROSSMATCH ─────────────────────────────────────────────────────────────
+    elif "Crossmatch" in im_tab:
+        st.markdown("### 🔬 Crossmatch — Tipos e Interpretación")
+
+        st.markdown("""
+#### ¿Qué es el crossmatch?
+Prueba que mezcla el **suero del receptor** con **células del donante** para detectar anticuerpos preformados contra ese donante específico.
+Un crossmatch **positivo** generalmente contraindica el trasplante sin desensibilización previa.
+
+#### Tipos de crossmatch — de menos a más sensible
+
+| Tipo | Principio | Sensibilidad | Cuando usar |
+|------|-----------|-------------|------------|
+| **CDC** (Citotoxicidad dependiente de complemento) | Lisis celular si IgG/IgM se unen → complemento activa → muerte | ++ | Estándar histórico, más rápido |
+| **CDC-AHG** (Anti-Human Globulin) | Agrega anti-IgG para amplificar la señal | +++ | Sospecha de anticuerpos a bajo título |
+| **FCXM** (Citometría de flujo) | Fluorescencia en células con anticuerpos — sin necesidad de lisis | ++++ | Mejor sensibilidad, detecta no-citotóxicos |
+| **Virtual Crossmatch** | Compara SAB del receptor vs HLA del donante — sin células | Variable | Pre-evaluación rápida, sin células disponibles |
+
+#### Interpretación de resultados
+
+| Resultado | Significado | Acción |
+|-----------|------------|--------|
+| **CDC negativo + FCXM negativo** | Sin anticuerpos detectables contra el donante | ✅ Trasplante posible |
+| **CDC negativo + FCXM positivo** | Anticuerpos a bajo título, no citotóxicos | ⚠️ Riesgo incrementado — decisión individualizada |
+| **CDC positivo en células T** | DSA de clase I significativos | ❌ Contraindicación relativa — desensibilización |
+| **CDC positivo solo en células B** | DSA de clase II (DR/DQ) | ⚠️ Riesgo moderado — considerar con MFI |
+| **CDC positivo T y B** | DSA clase I y II ambos | ❌ Alto riesgo — desensibilización obligatoria |
+
+#### Crossmatch virtual — ventajas y limitaciones
+
+```
+Ventajas:
+✅ No requiere células del donante en tiempo real
+✅ Permite evaluación previa de donantes cadavéricos a distancia
+✅ Más rápido para la asignación urgente
+
+Limitaciones:
+⚠️ No detecta anticuerpos contra antígenos no tipificados
+⚠️ No detecta anticuerpos no-HLA (anti-MICA, anti-AT1R)
+⚠️ El MFI puede ser negativo y el crossmatch celular positivo (anticuerpos complement-fixing)
+⚠️ Requiere tipificación HLA de alta resolución del donante
+```
+
+#### Anticuerpos no-HLA — cada vez más relevantes
+| Anticuerpo | Antígeno | Asociación clínica |
+|-----------|---------|-------------------|
+| Anti-MICA | MHC class I chain-related protein A | Rechazo humoral sin DSA HLA detectable |
+| Anti-AT1R | Receptor de angiotensina 1 | Rechazo vascular, HTA severa post-Tx |
+| Anti-endoteliales | Antígenos endoteliales | Rechazo mediado por anticuerpos C4d neg |
+
+> 📌 Si hay rechazo humoral sin DSA HLA → estudiar anticuerpos no-HLA.
+        """)
+        st.caption("Ref: Tait BD et al. Transplantation 2013 | Gebel HM et al. Clin Transpl 2012 | "
+                   "Lefaucheur C et al. Am J Transplant 2010.")
+
+    # ── ESTRATIFICACIÓN DE RIESGO ───────────────────────────────────────────────
+    else:
+        st.markdown("### ⚠️ Estratificación de Riesgo Inmunológico Pre-Trasplante")
+        st.caption("Ref: OPTN Policy 2023 | Meier-Kriesche HU et al. Am J Transplant 2004 | "
+                   "Wiebe C et al. Am J Transplant 2012")
+
+        st.markdown("#### Evaluación interactiva del riesgo del receptor")
+        er1, er2 = st.columns(2)
+
+        with er1:
+            er_cpra  = st.slider("cPRA del receptor (%)", 0, 100, 0, 1, key="er_cpra")
+            er_retx  = st.checkbox("Retrasplante (trasplante previo fallido)", key="er_retx")
+            er_emb   = st.number_input("Número de embarazos", 0, 15, 0, 1, key="er_emb")
+            er_transfusiones = st.number_input("Número de transfusiones previas", 0, 50, 0, 1, key="er_transf")
+
+        with er2:
+            er_dsa_pre = st.selectbox("DSA preformados", [
+                "No detectados", "MFI 500–2,999 (débiles)",
+                "MFI 3,000–5,000 (moderados)", "MFI >5,000 (fuertes)"
+            ], key="er_dsa")
+            er_xm = st.selectbox("Crossmatch con donante potencial", [
+                "Virtual negativo / CDC negativo",
+                "FCXM débilmente positivo (CDC neg)",
+                "CDC positivo solo células B",
+                "CDC positivo células T (con o sin B)",
+            ], key="er_xm")
+            er_mismatch = st.selectbox("Mismatches DR+DQ esperados", [
+                "0 mismatches", "1–2 mismatches", "3–4 mismatches (máximo)"
+            ], key="er_mm")
+
+        # Calculate risk score
+        riesgo_pts = 0
+        if er_cpra >= 99:    riesgo_pts += 4
+        elif er_cpra >= 80:  riesgo_pts += 3
+        elif er_cpra >= 50:  riesgo_pts += 2
+        elif er_cpra >= 20:  riesgo_pts += 1
+
+        if er_retx:          riesgo_pts += 2
+        if er_emb >= 3:      riesgo_pts += 2
+        elif er_emb >= 1:    riesgo_pts += 1
+        if er_transfusiones >= 5: riesgo_pts += 1
+
+        if "5,000" in er_dsa:    riesgo_pts += 3
+        elif "3,000" in er_dsa:  riesgo_pts += 2
+        elif "500" in er_dsa:    riesgo_pts += 1
+
+        if "células T" in er_xm: riesgo_pts += 4
+        elif "solo células B" in er_xm: riesgo_pts += 2
+        elif "FCXM" in er_xm:    riesgo_pts += 1
+
+        if "3–4" in er_mismatch: riesgo_pts += 1
+
+        st.divider()
+        if riesgo_pts == 0:
+            st.success("""
+**🟢 RIESGO INMUNOLÓGICO BAJO**
+- Candidato ideal para trasplante estándar
+- Inducción estándar (basiliximab o timoglobulina según protocolo)
+- Monitoreo rutinario post-trasplante
+- Sin restricciones especiales por factor inmunológico
+            """)
+        elif riesgo_pts <= 3:
+            st.success(f"""
+**🟢-🟡 RIESGO INMUNOLÓGICO BAJO-MODERADO** (score: {riesgo_pts})
+- Trasplante viable sin desensibilización
+- Considerar timoglobulina en inducción si DSA débiles presentes
+- Monitoreo estrecho de DSA post-trasplante (c/3 meses primer año)
+- Biopsia de protocolo recomendada (3 y 12 meses)
+            """)
+        elif riesgo_pts <= 6:
+            st.warning(f"""
+**🟡 RIESGO INMUNOLÓGICO MODERADO** (score: {riesgo_pts})
+- Inducción con timoglobulina obligatoria
+- Si DSA moderados: valorar desensibilización pre-Tx
+- Crossmatch celular obligatorio antes del trasplante
+- IS de mantenimiento más intensa (niveles de tacrolimus más altos)
+- Monitoreo DSA mensual primer año
+- Biopsia de protocolo obligatoria
+            """)
+        elif riesgo_pts <= 9:
+            st.error(f"""
+**🔴 RIESGO INMUNOLÓGICO ALTO** (score: {riesgo_pts})
+- Desensibilización pre-trasplante recomendada:
+  → IVIG 2 g/kg IV (dividido en 2 días) + Rituximab 375 mg/m²
+  → Plasmaféresis si DSA fuertes (×5 sesiones pre-trasplante)
+- Crossmatch celular T y B obligatorio
+- Inducción con timoglobulina (dosis completa 7–14 días)
+- Objetivos de tacrolimus más altos (C0 12–15 ng/mL fase 1)
+- DSA post-trasplante c/1–2 semanas primer mes → mensual
+            """)
+        else:
+            st.error(f"""
+**🚨 RIESGO INMUNOLÓGICO MUY ALTO / HIPERSENSIBILIZADO** (score: {riesgo_pts})
+- Candidato con cPRA ≥99% — prioridad máxima en lista de espera
+- Desensibilización agresiva pre-trasplante:
+  → IVIG 2 g/kg + Rituximab × múltiples ciclos
+  → Plasmaféresis intensiva (× 10–15 sesiones)
+  → Eculizumab perioperatorio en algunos protocolos
+- Crossmatch T + B debe ser negativo antes de proceder
+- Considerar trasplante AB0-incompatible o donante vivo HLA compatible
+- Centros especializados — derivar si no hay experiencia local
+            """)
+
+        st.markdown("""
+#### Protocolo de desensibilización — esquema general (IVIG + Rituximab)
+| Paso | Intervención | Objetivo |
+|------|-------------|---------|
+| **1** | IVIG 2 g/kg IV (1 g/kg × 2 días) | Bloqueo Fc + eliminación de anticuerpos |
+| **2** | Rituximab 375 mg/m² × 1 dosis | Depleción de células B productoras de anticuerpos |
+| **3** | Repetir IVIG en 21–30 días si DSA persisten | Reducción sostenida |
+| **4** | Plasmaféresis × 5–10 sesiones si DSA fuertes (MFI >5,000) | Eliminación directa de anticuerpos |
+| **5** | Monitorear DSA mensualmente durante desensibilización | Meta: reducción MFI >50% |
+| **6** | Trasplante cuando crossmatch virtual negativo o FCXM negativo | — |
+
+> ⚠️ No existe protocolo estándar universal — varía por centro y disponibilidad.
+> La evidencia para desensibilización viene principalmente de estudios observacionales.
+        """)
+        st.caption("Ref: Montgomery RA et al. NEJM 2011 | Stegall MD et al. Am J Transplant 2012 | "
+                   "Vo AA et al. Transplantation 2015.")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
