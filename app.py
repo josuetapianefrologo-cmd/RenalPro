@@ -51,12 +51,22 @@ def _cached_sessions(presc_id: int):
 @st.cache_data(ttl=15)
 def _cached_patients(uid: int):
     """Consulta pacientes con caché de 15s."""
-    return _db.get_patients(uid) if _DB_ON else []
+    if not _DB_ON:
+        return []
+    try:
+        return _db.get_patients(uid)
+    except AttributeError:
+        return []  # db.py desactualizado — subir versión nueva a GitHub
 
 @st.cache_data(ttl=15)
 def _cached_clinical_records(patient_id: int):
     """Consulta registros clínicos con caché de 15s."""
-    return _db.get_clinical_records(patient_id) if _DB_ON else []
+    if not _DB_ON:
+        return []
+    try:
+        return _db.get_clinical_records(patient_id)
+    except AttributeError:
+        return []  # db.py desactualizado — subir versión nueva a GitHub
 
 @st.cache_data(ttl=20)
 def _cached_all_users():
@@ -5033,6 +5043,14 @@ elif nav == "micuenta":
                                       value=st.session_state.get("sess_universidad",""),
                                       key="mc_univ",
                                       placeholder="Ej: Universidad de Guadalajara")
+            dom_mc    = st.text_input("Domicilio del consultorio/establecimiento",
+                                      value=st.session_state.get("sess_domicilio",""),
+                                      key="mc_dom",
+                                      placeholder="Ej: Av. Juan Alonso de Torres 1702, Col. Jardines del Moral, León, Gto.")
+            tel_mc    = st.text_input("Teléfono del consultorio",
+                                      value=st.session_state.get("sess_telefono",""),
+                                      key="mc_tel",
+                                      placeholder="Ej: (477) 123-4567")
 
             if st.button("💾 Guardar cambios", type="primary", key="btn_mc_save",
                          use_container_width=True):
@@ -5053,6 +5071,8 @@ elif nav == "micuenta":
                         st.session_state["sess_especialidad"]= esp_mc
                         st.session_state["sess_cedula"]      = ced_mc
                         st.session_state["sess_universidad"] = univ_mc
+                        st.session_state["sess_domicilio"]   = dom_mc
+                        st.session_state["sess_telefono"]    = tel_mc
                         _clear_cache()
                         st.success("✅ Perfil actualizado correctamente.")
                     else:
@@ -5112,7 +5132,8 @@ elif nav == "micuenta":
         with nc2:
             new_esp = st.selectbox("Especialidad", ["Nefrología", "Medicina Crítica",
                 "Medicina Interna", "Otra"], key="new_esp")
-            new_rol = st.selectbox("Rol inicial", ["trial", "pro", "admin"], key="new_rol")
+            new_rol = st.selectbox("Rol inicial", ["trial", "beca", "pro"], key="new_rol",
+                                help="Rol 'admin' solo puede asignarse directamente en DB por seguridad.")
             new_pass = st.text_input("Contraseña temporal", type="password", key="new_pass")
         if st.button("Crear usuario", key="btn_create_user", type="primary"):
             if new_u and new_pass and new_nombre:
@@ -9590,10 +9611,403 @@ elif nav == "expediente":
                 st.info("Sin registros aún. Usa el formulario de arriba para agregar el primero.")
 
 elif nav == "receta":
-    # ══════════════════════════════════════════════════════════════════════════
-    # RECETA MÉDICA — PDF profesional con reportlab
-    # ══════════════════════════════════════════════════════════════════════════
-    st.subheader("📄 Receta Médica — PDF Profesional")
+    st.subheader("📄 Receta Médica — NOM-004-SSA3-2012 / COFEPRIS")
+    st.caption("Apegada a NOM-004-SSA3-2012 (Expediente clínico) y requisitos COFEPRIS para receta médica general.")
+
+    if not _is_auth():
+        st.warning("Inicia sesión para generar recetas.")
+    else:
+        dr_nombre  = st.session_state.get("sess_nombre","")
+        dr_cedula  = st.session_state.get("sess_cedula","")
+        dr_univ    = st.session_state.get("sess_universidad","")
+        dr_esp     = st.session_state.get("sess_especialidad","")
+        dr_inst    = st.session_state.get("sess_institucion","")
+        dr_dom     = st.session_state.get("sess_domicilio","")
+        dr_tel     = st.session_state.get("sess_telefono","")
+
+        campos_faltantes = []
+        if not dr_nombre:  campos_faltantes.append("nombre")
+        if not dr_cedula:  campos_faltantes.append("cédula profesional")
+        if not dr_dom:     campos_faltantes.append("domicilio del consultorio")
+
+        if campos_faltantes:
+            st.warning(f"⚠️ Perfil incompleto. Faltan: **{', '.join(campos_faltantes)}**. "
+                       "Ve a **👤 Mi Cuenta** para completarlos — son requeridos por COFEPRIS.")
+            if st.button("→ Ir a Mi Cuenta"):
+                st.session_state["nav_sel"] = "micuenta"; st.rerun()
+        else:
+            pac_data = st.session_state.get("receta_pac", {})
+            rec_data = st.session_state.get("receta_rec", {})
+
+            # CIE-10 frecuentes en nefrología/trasplante
+            CIE10_FRECUENTES = {
+                "N18.5 — ERC Estadio 5 (ERCT)": "N18.5",
+                "N18.4 — ERC Estadio 4": "N18.4",
+                "N18.3 — ERC Estadio 3": "N18.3",
+                "N18.2 — ERC Estadio 2": "N18.2",
+                "N18.1 — ERC Estadio 1": "N18.1",
+                "N17 — Lesión Renal Aguda (AKI)": "N17",
+                "Z94.0 — Trasplante renal presente": "Z94.0",
+                "T86.1 — Rechazo de trasplante renal": "T86.1",
+                "N04 — Síndrome nefrótico": "N04",
+                "N05 — Síndrome nefrítico crónico": "N05",
+                "N03 — Síndrome nefrítico crónico recurrente": "N03",
+                "N00 — GN aguda": "N00",
+                "M32.1 — Nefritis lúpica (LES con compromiso renal)": "M32.1",
+                "E11.21 — Nefropatía diabética DM2": "E11.21",
+                "E10.21 — Nefropatía diabética DM1": "E10.21",
+                "I12 — Hipertensión con enfermedad renal crónica": "I12",
+                "N39.0 — Infección vías urinarias": "N39.0",
+                "N12 — Nefritis tubulointersticial": "N12",
+                "N04.0 — Nefropatía membranosa": "N04.0",
+                "N02 — Hematuria recurrente (IgAN)": "N02",
+                "N26 — Riñón contraído / cicatrizal": "N26",
+                "D59.3 — SHU": "D59.3",
+                "M31.1 — Vasculitis renal (ANCA)": "M31.1",
+                "Otro (escribir manualmente)": "",
+            }
+
+            rx_tab1, rx_tab2 = st.tabs(["✍️ Datos de la receta", "📋 Historial de recetas"])
+
+            with rx_tab1:
+                col_rx1, col_rx2 = st.columns([1, 1])
+                with col_rx1:
+                    st.markdown("**Datos del paciente** *(NOM-004-SSA3-2012)*")
+                    rx_nombre = st.text_input("Nombre completo del paciente *",
+                                              value=pac_data.get("nombre",""), key="rx_nombre")
+                    rx_exp    = st.text_input("N° Expediente / Folio",
+                                              value=pac_data.get("expediente",""), key="rx_exp")
+                    rxc1, rxc2 = st.columns(2)
+                    with rxc1:
+                        rx_edad = st.text_input("Edad",
+                                                value=str(pac_data.get("edad","")) if pac_data.get("edad") else "",
+                                                key="rx_edad")
+                    with rxc2:
+                        rx_sexo = st.selectbox("Sexo", ["Masculino","Femenino","No especificado"],
+                                               key="rx_sexo")
+                    rxv1, rxv2, rxv3 = st.columns(3)
+                    with rxv1:
+                        rx_peso = st.number_input("Peso (kg)", 0.0, 300.0,
+                                                  float(pac_data.get("peso",0)) if pac_data.get("peso") else 0.0,
+                                                  0.1, key="rx_peso")
+                    with rxv2:
+                        rx_talla = st.number_input("Talla (cm)", 0.0, 250.0, 0.0, 0.5, key="rx_talla")
+                    with rxv3:
+                        rx_imc = rx_peso / ((rx_talla/100)**2) if rx_talla > 0 and rx_peso > 0 else 0
+                        st.metric("IMC", f"{rx_imc:.1f}" if rx_imc > 0 else "—")
+
+                    st.markdown("**Signos vitales** *(opcionales)*")
+                    rsv1, rsv2, rsv3, rsv4 = st.columns(4)
+                    with rsv1:
+                        rx_ta   = st.text_input("TA (mmHg)", placeholder="120/80", key="rx_ta")
+                    with rsv2:
+                        rx_fc   = st.text_input("FC (lpm)", placeholder="72", key="rx_fc")
+                    with rsv3:
+                        rx_temp = st.text_input("Temp (°C)", placeholder="36.5", key="rx_temp")
+                    with rsv4:
+                        rx_spo2 = st.text_input("SpO₂ (%)", placeholder="98", key="rx_spo2")
+
+                with col_rx2:
+                    st.markdown("**Diagnóstico** *(CIE-10)*")
+                    dx_sel = st.selectbox("Diagnóstico frecuente en nefrología",
+                                          list(CIE10_FRECUENTES.keys()), key="rx_dx_sel")
+                    cie_code = CIE10_FRECUENTES.get(dx_sel, "")
+                    if dx_sel.startswith("Otro"):
+                        rx_dx    = st.text_input("Diagnóstico (texto libre)", key="rx_dx_txt")
+                        rx_cie10 = st.text_input("Código CIE-10 (opcional)", key="rx_cie")
+                    else:
+                        rx_dx    = dx_sel.split(" — ")[1] if " — " in dx_sel else dx_sel
+                        rx_cie10 = cie_code
+                        st.info(f"CIE-10: **{cie_code}** — {rx_dx}")
+
+                    st.markdown("**Fecha y próxima cita**")
+                    rxf1, rxf2 = st.columns(2)
+                    with rxf1:
+                        rx_fecha = st.date_input("Fecha de consulta", key="rx_fecha")
+                    with rxf2:
+                        rx_hora_prox = st.time_input("Hora próxima cita", key="rx_hora_prox",
+                                                     value=None)
+                    rx_fecha_prox = st.date_input("Fecha próxima cita", key="rx_fecha_prox",
+                                                  value=None)
+
+                st.markdown("**Indicaciones médicas** *(nombre genérico + marca, dosis, vía, frecuencia, duración)*")
+                rx_body = st.text_area("Indicaciones / prescripción *", height=180,
+                                       value=rec_data.get("resumen","") if rec_data else "",
+                                       key="rx_body",
+                                       placeholder="1. Tacrolimus (Prograf®) 2 mg c/12h VO × indefinido\n"
+                                                   "2. Micofenolato de mofetilo (Cellcept®) 500 mg c/12h VO\n"
+                                                   "3. Prednisona 10 mg c/24h VO en la mañana\n"
+                                                   "4. Omeprazol 20 mg c/24h VO en ayunas")
+                rx_notas = st.text_input("Indicaciones adicionales / instrucciones al paciente",
+                                         key="rx_notas",
+                                         placeholder="Tomar medicamentos a la misma hora cada día. No suspender sin consultar al médico.")
+
+                # ── GENERADOR PDF NOM ──────────────────────────────────────────
+                def _generar_receta_pdf_nom(dr_nombre, dr_cedula, dr_univ, dr_esp,
+                                            dr_inst, dr_dom, dr_tel,
+                                            rx_nombre, rx_exp, rx_edad, rx_sexo,
+                                            rx_peso, rx_talla, rx_imc,
+                                            rx_ta, rx_fc, rx_temp, rx_spo2,
+                                            rx_dx, rx_cie10, rx_fecha,
+                                            rx_fecha_prox, rx_hora_prox,
+                                            rx_body, rx_notas):
+                    import io
+                    from reportlab.lib.pagesizes import letter
+                    from reportlab.lib.units import cm
+                    from reportlab.lib.colors import HexColor, white, black
+                    from reportlab.platypus import (SimpleDocTemplate, Paragraph,
+                                                    Spacer, Table, TableStyle, HRFlowable)
+                    from reportlab.lib.styles import ParagraphStyle
+                    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+
+                    buf = io.BytesIO()
+                    doc = SimpleDocTemplate(buf, pagesize=letter,
+                                            leftMargin=1.8*cm, rightMargin=1.8*cm,
+                                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+
+                    AZUL  = HexColor("#1E3A8A")
+                    AZULC = HexColor("#DBEAFE")
+                    GRIS  = HexColor("#6B7280")
+                    GRISL = HexColor("#F9FAFB")
+
+                    def P(text, fn="Helvetica", fs=9, color=black, align=TA_LEFT, bold=False, space=2):
+                        style = ParagraphStyle("s", fontName=fn if not bold else "Helvetica-Bold",
+                                               fontSize=fs, textColor=color, alignment=align,
+                                               spaceAfter=space, leading=fs+3)
+                        return Paragraph(str(text) if text else "", style)
+
+                    story = []
+
+                    # ── ENCABEZADO ESTABLECIMIENTO (COFEPRIS) ────────────────
+                    hdr = [[
+                        P(dr_inst or "Consultorio Médico", "Helvetica-Bold", 11, AZUL, bold=True),
+                        P(f"Tel: {dr_tel}" if dr_tel else "", fs=8, color=GRIS, align=TA_RIGHT),
+                    ],[
+                        P(dr_dom, fs=8, color=GRIS),
+                        P("", fs=8),
+                    ]]
+                    th = Table(hdr, colWidths=[12*cm, 5*cm])
+                    th.setStyle(TableStyle([
+                        ("BACKGROUND",   (0,0), (-1,-1), AZULC),
+                        ("TOPPADDING",   (0,0), (-1,-1), 5),
+                        ("BOTTOMPADDING",(0,0), (-1,-1), 5),
+                        ("LEFTPADDING",  (0,0), (-1,-1), 8),
+                        ("RIGHTPADDING", (0,0), (-1,-1), 8),
+                        ("BOX",          (0,0), (-1,-1), 1.5, AZUL),
+                        ("LINEABOVE",    (0,0), (-1,0),  3,   AZUL),
+                    ]))
+                    story.append(th)
+                    story.append(Spacer(1, 0.3*cm))
+
+                    # ── DATOS DEL MÉDICO ──────────────────────────────────────
+                    med = [[
+                        P(dr_nombre, "Helvetica-Bold", 11, AZUL, bold=True),
+                        P(f"Cédula Prof.: {dr_cedula}", fs=8, align=TA_RIGHT),
+                    ],[
+                        P(dr_esp, fs=8, color=GRIS),
+                        P(dr_univ, fs=8, color=GRIS, align=TA_RIGHT),
+                    ]]
+                    tm = Table(med, colWidths=[10*cm, 7*cm])
+                    tm.setStyle(TableStyle([
+                        ("TOPPADDING",    (0,0), (-1,-1), 4),
+                        ("BOTTOMPADDING", (0,0), (-1,-1), 4),
+                        ("LEFTPADDING",   (0,0), (-1,-1), 8),
+                    ]))
+                    story.append(tm)
+                    story.append(HRFlowable(width="100%", thickness=1, color=AZUL))
+                    story.append(Spacer(1, 0.25*cm))
+
+                    # ── DATOS DEL PACIENTE ────────────────────────────────────
+                    fecha_str = str(rx_fecha)
+                    pac = [
+                        [P("Paciente:", bold=True, fs=8), P(rx_nombre, fs=9),
+                         P("Expediente:", bold=True, fs=8), P(rx_exp, fs=9),
+                         P("Fecha:", bold=True, fs=8), P(fecha_str, fs=9)],
+                        [P("Edad:", bold=True, fs=8), P(f"{rx_edad} años", fs=9),
+                         P("Sexo:", bold=True, fs=8), P(rx_sexo, fs=9),
+                         P("CIE-10:", bold=True, fs=8), P(rx_cie10, fs=9)],
+                        [P("Diagnóstico:", bold=True, fs=8),
+                         Paragraph(rx_dx, ParagraphStyle("dx", fontName="Helvetica",
+                                                          fontSize=9, leading=12)),
+                         P("", fs=8), P("", fs=8), P("", fs=8), P("", fs=8)],
+                    ]
+                    if rx_peso or rx_talla or rx_ta:
+                        sv_txt = []
+                        if rx_peso > 0:  sv_txt.append(f"Peso: {rx_peso:.1f} kg")
+                        if rx_talla > 0: sv_txt.append(f"Talla: {rx_talla:.0f} cm")
+                        if rx_imc > 0:   sv_txt.append(f"IMC: {rx_imc:.1f}")
+                        if rx_ta:        sv_txt.append(f"TA: {rx_ta}")
+                        if rx_fc:        sv_txt.append(f"FC: {rx_fc} lpm")
+                        if rx_temp:      sv_txt.append(f"T°: {rx_temp}°C")
+                        if rx_spo2:      sv_txt.append(f"SpO₂: {rx_spo2}%")
+                        pac.append([P("Signos:", bold=True, fs=8),
+                                    Paragraph("  ·  ".join(sv_txt),
+                                              ParagraphStyle("sv", fontName="Helvetica",
+                                                             fontSize=8, leading=11)),
+                                    P(""), P(""), P(""), P("")])
+                    tp = Table(pac, colWidths=[2.2*cm, 5.3*cm, 1.8*cm, 2.5*cm, 1.5*cm, 3.7*cm])
+                    tp.setStyle(TableStyle([
+                        ("BACKGROUND",   (0,0), (-1,-1), GRISL),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1), [GRISL, white]),
+                        ("TOPPADDING",   (0,0), (-1,-1), 3),
+                        ("BOTTOMPADDING",(0,0), (-1,-1), 3),
+                        ("LEFTPADDING",  (0,0), (-1,-1), 4),
+                        ("BOX",          (0,0), (-1,-1), 0.5, GRIS),
+                        ("SPAN",         (1,2), (-1,2)),
+                        ("SPAN",         (1,3), (-1,3)) if rx_peso or rx_ta else ("SPAN",(0,0),(0,0)),
+                    ]))
+                    story.append(tp)
+                    story.append(Spacer(1, 0.4*cm))
+
+                    # ── SÍMBOLO Rx + INDICACIONES ─────────────────────────────
+                    rx_sym = ParagraphStyle("rxs", fontName="Helvetica-Bold",
+                                            fontSize=24, textColor=AZUL, spaceAfter=4)
+                    story.append(Paragraph("&#x211E;", rx_sym))
+
+                    ind_style = ParagraphStyle("ind", fontName="Helvetica",
+                                               fontSize=10, leading=16, spaceAfter=3)
+                    for linea in (rx_body or "").strip().split("\n"):
+                        story.append(Paragraph(linea or " ", ind_style))
+
+                    if rx_notas:
+                        story.append(Spacer(1, 0.2*cm))
+                        story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS))
+                        nota_s = ParagraphStyle("nota", fontName="Helvetica",
+                                                fontSize=8, textColor=GRIS, spaceAfter=2)
+                        story.append(Paragraph(f"Instrucciones: {rx_notas}", nota_s))
+
+                    # ── PRÓXIMA CITA ──────────────────────────────────────────
+                    if rx_fecha_prox:
+                        story.append(Spacer(1, 0.2*cm))
+                        hora_txt = f" a las {rx_hora_prox}" if rx_hora_prox else ""
+                        cita_s = ParagraphStyle("cita", fontName="Helvetica-Bold",
+                                                fontSize=9, textColor=AZUL)
+                        story.append(Paragraph(f"📅 Próxima cita: {rx_fecha_prox}{hora_txt}", cita_s))
+
+                    story.append(Spacer(1, 1.2*cm))
+
+                    # ── FIRMA ─────────────────────────────────────────────────
+                    firma_s = ParagraphStyle("firma", fontName="Helvetica", fontSize=9,
+                                             alignment=TA_CENTER)
+                    firma_b = ParagraphStyle("firmab", fontName="Helvetica-Bold", fontSize=9,
+                                             alignment=TA_CENTER)
+                    firma_g = ParagraphStyle("firmag", fontName="Helvetica", fontSize=8,
+                                             textColor=GRIS, alignment=TA_CENTER)
+                    firma_data = [[
+                        "",
+                        [Paragraph("_" * 38, firma_s),
+                         Paragraph(dr_nombre, firma_b),
+                         Paragraph(f"Cédula: {dr_cedula}", firma_g),
+                         Paragraph(dr_esp, firma_g)],
+                    ]]
+                    tf = Table(firma_data, colWidths=[7*cm, 10*cm])
+                    tf.setStyle(TableStyle([("VALIGN", (0,0), (-1,-1), "BOTTOM")]))
+                    story.append(tf)
+                    story.append(Spacer(1, 0.3*cm))
+
+                    # ── PIE NOM ───────────────────────────────────────────────
+                    story.append(HRFlowable(width="100%", thickness=0.5, color=AZULC))
+                    pie_s = ParagraphStyle("pie", fontName="Helvetica", fontSize=7,
+                                           textColor=GRIS, alignment=TA_CENTER)
+                    story.append(Paragraph(
+                        f"Receta médica general · NOM-004-SSA3-2012 · COFEPRIS · "
+                        f"{dr_inst} · {dr_dom} · {dr_tel} · "
+                        "Generado por RenalPro v3.1.0", pie_s))
+
+                    doc.build(story)
+                    buf.seek(0)
+                    return buf.read()
+
+                # ── BOTÓN GENERAR ──────────────────────────────────────────────
+                st.divider()
+                bg1, bg2 = st.columns(2)
+                with bg1:
+                    if st.button("📄 Generar Receta PDF", type="primary",
+                                 use_container_width=True, key="btn_gen_pdf"):
+                        if not rx_nombre or not rx_body:
+                            st.warning("Nombre del paciente e indicaciones son obligatorios.")
+                        else:
+                            try:
+                                pdf_bytes = _generar_receta_pdf_nom(
+                                    dr_nombre, dr_cedula, dr_univ, dr_esp,
+                                    dr_inst, dr_dom, dr_tel,
+                                    rx_nombre, rx_exp, rx_edad, rx_sexo,
+                                    rx_peso, rx_talla, rx_imc,
+                                    rx_ta, rx_fc, rx_temp, rx_spo2,
+                                    rx_dx, rx_cie10, rx_fecha,
+                                    rx_fecha_prox, rx_hora_prox,
+                                    rx_body, rx_notas
+                                )
+                                nombre_safe = "".join(c for c in rx_nombre
+                                                      if c.isalnum() or c in " _")[:20].strip()
+                                st.download_button(
+                                    "⬇️ Descargar Receta PDF",
+                                    data=pdf_bytes,
+                                    file_name=f"Receta_{nombre_safe}_{rx_fecha}.pdf",
+                                    mime="application/pdf",
+                                    key="btn_dl_pdf",
+                                )
+                                st.success("✅ PDF generado. Haz clic en Descargar para guardarlo.")
+                            except Exception as e:
+                                st.error(f"Error al generar PDF: {e}")
+
+                with bg2:
+                    uid_rx = _user_id()
+                    if uid_rx and _DB_ON and _db.db_ok() and pac_data.get("id"):
+                        if st.button("💾 Guardar en expediente del paciente",
+                                     use_container_width=True, key="btn_save_rx"):
+                            resumen_rx = rx_body
+                            try:
+                                _db.add_clinical_record(pac_data["id"], uid_rx, {
+                                    "tipo": "Receta médica",
+                                    "titulo": f"Receta — {rx_dx[:40] if rx_dx else 'Indicaciones'}",
+                                    "fecha_consulta": rx_fecha,
+                                    "resumen": resumen_rx,
+                                    "notas": rx_notas,
+                                    "datos": {
+                                        "cie10": rx_cie10, "dx": rx_dx,
+                                        "peso": rx_peso, "talla": rx_talla,
+                                        "ta": rx_ta, "fecha_prox": str(rx_fecha_prox) if rx_fecha_prox else "",
+                                    },
+                                })
+                                _clear_cache()
+                                st.success("✅ Guardado en expediente.")
+                            except Exception:
+                                st.info("Para guardar en expediente: abre al paciente desde 🏥 Expediente Clínico → Generar receta.")
+                    else:
+                        st.info("Para guardar automáticamente en el expediente, abre la receta desde **🏥 Expediente Clínico** → botón 'Generar receta' en un registro.")
+
+            with rx_tab2:
+                st.markdown("#### Historial de recetas generadas")
+                uid_rx2 = _user_id()
+                if uid_rx2 and _DB_ON and _db.db_ok():
+                    try:
+                        import json as _jrx
+                        # Get all patients then their records of type receta
+                        pacs_rx = _cached_patients(uid_rx2)
+                        recetas_todas = []
+                        for p in pacs_rx:
+                            for r in _cached_clinical_records(p["id"]):
+                                if r.get("tipo") == "Receta médica":
+                                    recetas_todas.append({**r, "_pac_nombre": p.get("nombre","—")})
+                        recetas_todas.sort(key=lambda x: str(x.get("created_at","")), reverse=True)
+
+                        if recetas_todas:
+                            for rx_hist in recetas_todas[:20]:
+                                fecha_h = str(rx_hist.get("fecha_consulta",""))[:10]
+                                with st.expander(f"📄 {fecha_h} — {rx_hist.get('titulo','—')} · {rx_hist['_pac_nombre']}"):
+                                    st.markdown(f"**Indicaciones:** {rx_hist.get('resumen','')}")
+                                    if rx_hist.get("notas"):
+                                        st.caption(rx_hist["notas"])
+                                    if st.button("↩️ Cargar esta receta", key=f"cargar_rx_{rx_hist['id']}"):
+                                        st.session_state["rx_body_prefill"] = rx_hist.get("resumen","")
+                                        st.info("Receta cargada — ve a la pestaña '✍️ Datos de la receta' y modifica lo necesario.")
+                        else:
+                            st.info("No hay recetas guardadas aún.")
+                    except Exception:
+                        st.info("Sube el db.py actualizado a GitHub para activar el historial de recetas.")
+                else:
+                    st.info("Conecta Railway DB para ver el historial de recetas.")
 
     if not _is_auth():
         st.warning("Inicia sesión para generar recetas.")
@@ -9658,10 +10072,10 @@ elif nav == "receta":
                 GRIS_L     = HexColor("#F3F4F6")
 
                 def estilo(name, **kw):
-                    base = ParagraphStyle(name, fontName="Helvetica",
-                                         fontSize=10, leading=14,
-                                         textColor=black, **kw)
-                    return base
+                    defaults = dict(fontName="Helvetica", fontSize=10,
+                                    leading=14, textColor=black)
+                    defaults.update(kw)
+                    return ParagraphStyle(name, **defaults)
 
                 EST_TITULO  = estilo("titulo",  fontName="Helvetica-Bold",
                                      fontSize=14, textColor=AZUL, spaceAfter=2)
@@ -10634,9 +11048,9 @@ Limitaciones:
         elif er_emb >= 1:    riesgo_pts += 1
         if er_transfusiones >= 5: riesgo_pts += 1
 
-        if "5,000" in er_dsa:    riesgo_pts += 3
-        elif "3,000" in er_dsa:  riesgo_pts += 2
-        elif "500" in er_dsa:    riesgo_pts += 1
+        if "5,000" in er_dsa_pre:    riesgo_pts += 3
+        elif "3,000" in er_dsa_pre:  riesgo_pts += 2
+        elif "500" in er_dsa_pre:    riesgo_pts += 1
 
         if "células T" in er_xm: riesgo_pts += 4
         elif "solo células B" in er_xm: riesgo_pts += 2
