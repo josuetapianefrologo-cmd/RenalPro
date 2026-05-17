@@ -140,6 +140,8 @@ def init_tables() -> bool:
         for alter in [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar VARCHAR(20) DEFAULT '👨‍⚕️'",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS institucion VARCHAR(200)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula_profesional VARCHAR(50)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS universidad VARCHAR(200)",
         ]:
             try:
                 cur.execute(alter)
@@ -151,6 +153,41 @@ def init_tables() -> bool:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_presc ON patient_sessions(prescription_id);")
         cur.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_mp_id ON payments(mp_payment_id)
             WHERE mp_payment_id IS NOT NULL;""")
+
+        # ── Nuevas tablas — expediente clínico centrado en el paciente ─────────
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS patients (
+                id               SERIAL PRIMARY KEY,
+                user_id          INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                nombre           VARCHAR(100) NOT NULL,
+                expediente       VARCHAR(50),
+                fecha_nacimiento DATE,
+                edad             INTEGER,
+                sexo             VARCHAR(10),
+                peso             FLOAT,
+                diagnostico      TEXT,
+                tipo             VARCHAR(50) DEFAULT 'general',
+                notas            TEXT,
+                created_at       TIMESTAMP DEFAULT NOW(),
+                is_deleted       BOOLEAN DEFAULT FALSE
+            );
+            CREATE TABLE IF NOT EXISTS clinical_records (
+                id               SERIAL PRIMARY KEY,
+                patient_id       INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+                user_id          INTEGER REFERENCES users(id),
+                tipo             VARCHAR(50) NOT NULL,
+                titulo           VARCHAR(200),
+                fecha_consulta   DATE DEFAULT CURRENT_DATE,
+                datos_json       TEXT,
+                resumen          TEXT,
+                receta_generada  BOOLEAN DEFAULT FALSE,
+                notas            TEXT,
+                created_at       TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_patients_user ON patients(user_id, is_deleted);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_records_patient ON clinical_records(patient_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_records_user ON clinical_records(user_id);")
         conn.commit()
         cur.close()
         return True
@@ -391,23 +428,194 @@ def get_all_users() -> List[Dict]:
 
 
 # ── PRESCRIPCIONES ────────────────────────────────────────────────────────────
-def update_user_profile(user_id: int, nombre: str, email: str,
-                        especialidad: str, institucion: str, avatar: str) -> bool:
-    """Actualiza perfil del usuario."""
+# ── PACIENTES ──────────────────────────────────────────────────────────────────
+def create_patient(user_id: int, data: Dict) -> Optional[int]:
+    """Crea un nuevo paciente. Retorna el ID o None."""
+    conn = get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO patients (user_id, nombre, expediente, edad, sexo,
+                peso, diagnostico, tipo, notas)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (
+            user_id, data.get("nombre","Paciente"),
+            data.get("expediente"), data.get("edad"),
+            data.get("sexo"), data.get("peso"),
+            data.get("diagnostico"), data.get("tipo","general"),
+            data.get("notas",""),
+        ))
+        new_id = cur.fetchone()["id"]
+        conn.commit()
+        cur.close()
+        return new_id
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return None
+
+def get_patients(user_id: int) -> List[Dict]:
+    conn = get_conn()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT * FROM patients
+            WHERE user_id=%s AND is_deleted=FALSE
+            ORDER BY created_at DESC
+        """, (user_id,))
+        rows = cur.fetchall()
+        cur.close()
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+def get_patient(patient_id: int, user_id: int) -> Optional[Dict]:
+    conn = get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM patients WHERE id=%s AND user_id=%s", (patient_id, user_id))
+        row = cur.fetchone()
+        cur.close()
+        return dict(row) if row else None
+    except Exception:
+        return None
+
+def update_patient(patient_id: int, user_id: int, data: Dict) -> bool:
     conn = get_conn()
     if not conn:
         return False
     try:
         cur = conn.cursor()
         cur.execute("""
-            UPDATE users SET nombre=%s, email=%s, avatar=%s, institucion=%s
-            WHERE id=%s
-        """, (nombre, email, avatar, institucion, user_id))
-        # Guardar especialidad en el campo existente si existe
+            UPDATE patients SET nombre=%s, expediente=%s, edad=%s, sexo=%s,
+                peso=%s, diagnostico=%s, tipo=%s, notas=%s
+            WHERE id=%s AND user_id=%s
+        """, (
+            data.get("nombre"), data.get("expediente"), data.get("edad"),
+            data.get("sexo"), data.get("peso"), data.get("diagnostico"),
+            data.get("tipo","general"), data.get("notas",""),
+            patient_id, user_id
+        ))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
         try:
-            cur.execute("UPDATE users SET especialidad=%s WHERE id=%s", (especialidad, user_id))
+            conn.rollback()
         except Exception:
-            pass  # columna puede no existir
+            pass
+        return False
+
+def delete_patient(patient_id: int, user_id: int) -> bool:
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE patients SET is_deleted=TRUE WHERE id=%s AND user_id=%s",
+                    (patient_id, user_id))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+# ── REGISTROS CLÍNICOS ─────────────────────────────────────────────────────────
+def add_clinical_record(patient_id: int, user_id: int, data: Dict) -> Optional[int]:
+    """Agrega un registro clínico vinculado al paciente."""
+    conn = get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO clinical_records
+            (patient_id, user_id, tipo, titulo, fecha_consulta,
+             datos_json, resumen, notas)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (
+            patient_id, user_id,
+            data.get("tipo","general"),
+            data.get("titulo","Consulta"),
+            data.get("fecha_consulta"),
+            json.dumps(data.get("datos",{}), ensure_ascii=False, default=str),
+            data.get("resumen",""),
+            data.get("notas",""),
+        ))
+        new_id = cur.fetchone()["id"]
+        conn.commit()
+        cur.close()
+        return new_id
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return None
+
+def get_clinical_records(patient_id: int) -> List[Dict]:
+    conn = get_conn()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT * FROM clinical_records
+            WHERE patient_id=%s
+            ORDER BY created_at DESC
+        """, (patient_id,))
+        rows = cur.fetchall()
+        cur.close()
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+def delete_clinical_record(record_id: int, user_id: int) -> bool:
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM clinical_records WHERE id=%s AND user_id=%s",
+                    (record_id, user_id))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+def update_user_profile(user_id: int, nombre: str, email: str,
+                        especialidad: str, institucion: str, avatar: str,
+                        cedula: str = "", universidad: str = "") -> bool:
+    """Actualiza perfil del usuario incluyendo credenciales profesionales."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE users SET nombre=%s, email=%s, avatar=%s,
+                institucion=%s, cedula_profesional=%s, universidad=%s
+            WHERE id=%s
+        """, (nombre, email, avatar, institucion, cedula, universidad, user_id))
         conn.commit()
         cur.close()
         return True
