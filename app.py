@@ -2073,6 +2073,7 @@ with st.sidebar:
 
     _navsec("NEFROLOGÍA")
     _navbtn("🔢 Calculadoras Nefro", "nefro")
+    _navbtn("💉 Trasplante", "trasplante")
     _navbtn("🩸 Acceso Vascular", "acceso")
 
     _navsec("DOCUMENTACIÓN")
@@ -5325,7 +5326,8 @@ elif nav == "electrolitos":
 elif nav == "nefro":
     st.subheader("🔢 Calculadoras de Nefrología")
     nefro_modo = st.radio("Sección",
-        ["📐 FG & Estadificación ERC", "🩸 Anemia en ERC", "💊 Medicamentos en ERC/Diálisis"],
+        ["📐 FG & Estadificación ERC", "🧪 Orina & Electrolitos",
+         "🩸 Anemia en ERC", "💊 Medicamentos en ERC/Diálisis"],
         horizontal=True, key="nefro_modo")
 
     # ── FG & ERC ──────────────────────────────────────────────────────────────
@@ -5387,6 +5389,237 @@ elif nav == "nefro":
         st.caption("CKD-EPI 2021: Inker LA et al., NEJM 2021. Cockcroft-Gault: Cockcroft DW, Gault MH, Nephron 1976.")
 
     # ── ANEMIA EN ERC ──────────────────────────────────────────────────────────
+    # ── ORINA & ELECTROLITOS ──────────────────────────────────────────────────
+    elif nefro_modo == "🧪 Orina & Electrolitos":
+        calc_sel = st.selectbox("Calculadora", [
+            "📊 RACU — Relación Albúmina/Creatinina Urinaria",
+            "🔬 RPCU — Relación Proteína/Creatinina Urinaria",
+            "🧂 FENa / FEUrea — Prerrenal vs Renal",
+            "💧 Osmolalidad Plasmática + Gap Osmolar",
+            "⚡ Anión Gap Urinario",
+            "🦴 Corrección de Calcio por Albúmina",
+            "🩸 Déficit de Bicarbonato & Brecha Aniónica",
+        ], key="calc_orina_sel")
+
+        st.divider()
+
+        # ── RACU ──────────────────────────────────────────────────────────────
+        if "RACU" in calc_sel:
+            st.markdown("### 📊 RACU — Relación Albúmina/Creatinina Urinaria")
+            st.caption("Índice de detección temprana de daño renal. Muestra puntual de orina (spot).")
+
+            r1, r2, r3 = st.columns(3)
+            with r1:
+                racu_unidad_alb = st.selectbox("Unidades de albúmina",
+                    ["mg/L", "mg/dL", "μg/min (tasa de excreción)"], key="racu_ua")
+                racu_alb = st.number_input("Albúmina urinaria",
+                    0.0, 10000.0, 30.0, 1.0, key="racu_alb_val")
+            with r2:
+                racu_unidad_cr = st.selectbox("Unidades de creatinina",
+                    ["g/L", "mg/dL", "mmol/L"], key="racu_uc")
+                racu_cr = st.number_input("Creatinina urinaria",
+                    0.0, 500.0, 100.0, 1.0, key="racu_cr_val")
+
+            # Normalizar a mg/L y g/L
+            alb_mgl = racu_alb if racu_unidad_alb == "mg/L" else (racu_alb * 10 if racu_unidad_alb == "mg/dL" else racu_alb * 0.0667)
+            cr_gl   = racu_cr if racu_unidad_cr == "g/L" else (racu_cr / 100 if racu_unidad_cr == "mg/dL" else racu_cr * 0.1131)
+            racu_val = (alb_mgl / cr_gl) if cr_gl > 0 else 0
+
+            with r3:
+                st.markdown(" ")
+                if racu_val < 30:
+                    st.success(f"**RACU: {racu_val:.1f} mg/g**\n\n✅ Normal (<30 mg/g)")
+                elif racu_val < 300:
+                    st.warning(f"**RACU: {racu_val:.1f} mg/g**\n\n⚠️ A3 — Albuminuria moderada\n(30–300 mg/g)")
+                else:
+                    st.error(f"**RACU: {racu_val:.1f} mg/g**\n\n🔴 A3 — Albuminuria severa\n(>300 mg/g)")
+
+            st.markdown("""
+| RACU (mg/g) | Categoría | Estadio |
+|-------------|-----------|---------|
+| <10 | Normal | A1 |
+| 10–29 | Normal-alto | A1 |
+| 30–300 | Albuminuria moderada | A2 — Microalbuminuria |
+| >300 | Albuminuria severa | A3 — Macroalbuminuria |
+| >2,200 | Rango nefrótico | A3 |
+            """)
+            st.caption("**Conversión rápida:** mg/dL × 10 = mg/L | Resultado en mg/g (equivalente a mg/mmol × 8.84)")
+            st.caption("Ref: KDIGO CKD 2024 | Levey AS et al. Kidney International 2011")
+
+        # ── RPCU ──────────────────────────────────────────────────────────────
+        elif "RPCU" in calc_sel:
+            st.markdown("### 🔬 RPCU — Relación Proteína/Creatinina Urinaria")
+            rp1, rp2, rp3 = st.columns(3)
+            with rp1:
+                rpcu_prot = st.number_input("Proteína urinaria (mg/dL)", 0.0, 2000.0, 30.0, 1.0, key="rpcu_prot")
+            with rp2:
+                rpcu_cr   = st.number_input("Creatinina urinaria (mg/dL)", 0.0, 500.0, 100.0, 1.0, key="rpcu_cr")
+            rpcu_val = (rpcu_prot / rpcu_cr) * 1000 if rpcu_cr > 0 else 0  # mg/g
+            with rp3:
+                st.markdown(" ")
+                if rpcu_val < 150:
+                    st.success(f"**RPCU: {rpcu_val:.0f} mg/g** — Normal")
+                elif rpcu_val < 500:
+                    st.warning(f"**RPCU: {rpcu_val:.0f} mg/g** — Proteinuria leve")
+                elif rpcu_val < 3500:
+                    st.error(f"**RPCU: {rpcu_val:.0f} mg/g** — Proteinuria significativa")
+                else:
+                    st.error(f"**RPCU: {rpcu_val:.0f} mg/g** — Rango nefrótico (>3,500 mg/g)")
+            st.caption("Equivalencia: RPCU (mg/g) ≈ Proteinuria en orina 24h (mg/día) | Ref: KDIGO 2024")
+
+        # ── FENa / FEUrea ──────────────────────────────────────────────────────
+        elif "FENa" in calc_sel:
+            st.markdown("### 🧂 FENa / FEUrea — Diferencial Prerrenal vs Renal")
+            st.caption("Útil en oliguria/AKI para diferenciar causa prerrenal de intrínseca.")
+
+            fe1, fe2 = st.columns(2)
+            with fe1:
+                st.markdown("**Datos séricos:**")
+                fe_na_s  = st.number_input("Na sérico (mEq/L)", 100.0, 170.0, 140.0, 1.0, key="fe_na_s")
+                fe_cr_s  = st.number_input("Creatinina sérica (mg/dL)", 0.1, 30.0, 2.0, 0.1, key="fe_cr_s")
+                fe_urea_s = st.number_input("BUN sérico (mg/dL)", 1.0, 200.0, 40.0, 1.0, key="fe_urea_s")
+            with fe2:
+                st.markdown("**Datos urinarios:**")
+                fe_na_u  = st.number_input("Na urinario (mEq/L)", 0.0, 300.0, 20.0, 1.0, key="fe_na_u")
+                fe_cr_u  = st.number_input("Creatinina urinaria (mg/dL)", 0.0, 500.0, 120.0, 1.0, key="fe_cr_u")
+                fe_urea_u = st.number_input("BUN urinario (mg/dL)", 0.0, 2000.0, 400.0, 10.0, key="fe_urea_u")
+
+            fena  = (fe_na_u * fe_cr_s) / (fe_na_s * fe_cr_u) * 100 if (fe_na_s * fe_cr_u) > 0 else 0
+            feurea = (fe_urea_u * fe_cr_s) / (fe_urea_s * fe_cr_u) * 100 if (fe_urea_s * fe_cr_u) > 0 else 0
+
+            rc1, rc2 = st.columns(2)
+            with rc1:
+                color_na = "success" if fena < 1 else ("warning" if fena < 2 else "error")
+                dx_na = "🟢 Prerrenal / Hepatorrenal" if fena < 1 else ("🟡 Indeterminado" if fena < 2 else "🔴 Necrosis tubular aguda")
+                getattr(st, color_na)(f"**FENa: {fena:.2f}%**\n\n{dx_na}")
+            with rc2:
+                color_u = "success" if feurea < 35 else "error"
+                dx_u = "🟢 Prerrenal (útil si hay diuréticos)" if feurea < 35 else "🔴 NTA / Daño intrínseco"
+                getattr(st, color_u)(f"**FEUrea: {feurea:.1f}%**\n\n{dx_u}")
+
+            st.markdown("""
+| | FENa | FEUrea | Interpretación |
+|--|------|--------|---------------|
+| **Prerrenal** | <1% | <35% | Túbulo intacto, reabsorbe avidamente |
+| **NTA** | >2% | >50% | Daño tubular, pierde sodio |
+| **Con diuréticos** | No confiable | <35% útil | FEUrea más confiable en este contexto |
+| **Hepatorrenal** | <1% | <35% | Como prerrenal |
+            """)
+            st.caption("Ref: Steiner RW. Ann Intern Med 1984 | Carvounis CP. Am J Kidney Dis 2002")
+
+        # ── OSMOLALIDAD ───────────────────────────────────────────────────────
+        elif "Osmolalidad" in calc_sel:
+            st.markdown("### 💧 Osmolalidad Plasmática & Gap Osmolar")
+            os1, os2 = st.columns(2)
+            with os1:
+                os_na   = st.number_input("Na sérico (mEq/L)", 100.0, 170.0, 140.0, 1.0, key="os_na")
+                os_glu  = st.number_input("Glucosa (mg/dL)", 50.0, 1000.0, 100.0, 1.0, key="os_glu")
+                os_bun  = st.number_input("BUN (mg/dL)", 0.0, 200.0, 15.0, 1.0, key="os_bun")
+                os_etoh = st.number_input("Etanol (mg/dL) — si aplica", 0.0, 500.0, 0.0, 1.0, key="os_etoh")
+            with os2:
+                os_medida = st.number_input("Osmolalidad medida (mOsm/kg) — si disponible",
+                                             200.0, 400.0, 290.0, 1.0, key="os_med")
+
+            osm_calc = 2*os_na + os_glu/18 + os_bun/2.8 + os_etoh/4.6
+            gap_osm  = os_medida - osm_calc
+
+            om1, om2, om3 = st.columns(3)
+            om1.metric("Osmolalidad calculada", f"{osm_calc:.1f} mOsm/kg", help="Normal: 280–295")
+            om2.metric("Osmolalidad medida", f"{os_medida:.0f} mOsm/kg")
+            if gap_osm > 10:
+                om3.metric("Gap osmolar", f"{gap_osm:.1f} mOsm/kg", delta="⚠️ Elevado (>10)", delta_color="inverse")
+                st.error("Gap osmolar elevado — sospechar: metanol, etilenglicol, isopropanol, acetona, propilenglicol")
+            else:
+                om3.metric("Gap osmolar", f"{gap_osm:.1f} mOsm/kg", delta="Normal (<10)")
+            st.caption("Fórmula: 2×Na + Glucosa/18 + BUN/2.8 (+Etanol/4.6). Normal: 280–295 mOsm/kg. Gap normal: <10.")
+
+        # ── ANIÓN GAP URINARIO ────────────────────────────────────────────────
+        elif "Anión Gap" in calc_sel:
+            st.markdown("### ⚡ Anión Gap Urinario")
+            st.caption("Evalúa la excreción de NH₄⁺. Útil en acidosis metabólica para diferenciar diarrea de ATR.")
+            ag1, ag2, ag3 = st.columns(3)
+            with ag1:
+                agu_na = st.number_input("Na urinario (mEq/L)", 0.0, 300.0, 40.0, 1.0, key="agu_na")
+            with ag2:
+                agu_k  = st.number_input("K urinario (mEq/L)", 0.0, 200.0, 30.0, 1.0, key="agu_k")
+            with ag3:
+                agu_cl = st.number_input("Cl urinario (mEq/L)", 0.0, 300.0, 80.0, 1.0, key="agu_cl")
+            agu_val = agu_na + agu_k - agu_cl
+            if agu_val < 0:
+                st.success(f"**Anión Gap Urinario: {agu_val:.0f} mEq/L (negativo)**\n\n"
+                           "🟢 Excreción de NH₄⁺ adecuada → causa extrarrenal (diarrea, pérdidas GI)")
+            else:
+                st.error(f"**Anión Gap Urinario: {agu_val:.0f} mEq/L (positivo)**\n\n"
+                         "🔴 Excreción de NH₄⁺ deficiente → causa renal (ATR tipo I, II o IV)")
+            st.caption("AGU = Na_u + K_u – Cl_u. Negativo = renal acidifica bien. Positivo = ATR.")
+
+        # ── CORRECCIÓN DE CALCIO ──────────────────────────────────────────────
+        elif "Calcio" in calc_sel:
+            st.markdown("### 🦴 Corrección de Calcio por Albúmina")
+            cc1, cc2, cc3 = st.columns(3)
+            with cc1:
+                cc_ca  = st.number_input("Calcio total sérico (mg/dL)", 4.0, 16.0, 8.5, 0.1, key="cc_ca")
+            with cc2:
+                cc_alb = st.number_input("Albúmina sérica (g/dL)", 0.5, 6.0, 4.0, 0.1, key="cc_alb")
+            with cc3:
+                cc_alb_norm = st.number_input("Albúmina normal del lab (g/dL)", 3.0, 5.0, 4.0, 0.1, key="cc_albn")
+            ca_corr = cc_ca + 0.8 * (cc_alb_norm - cc_alb)
+            if ca_corr < 8.5:
+                st.error(f"**Ca corregido: {ca_corr:.2f} mg/dL** — Hipocalcemia")
+            elif ca_corr > 10.5:
+                st.error(f"**Ca corregido: {ca_corr:.2f} mg/dL** — Hipercalcemia")
+            else:
+                st.success(f"**Ca corregido: {ca_corr:.2f} mg/dL** — Normal (8.5–10.5 mg/dL)")
+            st.info("Si albumina baja, el calcio total subestima el Ca ionizado real. "
+                    "Fórmula: Ca_corr = Ca_total + 0.8 × (Albúmina_normal – Albúmina_paciente)")
+            st.caption("⚠️ En ERC: usar Ca ionizado cuando sea posible — la fórmula puede ser imprecisa. "
+                       "Ref: Payne RB. Lancet 1973.")
+
+        # ── DÉFICIT BICARBONATO / BRECHA ANIÓNICA ────────────────────────────
+        else:
+            st.markdown("### 🩸 Déficit de Bicarbonato & Brecha Aniónica")
+            ba1, ba2 = st.columns(2)
+            with ba1:
+                st.markdown("**Gasometría / Labs séricos:**")
+                bic_na  = st.number_input("Na (mEq/L)", 100.0, 170.0, 140.0, 1.0, key="bic_na")
+                bic_cl  = st.number_input("Cl (mEq/L)", 70.0, 130.0, 104.0, 1.0, key="bic_cl")
+                bic_hco3 = st.number_input("HCO₃⁻ actual (mEq/L)", 1.0, 40.0, 12.0, 0.5, key="bic_hco3")
+                bic_alb  = st.number_input("Albúmina (g/dL)", 0.5, 6.0, 4.0, 0.1, key="bic_alb")
+            with ba2:
+                st.markdown("**Datos del paciente:**")
+                bic_peso = st.number_input("Peso (kg)", 30.0, 200.0, 70.0, 1.0, key="bic_peso")
+                bic_meta_hco3 = st.number_input("HCO₃⁻ meta (mEq/L)", 18.0, 26.0, 22.0, 0.5, key="bic_meta")
+
+            # Cálculos
+            deficit_hco3 = 0.5 * bic_peso * (bic_meta_hco3 - bic_hco3)
+            ba = bic_na - bic_cl - bic_hco3
+            ba_corr = ba + 2.5 * (4.0 - bic_alb)  # corrección por albúmina
+
+            br1, br2, br3 = st.columns(3)
+            br1.metric("Déficit de HCO₃⁻", f"{max(deficit_hco3,0):.0f} mEq",
+                       help="0.5 × peso × (meta − actual)")
+            if ba > 12:
+                br2.metric("Brecha aniónica", f"{ba:.0f} mEq/L", delta="⚠️ Alta (>12)")
+                br3.metric("BA corregida por albúmina", f"{ba_corr:.0f} mEq/L")
+            else:
+                br2.metric("Brecha aniónica", f"{ba:.0f} mEq/L", delta="Normal (≤12)")
+                br3.metric("BA corregida por albúmina", f"{ba_corr:.0f} mEq/L")
+
+            if ba > 12:
+                st.error("**Acidosis metabólica con BA elevada** — causas: láctica, cetoacidosis, "
+                         "urémica, tóxicos (metanol, etilenglicol, salicilatos)")
+            else:
+                st.info("**BA normal** — acidosis hiperclorémica: diarrea, ATR, dilucional, post-NaCl")
+
+            if deficit_hco3 > 0:
+                amp_hco3 = deficit_hco3 / 50  # ámpulas de 50 mEq
+                st.markdown(f"**Reposición estimada:** {deficit_hco3:.0f} mEq NaHCO₃ "
+                            f"≈ **{amp_hco3:.1f} ámpulas de 50 mEq**\n\n"
+                            "⚠️ Reponer 50% en 4–6h, reevaluar gases y electrolitos.")
+            st.caption("BA = Na – Cl – HCO₃. Normal: 8–12. Corrección albúmina: +2.5 por cada g/dL < 4. "
+                       "Ref: Haber RJ. West J Med 1991.")
+
+    # ── ANEMIA EN ERC ─────────────────────────────────────────────────────────
     elif nefro_modo == "🩸 Anemia en ERC":
         st.markdown("### Anemia en ERC — Diagnóstico, Hierro y AEE")
         st.caption("KDIGO 2012 Anemia in CKD + actualizaciones 2024.")
@@ -7118,6 +7351,394 @@ elif nav == "enfermeria":
                 st.info("💡 Con RCA: suspender citrato Y calcio de forma simultánea para evitar desequilibrio de iCa sistémico.")
             st.success("✅ Este protocolo fue generado automáticamente por TRRC360 según la anticoagulación seleccionada. "
                        "Siempre seguir indicaciones específicas del médico tratante.")
+
+elif nav == "trasplante":
+    st.subheader("💉 Trasplante Renal — Inmunosupresores")
+    st.caption("Protocolos basados en KDIGO Transplant 2009/2022 e INNSZ. Siempre ajustar según protocolo institucional.")
+
+    tx_modo = st.radio("Módulo", [
+        "🧪 Timoglobulina (ATG-r)",
+        "💊 Tacrolimus",
+        "🔵 Micofenolato (MMF/MFS)",
+        "🟡 Ciclosporina A",
+        "⚙️ Everolimus / Sirolimus",
+        "💉 Esteroides",
+        "🚨 Protocolo de Rechazo",
+    ], horizontal=True, key="tx_modo")
+
+    st.divider()
+
+    # ── TIMOGLOBULINA ──────────────────────────────────────────────────────────
+    if "Timoglobulina" in tx_modo:
+        st.markdown("### 🧪 Timoglobulina — Globulina Antitimocítica de Conejo (ATG-r)")
+        st.info("**Presentación:** Timoglobulina® (Sanofi) — viales de 25 mg. Reconstituir en SSF o SG5%.")
+
+        tg1, tg2 = st.columns(2)
+        with tg1:
+            tg_indicacion = st.selectbox("Indicación", [
+                "Inducción en trasplante de alto riesgo",
+                "Inducción estándar (protocolo institucional)",
+                "Rechazo celular agudo (Banff ≥IA)",
+                "Rechazo humoral (AMR)",
+            ], key="tg_ind")
+            tg_peso = st.number_input("Peso (kg)", 30.0, 150.0, 70.0, 1.0, key="tg_peso")
+        with tg2:
+            if "Inducción" in tg_indicacion:
+                tg_dosis_ref = 1.0 if "alto riesgo" in tg_indicacion else 1.0
+                tg_dias_ref  = 5 if "alto riesgo" in tg_indicacion else 3
+            else:
+                tg_dosis_ref = 1.5
+                tg_dias_ref  = 7
+            tg_dosis = st.number_input("Dosis (mg/kg/día)", 0.5, 2.0, tg_dosis_ref, 0.25, key="tg_dosis")
+            tg_dias  = st.number_input("Número de dosis/días", 1, 14, tg_dias_ref, 1, key="tg_dias")
+
+        dosis_diaria_mg = tg_dosis * tg_peso
+        dosis_total_mg  = dosis_diaria_mg * tg_dias
+        viales_dia = dosis_diaria_mg / 25
+        viales_total = dosis_total_mg / 25
+
+        dr1, dr2, dr3, dr4 = st.columns(4)
+        dr1.metric("Dosis diaria", f"{dosis_diaria_mg:.0f} mg")
+        dr2.metric("Viales/día (25 mg)", f"{viales_dia:.1f}")
+        dr3.metric("Dosis total del ciclo", f"{dosis_total_mg:.0f} mg")
+        dr4.metric("Viales totales", f"{viales_total:.1f}")
+
+        st.markdown(f"""
+#### Protocolo de administración
+| Parámetro | Indicación |
+|-----------|-----------|
+| **Diluir en** | 500 mL SSF o SG5% (1 mg/mL máx) |
+| **Tiempo de infusión** | ≥4–6 horas (primera dosis más lenta, 6h) |
+| **Vía** | Vena central preferida |
+| **Pretratamiento** | Metilprednisolona 500 mg IV 30 min antes + Difenhidramina 25–50 mg IV + Paracetamol 1 g VO |
+| **Monitoreo CD3** | Meta: CD3 <50 cells/μL (ajustar dosis si <25 → pausar) |
+| **Plaquetas** | Si <50,000: reducir dosis 50% · Si <25,000: suspender |
+| **Leucocitos** | Si <2,000/μL: reducir o suspender |
+        """)
+        st.warning("⚠️ Profilaxis obligatoria: Cotrimoxazol (PCP), Valganciclovir (CMV si D+/R- o R+), "
+                   "Nistatina o Fluconazol (candidiasis)")
+        st.caption("Ref: Brennan DC. Am J Transplant 2011 | INNSZ Protocolo Inmunosupresión 2024")
+
+    # ── TACROLIMUS ─────────────────────────────────────────────────────────────
+    elif "Tacrolimus" in tx_modo:
+        st.markdown("### 💊 Tacrolimus — Inhibidor de Calcineurina")
+        st.info("**Presentaciones:** Prograf® (IR c/12h) · Advagraf®/Envarsus® (LP c/24h). Metabolismo CYP3A4/P-gp.")
+
+        tc1, tc2 = st.columns(2)
+        with tc1:
+            tc_peso   = st.number_input("Peso (kg)", 30.0, 150.0, 70.0, 1.0, key="tc_peso")
+            tc_fase   = st.selectbox("Fase post-trasplante", [
+                "Fase 1: 0–3 meses",
+                "Fase 2: 3–12 meses",
+                "Fase 3: >12 meses (mantenimiento)",
+            ], key="tc_fase")
+            tc_riesgo = st.selectbox("Riesgo inmunológico", [
+                "Bajo riesgo (0 DSA, crossmatch negativo)",
+                "Riesgo estándar",
+                "Alto riesgo (PRA alto, retrasplante, rechazo previo)",
+            ], key="tc_riesgo")
+        with tc2:
+            tc_nivel_actual = st.number_input("Nivel C0 actual (ng/mL) — si disponible",
+                                              0.0, 30.0, 0.0, 0.5, key="tc_nivel")
+            tc_dosis_actual = st.number_input("Dosis actual (mg c/12h)",
+                                              0.0, 20.0, 0.0, 0.5, key="tc_dosis_act")
+
+        # Targets según fase y riesgo
+        targets = {
+            "Fase 1: 0–3 meses": {"Bajo riesgo (0 DSA, crossmatch negativo)": (8,12),
+                                    "Riesgo estándar": (10,15),
+                                    "Alto riesgo (PRA alto, retrasplante, rechazo previo)": (12,15)},
+            "Fase 2: 3–12 meses": {"Bajo riesgo (0 DSA, crossmatch negativo)": (6,10),
+                                    "Riesgo estándar": (8,12),
+                                    "Alto riesgo (PRA alto, retrasplante, rechazo previo)": (10,12)},
+            "Fase 3: >12 meses (mantenimiento)": {"Bajo riesgo (0 DSA, crossmatch negativo)": (4,7),
+                                    "Riesgo estándar": (5,8),
+                                    "Alto riesgo (PRA alto, retrasplante, rechazo previo)": (6,10)},
+        }
+        meta_low, meta_high = targets[tc_fase][tc_riesgo]
+        dosis_inicio = round(0.1 * tc_peso / 2, 2)  # 0.1 mg/kg/día ÷ 2 (c/12h)
+
+        tm1, tm2, tm3 = st.columns(3)
+        tm1.metric("Meta C0", f"{meta_low}–{meta_high} ng/mL")
+        tm2.metric("Dosis inicio sugerida", f"{dosis_inicio:.1f} mg c/12h",
+                   help="0.1 mg/kg/día dividido c/12h. Ajustar por nivel.")
+        if tc_nivel_actual > 0 and tc_dosis_actual > 0:
+            if tc_nivel_actual < meta_low:
+                ajuste = round(tc_dosis_actual * 1.25, 1)
+                tm3.metric("Ajuste sugerido", f"↑ {ajuste} mg c/12h", delta="Nivel bajo")
+            elif tc_nivel_actual > meta_high:
+                ajuste = round(tc_dosis_actual * 0.75, 1)
+                tm3.metric("Ajuste sugerido", f"↓ {ajuste} mg c/12h", delta="Nivel alto")
+            else:
+                tm3.metric("Nivel en meta ✅", f"{tc_nivel_actual} ng/mL")
+
+        st.markdown("""
+#### Interacciones farmacológicas relevantes
+| Aumentan niveles (inhibidores CYP3A4) | Disminuyen niveles (inductores CYP3A4) |
+|---------------------------------------|---------------------------------------|
+| Fluconazol, Voriconazol, Itraconazol | Rifampicina |
+| Claritromicina, Eritromicina | Fenitoína, Carbamazepina |
+| Diltiazem, Verapamilo, Amlodipino | Rifabutina |
+| Omeprazol (leve) | Hierba de San Juan |
+| Jugo de toronja | Rifapentina |
+        """)
+        st.caption("Monitorear niveles C0 (valle, antes de la dosis): diario × 1 semana → semanal × 1 mes → mensual. "
+                   "Ref: KDIGO Transplant 2009 | Webster AC, Cochrane 2005")
+
+    # ── MICOFENOLATO ───────────────────────────────────────────────────────────
+    elif "Micofenolato" in tx_modo:
+        st.markdown("### 🔵 Micofenolato — MMF / Micofenolato de Sodio (MFS)")
+        st.info("**MMF (Cellcept®):** 250/500 mg cápsulas · **MFS (Myfortic®):** 180/360 mg tabletas EC. "
+                "Equivalencia: MMF 1,000 mg = MFS 720 mg.")
+
+        mf1, mf2 = st.columns(2)
+        with mf1:
+            mf_tipo = st.selectbox("Formulación", ["MMF (Cellcept®)", "MFS — Micofenolato Sódico (Myfortic®)"], key="mf_tipo")
+            mf_peso = st.number_input("Peso (kg)", 30.0, 150.0, 70.0, 1.0, key="mf_peso")
+            mf_erc  = st.selectbox("Función renal", [
+                "Normal / TFG >50", "TFG 25–50", "TFG <25 (sin diálisis)", "En diálisis"], key="mf_erc")
+        with mf2:
+            mf_indicacion = st.selectbox("Indicación", [
+                "Mantenimiento post-trasplante",
+                "Rechazo celular agudo — aumentar dosis",
+            ], key="mf_ind")
+
+        dosis_std = 1000 if "MMF" in mf_tipo else 720  # mg c/12h estándar
+        if "TFG <25" in mf_erc:
+            dosis_ajust = dosis_std * 0.75
+            nota_erc = "⚠️ Reducir dosis 25% — niveles de MPAG se acumulan"
+        elif "diálisis" in mf_erc:
+            dosis_ajust = dosis_std * 0.75
+            nota_erc = "⚠️ Reducir dosis 25% en peritoneo diálisis. En HD: sin ajuste adicional."
+        else:
+            dosis_ajust = dosis_std
+            nota_erc = "✅ Dosis estándar"
+
+        mfr1, mfr2, mfr3 = st.columns(3)
+        mfr1.metric("Dosis estándar", f"{dosis_std} mg c/12h")
+        mfr2.metric("Dosis ajustada ERC", f"{dosis_ajust:.0f} mg c/12h")
+        mfr3.metric("Dosis diaria total", f"{dosis_ajust*2:.0f} mg/día")
+        st.caption(nota_erc)
+
+        st.warning("**Toxicidad principal:** diarrea, náusea, leucopenia · "
+                   "Si leucocitos <2,000: reducir 50% o suspender · "
+                   "**Teratogénico:** anticoncepción obligatoria en mujeres en edad fértil")
+        st.caption("Ref: Sollinger HW. Transplantation 1995 | KDIGO Transplant 2009")
+
+    # ── CICLOSPORINA ──────────────────────────────────────────────────────────
+    elif "Ciclosporina" in tx_modo:
+        st.markdown("### 🟡 Ciclosporina A — Inhibidor de Calcineurina")
+        st.info("**Presentaciones:** Sandimmun Neoral® (microemulsión) · Genéricos. No intercambiables sin monitoreo de niveles.")
+
+        cs1, cs2 = st.columns(2)
+        with cs1:
+            cs_peso  = st.number_input("Peso (kg)", 30.0, 150.0, 70.0, 1.0, key="cs_peso")
+            cs_fase  = st.selectbox("Fase", ["0–3 meses", "3–12 meses", ">12 meses"], key="cs_fase")
+        with cs2:
+            cs_c0    = st.number_input("Nivel C0 (ng/mL) — 12h post-dosis", 0.0, 600.0, 0.0, 5.0, key="cs_c0")
+            cs_c2    = st.number_input("Nivel C2 (ng/mL) — 2h post-dosis (opcional)", 0.0, 2000.0, 0.0, 50.0, key="cs_c2")
+
+        dosis_inicio = round(8 * cs_peso / 2, 0)
+        metas_c0 = {"0–3 meses": (200,300), "3–12 meses": (100,200), ">12 meses": (75,125)}
+        metas_c2 = {"0–3 meses": (1000,1500), "3–12 meses": (700,1000), ">12 meses": (500,700)}
+        meta_c0  = metas_c0[cs_fase]
+        meta_c2  = metas_c2[cs_fase]
+
+        csr1, csr2, csr3 = st.columns(3)
+        csr1.metric("Dosis inicio", f"{dosis_inicio:.0f} mg c/12h", help="8 mg/kg/día ÷ 2")
+        csr2.metric("Meta C0", f"{meta_c0[0]}–{meta_c0[1]} ng/mL")
+        csr3.metric("Meta C2", f"{meta_c2[0]}–{meta_c2[1]} ng/mL")
+
+        st.markdown("""
+#### Conversión Ciclosporina → Tacrolimus
+Si se decide cambiar por toxicidad o falta de eficacia:
+- Suspender ciclosporina
+- Iniciar tacrolimus 12h después
+- Dosis inicial tacrolimus: 0.05–0.1 mg/kg/día c/12h
+- Monitorear nivel C0 tacrolimus a las 72h
+        """)
+        st.caption("Ref: Vanhove T. Transplantation 2016 | KDIGO Transplant 2009")
+
+    # ── EVEROLIMUS / SIROLIMUS ────────────────────────────────────────────────
+    elif "Everolimus" in tx_modo:
+        st.markdown("### ⚙️ Everolimus / Sirolimus — mTOR Inhibidores")
+        st.warning("⚠️ **No usar en los primeros 30 días post-trasplante** — deteriora la cicatrización. "
+                   "Introducir cuando creatinina estable y herida cerrada.")
+
+        ev1, ev2 = st.columns(2)
+        with ev1:
+            ev_tipo = st.selectbox("Agente", ["Everolimus (Certican®)", "Sirolimus (Rapamune®)"], key="ev_tipo")
+            ev_indicacion = st.selectbox("Indicación", [
+                "Conversión por nefrotoxicidad de CNI",
+                "Rechazo crónico — minimizar CNI",
+                "Neoplasia post-trasplante — conversión",
+            ], key="ev_ind")
+        with ev2:
+            ev_nivel = st.number_input("Nivel actual (ng/mL) — si disponible", 0.0, 30.0, 0.0, 0.5, key="ev_niv")
+
+        if "Everolimus" in ev_tipo:
+            dosis_inicio = "0.75 mg c/12h (combinado con CNI reducido)"
+            meta_nivel = "3–8 ng/mL"
+            presentacion = "0.25 / 0.5 / 0.75 / 1.0 mg tabletas"
+        else:
+            dosis_inicio = "2 mg c/24h (dosis de carga 6 mg día 1)"
+            meta_nivel = "5–15 ng/mL (4–12 en combinación con CNI)"
+            presentacion = "0.5 / 1 / 2 mg tabletas · Solución 1 mg/mL"
+
+        st.markdown(f"""
+| Parámetro | Valor |
+|-----------|-------|
+| **Dosis inicio** | {dosis_inicio} |
+| **Meta de nivel** | {meta_nivel} |
+| **Presentación** | {presentacion} |
+| **Monitoreo** | Nivel C0 c/1–2 semanas hasta estable, luego mensual |
+| **CNI concomitante** | Reducir tacrolimus 50% al iniciar mTOR |
+        """)
+        st.error("**Contraindicaciones:** herida quirúrgica abierta, proteinuria >500 mg/g, "
+                 "neumocistosis (requiere cotrimoxazol), dislipidemia severa no controlada")
+        st.caption("Ref: Pascual J. Transplantation 2006 | Budde K. NEJM 2012")
+
+    # ── ESTEROIDES ────────────────────────────────────────────────────────────
+    elif "Esteroides" in tx_modo:
+        st.markdown("### 💉 Esteroides — Metilprednisolona / Prednisona")
+
+        est_modo = st.radio("Tipo de protocolo",
+            ["Inducción (intraoperatorio + post-Qx inmediato)",
+             "Mantenimiento (esquema de reducción)",
+             "Pulsos para rechazo agudo"], horizontal=True, key="est_modo")
+
+        if "Inducción" in est_modo:
+            est_peso = st.number_input("Peso (kg)", 30.0, 150.0, 70.0, 1.0, key="est_peso_ind")
+            st.markdown(f"""
+#### Protocolo de inducción esteroide
+| Momento | Dosis | Vía |
+|---------|-------|-----|
+| Intraoperatorio (clampeo) | **Metilprednisolona 500 mg IV** | IV bolo lento |
+| Día 1 post-Qx | **Metilprednisolona 250 mg IV** | IV c/12h |
+| Día 2 | **Metilprednisolona 125 mg IV** | IV |
+| Día 3 | **Prednisona 60 mg VO** | VO c/24h |
+| Día 7–14 | **Prednisona 30 mg VO** | VO c/24h |
+| Mes 1–3 | **Prednisona 20 mg VO** | VO c/24h |
+| Mes 3–6 | **Prednisona 10 mg VO** | VO c/24h |
+| Mes 6–12 | **Prednisona 5–7.5 mg VO** | VO c/24h |
+| >12 meses | **Prednisona 5 mg VO** | VO c/24h (mantenimiento) |
+            """)
+
+        elif "Mantenimiento" in est_modo:
+            est_mes = st.slider("Mes post-trasplante", 1, 60, 6, key="est_mes")
+            if est_mes <= 1: dosis_mant = 30; nota = "Reducción activa"
+            elif est_mes <= 3: dosis_mant = 20; nota = "Reducción activa"
+            elif est_mes <= 6: dosis_mant = 15; nota = "Reducción gradual"
+            elif est_mes <= 12: dosis_mant = 10; nota = "Reducción lenta"
+            else: dosis_mant = 5; nota = "Mantenimiento a largo plazo"
+            st.metric(f"Prednisona VO — mes {est_mes}", f"{dosis_mant} mg/día", nota)
+            st.caption("Protocolo orientativo. Ajustar según episodios de rechazo, función renal y efectos secundarios.")
+
+        else:  # Pulsos de rechazo
+            est_peso_r = st.number_input("Peso (kg)", 30.0, 150.0, 70.0, 1.0, key="est_peso_r")
+            st.markdown("""
+#### Pulsos de metilprednisolona para rechazo agudo
+| Dosis | Vía | Frecuencia | Duración |
+|-------|-----|-----------|---------|
+| **Metilprednisolona 500 mg IV** | IV bolo en 30 min | c/24h | 3 días |
+
+**Pretratamiento:** SSF 500 mL previo · Monitor de glucemia c/2h · Calcio · Omeprazol
+**Post-pulsos:** Retornar a esquema oral habitual o aumentar prednisona VO 0.5 mg/kg/día
+**Si no responde:** biopsia de confirmación + timoglobulina (rechazo celular ≥IB) o IVIG + Rituximab (rechazo humoral)
+            """)
+        st.caption("Ref: KDIGO Transplant 2009 | Protocolo INNSZ 2024")
+
+    # ── PROTOCOLO DE RECHAZO ──────────────────────────────────────────────────
+    else:
+        st.markdown("### 🚨 Protocolo de Rechazo del Injerto")
+
+        rec_tipo = st.selectbox("Tipo de rechazo (Clasificación Banff 2022)", [
+            "Rechazo Celular Agudo (ACR) Banff IA — tubulitis moderada",
+            "Rechazo Celular Agudo (ACR) Banff IB — tubulitis severa",
+            "Rechazo Celular Agudo (ACR) Banff IIA/IIB — arteritis",
+            "Rechazo Humoral Agudo (AMR) — DSA + C4d + lesión microvascular",
+            "Rechazo Crónico Activo — Banff III / Fibrosis",
+            "Rechazo Hiperagudo",
+        ], key="rec_tipo")
+
+        protocolos = {
+            "Rechazo Celular Agudo (ACR) Banff IA — tubulitis moderada": {
+                "primera_linea": "Pulsos de metilprednisolona 500 mg IV × 3 días",
+                "segunda_linea": "Timoglobulina 1.5 mg/kg/día × 7–10 días si no responde",
+                "ajuste_is": "Optimizar niveles de tacrolimus (C0 10–15 ng/mL fase aguda)",
+                "pronostico": "80–90% respuesta a esteroides",
+                "seguimiento": "Creatinina diaria × 1 semana · Biopsia de control si no mejora en 5–7 días",
+            },
+            "Rechazo Celular Agudo (ACR) Banff IB — tubulitis severa": {
+                "primera_linea": "Pulsos de metilprednisolona 500 mg IV × 3 días",
+                "segunda_linea": "Timoglobulina 1.5 mg/kg/día × 7–14 días (alta probabilidad de necesitar)",
+                "ajuste_is": "Optimizar tacrolimus + considerar aumentar MMF",
+                "pronostico": "60–80% respuesta",
+                "seguimiento": "Biopsia de control a los 14 días · Monitoreo CD3 durante ATG",
+            },
+            "Rechazo Celular Agudo (ACR) Banff IIA/IIB — arteritis": {
+                "primera_linea": "Timoglobulina 1.5 mg/kg/día × 7–14 días (primera línea directa)",
+                "segunda_linea": "Plasmaféresis si componente humoral asociado",
+                "ajuste_is": "Optimizar tacrolimus agresivamente · Revisar DSA",
+                "pronostico": "50–70% respuesta. Mayor riesgo de pérdida del injerto.",
+                "seguimiento": "Biopsia de control a los 14–21 días · Nefrología frecuente",
+            },
+            "Rechazo Humoral Agudo (AMR) — DSA + C4d + lesión microvascular": {
+                "primera_linea": "Plasmaféresis (5–7 sesiones, días alternos) + IVIG 2 g/kg (dividido en 2 días)",
+                "segunda_linea": "Rituximab 375 mg/m² × 1–4 dosis (si no responde o recurrente)",
+                "ajuste_is": "Pulsos de metilprednisolona + optimizar CNI + considerar Eculizumab en casos graves",
+                "pronostico": "50–60% respuesta parcial. Alta tasa de pérdida crónica.",
+                "seguimiento": "DSA cuantitativo pre/post plasmaféresis · C4d en biopsia de control",
+            },
+            "Rechazo Crónico Activo — Banff III / Fibrosis": {
+                "primera_linea": "Optimizar inmunosupresión base · Conversión a mTOR si CNI nefrotóxico",
+                "segunda_linea": "Rituximab si AMR crónico activo con DSA",
+                "ajuste_is": "Reducir CNI o convertir a everolimus · Mantener MMF",
+                "pronostico": "Progresión lenta. Meta: enlentecer pérdida de función.",
+                "seguimiento": "FG cada 3 meses · Proteinuria · Biopsia c/1–2 años",
+            },
+            "Rechazo Hiperagudo": {
+                "primera_linea": "⚠️ Nefrectomía del injerto (no tiene tratamiento efectivo)",
+                "segunda_linea": "—",
+                "ajuste_is": "Diálisis de urgencia · Trasplante futuro con crossmatch virtual negativo",
+                "pronostico": "Pérdida del injerto en horas",
+                "seguimiento": "Soporte del paciente · Reiniciar diálisis · Evaluación para retrasplante",
+            },
+        }
+
+        p = protocolos.get(rec_tipo, {})
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            st.markdown(f"**🔴 Primera línea:**\n{p.get('primera_linea','—')}")
+            st.markdown(f"**🟠 Segunda línea / Si no responde:**\n{p.get('segunda_linea','—')}")
+            st.markdown(f"**💊 Ajuste de inmunosupresión:**\n{p.get('ajuste_is','—')}")
+        with rc2:
+            st.info(f"**Pronóstico:** {p.get('pronostico','—')}")
+            st.caption(f"**Seguimiento:** {p.get('seguimiento','—')}")
+
+        st.divider()
+        st.markdown("#### Algoritmo diagnóstico de disfunción del injerto")
+        st.markdown("""
+```
+Creatinina ↑ post-trasplante
+        │
+        ├── Primeras 24–72h → Función retardada del injerto (DGF)
+        │      → Diálisis temporal, optimizar hidratación, Doppler renal
+        │
+        ├── 1ª semana → Rechazo hiperagudo / agudo acelerado
+        │      → Biopsia urgente + crossmatch
+        │
+        ├── 1–12 semanas → Rechazo celular agudo
+        │      → Biopsia → Clasificación Banff → Protocolo arriba
+        │
+        ├── >3 meses → AMR / Rechazo crónico / Nefrotoxicidad CNI
+        │      → Biopsia + DSA cuantitativo + C4d
+        │
+        └── Cualquier momento → Descartar causas no inmunes
+               → IVU, obstrucción, deshidratación, fármacos nefrotóxicos
+```
+        """)
+        st.caption("Ref: Banff Classification 2022 | KDIGO Transplant 2022 | INNSZ Protocolo Rechazo 2024")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
