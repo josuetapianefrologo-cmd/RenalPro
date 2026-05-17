@@ -7807,7 +7807,8 @@ elif nav == "glomerulopatias":
         "🔴 Vasculitis ANCA (MPA/GPA) — KDIGO 2024",
         "🟠 Nefritis Lúpica (LN)",
         "⚡ Enfermedad Anti-MBG (Goodpasture)",
-        "🌀 Glomerulopatía C3 / MPGN",
+        "🌀 MPGN — Algoritmo diagnóstico por patrón de IF",
+        "🌀 Glomerulopatía C3 / C3GN / DDD",
     ], key="gx_sel")
 
     st.divider()
@@ -8024,6 +8025,13 @@ elif nav == "glomerulopatias":
 |--------|-------------|-----------|
 | **① Ciclofosfamida + esteroides** (1ª línea) | Esquema Ponticelli modificado × 6 meses | 1B |
 | **② Rituximab** | Alternativa si no tolera o tiene contraindicación a CYC | 2C |
+
+> ⚠️ **¿Por qué CYC y no rituximab en riesgo muy alto?**
+> El rituximab tiene un efecto antiproteinúrico lento — puede tardar **6–18 meses** en lograr remisión.
+> En SN muy grave (trombosis, AKI superpuesta, infecciones recurrentes, desnutrición severa)
+> ese tiempo puede ser fatal. La ciclofosfamida + esteroides reduce la proteinuria en **semanas**,
+> lo que marca la diferencia en el pronóstico a corto plazo.
+> El rituximab se reserva para quienes no toleran ciclofosfamida (oncológicos, infertilidad, edad >70).
 
 > ⚠️ Si TFG <50 mL/min: reducir dosis de ciclofosfamida a la mitad.
 > Consultar centro de referencia si falla rituximab y CYC.
@@ -8306,11 +8314,214 @@ Mayor puntuación = mayor riesgo de progresión.
         """)
         st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276.")
 
+    # ── MPGN ALGORITMO DIAGNÓSTICO ────────────────────────────────────────────
+    elif "MPGN.*Algoritmo" in gx_sel or "Algoritmo diagnóstico" in gx_sel:
+        st.markdown("### 🌀 MPGN — Algoritmo diagnóstico por patrón de inmunofluorescencia")
+        st.info("""
+**Concepto clave (KDIGO 2021):** MPGN es un **patrón histológico**, no un diagnóstico.
+La inmunofluorescencia (IF) es el pivote diagnóstico que orienta todo el estudio subsecuente.
+Cada causa requiere tratamiento diferente — nunca tratar empíricamente sin clasificar primero.
+        """)
+        st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276. "
+                   "Appel GB et al. CJASN 2021. Smith RJH et al. Nat Rev Nephrol 2019.")
+
+        mp_tab1, mp_tab2, mp_tab3, mp_tab4 = st.tabs([
+            "🔬 Paso 1 — IF biopsia",
+            "🧪 Paso 2 — Estudios según IF",
+            "🔀 Paso 3 — Diagnóstico diferencial",
+            "💊 Paso 4 — Tratamiento por causa",
+        ])
+
+        with mp_tab1:
+            st.markdown("#### Paso 1 — Resultado de inmunofluorescencia en biopsia")
+            st.markdown("""
+La IF clasifica el patrón MPGN en 3 grupos con implicaciones diagnósticas y terapéuticas distintas:
+
+| Patrón IF | Depósitos | Diagnóstico orientado | Prevalencia en adultos |
+|-----------|-----------|----------------------|----------------------|
+| **Inmunocomplejos (IC-MPGN)** | IgG + C3 ± IgM, IgA, C1q | Buscar causa sistémica | 70–80% |
+| **C3 dominante (C3G)** | C3 ≥2 cruces sobre cualquier Ig | Desregulación vía alterna | 15–25% |
+| **Pauci-inmune / sin depósitos** | Sin depósitos significativos | ANCA, TMA, SHU | <5% |
+            """)
+
+            mp_if = st.radio("¿Cuál es el patrón de IF en la biopsia?", [
+                "🟡 Inmunocomplejos (IgG + C3 ± IgM, C1q) — Ig dominante",
+                "🔵 C3 dominante (C3 ≥2 cruces sobre Ig) — patrón C3G",
+                "⬜ Sin depósitos significativos (pauci-inmune)",
+                "❓ Pendiente / no disponible",
+            ], key="mp_if")
+
+            if "Inmunocomplejos" in mp_if:
+                st.warning("""
+**Patrón IC-MPGN → Buscar causa subyacente (orden de prioridad KDIGO 2021):**
+1. **Infección** (VHC, VHB, endocarditis, HIV, otras bacteriemias crónicas)
+2. **Enfermedad autoinmune** (LES, síndrome de Sjögren, artritis reumatoide)
+3. **Gammapatía monoclonal** (obligatorio en >50 años — puede enmascararse en IF rutinaria)
+4. **Crioglobulinemia** (tipos I, II, III)
+5. **Idiopática** — solo si se agotaron todas las anteriores (rara en adultos)
+
+> ⚠️ La GN por IC idiopática es diagnóstico de exclusión en adultos. KDIGO 2021 la considera infrecuente.
+                """)
+            elif "C3 dominante" in mp_if:
+                st.error("""
+**Patrón C3G → Desregulación de vía alterna del complemento:**
+- Excluir primero: infección activa (puede producir patrón C3G transitorio)
+- Si >50 años: excluir gammapatía monoclonal (requiere proteólisis en parafina si IF normal)
+- Iniciar estudio de complemento completo → ver Paso 2
+                """)
+            elif "pauci" in mp_if.lower() or "Sin depósitos" in mp_if:
+                st.error("""
+**Sin depósitos / pauci-inmune con patrón MPGN:**
+- **ANCA** → descartar vasculitis ANCA (MPO, PR3)
+- **TMA / SHU** → SHU atípico, TTP (ADAMTS-13), síndrome antifosfolípido
+- **Lesión isquémica crónica** → revisar historia vascular
+                """)
+
+        with mp_tab2:
+            st.markdown("#### Paso 2 — Estudios complementarios según patrón de IF")
+
+            st.markdown("**🟡 Para IC-MPGN (inmunocomplejos):**")
+            st.markdown("""
+| Estudio | Objetivo | Interpretación |
+|---------|---------|---------------|
+| **VHC** (anti-VHC + PCR RNA) | Causa más frecuente de IC-MPGN en adultos | Positivo → tratar VHC primero |
+| **VHB** (HBsAg, anti-HBc, DNA) | Asociación directa IC-MPGN | Positivo → TARV específico |
+| **Hemocultivos seriados** | Endocarditis bacteriana subaguda | Cultivo + ecocardiografía |
+| **HIV** | Causa IC-MPGN y GESF | TARV si positivo |
+| **ANA, anti-dsDNA, C3, C4** | LES | C3 y C4 bajos en lupus activo |
+| **FR, anti-CCP, crioglobulinas** | AR, Sjögren, crioglobulinemia | Crioglobulinas → tipo I/II/III |
+| **SPEP + inmunofijación sérica y urinaria** | Gammapatía monoclonal | κ/λ ratio libre, cadenas ligeras |
+| **Cadenas ligeras libres séricas** | Mieloma, amiloidosis | Ratio κ/λ anormal |
+| **Biopsia de médula ósea** | Si SPEP anormal o >50 años con IC-MPGN | Hematología |
+            """)
+
+            st.markdown("**🔵 Para C3G (C3 dominante):**")
+            st.markdown("""
+| Estudio | Objetivo | Interpretación |
+|---------|---------|---------------|
+| **C3 sérico** | Vía alterna activa | Bajo en 70–80% de C3G |
+| **C4 sérico** | Vía clásica | Normal en C3G pura; bajo en IC-MPGN |
+| **CH50** (vía clásica total) | Integridad del complemento | Bajo si hay deficiencias |
+| **AP50** (vía alterna) | Activación vía alterna | Bajo o ausente en C3G activa |
+| **Factor H, I, B séricos** | Reguladores de vía alterna | Deficiencia → causa de C3G |
+| **Anti-C3 nefritogénico (C3NeF)** | Autoanticuerpo contra C3bBb | + en 80% DDD, 40–50% C3GN |
+| **Anti-factor H (anti-FH)** | Autoanticuerpo | Tratable con plasmaféresis + IS |
+| **SPEP + inmunofijación** | Gammapatía monoclonal que activa C3G | Excluir en >50 años |
+| **Panel genético complemento** | FH, FI, FHRs, C3, FB | Indicado si <30 años, historia familiar |
+| **Biopsia retiniana / fondo de ojo** | Drusen (C3G crónica) | DDD asociada a lipodistrofia parcial |
+            """)
+
+            # Interactive complement interpretation
+            st.divider()
+            st.markdown("#### 🔢 Interpretación rápida del complemento")
+            ci1, ci2, ci3, ci4 = st.columns(4)
+            with ci1:
+                mp_c3  = st.selectbox("C3 sérico", ["Normal", "Bajo (<85 mg/dL)"], key="mp_c3")
+            with ci2:
+                mp_c4  = st.selectbox("C4 sérico", ["Normal", "Bajo (<16 mg/dL)"], key="mp_c4")
+            with ci3:
+                mp_c3nef = st.selectbox("Anti-C3NeF", ["Negativo", "Positivo"], key="mp_c3nef")
+            with ci4:
+                mp_antifh = st.selectbox("Anti-factor H", ["Negativo", "Positivo"], key="mp_antifh")
+
+            if mp_c3 == "Bajo (<85 mg/dL)" and mp_c4 == "Normal":
+                st.success("🔵 **Vía alterna activada** — Compatible con C3G, infección crónica, o déficit de factor H/I")
+            elif mp_c3 == "Bajo (<85 mg/dL)" and mp_c4 == "Bajo (<16 mg/dL)":
+                st.warning("🟡 **Vías clásica y alterna activadas** — Compatible con IC-MPGN (LES, endocarditis, crioglobulinemia)")
+            elif mp_c3 == "Normal" and mp_c4 == "Normal":
+                st.info("Complemento normal — No descarta C3G. Puede ser proceso intermitente. Repetir en fase activa.")
+
+            if mp_antifh == "Positivo":
+                st.error("⚠️ **Anti-factor H positivo** — C3G mediada por autoanticuerpo. Responde a plasmaféresis + rituximab. Urgente.")
+            if mp_c3nef == "Positivo":
+                st.warning("⚠️ **C3NeF positivo** — Estabiliza C3bBb → consumo continuo de C3. DDD en 80%. MMF puede ser útil.")
+
+        with mp_tab3:
+            st.markdown("#### Paso 3 — Algoritmo diagnóstico integrado")
+            st.markdown("""
+```
+BIOPSIA: Patrón MPGN en microscopía óptica
+                │
+    ┌───────────┴────────────────────┐
+    │                                │
+ IF: IgG + C3 ± C1q            IF: C3 dominante
+ (Inmunocomplejos)              (≥2 cruces sobre Ig)
+    │                                │
+    ├── VHC/VHB/HIV ──► +         ┌──┴──────────────────────┐
+    │   → Tratar infección         │                          │
+    │                           C4 bajo                   C4 normal
+    ├── ANA/dsDNA ──► +            │                          │
+    │   → Lupus class III/IV     Vía clásica               Vía alterna
+    │   (ver módulo LN)          activada                  activada
+    │                           (IC-MPGN                 (C3G verdadera)
+    ├── Crioglobulinas ──► +      enmascarado                  │
+    │   → Crioglobulinemia         como C3G)              ┌───┴─────────────┐
+    │                                  │                  │                 │
+    ├── SPEP/κλ ──► +             Excluir            Anti-FH +        Anti-FH -
+    │   → Gammapatía monoclonal   gammapatía          Plasmaféresis    Anti-C3NeF?
+    │   → Hematología                                 + Rituximab      Panel genético
+    │
+    └── Todo negativo
+        → IC-MPGN IDIOPÁTICA
+          (Rara en adultos — diagnóstico de exclusión)
+          MMF ± prednisona baja dosis
+```
+            """)
+
+            st.markdown("""
+#### Diferencias clave C3GN vs DDD
+| Característica | C3GN | DDD (Dense Deposit Disease) |
+|----------------|------|-----------------------------|
+| IF | C3 mesangial + subendotelial | C3 en lámina densa (intenso) |
+| ME | Depósitos subendoteliales | Densificación lamina densa ("sausage") |
+| Anti-C3NeF | 40–50% | 80% |
+| Lipodistrofia parcial | Raro | 20–30% |
+| Drusen retinianos | Raro | Frecuente |
+| Pronóstico | Moderado | Peor — 50% ESRD a 10 años |
+| Recurrencia post-Tx | 50–70% | >90% |
+            """)
+
+        with mp_tab4:
+            st.markdown("#### Paso 4 — Tratamiento por diagnóstico etiológico")
+            st.markdown("""
+#### IC-MPGN — Tratar la causa subyacente:
+
+| Causa | Tratamiento específico |
+|-------|----------------------|
+| **VHC** | Antivirales de acción directa (DAA) — glefaprevir/pibrentasvir u otros según genotipo |
+| **VHB** | Entecavir o tenofovir (evitar TDF si ERC avanzada — usar TAF) |
+| **Endocarditis** | Antibióticos según cultivo × 6 semanas + reparación valvular si aplica |
+| **HIV** | TARV optimizado — NF puede mejorar con supresión viral |
+| **Lupus** | Ver módulo Nefritis Lúpica |
+| **Crioglobulinemia tipo II/III** | Rituximab 375 mg/m² × 4 sem. Si VHC positivo: DAA + rituximab |
+| **Gammapatía monoclonal** | Tratamiento del clon según hematología (quimioterapia, bortezomib, trasplante autólogo) |
+| **IC-MPGN idiopática** | MMF 1.5–2 g/día ± prednisona 0.5 mg/kg/día. Evidencia limitada (observacional). |
+
+#### C3G — Tratamiento por mecanismo:
+
+| Mecanismo | Tratamiento |
+|-----------|------------|
+| **Anti-factor H** | Plasmaféresis × 5–7 sesiones + rituximab 375 mg/m² × 4 sem (urgente) |
+| **Anti-C3NeF activo con progresión** | MMF 2 g/día ± prednisona. Respuesta parcial en ~50% |
+| **Gammapatía monoclonal** | Tratar el clon → puede mejorar o resolver la C3G |
+| **Mutación genética (FH, FI, FB, C3)** | Soporte: RASi, SGLT2i, control PA. No IS. Eculizumab si progresión rápida |
+| **Idiopática / anti-C3NeF solo** | MMF ± prednisona. Eculizumab off-label en C3G refractaria grave |
+
+> 📌 **Eculizumab en C3G (KDIGO 2021 — 2D):**
+> Evidencia limitada a series de casos. Considerar en: TFG que cae rápido, crescéntica, o
+> refractaria a IS convencional. Respuesta variable — mejor en anti-FH que en C3G genética.
+>
+> 📌 **Soporte universal:** RASi optimizado, control PA <130/80, SGLT2i si proteinuria >0.5 g/día y TFG >20.
+            """)
+            st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276. "
+                       "Appel GB et al. CJASN 2021. Smith RJH et al. Nat Rev Nephrol 2019. "
+                       "Rovin BH et al. Kidney Int 2021. (Eculizumab en C3G).")
+
     # ── GLOMERULOPATÍA C3 / MPGN ──────────────────────────────────────────────
-    else:
-        st.markdown("### 🌀 Glomerulopatía C3 / MPGN")
-        st.info("Grupo de enfermedades mediadas por desregulación del complemento. "
-                "Diagnóstico por IF: depósitos dominantes de C3 (C3G) vs complejos inmunes (MPGN tipo I/III).")
+    elif "C3" in gx_sel or "C3GN" in gx_sel or "DDD" in gx_sel:
+        st.markdown("### 🌀 Glomerulopatía C3 / C3GN / DDD — Vista detallada")
+        st.info("Para el algoritmo diagnóstico completo desde la biopsia, selecciona **'MPGN — Algoritmo diagnóstico'**. "
+                "Esta sección muestra la clasificación y manejo específico de C3G confirmada.")
 
         st.markdown("""
 #### Clasificación actualizada
