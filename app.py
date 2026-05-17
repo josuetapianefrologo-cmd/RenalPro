@@ -8415,100 +8415,291 @@ elif nav == "hiperkalemia":
             """)
 
 elif nav == "hiponatremia":
-    st.subheader("💧 Hiponatremia — Clasificación y Corrección")
-    st.caption("Ref: Spasovski G et al. Eur J Endocrinol 2014 | Verbalis JG et al. Am J Med 2013 | KDIGO AKI 2012")
+    st.subheader("💧 Hiponatremia — Diagnóstico y Corrección")
+    st.caption("Ref: Spasovski G et al. Eur J Endocrinol 2014 | Verbalis JG et al. Am J Med 2013 | Hoorn EJ. Kidney Int 2017")
 
-    hn1, hn2 = st.columns([1, 2])
-    with hn1:
-        hn_na    = st.number_input("Na sérico actual (mEq/L)", 100.0, 135.0, 122.0, 1.0, key="hn_na")
-        hn_peso  = st.number_input("Peso (kg)", 20.0, 200.0, 70.0, 1.0, key="hn_peso")
-        hn_sexo  = st.selectbox("Sexo", ["Masculino", "Femenino", "Adulto mayor H", "Adulto mayor M"], key="hn_sexo")
-        hn_sint  = st.selectbox("Síntomas", [
-            "Asintomático / síntomas leves",
-            "Moderados (náusea, confusión, mareo)",
-            "Severos (convulsiones, coma, paro respiratorio)",
-        ], key="hn_sint")
-        hn_vol   = st.selectbox("Estado de volumen", [
-            "Hipovolémico (mucosas secas, taquicardia, piel turgente ↓)",
-            "Euvolémico (sin edema, sin hipovolemia — sospechar SIADH)",
-            "Hipervolémico (edema, ascitis — IC/cirrosis/síndrome nefrótico)",
-        ], key="hn_vol")
-        hn_osm_u = st.number_input("Osmolalidad urinaria (mOsm/kg) — si disponible", 0.0, 1200.0, 400.0, 10.0, key="hn_osm_u")
-        hn_na_u  = st.number_input("Na urinario (mEq/L) — si disponible", 0.0, 200.0, 60.0, 1.0, key="hn_na_u")
+    hn_tab1, hn_tab2, hn_tab3 = st.tabs(["🔬 Algoritmo diagnóstico", "💊 Tratamiento & Corrección", "📋 Criterios SIADH"])
 
-    with hn2:
-        # Severity
-        if hn_na >= 130:
-            st.success(f"**Na {hn_na:.0f} — Hiponatremia leve**")
-        elif hn_na >= 125:
-            st.warning(f"**Na {hn_na:.0f} — Hiponatremia moderada**")
+    # ── TAB 1 — DIAGNÓSTICO ────────────────────────────────────────────────────
+    with hn_tab1:
+        st.markdown("#### Paso 1 — Datos séricos y osmolalidad plasmática")
+        p1a, p1b, p1c, p1d = st.columns(4)
+        with p1a:
+            hn_na   = st.number_input("Na sérico (mEq/L)", 100.0, 145.0, 122.0, 1.0, key="hn_na")
+        with p1b:
+            hn_glu  = st.number_input("Glucosa (mg/dL)", 50.0, 1000.0, 100.0, 1.0, key="hn_glu")
+        with p1c:
+            hn_bun  = st.number_input("BUN (mg/dL)", 0.0, 200.0, 15.0, 1.0, key="hn_bun")
+        with p1d:
+            hn_posm_med = st.number_input("Osm plasmática medida (mOsm/kg) — si disponible",
+                                          200.0, 400.0, 0.0, 1.0, key="hn_posm_med")
+
+        posm_calc = 2*hn_na + hn_glu/18 + hn_bun/2.8
+        posm_usar = hn_posm_med if hn_posm_med > 200 else posm_calc
+
+        oc1, oc2 = st.columns(2)
+        oc1.metric("Osmolalidad plasmática calculada", f"{posm_calc:.1f} mOsm/kg",
+                   help="2×Na + Glucosa/18 + BUN/2.8")
+        if hn_posm_med > 200:
+            oc2.metric("Osmolalidad medida (en uso)", f"{posm_med:.1f} mOsm/kg")
+
+        # Osmolality classification
+        if posm_usar < 275:
+            st.success(f"**Osm {posm_usar:.1f} — HIPOTÓNICA** → Hiponatremia verdadera. Continúa con el algoritmo ↓")
+            tipo_osm = "hipotonica"
+        elif posm_usar <= 295:
+            st.warning(f"**Osm {posm_usar:.1f} — ISOTÓNICA** → Pseudohiponatremia")
+            tipo_osm = "isotonica"
+            st.info("**Pseudohiponatremia:** hiperproteinemia severa (mieloma múltiple) o hiperlipidemia severa. "
+                    "El Na sérico medido por fotometría de llama es falsamente bajo. "
+                    "Confirmar con gasometría (Na directo por electrodo ion-selectivo).")
         else:
-            st.error(f"**Na {hn_na:.0f} — ⚠️ Hiponatremia severa**")
+            st.error(f"**Osm {posm_usar:.1f} — HIPERTÓNICA** → Hiponatremia translocacional")
+            tipo_osm = "hipertonica"
+            na_corr_glu = hn_na + 1.6 * (hn_glu - 100) / 100
+            st.info(f"**Causa más frecuente: hiperglucemia.** "
+                    f"Na corregido por glucosa: **{na_corr_glu:.1f} mEq/L** "
+                    f"(Katz: +1.6 mEq/L por cada 100 mg/dL de glucosa sobre 100). "
+                    f"Tratar la hiperglucemia — el Na se normalizará.")
 
-        # TBW
-        tbw_factor = {"Masculino": 0.6, "Femenino": 0.5,
-                      "Adulto mayor H": 0.5, "Adulto mayor M": 0.45}[hn_sexo]
-        tbw = tbw_factor * hn_peso
+        if tipo_osm == "hipotonica":
+            st.divider()
+            st.markdown("#### Paso 2 — Estudios urinarios")
+            st.caption("Muestra de orina spot al momento de la evaluación (idealmente antes de iniciar tratamiento)")
+            u1, u2, u3 = st.columns(3)
+            with u1:
+                hn_osm_u = st.number_input("Osmolalidad urinaria (mOsm/kg)", 50.0, 1200.0, 400.0, 10.0, key="hn_osm_u")
+            with u2:
+                hn_na_u  = st.number_input("Na urinario (mEq/L)", 0.0, 200.0, 60.0, 1.0, key="hn_na_u")
+            with u3:
+                hn_k_u   = st.number_input("K urinario (mEq/L) — opcional", 0.0, 200.0, 30.0, 1.0, key="hn_k_u")
 
-        # Correction targets
-        na_target_24h = hn_na + 8   # max 8 mEq/24h (safe)
-        na_target_severe = hn_na + 5  # initial 5 mEq/L for severe symptoms
-        deficit_total = tbw * (na_target_24h - hn_na)
+            st.divider()
+            st.markdown("#### Paso 3 — Estado de volumen (evaluación clínica)")
+            hn_vol = st.radio("Estado de volumen estimado", [
+                "🔻 Hipovolémico — mucosas secas, taquicardia, piel turgente ↓, PVC baja",
+                "⚖️ Euvolémico — sin edema, sin signos de hipovolemia",
+                "🔺 Hipervolémico — edema, ascitis, ingurgitación yugular",
+            ], key="hn_vol")
 
-        st.markdown("#### Objetivos de corrección")
-        tc1, tc2, tc3 = st.columns(3)
-        tc1.metric("Agua corporal total", f"{tbw:.1f} L")
-        tc2.metric("Meta segura 24h", f"+8 mEq/L → Na {na_target_24h:.0f}")
-        tc3.metric("⚠️ Límite máximo 24h", "10–12 mEq/L (riesgo ODS si >12)")
+            st.divider()
+            st.markdown("#### Resultado del algoritmo diagnóstico")
 
-        st.warning("⚠️ **Síndrome de desmielinización osmótica (ODS):** corrección rápida >12 mEq/24h en hiponatremia crónica. Irreversible.")
+            # Diagnostic algorithm
+            if hn_osm_u < 100:
+                st.info("""
+**Osm urinaria <100 → ADH suprimida → POLIDIPSIA / INTOXICACIÓN HÍDRICA**
 
-        # By volume status
-        st.markdown("#### Tratamiento por causa")
-        if "Hipovolémico" in hn_vol:
-            st.markdown(f"""
-**HIPOVOLÉMICO — Reposición de volumen con SSF 0.9%**
-- SSF 0.9% a 1–1.5 mL/kg/h IV
-- El Na sube al corregir la depleción de volumen (ADH suprimida)
-- Monitorear Na c/2–4h — riesgo de sobrecorrección
-- Si Na sube >8 mEq en 24h: dar agua libre (desmopresina 2–4 mcg IV o agua VO) para frenar
-            """)
-        elif "Euvolémico" in hn_vol:
-            # SIADH criteria
-            siadh = hn_osm_u > 100 and hn_na_u > 40
-            if siadh:
-                st.success("✅ Compatible con SIADH (Osm_u >100 + Na_u >40 + euvolemia)")
-            st.markdown(f"""
-**EUVOLÉMICO / SIADH**
-- **1ª línea:** Restricción hídrica 500–800 mL/día
-- **Si síntomas moderados:** NaCl 0.9% + furosemida 20 mg IV (crea pérdida de agua libre)
-- **Tolvaptan** (acuarético): 15 mg VO c/24h — solo si restricción falla y na >125. No usar >30 días ni en hepatopatía.
-- Corregir causa subyacente (hipotiroidismo, insuficiencia adrenal, fármacos)
-            """)
-        else:
-            st.markdown("""
-**HIPERVOLÉMICO (IC / cirrosis / SN)**
-- Restricción hídrica 1–1.5 L/día + restricción de sodio
-- Furosemida IV (diuresis = excreción de agua libre)
-- Tratar la causa subyacente (IC → optimizar tratamiento)
-- Tolvaptan puede considerarse en IC refractaria (EVEREST trial)
-- NO SSF — empeoraría el edema
-            """)
+Causas:
+- Polidipsia psicógena
+- Intoxicación por agua (maratón, MDMA, psicosis)
+- Dieta té y tostadas ("tea and toast" — ancianos)
+- Intoxicación por cerveza (beer potomania)
 
-        # 3% NaCl for severe
-        if "Severos" in hn_sint or hn_na < 120:
-            vol_3pct_1h = round(hn_peso * 1.5, 0)
+**Manejo:** restricción hídrica estricta. No reponer sodio — el riñón lo corregirá solo al restringir agua.
+                """)
+
+            elif "Hipovolémico" in hn_vol:
+                if hn_na_u < 25:
+                    st.warning("""
+**Hipovolémico + Na_u <25 → PÉRDIDAS EXTRARRENALES de sodio**
+
+Causas: vómito prolongado, diarrea, pérdidas por piel (quemaduras, sudoración extrema), 
+secuestro en tercer espacio (pancreatitis, peritonitis)
+
+**Manejo:** SSF 0.9% para reponer volumen → Na sube al corregir la hipovolemia (ADH suprimida).
+Monitorear Na c/2h — riesgo de sobrecorrección rápida.
+                    """)
+                else:
+                    st.warning("""
+**Hipovolémico + Na_u ≥25 → PÉRDIDAS RENALES de sodio**
+
+Causas: diuréticos (tiazídicos > asa), hipoaldosteronismo, insuficiencia adrenal,
+cerebral salt wasting (tras HSA/TCE), tubulopatías (Fanconi, Bartter, Gitelman)
+
+**Manejo:** SSF 0.9%. Considerar fludrocortisona si hipoaldosteronismo.
+Descartar insuficiencia adrenal: cortisol matutino + estimulación con ACTH.
+                    """)
+
+            elif "Euvolémico" in hn_vol:
+                siadh_probable = hn_osm_u > 100 and hn_na_u >= 40
+                if siadh_probable:
+                    st.error("""
+**Euvolémico + Osm_u >100 + Na_u ≥40 → SIADH (más probable)**
+
+Confirmar con criterios completos en la pestaña "📋 Criterios SIADH".
+
+Otras causas a descartar:
+- Hipotiroidismo (TSH)
+- Insuficiencia adrenal (cortisol, ACTH)
+- Fármacos (ISRS, carbamazepina, omeprazol, AINEs, opioides, antipsicóticos)
+- Náusea, dolor, cirugía reciente (ADH no osmótica)
+                    """)
+                else:
+                    st.warning("""
+**Euvolémico + Osm_u <100 → Considerar polidipsia psicógena o hipotiroidismo severo**
+
+Si Osm_u entre 100–300: puede ser SIADH con dilución o uso previo de diuréticos.
+Revisar medicamentos y solicitar TSH, cortisol.
+                    """)
+
+            else:  # Hipervolémico
+                if hn_na_u < 25:
+                    st.error("""
+**Hipervolémico + Na_u <25 → IC, Cirrosis o Síndrome Nefrótico**
+
+El riñón retiene sodio ávidamente (SRAA activado, bajo GC o baja presión oncótica).
+El agua libre se acumula más que el sodio → dilución → hiponatremia.
+
+**Manejo:** restricción hídrica + restricción de sal (<2g/día) + tratar la causa base.
+Diuréticos de asa para reducir sobrecarga. Tolvaptan en IC refractaria (con precaución).
+                    """)
+                else:
+                    st.error("""
+**Hipervolémico + Na_u ≥40 → AKI / ERC avanzada**
+
+El riñón no puede excretar Na ni agua adecuadamente.
+El edema coexiste con retención de agua libre.
+
+**Manejo:** restricción hídrica + restricción de sal.
+Diuréticos de asa IV si diuresis presente. Considerar diálisis si refractario.
+                    """)
+
+    # ── TAB 2 — TRATAMIENTO ────────────────────────────────────────────────────
+    with hn_tab2:
+        st.markdown("#### Datos del paciente")
+        tc1, tc2, tc3, tc4 = st.columns(4)
+        with tc1:
+            hn_na2   = st.number_input("Na actual (mEq/L)", 100.0, 135.0, 122.0, 1.0, key="hn_na2")
+        with tc2:
+            hn_peso2 = st.number_input("Peso (kg)", 20.0, 200.0, 70.0, 1.0, key="hn_peso2")
+        with tc3:
+            hn_sexo2 = st.selectbox("Sexo / grupo", ["Hombre adulto", "Mujer adulta",
+                                                      "Hombre adulto mayor", "Mujer adulta mayor"], key="hn_sexo2")
+        with tc4:
+            hn_sint2 = st.selectbox("Síntomas", [
+                "Asintomático / leves (náusea leve)",
+                "Moderados (náusea, confusión, cefalea)",
+                "Severos (convulsiones, coma, paro respiratorio)",
+            ], key="hn_sint2")
+
+        # TBW and calculations
+        tbw_f = {"Hombre adulto": 0.6, "Mujer adulta": 0.5,
+                 "Hombre adulto mayor": 0.5, "Mujer adulta mayor": 0.45}[hn_sexo2]
+        tbw = tbw_f * hn_peso2
+
+        na_meta_24 = hn_na2 + 8      # safe max
+        na_meta_48 = hn_na2 + 16     # 48h max
+        deficit_8  = tbw * 8         # mEq to gain 8 mEq/L in 24h
+
+        # Vol de SSF 0.9% y NaCl 3% necesarios
+        # SSF 0.9% tiene 154 mEq/L Na
+        # NaCl 3% tiene 513 mEq/L Na
+        # Adrogue-Madias: ΔNa = (Na_infundido - Na_sérico) / (TBW + 1)
+        delta_ssf_1L = (154 - hn_na2) / (tbw + 1)    # mEq/L por litro de SSF
+        delta_3pct_1L = (513 - hn_na2) / (tbw + 1)   # mEq/L por litro de NaCl 3%
+
+        # Volume needed to raise 8 mEq/L
+        vol_ssf_8  = round(8 / delta_ssf_1L, 1) if delta_ssf_1L > 0 else 0
+        vol_3pct_8 = round(8 / delta_3pct_1L, 1) if delta_3pct_1L > 0 else 0
+
+        rv1, rv2, rv3, rv4 = st.columns(4)
+        rv1.metric("Agua corporal total", f"{tbw:.1f} L")
+        rv2.metric("Meta segura 24h", f"Na {na_meta_24:.0f} mEq/L (+8)")
+        rv3.metric("⚠️ Límite absoluto 24h", "≤12 mEq/L (ODS si crónica)")
+        rv4.metric("Meta 48h máxima", f"Na {na_meta_48:.0f} mEq/L (+16)")
+
+        st.warning("⚠️ **Síndrome de desmielinización osmótica (ODS):** irreversible. "
+                   "Riesgo si Na corrige >12 mEq en 24h en hiponatremia crónica (>48h de evolución). "
+                   "Grupos de mayor riesgo: alcoholismo, desnutrición, hipopotasemia.")
+
+        st.divider()
+
+        if "Severos" in hn_sint2:
+            bolo_3pct = round(hn_peso2 * 1.5, 0)
             st.error(f"""
-#### 🚨 NaCl 3% — Síntomas severos o Na <120
-- **Bolo: {vol_3pct_1h:.0f} mL IV** en 20 min (1.5 mL/kg)
-- Repetir hasta mejoría de síntomas o Na sube 5 mEq/L
-- Luego infusión lenta: ajustar para no superar +8 mEq/24h total
-- Na c/2h hasta estabilización
+#### 🚨 Síntomas severos — NaCl 3% URGENTE
+**Bolo inmediato: {bolo_3pct:.0f} mL de NaCl 3% IV en 10–20 minutos**
+Repetir hasta × 3 si persisten los síntomas o Na sube <5 mEq/L
 
-**Preparación NaCl 3%:** 30 mL de ClNa 20% + 70 mL SSF 0.9% = 100 mL de ClNa 3%
+**Meta inicial:** subir Na **5 mEq/L en 1–2h** (resuelve síntomas agudos)
+Luego DETENER o reducir la velocidad para no superar +8 mEq/24h total.
+
+**Preparación de NaCl 3%:**
+30 mL de ClNa 20% + 70 mL de SSF 0.9% = 100 mL de NaCl 3%
             """)
 
-        st.caption("Monitorear Na c/2h primeras 6h, c/4h siguientes 18h. Meta: corrección 6–8 mEq/24h.")
+        st.markdown("#### Cálculo de infusión (Fórmula de Adrogue-Madias)")
+        st.markdown(f"""
+| Solución | ΔNa por litro | Volumen para +8 mEq/L en 24h |
+|----------|---------------|------------------------------|
+| **SSF 0.9%** (154 mEq/L) | +{delta_ssf_1L:.2f} mEq/L | **{vol_ssf_8:.1f} L** en 24h → {vol_ssf_8*1000/24:.0f} mL/h |
+| **NaCl 3%** (513 mEq/L) | +{delta_3pct_1L:.2f} mEq/L | **{vol_3pct_8*1000:.0f} mL** en 24h → {vol_3pct_8*1000/24:.0f} mL/h |
+
+> ⚠️ Monitorear Na sérico c/2h las primeras 6h, c/4h las siguientes 18h.
+> Si Na sube demasiado rápido → agua libre VO o desmopresina 2–4 mcg IV para frenar.
+        """)
+
+        st.markdown("#### Tolvaptan (acuarético V2)")
+        st.info("""
+**Indicación:** SIADH refractaria a restricción hídrica, euvolémico, Na >120 mEq/L
+**Dosis:** 15 mg VO c/24h · titular hasta 30–60 mg si necesario
+**Contraindicaciones:** uso con CYP3A4 fuertes, hepatopatía severa, hipovolemia, necesidad de corregir rápido
+**Precaución:** NO iniciar en hospitalizados sin monitoreo cada 2h primeras 8h — sobrecorrección frecuente
+**Duración:** máximo 30 días continuos
+        """)
+
+    # ── TAB 3 — SIADH ─────────────────────────────────────────────────────────
+    with hn_tab3:
+        st.markdown("### 📋 Criterios diagnósticos de SIADH")
+        st.caption("Verbalis JG et al. Am J Med 2013 | Schwartz WB et al. Am J Med 1957 (criterios originales)")
+
+        st.markdown("#### Criterios esenciales (todos deben cumplirse)")
+        crit = {
+            "Osm plasmática <275 mOsm/kg (hiponatremia hipotónica)": False,
+            "Osm urinaria >100 mOsm/kg (ADH inadecuadamente activa)": False,
+            "Euvolemia clínica (sin signos de hipovolemia ni hipervolemia)": False,
+            "Na urinario ≥40 mEq/L con ingesta normal de sal": False,
+            "Función tiroidea normal (TSH normal)": False,
+            "Función adrenal normal (cortisol normal o estimulación ACTH normal)": False,
+            "Sin uso reciente de diuréticos (o >5 vidas medias sin diurético)": False,
+        }
+        cumplidos = 0
+        for i, (criterio, _) in enumerate(crit.items()):
+            val = st.checkbox(criterio, key=f"siadh_c{i}")
+            if val:
+                cumplidos += 1
+
+        if cumplidos == 7:
+            st.success("✅ **SIADH confirmado** — todos los criterios cumplidos")
+        elif cumplidos >= 5:
+            st.warning(f"⚠️ **SIADH probable** — {cumplidos}/7 criterios. Verificar los pendientes.")
+        else:
+            st.info(f"**{cumplidos}/7 criterios** — Diagnóstico de SIADH no confirmado aún.")
+
+        st.divider()
+        st.markdown("#### Causas de SIADH — clasificación")
+        st.markdown("""
+| Categoría | Causas frecuentes |
+|-----------|-------------------|
+| **SNC** | HSA, ACV isquémico, TCE, meningitis, encefalitis, psicosis |
+| **Pulmonar** | Neumonía, tuberculosis, EPOC exacerbado, ventilación mecánica |
+| **Neoplasias** | Cáncer de pulmón (células pequeñas), páncreas, duodeno, SNC |
+| **Fármacos** | ISRS, carbamazepina, oxcarbazepina, ciclofosfamida, omeprazol, opioides, MDMA |
+| **Postoperatorio** | Dolor, náusea, volumen IV hipotónico excesivo |
+| **Idiopática** | Adultos mayores — diagnóstico de exclusión |
+
+#### Diagnóstico diferencial con insuficiencia adrenal
+| Criterio | SIADH | Insuf. adrenal |
+|----------|-------|----------------|
+| Na urinario | ≥40 mEq/L | ≥40 mEq/L |
+| Osm urinaria | >100 | >100 |
+| K sérico | Normal | ↑ (hiperkalemia) |
+| Cortisol matutino | Normal | <18 μg/dL |
+| Tratamiento | Restricción hídrica | Hidrocortisona |
+        """)
+        st.caption("Ref: Verbalis JG et al. Am J Med 2013;126(10 Suppl 1):S1-42. "
+                   "Hoorn EJ, Zietse R. J Am Soc Nephrol 2017.")
 
 elif nav == "diureticos":
     st.subheader("💊 Diuréticos — Optimización y Resistencia")
