@@ -2068,6 +2068,7 @@ with st.sidebar:
     _navsec("NEFROLOGÍA")
     _navbtn("🔢 Calculadoras Nefro", "nefro")
     _navbtn("💉 Trasplante", "trasplante")
+    _navbtn("🫧 Glomerulopatías", "glomerulopatias")
     _navbtn("🩸 Acceso Vascular", "acceso")
 
     _navsec("DOCUMENTACIÓN")
@@ -7776,6 +7777,535 @@ Creatinina ↑ post-trasplante
 ```
         """)
         st.caption("Ref: Naesens M et al. (Banff 2022). Am J Transplant 2024;24:338–349 | KDIGO Transplant Work Group. Am J Transplant 2009;9 Suppl 3:S1-155")
+
+elif nav == "glomerulopatias":
+    st.subheader("🫧 Glomerulopatías — Diagnóstico y Tratamiento")
+    st.caption("Basado en KDIGO 2021 (Kidney Int 2021;100[4S]:S1-S276) · "
+               "KDIGO 2025 IgAN/IgAV · KDIGO 2024 ANCA (Kidney Int 2024;105[3S]:S71-S116). "
+               "Siempre ajustar a protocolo institucional.")
+
+    gx_sel = st.selectbox("Selecciona la glomerulopatía", [
+        "🔵 Enfermedad de Cambios Mínimos (MCD)",
+        "🔶 GESF — Glomeruloesclerosis Focal y Segmentaria",
+        "🟣 Nefropatía Membranosa (NM / MN)",
+        "🟢 Nefropatía por IgA (IgAN) — KDIGO 2025",
+        "🔴 Vasculitis ANCA (MPA/GPA) — KDIGO 2024",
+        "🟠 Nefritis Lúpica (LN)",
+        "⚡ Enfermedad Anti-MBG (Goodpasture)",
+        "🌀 Glomerulopatía C3 / MPGN",
+    ], key="gx_sel")
+
+    st.divider()
+
+    # ── ENFERMEDAD DE CAMBIOS MÍNIMOS ──────────────────────────────────────────
+    if "Cambios Mínimos" in gx_sel:
+        st.markdown("### 🔵 Enfermedad de Cambios Mínimos (MCD)")
+        st.info("Causa más frecuente de síndrome nefrótico en niños (90%) y en adultos jóvenes (~15–25%). "
+                "Biopsia: fusión de podocitos en MEB, sin depósitos en IF ni MO.")
+
+        mcd_tab1, mcd_tab2, mcd_tab3 = st.tabs(["🔬 Diagnóstico", "💊 Tratamiento", "📊 Monitoreo"])
+
+        with mcd_tab1:
+            st.markdown("""
+#### Criterios diagnósticos KDIGO 2021
+- **Síndrome nefrótico:** proteinuria >3.5 g/día (adultos) + hipoalbuminemia + edema
+- **Biopsia renal:** fusión difusa de pedicelos en MEB, IF negativa o mínima, MO normal
+- **Descartar:** MCD secundaria (AINEs, litio, linfoma Hodgkin, VIH, alergias)
+
+#### Estudio complementario
+| Estudio | Objetivo |
+|---------|---------|
+| Orina 24h o RPCU | Cuantificar proteinuria |
+| Albúmina sérica, colesterol, TG | Severidad del síndrome nefrótico |
+| Complemento (C3/C4) | Normal en MCD — útil para diagnóstico diferencial |
+| Serología: ANA, ANCA, anti-GBM | Descartar glomerulopatías secundarias |
+| Biometría hemática | Descartar linfoma Hodgkin en adultos |
+| Biopsia renal | Indicada en adultos antes de iniciar tratamiento |
+            """)
+
+        with mcd_tab2:
+            st.markdown("#### Tratamiento — KDIGO 2021")
+
+            mcd_peso = st.number_input("Peso (kg)", 20.0, 200.0, 70.0, 1.0, key="mcd_peso")
+            mcd_escen = st.selectbox("Escenario clínico", [
+                "1ª vez (primer episodio)",
+                "Recaída frecuente o dependiente de esteroides",
+                "Resistente a esteroides (sin remisión en 16 semanas)",
+            ], key="mcd_escen")
+
+            pred_dosis = min(1.0 * mcd_peso, 80)
+            if "1ª vez" in mcd_escen:
+                st.markdown(f"""
+**1ª línea: Prednisona**
+- Dosis: **{pred_dosis:.0f} mg/día VO** (1 mg/kg/día, máximo 80 mg)
+- Duración mínima: **16 semanas** (hasta remisión + 4–8 semanas adicionales)
+- Si remisión completa: reducción gradual en 6–12 meses
+
+> 📌 KDIGO 2021: "Sugerimos iniciar prednisona/prednisolona 1 mg/kg/día (máx 80 mg/día) en dosis única matutina." (2D)
+                """)
+            elif "Recaída" in mcd_escen:
+                st.markdown(f"""
+**Recaída infrecuente:** repetir prednisona al mismo esquema.
+
+**Recaída frecuente / Dependiente de esteroides — opciones:**
+| Agente | Dosis | Evidencia KDIGO 2021 |
+|--------|-------|---------------------|
+| **Ciclofosfamida VO** | 2–2.5 mg/kg/día × 8–12 semanas | 2B |
+| **Tacrolimus** | 0.05–0.1 mg/kg/día c/12h (nivel 5–10 ng/mL) | 2C |
+| **Rituximab** | 375 mg/m² × 1–4 dosis | 2C |
+| Micofenolato (MMF) | 1–2 g/día | 2D (menos evidencia) |
+                """)
+            else:
+                st.markdown(f"""
+**Resistente a esteroides (sin remisión en 16 semanas):**
+> 📌 Antes de clasificar como resistente: verificar adherencia y descartar MCD secundaria.
+
+| Agente | Dosis | Evidencia |
+|--------|-------|-----------|
+| **Tacrolimus** | 0.05–0.1 mg/kg/día c/12h × mín. 6–12 meses | 2C |
+| **Ciclosporina** | 4–6 mg/kg/día c/12h | 2C |
+| **Ciclofosfamida IV** | 500–1000 mg/m² mensual × 6 meses | 2C |
+| **Rituximab** | Considerar si falla CNI | 2D |
+
+> ⚠️ Si persiste resistencia, reconsiderar diagnóstico — ¿es realmente MCD o GESF primaria?
+                """)
+
+        with mcd_tab3:
+            st.markdown("""
+#### Monitoreo — KDIGO 2021
+| Frecuencia | Parámetro | Meta |
+|-----------|-----------|------|
+| Semanal × 4 semanas | Proteinuria (tira reactiva o RPCU) | Remisión: <300 mg/día |
+| Mensual | Albúmina, creatinina, presión arterial | Albúmina >3.5 g/dL |
+| c/3 meses | BH, glucosa, densidad ósea si esteroides crónicos | Vigilar efectos adversos |
+| c/6–12 meses | RPCU en remisión | Confirmar remisión sostenida |
+
+**Definiciones de respuesta:**
+- Remisión completa: proteinuria <300 mg/día (o RPCU <0.3)
+- Remisión parcial: reducción ≥50% y proteinuria 300–3,500 mg/día
+- Recaída: proteinuria ≥3.5 g/día después de remisión
+            """)
+            st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276.")
+
+    # ── GESF ───────────────────────────────────────────────────────────────────
+    elif "GESF" in gx_sel:
+        st.markdown("### 🔶 GESF — Glomeruloesclerosis Focal y Segmentaria")
+        st.warning("⚠️ Antes de tratar: descartar GESF secundaria (obesidad, reflujo, VIH, anemia falciforme, uso de heroína). "
+                   "La GESF secundaria NO se trata con inmunosupresión.")
+
+        gesf_tipo = st.selectbox("Tipo de GESF", [
+            "Primaria (idiopática) — síndrome nefrótico clásico",
+            "Secundaria — investigar causa subyacente",
+            "Genética / familiar",
+        ], key="gesf_tipo")
+
+        if "Primaria" in gesf_tipo:
+            st.markdown(f"""
+#### Tratamiento 1ª línea — KDIGO 2021
+**Prednisona:** 1 mg/kg/día (máx 80 mg) × mínimo **16 semanas** antes de clasificar resistencia.
+
+**Si resistente a esteroides:**
+| Opción | Dosis KDIGO 2021 |
+|--------|-----------------|
+| **Tacrolimus (CNI preferido)** | 0.05–0.1 mg/kg/día c/12h (nivel 5–10 ng/mL) × ≥12 meses | 
+| Ciclosporina | 3–5 mg/kg/día c/12h × ≥12 meses |
+| Ciclofosfamida | Solo con esteroides; menos eficaz que CNI en GESF |
+
+> 📌 KDIGO 2021 sugiere CNI como agente preferido en GESF resistente a esteroides (2B).
+> ⚠️ Riesgo de nefrotoxicidad por CNI en uso prolongado: monitorear TFG y niveles.
+            """)
+        elif "Secundaria" in gesf_tipo:
+            st.markdown("""
+#### GESF Secundaria — Manejo KDIGO 2021
+**NO usar inmunosupresión.** El tratamiento es de la causa subyacente:
+| Causa | Manejo |
+|-------|--------|
+| Obesidad | Pérdida de peso >10% reduce proteinuria significativamente |
+| Reflujo nefrovascular | Corrección quirúrgica o médica |
+| VIH | TARV + RASi (tenofovir evitar en ERC avanzada) |
+| Hiperfiltración por nefrona solitaria | RASi + control estricto de PA |
+| Anemia de células falciformes | Hidroxiurea + RASi |
+
+> 📌 RASi: primer pilar en GESF secundaria — reduce proteinuria y progresión.
+            """)
+        else:
+            st.markdown("""
+#### GESF Genética — KDIGO 2021
+- Sospechar en: inicio en infancia/adolescencia, historia familiar, resistencia a esteroides
+- Estudio: panel genético (NPHS1, NPHS2, WT1, TRPC6, INF2, etc.)
+- **No responde a inmunosupresión** — manejo de soporte: RASi, control de PA
+- Referir a centro especializado en nefropatías genéticas
+- Implicaciones para trasplante: riesgo de recurrencia en injerto (GESF primaria >50%; genética <5%)
+            """)
+        st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276.")
+
+    # ── NEFROPATÍA MEMBRANOSA ──────────────────────────────────────────────────
+    elif "Membranosa" in gx_sel:
+        st.markdown("### 🟣 Nefropatía Membranosa (NM / MN)")
+        st.info("70–80% primaria (anti-PLA2R+). 20–30% secundaria (lupus, neoplasia, VHB, fármacos). "
+                "Causa más frecuente de SN en adultos >40 años.")
+
+        nm1, nm2, nm3 = st.tabs(["🔬 Diagnóstico & Riesgo", "💊 Tratamiento", "📊 Monitoreo"])
+
+        with nm1:
+            st.markdown("""
+#### Diagnóstico KDIGO 2021
+- **Biopsia:** engrosamiento de la MBG, depósitos subepiteliales (IF: IgG + C3 granular)
+- **Anti-PLA2R:** positivo en 70–80% NM primaria — sensibilidad 96–100%
+- **Descartar NM secundaria:** ANA, anti-dsDNA (lupus), VHB, VHC, neoplasia (>65 años: cribado)
+
+#### Estratificación de riesgo KDIGO 2021
+            """)
+            nm_prot = st.number_input("Proteinuria (g/día)", 0.0, 30.0, 4.0, 0.5, key="nm_prot")
+            nm_cr = st.number_input("Creatinina sérica (mg/dL)", 0.3, 10.0, 1.0, 0.1, key="nm_cr")
+            nm_pla2r = st.selectbox("Anti-PLA2R", ["Negativo / no disponible", "Positivo bajo (<50 U/mL)", "Positivo alto (≥50 U/mL)"], key="nm_pla2r")
+
+            # Risk stratification KDIGO 2021
+            if nm_prot < 4 and nm_cr < 1.5:
+                riesgo = "BAJO"
+                color_r = "success"
+                plan_r = "Observación 6 meses con RASi. No iniciar inmunosupresión de inmediato."
+            elif nm_prot >= 8 or nm_cr >= 1.5 or "alto" in nm_pla2r:
+                riesgo = "ALTO / MUY ALTO"
+                color_r = "error"
+                plan_r = "Iniciar tratamiento inmunosupresor. No esperar."
+            else:
+                riesgo = "MODERADO"
+                color_r = "warning"
+                plan_r = "Período de observación 6 meses con RASi. Iniciar IS si no mejora."
+
+            getattr(st, color_r)(f"**Riesgo: {riesgo}** — {plan_r}")
+
+        with nm2:
+            st.markdown("""
+#### Tratamiento KDIGO 2021
+> 📌 **Cambio mayor vs 2012:** Rituximab ahora es la 1ª línea preferida sobre ciclofosfamida.
+
+| | Riesgo Bajo | Riesgo Moderado | Riesgo Alto/Muy Alto |
+|--|-------------|-----------------|---------------------|
+| **Observación** | 6 meses con RASi | 6 meses con RASi → IS si no mejora | No — iniciar IS |
+| **1ª línea IS** | — | Rituximab | **Rituximab** |
+| **Alternativa** | — | CNI (tacrolimus) | Ciclofosfamida + esteroides (esquema Ponticelli) |
+
+**Rituximab (1ª línea recomendada — KDIGO 2021):**
+- 375 mg/m² IV × 4 semanas (protocolo clásico)
+- O: 1 g IV × 2 dosis (día 1 y día 15) — protocolo alternativo
+- Evaluar respuesta de PLA2R a los 3 meses (antes de proteinuria)
+
+**Esquema Ponticelli modificado (si se elige ciclofosfamida):**
+- Meses 1, 3, 5: Metilprednisolona 1 g IV × 3 días → prednisona 0.5 mg/kg/día × 27 días
+- Meses 2, 4, 6: Ciclofosfamida 2.5 mg/kg/día VO × 30 días
+            """)
+
+        with nm3:
+            st.markdown("""
+#### Monitoreo KDIGO 2021
+| Momento | Parámetro | Objetivo |
+|---------|-----------|---------|
+| c/3 meses | Anti-PLA2R, proteinuria, creatinina | PLA2R cae antes que proteinuria |
+| c/6 meses | Proteinuria 24h, albúmina, C3/C4 | Remisión: <0.3 g/día (completa) |
+| Anual si estable | Creatinina, TFG, proteinuria | Preservar función renal |
+
+**Definiciones de respuesta:**
+- Remisión completa: proteinuria <0.3 g/día + albumina normal
+- Remisión parcial: proteinuria <3.5 g/día + reducción ≥50%
+- Tiempo para evaluar respuesta: **mínimo 6 meses** (rituximab puede tardar hasta 18m)
+            """)
+            st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276. "
+                       "Rovin BH et al. (MENTOR trial). NEJM 2019.")
+
+    # ── NEFROPATÍA IgA ────────────────────────────────────────────────────────
+    elif "IgA" in gx_sel:
+        st.markdown("### 🟢 Nefropatía por IgA (IgAN) — KDIGO 2025")
+        st.info("Glomerulopatía primaria más frecuente a nivel mundial. "
+                "Diagnóstico definitivo por biopsia: depósitos mesangiales de IgA en IF.")
+
+        igan1, igan2, igan3 = st.tabs(["📊 Riesgo KDIGO 2025", "💊 Tratamiento", "📖 Estudio"])
+
+        with igan1:
+            st.markdown("#### Calculadora de riesgo de progresión")
+            ig1, ig2 = st.columns(2)
+            with ig1:
+                igan_egfr = st.number_input("TFG estimada (mL/min/1.73m²)", 5.0, 120.0, 60.0, 1.0, key="igan_egfr")
+                igan_prot = st.number_input("Proteinuria (g/día)", 0.0, 15.0, 1.0, 0.1, key="igan_prot")
+                igan_hta  = st.checkbox("Hipertensión arterial", key="igan_hta")
+            with ig2:
+                igan_hematuria = st.checkbox("Hematuria macroscópica episódica", key="igan_hem")
+                igan_mest = st.multiselect("MEST-C (hallazgos de biopsia disponibles)",
+                    ["M1 (hipercelularidad mesangial)", "E1 (hipercelularidad endocapilar)",
+                     "S1 (esclerosis segmentaria)", "T1/T2 (atrofia tubular >25%)",
+                     "C1/C2 (semilunas)"], key="igan_mest")
+
+            # Risk classification KDIGO 2025
+            puntos = 0
+            if igan_egfr < 60: puntos += 2
+            elif igan_egfr < 90: puntos += 1
+            if igan_prot >= 1.0: puntos += 2
+            elif igan_prot >= 0.5: puntos += 1
+            if igan_hta: puntos += 1
+            if any("T1" in m or "T2" in m for m in igan_mest): puntos += 1
+            if any("C1" in m or "C2" in m for m in igan_mest): puntos += 1
+
+            if puntos <= 1:
+                st.success("🟢 **Riesgo BAJO** — Manejo conservador. RASi optimizado. Seguimiento.")
+                riesgo_igan = "bajo"
+            elif puntos <= 3:
+                st.warning("🟡 **Riesgo MODERADO** — Optimizar RASi. Considerar SGLT2i. Seguimiento estrecho.")
+                riesgo_igan = "moderado"
+            else:
+                st.error("🔴 **Riesgo ALTO** — Tratamiento activo recomendado. RASi + SGLT2i + considerar sparsentan o budesonida.")
+                riesgo_igan = "alto"
+
+            st.caption("Clasificación orientativa basada en factores de riesgo KDIGO 2025. "
+                       "No reemplaza el juicio clínico completo.")
+
+        with igan2:
+            st.markdown("#### Tratamiento por nivel de riesgo — KDIGO 2025")
+            st.markdown("""
+#### Base para TODOS los pacientes:
+- **RASi (IECAs o ARA-II):** optimizar hasta dosis máxima tolerada — meta PA <130/80 mmHg
+- **Dieta baja en sodio**, control de peso, no fumar
+
+#### Pacientes en RIESGO de progresión (KDIGO 2025):
+| Agente | Recomendación | Evidencia |
+|--------|--------------|-----------|
+| **SGLT2i** (empagliflozin, dapagliflozin) | Recomendado para riesgo de progresión | 2B |
+| **Sparsentan** 400 mg/día VO | SUSTITUYE al RASi (no se combina) | 2B |
+| **Budesonida MR (Nefecon®)** 16 mg/día VO × 9 meses | Si proteinuria persistente ≥1 g/día con RASi optimizado | 2B |
+
+> ⚠️ **Sparsentan:** aprobado FDA sept 2024 / EMA abril 2024. Reemplaza al RASi, no se suma.
+> No usar sparsentan + SGLT2i + RASi simultáneamente sin supervisión especializada.
+
+#### Glucocorticoides sistémicos (KDIGO 2025):
+- Solo si proteinuria persistente ≥1 g/día con RASi + SGLT2i optimizados Y TFG >30
+- Considerar riesgo de efectos adversos (infección, diabetes, osteoporosis)
+- Ciclo: prednisona 0.5–1 mg/kg/día con reducción gradual en 6 meses
+
+#### IgAN de progresión rápida (crescéntica):
+- Ciclofosfamida + glucocorticoides (como vasculitis ANCA — KDIGO 2025)
+            """)
+
+        with igan3:
+            st.markdown("""
+#### Estudio diagnóstico
+| Prueba | Objetivo |
+|--------|---------|
+| Biopsia renal | MEST-C score (diagnóstico definitivo) |
+| IgA sérica | Elevada en ~50% — inespecífico |
+| Complemento C3/C4 | Normal en IgAN primaria |
+| Anti-PLA2R, ANA, ANCA | Diagnóstico diferencial |
+| RPCU / proteinuria 24h | Cuantificar y estratificar |
+
+**MEST-C Score:**
+M (mesangial) · E (endocapilar) · S (esclerosis) · T (atrofia tubular) · C (semilunas)
+Mayor puntuación = mayor riesgo de progresión.
+            """)
+            st.caption("Ref: KDIGO IgAN/IgAV Work Group. Kidney Int. 2025. "
+                       "(Basado en draft público KDIGO 2024 — publicación final 2025). "
+                       "PROTECT trial: Heerspink HJL et al. NEJM 2023. "
+                       "NefIgArd trial: Barratt J et al. NEJM 2023.")
+
+    # ── VASCULITIS ANCA ────────────────────────────────────────────────────────
+    elif "ANCA" in gx_sel:
+        st.markdown("### 🔴 Vasculitis ANCA-Asociada (MPA / GPA) — KDIGO 2024")
+        st.error("⚠️ **EMERGENCIA NEFROLÓGICA.** No esperar biopsia para iniciar tratamiento si hay deterioro rápido "
+                 "y ANCA positivo con clínica compatible.")
+
+        anc1, anc2, anc3 = st.tabs(["🔬 Diagnóstico", "💊 Tratamiento", "🔄 Mantenimiento"])
+
+        with anc1:
+            st.markdown("""
+#### Diagnóstico KDIGO 2024
+| Estudio | Hallazgo |
+|---------|---------|
+| **ANCA-MPO (p-ANCA)** | MPA — 60–70% |
+| **ANCA-PR3 (c-ANCA)** | GPA — 65–75% |
+| **Biopsia renal** | GN necrotizante pauci-inmune ± semilunas |
+| Creatinina, orina | Sedimento nefrítico, cilindros eritrocitarios |
+| Rx/TC tórax | Hemorragia pulmonar, nódulos (GPA) |
+| Complemento C3/C4 | Normal (pauci-inmune — sin depósitos) |
+
+> 📌 KDIGO 2024: No retrasar IS por biopsia si clínica + ANCA+ y deterioro rápido.
+            """)
+
+        with anc2:
+            st.markdown("""
+#### Inducción — KDIGO 2024
+| Agente | Dosis | Evidencia |
+|--------|-------|-----------|
+| **Rituximab (1ª línea)** | 375 mg/m² × 4 semanas O 1g × 2 (d1, d15) | 1B |
+| **Ciclofosfamida IV** | 15 mg/kg c/2 semanas × 3, luego c/3 semanas × 3–6 | 1B |
+| **Glucocorticoides** | Metilprednisolona 1–3 g IV × 3 días → prednisona 1 mg/kg/día (reducción en 5–6 meses) | — |
+| **Avacopan** | 30 mg c/12h VO — sustitución parcial o total de GC | 2B |
+
+> 📌 **Avacopan (KDIGO 2024):** inhibidor del receptor C5a. Aprobado FDA/EMA 2021.
+> Puede reemplazar glucocorticoides orales en pacientes con alto riesgo de efectos adversos.
+> ADVOCATE trial: no inferioridad vs prednisona + superior en remisión sostenida.
+
+**Plasmaféresis (PEXIVAS 2020):**
+> ⚠️ KDIGO 2024 ya NO recomienda plasmaféresis de rutina.
+> Solo considerar en: hemorragia alveolar severa o Cr >6 mg/dL con posibilidad de recuperación.
+            """)
+
+        with anc3:
+            st.markdown("""
+#### Mantenimiento — KDIGO 2024
+| Agente | Dosis | Duración |
+|--------|-------|---------|
+| **Rituximab (preferido)** | 500 mg IV c/6 meses | Mínimo 18–24 meses |
+| Azatioprina | 2 mg/kg/día VO | Hasta 18–24 meses post-remisión |
+| Micofenolato | 1–2 g/día | Alternativa a azatioprina |
+
+**Monitoreo de recaída:**
+- ANCA persiste positivo o títulos aumentan → mayor riesgo de recaída
+- Creatinina + orina c/1–3 meses durante mantenimiento
+- No suspender mantenimiento abruptamente
+            """)
+            st.caption("Ref: KDIGO ANCA Vasculitis Work Group. Kidney Int. 2024;105(3S):S71-S116. "
+                       "ADVOCATE trial: Jayne DRW et al. NEJM 2021. "
+                       "PEXIVAS trial: Walsh M et al. NEJM 2020.")
+
+    # ── NEFRITIS LÚPICA ────────────────────────────────────────────────────────
+    elif "Lúpica" in gx_sel:
+        st.markdown("### 🟠 Nefritis Lúpica (LN)")
+
+        ln1, ln2 = st.tabs(["📋 Clasificación ISN/RPS", "💊 Tratamiento por clase"])
+
+        with ln1:
+            st.markdown("""
+#### Clasificación ISN/RPS 2003 (revisión 2018)
+| Clase | Histología | Implicación |
+|-------|-----------|-------------|
+| **I** | Mesangial mínima | No requiere IS específica |
+| **II** | Mesangial proliferativa | Tratar la extra-renal |
+| **III** | Focal (<50% glomérulos) | Requiere IS |
+| **IV** | Difusa (≥50% glomérulos) | IS agresiva — peor pronóstico |
+| **V** | Membranosa | SN — tratamiento según proteinuria |
+| **VI** | Esclerosis avanzada (>90%) | Preparar para TRS |
+
+> La clase III y IV pueden coexistir con V (III+V o IV+V).
+            """)
+            ln_clase = st.selectbox("Clase histológica", ["III", "IV", "III+V", "IV+V", "V", "I-II"], key="ln_clase")
+
+        with ln2:
+            tratamientos_ln = {
+                "III": {
+                    "induccion": "Micofenolato (MMF) 2–3 g/día VO + prednisona 0.5–1 mg/kg/día",
+                    "alternativa": "Ciclofosfamida IV bajas dosis (Euro-Lupus) 500 mg c/2 semanas × 6",
+                    "mantenimiento": "MMF 1–2 g/día o Azatioprina 2 mg/kg/día",
+                    "duracion": "Inducción 6 meses → mantenimiento ≥3 años",
+                },
+                "IV": {
+                    "induccion": "MMF 3 g/día VO + prednisona 1 mg/kg/día (máx 80 mg)\nO ciclofosfamida IV bajas dosis (Euro-Lupus)",
+                    "alternativa": "Ciclofosfamida IV altas dosis (NIH) 0.5–1 g/m² mensual × 6",
+                    "mantenimiento": "MMF 2 g/día o Azatioprina 2 mg/kg/día",
+                    "duracion": "Inducción 6 meses → mantenimiento ≥3 años",
+                },
+                "V": {
+                    "induccion": "Si proteinuria nefrótica: MMF 2–3 g/día ± prednisona\nVoclosporin (donde disponible): 23.7 mg c/12h añadir a MMF",
+                    "alternativa": "CNI (tacrolimus) + MMF + prednisona (triple terapia)",
+                    "mantenimiento": "MMF 1–2 g/día ± dosis baja de prednisona",
+                    "duracion": "≥ 2 años de mantenimiento",
+                },
+            }
+            datos = tratamientos_ln.get(ln_clase.split("+")[0],
+                      {"induccion": "Manejo de enfermedad extrarrenal y control de PA",
+                       "alternativa": "RASi si proteinuria presente",
+                       "mantenimiento": "Sin IS renal específica en clase I/II",
+                       "duracion": "Seguimiento cada 3–6 meses"})
+
+            st.markdown(f"""
+**Clase {ln_clase} — Tratamiento KDIGO 2021:**
+
+**Inducción:**
+{datos['induccion']}
+
+**Alternativa:**
+{datos['alternativa']}
+
+**Mantenimiento:**
+{datos['mantenimiento']}
+
+**Duración:**
+{datos['duracion']}
+
+**Adicional para todos:**
+- Hidroxicloroquina 200–400 mg/día (nefroprotector — continuar siempre)
+- Belimumab puede añadirse a terapia estándar (BLISS-LN trial — KDIGO 2021)
+- RASi si proteinuria >0.5 g/día
+- Meta PA: <130/80 mmHg
+            """)
+            st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276. "
+                       "BLISS-LN trial: Furie R et al. NEJM 2020.")
+
+    # ── ANTI-MBG ──────────────────────────────────────────────────────────────
+    elif "Anti-MBG" in gx_sel:
+        st.markdown("### ⚡ Enfermedad Anti-MBG (Síndrome de Goodpasture)")
+        st.error("🚨 **EMERGENCIA NEFROLÓGICA.** Requiere diagnóstico y tratamiento dentro de las primeras horas. "
+                 "Riesgo de pérdida irreversible de función renal y hemorragia alveolar fatal.")
+
+        st.markdown("""
+#### Diagnóstico
+- **Anti-MBG** (anti-colágeno IV α3) sérico — sensibilidad ~95%
+- **Biopsia renal:** GN crescéntica con depósitos lineales de IgG en MBF (IF)
+- TC tórax: hemorragia alveolar (hasta 40–60% de casos — síndrome pulmón-riñón)
+- Descartar: ANCA co-positivo (~30% doble positivos — peor pronóstico)
+
+#### Tratamiento de emergencia — KDIGO 2021
+| Componente | Protocolo |
+|-----------|---------|
+| **Plasmaféresis** | 4L/sesión c/día × 14 días o hasta anti-MBG negativo |
+| **Ciclofosfamida VO** | 2–3 mg/kg/día × 3 meses (ajustar por edad y función renal) |
+| **Prednisona** | 1 mg/kg/día (máx 60–80 mg) → reducción progresiva en 6 meses |
+| **Pulsos MP** | Metilprednisolona 500–1000 mg IV × 3 días si afección pulmonar severa |
+
+> ⚠️ Si creatinina >6 mg/dL al diagnóstico con oligoanuria: probabilidad de recuperación muy baja.
+> Continuar tratamiento por posible componente pulmonar — la diálisis no contraindica el tratamiento.
+
+#### Pronóstico
+- Cr <6 mg/dL al inicio: ~90% independencia de diálisis
+- Cr >6 mg/dL + anuria: ~10% independencia de diálisis
+- Hemorragia alveolar masiva: mortalidad 25–50% sin tratamiento urgente
+        """)
+        st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276.")
+
+    # ── GLOMERULOPATÍA C3 / MPGN ──────────────────────────────────────────────
+    else:
+        st.markdown("### 🌀 Glomerulopatía C3 / MPGN")
+        st.info("Grupo de enfermedades mediadas por desregulación del complemento. "
+                "Diagnóstico por IF: depósitos dominantes de C3 (C3G) vs complejos inmunes (MPGN tipo I/III).")
+
+        st.markdown("""
+#### Clasificación actualizada
+| Entidad | IF | MO | Mecanismo |
+|---------|----|----|-----------|
+| **C3G — GN C3** | C3 dominante (IF3+) | Patrón MPGN | Desregulación vía alterna |
+| **C3G — Enfermedad de depósitos densos (DDD)** | C3 dominante | Densificación de lámina densa | Mutación/anticuerpo factor H |
+| **MPGN tipo I (inmunocomplejos)** | IgG + C3 + C1q | Patrón MPGN | Complejos inmunes — buscar causa |
+
+#### Estudio complementario — KDIGO 2021
+| Prueba | Objetivo |
+|--------|---------|
+| Complemento (C3, C4, CH50, AP50) | C3 bajo ± C4 normal → vía alterna |
+| Factor H, I, B | Deficiencias del complemento |
+| Anti-C3 nefritogénico (anti-C3Nef) | Positivo en DDD 80%, GN C3 40–50% |
+| Anticuerpos anti-factor H | Causa tratable con IS |
+| Electroforesis proteínas + inmunofijación | Gammapatía monoclonal en adultos |
+| Genética del complemento | Si < 30 años o historia familiar |
+
+#### Tratamiento — KDIGO 2021
+| Situación | Manejo |
+|-----------|--------|
+| **Gammapatía monoclonal** (adultos >50a) | Tratar la discrasia de células plasmáticas |
+| **Anti-factor H** | Plasmaféresis + IS (rituximab o prednisona) |
+| **Deficiencia genética** | Soporte conservador, RASi |
+| **Progresión activa** | MMF 2 g/día ± prednisona baja dosis (evidencia limitada) |
+| **Eculizumab** | Considerar en C3G con DDD severa o progresión rápida (off-label, evidencia 2D) |
+
+> 📌 No hay ensayos clínicos aleatorizados de alta calidad en C3G. La evidencia es principalmente observacional.
+        """)
+        st.caption("Ref: KDIGO Glomerular Diseases Work Group. Kidney Int. 2021;100(4S):S1-S276. "
+                   "Smith RJH et al. Nat Rev Nephrol. 2019.")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
