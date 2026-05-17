@@ -618,13 +618,13 @@ section[data-testid="stSidebar"]{display:none!important;}
     st.markdown("""
 <div style="text-align:center;padding:36px 0 16px 0;">
   <div style="font-size:56px;font-weight:900;color:#fff;letter-spacing:-3px;line-height:1;">
-    TRRC<span style="font-size:28px;vertical-align:super;font-weight:700;letter-spacing:0;">360</span>
+    RenalPro
   </div>
   <div style="color:rgba(255,255,255,0.85);font-size:16px;font-weight:500;margin-top:8px;">
     Plataforma Clínica de Nefrología
   </div>
   <div style="color:rgba(255,255,255,0.55);font-size:12px;margin-top:4px;">
-    TRRC · HD · Citrato · Plasmaféresis · Scores UCI
+    TRRC · Nefrología · Trasplante · Guardia
   </div>
 </div>""", unsafe_allow_html=True)
 
@@ -1980,7 +1980,7 @@ st.markdown(f"""
         min-width: 90px;
     ">
         <div style="font-size:26px; font-weight:900; color:#FFFFFF; letter-spacing:-1px; line-height:1;">
-            TRRC<span style="font-size:14px; vertical-align:super; font-weight:700;">360</span>
+            RenalPro
         </div>
         <div style="font-size:9px; color:rgba(255,255,255,0.75); font-weight:600; letter-spacing:0.08em; margin-top:2px;">
             NEFROLOGÍA
@@ -1991,7 +1991,7 @@ st.markdown(f"""
             Plataforma Clínica de Nefrología
         </div>
         <div style="font-size:12px; color:rgba(255,255,255,0.75); margin-top:4px; font-weight:500;">
-            Prescripción TRRC · Citrato · HD · Plasmaféresis · Scores UCI
+            TRRC · Nefrología · Trasplante · Guardia
         </div>
         <div style="font-size:10px; color:rgba(255,255,255,0.50); margin-top:3px;">
             Dr. Josué Tapia · León, Gto. · {VERSION} · Uso académico
@@ -2074,7 +2074,7 @@ with st.sidebar:
     _navsec("NEFROLOGÍA")
     _navbtn("🔢 Calculadoras Nefro", "nefro")
     _navbtn("💉 Trasplante", "trasplante")
-    _navbtn("🫧 Glomerulopatías", "glomerulopatias")
+    _navbtn("🔵 Glomerulopatías", "glomerulopatias")
     _navbtn("🩸 Acceso Vascular", "acceso")
 
     _navsec("DOCUMENTACIÓN")
@@ -2096,6 +2096,15 @@ with st.sidebar:
 
 # ─── NAVEGACIÓN: variable de control ──────────────────────────────────────────
 nav = st.session_state.get("nav_sel", "presc")
+
+# ── Variables globales TRRC — leídas de session_state (definidas en módulo Prescripción) ──
+# Todos los módulos que usen estos valores los toman de aquí
+peso      = float(st.session_state.get("sb_peso", 70.0))
+hto       = float(st.session_state.get("sb_hto", 0.30))
+qb        = int(st.session_state.get("sb_qb", 200))
+uf        = int(st.session_state.get("sb_uf", 100))
+dosis_mlkg = int(st.session_state.get("sb_dosis", 30))
+escenarios = list(st.session_state.get("sb_escenarios", ["Sepsis / choque séptico"]))
 
 
 
@@ -7785,7 +7794,7 @@ Creatinina ↑ post-trasplante
         st.caption("Ref: Naesens M et al. (Banff 2022). Am J Transplant 2024;24:338–349 | KDIGO Transplant Work Group. Am J Transplant 2009;9 Suppl 3:S1-155")
 
 elif nav == "glomerulopatias":
-    st.subheader("🫧 Glomerulopatías — Diagnóstico y Tratamiento")
+    st.subheader("🔵 Glomerulopatías — Diagnóstico y Tratamiento")
     st.caption("Basado en KDIGO 2021 (Kidney Int 2021;100[4S]:S1-S276) · "
                "KDIGO 2025 IgAN/IgAV · KDIGO 2024 ANCA (Kidney Int 2024;105[3S]:S71-S116). "
                "Siempre ajustar a protocolo institucional.")
@@ -7984,23 +7993,45 @@ elif nav == "glomerulopatias":
 
         with nm2:
             st.markdown("""
-#### Tratamiento KDIGO 2021
-> 📌 **Cambio mayor vs 2012:** Rituximab ahora es la 1ª línea preferida sobre ciclofosfamida.
+#### Tratamiento por nivel de riesgo — KDIGO 2021
+> 📌 **Cambio mayor vs 2012:** Rituximab es ahora tratamiento de primera línea para riesgo moderado y alto.
+> La observación de 6 meses sigue siendo válida en riesgo bajo y moderado (remisión espontánea ~30%).
 
-| | Riesgo Bajo | Riesgo Moderado | Riesgo Alto/Muy Alto |
-|--|-------------|-----------------|---------------------|
-| **Observación** | 6 meses con RASi | 6 meses con RASi → IS si no mejora | No — iniciar IS |
-| **1ª línea IS** | — | Rituximab | **Rituximab** |
-| **Alternativa** | — | CNI (tacrolimus) | Ciclofosfamida + esteroides (esquema Ponticelli) |
+#### 🟢 Riesgo BAJO
+- Solo manejo conservador: RASi (IECA/ARA-II) optimizado, control de PA <125/75 mmHg
+- **NO iniciar inmunosupresión**
+- Reevaluar c/3–6 meses
 
-**Rituximab (1ª línea recomendada — KDIGO 2021):**
-- 375 mg/m² IV × 4 semanas (protocolo clásico)
-- O: 1 g IV × 2 dosis (día 1 y día 15) — protocolo alternativo
-- Evaluar respuesta de PLA2R a los 3 meses (antes de proteinuria)
+#### 🟡 Riesgo MODERADO — 3 opciones paralelas válidas (KDIGO 2021):
+| Opción | Descripción | Evidencia |
+|--------|-------------|-----------|
+| **① Observación 6 meses** | Watchful waiting con RASi — remisión espontánea en ~30% | 2C |
+| **② Rituximab** | 375 mg/m² × 4 semanas **o** 1g × 2 (día 1 y 15) | 2C |
+| **③ CNI monotherapy** | Tacrolimus 0.05–0.1 mg/kg/día o ciclosporina 4–6 mg/kg/día · solo si TFG normal | 2C |
 
-**Esquema Ponticelli modificado (si se elige ciclofosfamida):**
-- Meses 1, 3, 5: Metilprednisolona 1 g IV × 3 días → prednisona 0.5 mg/kg/día × 27 días
-- Meses 2, 4, 6: Ciclofosfamida 2.5 mg/kg/día VO × 30 días
+> Si se elige observación y no hay mejoría a los 6 meses → iniciar rituximab o CNI.
+> CNI acorta período de proteinuria pero tiene alta tasa de recaída (40–50%) al suspender.
+
+#### 🔴 Riesgo ALTO — iniciar tratamiento activo:
+| Opción | Descripción | Evidencia |
+|--------|-------------|-----------|
+| **① Rituximab (preferido)** | 375 mg/m² × 4 semanas **o** 1g × 2 | 2B |
+| **② CNI → + Rituximab** | CNI × 6 meses → agregar rituximab si no hay respuesta (excepto si PLA2R desapareció) | 2C |
+| **③ Ciclofosfamida + esteroides** | Esquema Ponticelli alternado × 6 meses | 2B |
+
+#### 🚨 Riesgo MUY ALTO / SN amenazante de vida:
+| Opción | Descripción | Evidencia |
+|--------|-------------|-----------|
+| **① Ciclofosfamida + esteroides** (1ª línea) | Esquema Ponticelli modificado × 6 meses | 1B |
+| **② Rituximab** | Alternativa si no tolera o tiene contraindicación a CYC | 2C |
+
+> ⚠️ Si TFG <50 mL/min: reducir dosis de ciclofosfamida a la mitad.
+> Consultar centro de referencia si falla rituximab y CYC.
+
+**Esquema Ponticelli modificado:**
+- Meses 1, 3, 5: Metilprednisolona 1g IV × 3 días → Prednisona 0.5 mg/kg/día × 27 días
+- Meses 2, 4, 6: Ciclofosfamida VO 2.5 mg/kg/día × 30 días
+- Dosis acumulada máxima CYC: 36g (preservar fertilidad: máx 10g)
             """)
 
         with nm3:
@@ -8753,12 +8784,14 @@ Agregar un diurético de segmento diferente al asa:
 | Nivel tubular | Agente | Dosis | Nota |
 |--------------|--------|-------|------|
 | **Túbulo proximal** | **Acetazolamida 500 mg IV** | 1 vez antes de furosemida | ADVOR 2022: superior a placebo en descongestión |
-| **TDC / TCD** | **Metolazona 5–10 mg VO** | 30–60 min antes de furosemida | Eficaz incluso con TFG <30 |
+| **TDC / TCD** | **Metolazona 5–10 mg VO** | 30–60 min antes de furosemida | Eficaz incluso con TFG <30 — preferida en ERC |
+| | **Clortalidona 25–100 mg VO** | c/24h | Acción larga (24–72h) — mejor que HCT en TFG 15–45 |
 | | Hidroclorotiazida 25–50 mg | VO c/12h | Menos eficaz con TFG <30 |
-| **Colector** | Espironolactona 25–100 mg | VO c/24h | Útil en cirrosis, IC |
+| **Colector** | Espironolactona 25–100 mg | VO c/24h | Útil en cirrosis, IC con hiperaldosteronismo |
 | | Amilorida 5–10 mg | VO c/12h | Alternativa sin acción hormonal |
 
 > 📌 **ADVOR trial (NEJM 2022):** acetazolamida 500 mg IV + furosemida IV fue superior a placebo en descongestión en IC descompensada.
+> 📌 Clortalidona mantiene eficacia con TFG 15–45 y tiene duración de acción más larga que metolazona — útil en ERC moderada.
             """)
 
         st.markdown("#### Infusión continua de furosemida")
@@ -8786,100 +8819,206 @@ Evidencia del DOSE trial (NEJM 2011): infusión continua = bolos intermitentes e
 
 elif nav == "contraste":
     st.subheader("🔬 Prevención de AKI por Contraste (CA-AKI)")
-    st.caption("Ref: Weisbord SD et al. (PRESERVE trial) NEJM 2018 | ACR Manual on Contrast Media 2023 | KDIGO AKI 2012")
+    st.caption("Ref: Weisbord SD et al. (PRESERVE trial) NEJM 2018 | Mehran R et al. JACC 2004 | ACR Manual on Contrast Media 2023 | KDIGO AKI 2012")
 
-    st.info("""
-**Terminología actualizada:** CA-AKI (Contrast-Associated AKI) reemplaza al término "nefropatía por contraste" (CIN).
-El contraste IV tiene menor riesgo de lo anteriormente pensado; el contraste intra-arterial tiene mayor riesgo.
-    """)
+    st.info("**Terminología actualizada:** CA-AKI (Contrast-Associated AKI) reemplaza 'nefropatía por contraste' (CIN). "
+            "El contraste IV tiene menor riesgo de lo antes estimado; el contraste intra-arterial tiene mayor riesgo.")
 
-    ct1, ct2 = st.columns([1, 2])
-    with ct1:
-        ct_egfr  = st.number_input("TFG estimada (mL/min/1.73m²)", 5.0, 120.0, 45.0, 1.0, key="ct_egfr")
-        ct_cr    = st.number_input("Creatinina basal (mg/dL)", 0.5, 15.0, 1.5, 0.1, key="ct_cr")
-        ct_dm    = st.checkbox("Diabetes mellitus", key="ct_dm")
-        ct_ic    = st.checkbox("Insuficiencia cardíaca", key="ct_ic")
-        ct_via   = st.selectbox("Vía de administración del contraste", [
-            "Intravenosa (TAC, uro-TC)",
-            "Intra-arterial 1ª circulación (aortografía, coronaria)",
-            "Intra-arterial 2ª circulación (arteriografía periférica)",
-        ], key="ct_via")
-        ct_vol   = st.number_input("Volumen de contraste planeado (mL)", 50.0, 400.0, 100.0, 10.0, key="ct_vol")
+    ca_tab1, ca_tab2, ca_tab3 = st.tabs(["📊 Riesgo & Estratificación", "💧 Protocolo de prevención", "📋 Mehran Score (post-ICP)"])
 
-    with ct2:
+    with ca_tab1:
+        st.markdown("#### Datos del paciente — TFG automática (CKD-EPI 2021)")
+        ca1, ca2, ca3, ca4 = st.columns(4)
+        with ca1:
+            ca_cr   = st.number_input("Creatinina basal (mg/dL)", 0.3, 15.0, 1.5, 0.1, key="ca_cr")
+            ca_edad = st.number_input("Edad (años)", 18, 100, 65, 1, key="ca_edad")
+        with ca2:
+            ca_sexo = st.selectbox("Sexo biológico", ["Masculino", "Femenino"], key="ca_sexo")
+            ca_dm   = st.checkbox("Diabetes mellitus", key="ca_dm")
+        with ca3:
+            ca_ic   = st.checkbox("Insuficiencia cardíaca", key="ca_ic")
+            ca_via  = st.selectbox("Vía del contraste", [
+                "Intravenosa (TAC, uro-TC, angio-TC)",
+                "Intra-arterial 1ª circulación (coronaria, aortografía)",
+                "Intra-arterial 2ª circulación (arteriografía periférica)",
+            ], key="ca_via")
+        with ca4:
+            ca_vol  = st.number_input("Volumen de contraste (mL)", 50.0, 400.0, 100.0, 10.0, key="ca_vol")
+
+        # CKD-EPI 2021 calculation (race-free)
+        kappa = 0.7 if ca_sexo == "Femenino" else 0.9
+        alpha = -0.241 if ca_sexo == "Femenino" else -0.302
+        sexo_f = 1.012 if ca_sexo == "Femenino" else 1.0
+        cr_kappa = ca_cr / kappa
+        if cr_kappa < 1:
+            egfr_ckdepi = 142 * (cr_kappa ** alpha) * (0.9938 ** ca_edad) * sexo_f
+        else:
+            egfr_ckdepi = 142 * (cr_kappa ** -1.200) * (0.9938 ** ca_edad) * sexo_f
+
+        ratio_vol_egfr = ca_vol / egfr_ckdepi if egfr_ckdepi > 0 else 99
+
+        eg1, eg2, eg3 = st.columns(3)
+        eg1.metric("TFG CKD-EPI 2021", f"{egfr_ckdepi:.1f} mL/min/1.73m²")
+        eg2.metric("Ratio Volumen/TFG", f"{ratio_vol_egfr:.1f}",
+                   delta="⚠️ Alto si >3.7" if ratio_vol_egfr > 3.7 else "✅ Aceptable (<3.7)")
+        # ERC stage
+        if egfr_ckdepi >= 60:
+            eg3.metric("Estadio ERC", "G1–G2 (bajo riesgo basal)")
+        elif egfr_ckdepi >= 45:
+            eg3.metric("Estadio ERC", "G3a (riesgo moderado)")
+        elif egfr_ckdepi >= 30:
+            eg3.metric("Estadio ERC", "G3b (riesgo alto)")
+        else:
+            eg3.metric("Estadio ERC", "G4–G5 (riesgo muy alto)")
+
         # Risk stratification
         riesgo_pts = 0
-        if ct_egfr < 30: riesgo_pts += 3
-        elif ct_egfr < 45: riesgo_pts += 2
-        elif ct_egfr < 60: riesgo_pts += 1
-        if ct_dm: riesgo_pts += 1
-        if ct_ic: riesgo_pts += 1
-        if "Intra-arterial 1ª" in ct_via: riesgo_pts += 2
-        ratio_vol_egfr = ct_vol / ct_egfr if ct_egfr > 0 else 99
+        if egfr_ckdepi < 30: riesgo_pts += 3
+        elif egfr_ckdepi < 45: riesgo_pts += 2
+        elif egfr_ckdepi < 60: riesgo_pts += 1
+        if ca_dm: riesgo_pts += 1
+        if ca_ic: riesgo_pts += 1
+        if "Intra-arterial 1ª" in ca_via: riesgo_pts += 2
+        elif "Intra-arterial 2ª" in ca_via: riesgo_pts += 1
         if ratio_vol_egfr > 3.7: riesgo_pts += 1
 
         if riesgo_pts <= 1:
-            st.success(f"**Riesgo BAJO de CA-AKI** — Hidratación estándar suficiente")
-            riesgo_ca = "bajo"
+            st.success("**Riesgo BAJO de CA-AKI** — Hidratación oral suficiente en la mayoría")
         elif riesgo_pts <= 3:
-            st.warning(f"**Riesgo MODERADO de CA-AKI** — Hidratación IV obligatoria")
-            riesgo_ca = "moderado"
+            st.warning("**Riesgo MODERADO de CA-AKI** — Hidratación IV obligatoria")
         else:
-            st.error(f"**Riesgo ALTO de CA-AKI** — Hidratación IV + optimización de protocolo")
-            riesgo_ca = "alto"
+            st.error("**Riesgo ALTO de CA-AKI** — Hidratación IV + optimización completa del protocolo")
 
-        # Volume/eGFR ratio
-        st.metric("Ratio Volumen/TFG", f"{ratio_vol_egfr:.1f}",
-                  delta="⚠️ Alto riesgo si >3.7" if ratio_vol_egfr > 3.7 else "✅ Adecuado (<3.7)")
+    with ca_tab2:
+        st.markdown("#### Protocolo de prevención según TFG")
 
-        st.markdown("#### Protocolo de hidratación")
-        if ct_egfr >= 45 and riesgo_ca == "bajo":
-            st.markdown("""
-**TFG ≥45 + riesgo bajo:** hidratación oral suficiente
-- Beber ≥500 mL agua 2h antes del procedimiento
-- Hidratación IV no necesaria de rutina (ACR 2023)
-            """)
-        else:
-            pre_vol  = round(ct_peso if 'ct_peso' in dir() else 70 * 1.0, 0)
+        if egfr_ckdepi >= 45:
             st.markdown(f"""
-**Hidratación IV con SSF 0.9% (protocolo estándar):**
-- **Pre-procedimiento:** SSF 0.9% a **1 mL/kg/h × 6–12h** antes
-- **Post-procedimiento:** SSF 0.9% a **1 mL/kg/h × 6h** después
-- Para procedimientos urgentes: 3 mL/kg/h × 1h pre + 1 mL/kg/h × 6h post
-
-> 📌 **PRESERVE trial (NEJM 2018):** SSF 0.9% = bicarbonato en prevención de CA-AKI.
-> N-acetilcisteína NO mostró beneficio vs placebo — **no recomendada de rutina** (PRESERVE 2018).
+**TFG {egfr_ckdepi:.0f} ≥45 mL/min — Riesgo bajo:**
+- Hidratación oral ≥500 mL agua 2h antes del procedimiento
+- Hidratación IV no necesaria de rutina (ACR 2023)
+- Evitar deshidratación el día del estudio
+            """)
+        else:
+            st.markdown(f"""
+**TFG {egfr_ckdepi:.0f} <45 mL/min — Hidratación IV con SSF 0.9%:**
+- **Pre-procedimiento:** 1 mL/kg/h × 6–12h antes
+- **Post-procedimiento:** 1 mL/kg/h × 6h después
+- Procedimiento urgente: 3 mL/kg/h × 1h pre + 1 mL/kg/h × 6h post
             """)
 
-        st.markdown("#### Medidas adicionales")
         st.markdown("""
+#### Medidas universales
 | Medida | Recomendación | Evidencia |
 |--------|--------------|-----------|
-| **Contraste iso-osmolar o low-osmolar** | Preferir siempre (evitar alto-osmolar) | Fuerte |
-| **Minimizar volumen de contraste** | Meta: volumen/TFG <3.7 | Fuerte |
-| **Suspender metformina** | 48h antes si TFG <60 (riesgo acidosis láctica) | Moderada |
+| **Contraste iso/low-osmolar** | Siempre — evitar alto-osmolar | Fuerte |
+| **Minimizar volumen** | Meta ratio Volumen/TFG <3.7 | Fuerte |
+| **Suspender metformina** | 48h antes si TFG <60 (acidosis láctica) | Moderada |
 | **Suspender AINEs** | 24–48h antes | Moderada |
 | **Suspender aminoglucósidos** | Si es posible | Moderada |
-| **N-acetilcisteína** | ❌ Sin beneficio demostrado (PRESERVE 2018) | No recomendada |
-| **Bicarbonato IV** | No superior a SSF (PRESERVE 2018) | No recomendado |
-| **Hemodiálisis post-contraste** | ❌ No previene CA-AKI — no indicado | No recomendado |
+| **N-acetilcisteína** | ❌ Sin beneficio — PRESERVE 2018 | No recomendada |
+| **Bicarbonato IV** | ❌ No superior a SSF — PRESERVE 2018 | No recomendado |
+| **HD post-contraste profiláctica** | ❌ No previene CA-AKI | No recomendada |
         """)
 
-        if ct_egfr < 30:
-            st.error("""
-**TFG <30 — Consideraciones especiales:**
-- Balance estricto del riesgo vs beneficio del estudio con contraste
-- Si TFG <15 o diálisis: el riesgo de CA-AKI es irrelevante (ya requieren TRS) — SE PUEDE usar contraste
-- Preferir estudio alternativo sin contraste si la información diagnóstica es equivalente
-- Si se usa: hidratación IV + monitoreo de creatinina 24–48h post
+        if egfr_ckdepi < 30:
+            st.error(f"""
+**TFG {egfr_ckdepi:.0f} <30 mL/min — Consideraciones especiales:**
+- Balance riesgo/beneficio antes de usar contraste yodado
+- TFG <15 o diálisis: el contraste no empeora la función renal (ya no la tienen) — SE PUEDE usar
+- Preferir alternativa sin contraste si la información diagnóstica es equivalente
+- Monitoreo de creatinina 24h y 48h post-procedimiento
             """)
 
         st.markdown("#### Monitoreo post-procedimiento")
         st.markdown("""
-- Creatinina sérica a las **24h y 48h** post-contraste en pacientes de riesgo
-- Definición CA-AKI: Cr sube ≥0.3 mg/dL o ≥50% en 48h post-contraste
-- Si CA-AKI: suspender nefrotóxicos, optimizar hidratación, monitoreo estrecho
+- Creatinina a las **24h y 48h** en pacientes con TFG <60 o factores de riesgo
+- **Definición CA-AKI:** Cr sube ≥0.3 mg/dL o ≥50% en 48h post-contraste
+- Si CA-AKI: suspender nefrotóxicos, hidratación IV, monitoreo estrecho, considerar nefrología
         """)
+
+    with ca_tab3:
+        st.markdown("### 📋 Score de Mehran — Riesgo de nefropatía post-ICP")
+        st.caption("Mehran R et al. JACC 2004. Desarrollado específicamente para procedimientos coronarios percutáneos.")
+
+        st.markdown("Selecciona los factores de riesgo presentes:")
+        m1, m2 = st.columns(2)
+        with m1:
+            m_hipo  = st.checkbox("Hipotensión (PAS <80 mmHg >1h o soporte inotrópico)", key="m_hipo")   # 5 pts
+            m_bcia  = st.checkbox("Balón de contrapulsación intraaórtico (BCIA)", key="m_bcia")             # 5 pts
+            m_ic    = st.checkbox("Insuficiencia cardíaca (NYHA III–IV o historia de EAP)", key="m_ic")     # 5 pts
+            m_edad  = st.checkbox("Edad >75 años", key="m_edad")                                            # 4 pts
+            m_dm    = st.checkbox("Diabetes mellitus", key="m_dm")                                          # 3 pts
+        with m2:
+            m_cr    = st.number_input("Creatinina basal (mg/dL)", 0.3, 15.0, 1.2, 0.1, key="m_cr")
+            m_egfr  = st.number_input("TFG estimada (mL/min/1.73m²)", 5.0, 120.0,
+                                      float(egfr_ckdepi), 1.0, key="m_egfr")
+            m_hto   = st.number_input("Hematocrito (%)", 20.0, 60.0, 42.0, 1.0, key="m_hto")
+            m_sexo2 = st.selectbox("Sexo", ["Masculino", "Femenino"], key="m_sexo2")
+            m_vol   = st.number_input("Volumen de contraste (mL)", 50.0, 400.0, 150.0, 10.0, key="m_vol")
+
+        # Mehran score calculation
+        score = 0
+        if m_hipo: score += 5
+        if m_bcia: score += 5
+        if m_ic:   score += 5
+        if m_edad: score += 4
+        if m_dm:   score += 3
+
+        # Hematocrit (anemia)
+        umbral_hto = 39 if m_sexo2 == "Masculino" else 36
+        if m_hto < umbral_hto:
+            score += 3
+            hto_flag = f"✅ Hto <{umbral_hto}% → +3 pts (anemia)"
+        else:
+            hto_flag = f"Hto {m_hto:.0f}% (normal para {m_sexo2.lower()})"
+
+        # Creatinine / eGFR points
+        if m_egfr < 20:    score += 6
+        elif m_egfr < 40:  score += 4
+        elif m_egfr < 60:  score += 2
+        # Creatinine >1.5 mg/dL adds 4 pts (independent of eGFR in original Mehran)
+        if m_cr > 1.5:     score += 4
+
+        # Contrast volume (per 100 mL)
+        vol_pts = int(m_vol / 100)
+        score += vol_pts
+
+        # Display score
+        st.divider()
+        sc1, sc2, sc3 = st.columns(3)
+        sc1.metric("Score de Mehran", str(score))
+
+        if score <= 5:
+            sc2.metric("Riesgo CA-AKI", "~7.5%", delta="Bajo")
+            sc3.metric("Riesgo diálisis", "~0.04%")
+            st.success("Riesgo BAJO — Hidratación estándar")
+        elif score <= 10:
+            sc2.metric("Riesgo CA-AKI", "~14%", delta="Moderado")
+            sc3.metric("Riesgo diálisis", "~0.12%")
+            st.warning("Riesgo MODERADO — Hidratación IV obligatoria")
+        elif score <= 15:
+            sc2.metric("Riesgo CA-AKI", "~26%", delta="Alto")
+            sc3.metric("Riesgo diálisis", "~1.09%")
+            st.error("Riesgo ALTO — Hidratación IV + minimizar contraste")
+        else:
+            sc2.metric("Riesgo CA-AKI", "~57%", delta="Muy alto")
+            sc3.metric("Riesgo diálisis", "~12.6%")
+            st.error("Riesgo MUY ALTO — Considerar alternativa al contraste")
+
+        st.markdown(f"""
+**Desglose del score:**
+- Hipotensión/soporte inotrópico: {5 if m_hipo else 0} pts
+- BCIA: {5 if m_bcia else 0} pts
+- IC / NYHA III-IV / EAP: {5 if m_ic else 0} pts
+- Edad >75: {4 if m_edad else 0} pts
+- Diabetes: {3 if m_dm else 0} pts
+- {hto_flag}
+- TFG {m_egfr:.0f}: {6 if m_egfr<20 else 4 if m_egfr<40 else 2 if m_egfr<60 else 0} pts
+- Cr >{1.5} mg/dL: {4 if m_cr>1.5 else 0} pts
+- Volumen contraste ({m_vol:.0f} mL): {vol_pts} pts (1 pt/100 mL)
+        """)
+        st.caption("Ref: Mehran R et al. A simple risk score for prediction of contrast-induced nephropathy. JACC 2004;44(7):1393-1399.")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
