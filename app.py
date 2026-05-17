@@ -2074,6 +2074,7 @@ with st.sidebar:
     _navsec("NEFROLOGÍA")
     _navbtn("🔢 Calculadoras Nefro", "nefro")
     _navbtn("💉 Trasplante", "trasplante")
+    _navbtn("🦠 Infecciones Tx", "infecciones_tx")
     _navbtn("🔵 Glomerulopatías", "glomerulopatias")
     _navbtn("🩸 Acceso Vascular", "acceso")
 
@@ -9589,147 +9590,638 @@ elif nav == "expediente":
 
 elif nav == "receta":
     # ══════════════════════════════════════════════════════════════════════════
-    # RECETA MÉDICA — generada desde el perfil del médico + registro clínico
+    # RECETA MÉDICA — PDF profesional con reportlab
     # ══════════════════════════════════════════════════════════════════════════
-    st.subheader("📄 Receta Médica")
+    st.subheader("📄 Receta Médica — PDF Profesional")
 
     if not _is_auth():
         st.warning("Inicia sesión para generar recetas.")
     else:
-        # Datos del médico desde perfil
-        dr_nombre  = st.session_state.get("sess_nombre","")
-        dr_cedula  = st.session_state.get("sess_cedula","")
-        dr_univ    = st.session_state.get("sess_universidad","")
-        dr_esp     = st.session_state.get("sess_especialidad","")
-        dr_inst    = st.session_state.get("sess_institucion","")
+        dr_nombre = st.session_state.get("sess_nombre","")
+        dr_cedula = st.session_state.get("sess_cedula","")
+        dr_univ   = st.session_state.get("sess_universidad","")
+        dr_esp    = st.session_state.get("sess_especialidad","")
+        dr_inst   = st.session_state.get("sess_institucion","")
 
         if not dr_nombre or not dr_cedula:
-            st.warning("⚠️ Tu perfil está incompleto. Ve a **👤 Mi Cuenta** y agrega tu nombre y cédula profesional antes de generar recetas.")
-            if st.button("Ir a Mi Cuenta →"):
-                st.session_state["nav_sel"] = "micuenta"
-                st.rerun()
+            st.warning("⚠️ Perfil incompleto. Ve a **👤 Mi Cuenta** y agrega tu nombre y cédula antes de generar recetas.")
+            if st.button("→ Ir a Mi Cuenta", key="btn_goto_mc"):
+                st.session_state["nav_sel"] = "micuenta"; st.rerun()
         else:
-            # Datos del paciente (desde expediente o manual)
             pac_data = st.session_state.get("receta_pac", {})
             rec_data = st.session_state.get("receta_rec", {})
 
-            st.markdown("### Datos del paciente")
-            rx1, rx2, rx3 = st.columns(3)
-            with rx1:
-                rx_nombre = st.text_input("Nombre del paciente", value=pac_data.get("nombre",""), key="rx_nombre")
-                rx_edad   = st.text_input("Edad", value=str(pac_data.get("edad","")) if pac_data.get("edad") else "", key="rx_edad")
-            with rx2:
-                rx_exp    = st.text_input("N° expediente", value=pac_data.get("expediente",""), key="rx_exp")
-                rx_sexo   = st.text_input("Sexo", value=pac_data.get("sexo",""), key="rx_sexo")
-            with rx3:
-                rx_fecha  = st.date_input("Fecha", key="rx_fecha")
-                rx_dx     = st.text_input("Diagnóstico", value=pac_data.get("diagnostico",""), key="rx_dx")
+            col_rx1, col_rx2 = st.columns([1, 1])
+            with col_rx1:
+                st.markdown("#### Datos del paciente")
+                rx_nombre = st.text_input("Nombre del paciente",  value=pac_data.get("nombre",""), key="rx_nombre")
+                rx_exp    = st.text_input("N° Expediente",        value=pac_data.get("expediente",""), key="rx_exp")
+                rx_edad   = st.text_input("Edad",                 value=str(pac_data.get("edad","")) if pac_data.get("edad") else "", key="rx_edad")
+                rx_sexo   = st.text_input("Sexo",                 value=pac_data.get("sexo",""), key="rx_sexo")
+                rx_fecha  = st.date_input("Fecha de consulta",    key="rx_fecha")
+                rx_dx     = st.text_input("Diagnóstico",          value=pac_data.get("diagnostico",""), key="rx_dx")
 
-            st.markdown("### Indicaciones / Prescripción")
-            rx_body = st.text_area("Escribe las indicaciones médicas aquí", height=200,
-                                   value=rec_data.get("resumen","") if rec_data else "",
-                                   key="rx_body",
-                                   placeholder="Ej:\n1. Tacrolimus 2 mg c/12h VO\n2. MMF 500 mg c/12h VO\n3. Prednisona 10 mg c/24h VO\n4. Omeprazol 20 mg c/24h VO\n5. Control con niveles de tacrolimus en 7 días")
-            rx_notas = st.text_input("Nota adicional / próxima cita", key="rx_notas",
-                                     placeholder="Ej: Próxima cita en 7 días con niveles de tacrolimus")
+            with col_rx2:
+                st.markdown("#### Indicaciones médicas")
+                rx_body = st.text_area("Indicaciones / prescripción", height=220,
+                                       value=rec_data.get("resumen","") if rec_data else "",
+                                       key="rx_body",
+                                       placeholder="1. Tacrolimus 2 mg c/12h VO\n2. MMF 500 mg c/12h VO\n3. Prednisona 10 mg c/24h VO")
+                rx_notas = st.text_input("Próxima cita / nota", key="rx_notas",
+                                         placeholder="Próxima cita en 7 días con niveles de tacrolimus")
+                rx_firma = st.text_input("Lugar de expedición (aparece en firma)",
+                                         value=dr_inst.split(",")[0] if dr_inst else "",
+                                         key="rx_firma")
 
+            # ── GENERADOR PDF ──────────────────────────────────────────────
+            def _generar_receta_pdf(dr_nombre, dr_cedula, dr_univ, dr_esp, dr_inst,
+                                    rx_nombre, rx_exp, rx_edad, rx_sexo, rx_fecha,
+                                    rx_dx, rx_body, rx_notas, rx_firma):
+                import io
+                from reportlab.lib.pagesizes import letter
+                from reportlab.lib.units import cm
+                from reportlab.lib.colors import HexColor, white, black
+                from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                                Table, TableStyle, HRFlowable)
+                from reportlab.lib.styles import ParagraphStyle
+                from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+
+                buf = io.BytesIO()
+                doc = SimpleDocTemplate(buf, pagesize=letter,
+                                        leftMargin=2*cm, rightMargin=2*cm,
+                                        topMargin=2*cm, bottomMargin=2*cm)
+
+                AZUL       = HexColor("#1E3A8A")
+                AZUL_CLARO = HexColor("#DBEAFE")
+                GRIS       = HexColor("#6B7280")
+                GRIS_L     = HexColor("#F3F4F6")
+
+                def estilo(name, **kw):
+                    base = ParagraphStyle(name, fontName="Helvetica",
+                                         fontSize=10, leading=14,
+                                         textColor=black, **kw)
+                    return base
+
+                EST_TITULO  = estilo("titulo",  fontName="Helvetica-Bold",
+                                     fontSize=14, textColor=AZUL, spaceAfter=2)
+                EST_SUB     = estilo("sub",     fontName="Helvetica",
+                                     fontSize=9,  textColor=GRIS, spaceAfter=1)
+                EST_CUERPO  = estilo("cuerpo",  fontSize=10, leading=16, spaceAfter=4)
+                EST_SMALL   = estilo("small",   fontSize=8,  textColor=GRIS)
+                EST_RX      = estilo("rx",      fontName="Helvetica-Bold",
+                                     fontSize=28, textColor=AZUL, spaceAfter=4)
+                EST_LABEL   = estilo("label",   fontName="Helvetica-Bold",
+                                     fontSize=8,  textColor=AZUL)
+                EST_VALUE   = estilo("value",   fontSize=9,  textColor=black)
+                EST_CENTER  = estilo("center",  fontSize=8,  textColor=GRIS,
+                                     alignment=TA_CENTER)
+
+                story = []
+
+                # ── ENCABEZADO ────────────────────────────────────────────
+                header_data = [[
+                    Paragraph(f"<b>{dr_nombre}</b>", EST_TITULO),
+                    Paragraph(f"<b>Cédula Prof.:</b> {dr_cedula}", EST_VALUE),
+                ],[
+                    Paragraph(dr_esp, EST_SUB),
+                    Paragraph(dr_univ, EST_SUB),
+                ],[
+                    Paragraph(dr_inst, EST_SUB),
+                    Paragraph("", EST_SUB),
+                ]]
+                t_header = Table(header_data, colWidths=[10*cm, 7*cm])
+                t_header.setStyle(TableStyle([
+                    ("BACKGROUND",  (0,0), (-1,0), AZUL_CLARO),
+                    ("ROWBACKGROUNDS", (0,0), (-1,-1), [AZUL_CLARO, white, white]),
+                    ("TOPPADDING",  (0,0), (-1,-1), 6),
+                    ("BOTTOMPADDING",(0,0),(-1,-1), 6),
+                    ("LEFTPADDING", (0,0), (-1,-1), 8),
+                    ("BOX",         (0,0), (-1,-1), 1.5, AZUL),
+                    ("LINEABOVE",   (0,0), (-1,0),  2,   AZUL),
+                ]))
+                story.append(t_header)
+                story.append(Spacer(1, 0.4*cm))
+
+                # ── DATOS DEL PACIENTE ────────────────────────────────────
+                story.append(HRFlowable(width="100%", thickness=1, color=AZUL_CLARO))
+                story.append(Spacer(1, 0.2*cm))
+
+                pac_data_rows = [[
+                    Paragraph("<b>Paciente:</b>", EST_LABEL),
+                    Paragraph(rx_nombre or "_____________________", EST_VALUE),
+                    Paragraph("<b>Expediente:</b>", EST_LABEL),
+                    Paragraph(rx_exp or "___________", EST_VALUE),
+                ],[
+                    Paragraph("<b>Edad:</b>", EST_LABEL),
+                    Paragraph(f"{rx_edad} años" if rx_edad else "______", EST_VALUE),
+                    Paragraph("<b>Sexo:</b>", EST_LABEL),
+                    Paragraph(rx_sexo or "______", EST_VALUE),
+                ],[
+                    Paragraph("<b>Fecha:</b>", EST_LABEL),
+                    Paragraph(str(rx_fecha), EST_VALUE),
+                    Paragraph("<b>Diagnóstico:</b>", EST_LABEL),
+                    Paragraph(rx_dx or "______________________________", EST_VALUE),
+                ]]
+                t_pac = Table(pac_data_rows, colWidths=[2.5*cm, 7*cm, 2.5*cm, 5*cm])
+                t_pac.setStyle(TableStyle([
+                    ("TOPPADDING",   (0,0), (-1,-1), 4),
+                    ("BOTTOMPADDING",(0,0), (-1,-1), 4),
+                    ("LEFTPADDING",  (0,0), (-1,-1), 4),
+                    ("BACKGROUND",   (0,0), (-1,-1), GRIS_L),
+                    ("ROWBACKGROUNDS",(0,0),(-1,-1), [GRIS_L, white]),
+                    ("BOX",          (0,0), (-1,-1), 0.5, GRIS),
+                    ("LINEAFTER",    (1,0), (1,-1), 0.5, GRIS),
+                ]))
+                story.append(t_pac)
+                story.append(Spacer(1, 0.5*cm))
+
+                # ── SÍMBOLO ℞ Y CUERPO DE INDICACIONES ───────────────────
+                story.append(Paragraph("&#x211E;", EST_RX))
+
+                # Split body by lines preserving numbering
+                lineas = rx_body.strip().split("\n") if rx_body.strip() else ["_" * 60]
+                for linea in lineas:
+                    story.append(Paragraph(linea if linea.strip() else " ", EST_CUERPO))
+                story.append(Spacer(1, 0.3*cm))
+
+                if rx_notas:
+                    story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS))
+                    story.append(Spacer(1, 0.2*cm))
+                    story.append(Paragraph(rx_notas, EST_SMALL))
+
+                story.append(Spacer(1, 1.5*cm))
+
+                # ── FIRMA ─────────────────────────────────────────────────
+                firma_data = [[
+                    "",
+                    Paragraph("_" * 35, EST_CUERPO),
+                ],[
+                    "",
+                    Paragraph(f"<b>{dr_nombre}</b>", EST_VALUE),
+                ],[
+                    "",
+                    Paragraph(f"Cédula: {dr_cedula} | {rx_firma}", EST_SMALL),
+                ]]
+                t_firma = Table(firma_data, colWidths=[8*cm, 9*cm])
+                t_firma.setStyle(TableStyle([
+                    ("TOPPADDING",   (0,0), (-1,-1), 2),
+                    ("BOTTOMPADDING",(0,0), (-1,-1), 2),
+                    ("ALIGN",        (1,0), (1,-1), "CENTER"),
+                    ("LINEABOVE",    (1,1), (1,1), 1, black),
+                ]))
+                story.append(t_firma)
+                story.append(Spacer(1, 0.5*cm))
+
+                # ── PIE DE PÁGINA ─────────────────────────────────────────
+                story.append(HRFlowable(width="100%", thickness=0.5, color=AZUL_CLARO))
+                story.append(Spacer(1, 0.2*cm))
+                story.append(Paragraph(
+                    f"Generado por RenalPro v3.1.0 | {dr_inst} | "
+                    "Uso académico y clínico — Documento válido con firma del médico tratante",
+                    EST_CENTER))
+
+                doc.build(story)
+                buf.seek(0)
+                return buf.read()
+
+            # ── BOTÓN GENERAR ──────────────────────────────────────────────
             st.divider()
-
-            # Preview de la receta
-            st.markdown("### Vista previa")
-            receta_html = f"""
-<div style="border:2px solid #1E3A8A;border-radius:12px;padding:24px;background:#fff;
-     font-family:'Times New Roman',serif;max-width:600px;margin:0 auto;
-     box-shadow:0 4px 16px rgba(0,0,0,0.1);">
-
-  <!-- Header -->
-  <div style="border-bottom:2px solid #1E3A8A;padding-bottom:12px;margin-bottom:16px;">
-    <div style="font-size:18px;font-weight:bold;color:#1E3A8A;">{dr_nombre}</div>
-    <div style="font-size:13px;color:#374151;">{dr_esp}</div>
-    <div style="font-size:12px;color:#6B7280;">Cédula Profesional: {dr_cedula}</div>
-    <div style="font-size:12px;color:#6B7280;">Universidad: {dr_univ}</div>
-    <div style="font-size:12px;color:#6B7280;">{dr_inst}</div>
-  </div>
-
-  <!-- Datos del paciente -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:16px;font-size:13px;">
-    <div><b>Paciente:</b> {rx_nombre or '_______________'}</div>
-    <div><b>Expediente:</b> {rx_exp or '_______________'}</div>
-    <div><b>Edad:</b> {rx_edad or '___'} años &nbsp; <b>Sexo:</b> {rx_sexo or '___'}</div>
-    <div><b>Fecha:</b> {rx_fecha}</div>
-    <div style="grid-column:span 2"><b>Dx:</b> {rx_dx or '_______________'}</div>
-  </div>
-
-  <!-- Rx symbol -->
-  <div style="font-size:28px;color:#1E3A8A;font-weight:bold;margin-bottom:8px;">℞</div>
-
-  <!-- Indicaciones -->
-  <div style="font-size:14px;color:#111827;min-height:120px;white-space:pre-wrap;
-       border-bottom:1px solid #E5E7EB;padding-bottom:16px;margin-bottom:16px;">
-{rx_body.replace(chr(10), '<br>') if rx_body else '<em style="color:#9CA3AF">Sin indicaciones escritas</em>'}</div>
-
-  <!-- Nota y firma -->
-  <div style="font-size:12px;color:#6B7280;margin-bottom:16px;">{rx_notas}</div>
-  <div style="text-align:right;">
-    <div style="border-top:1px solid #374151;width:180px;margin-left:auto;padding-top:4px;
-         font-size:12px;color:#374151;">Firma del médico</div>
-  </div>
-  <div style="text-align:center;font-size:10px;color:#9CA3AF;margin-top:12px;">
-    Generado por RenalPro v3.1.0 — Uso académico y clínico
-  </div>
-</div>
-            """
-            st.markdown(receta_html, unsafe_allow_html=True)
-
-            # Download as text
-            st.divider()
-            receta_txt = f"""RECETA MÉDICA
-{'='*50}
-{dr_nombre}
-{dr_esp}
-Cédula Profesional: {dr_cedula}
-Universidad: {dr_univ}
-{dr_inst}
-
-{'='*50}
-Paciente: {rx_nombre}   Expediente: {rx_exp}
-Edad: {rx_edad} años   Sexo: {rx_sexo}
-Fecha: {rx_fecha}
-Diagnóstico: {rx_dx}
-{'='*50}
-
-℞
-
-{rx_body}
-
-{'─'*40}
-{rx_notas}
-
-Firma: ___________________
-{dr_nombre}
-Cédula: {dr_cedula}
-
-RenalPro v3.1.0 — Uso académico y clínico
-            """
-            st.download_button("📥 Descargar receta (.txt)",
-                               data=receta_txt,
-                               file_name=f"Receta_{rx_nombre.replace(' ','_')}_{rx_fecha}.txt",
-                               mime="text/plain",
-                               key="btn_dl_receta")
+            if st.button("📄 Generar Receta PDF", type="primary",
+                         use_container_width=True, key="btn_gen_pdf"):
+                if not rx_nombre or not rx_body:
+                    st.warning("Nombre del paciente e indicaciones son obligatorios.")
+                else:
+                    try:
+                        pdf_bytes = _generar_receta_pdf(
+                            dr_nombre, dr_cedula, dr_univ, dr_esp, dr_inst,
+                            rx_nombre, rx_exp, rx_edad, rx_sexo, rx_fecha,
+                            rx_dx, rx_body, rx_notas, rx_firma
+                        )
+                        nombre_safe = "".join(c for c in rx_nombre if c.isalnum() or c in " _-")[:20].strip()
+                        st.download_button(
+                            label="⬇️ Descargar Receta PDF",
+                            data=pdf_bytes,
+                            file_name=f"Receta_{nombre_safe}_{rx_fecha}.pdf",
+                            mime="application/pdf",
+                            key="btn_dl_receta_pdf",
+                        )
+                        st.success("✅ Receta generada correctamente. Haz clic en 'Descargar' para guardarla.")
+                    except Exception as e_pdf:
+                        st.error(f"Error al generar PDF: {e_pdf}")
 
             if rec_data and _DB_ON and _db.db_ok():
-                if st.button("✅ Marcar receta como generada en el expediente", key="btn_mark_receta"):
-                    conn_r = _db.get_conn()
-                    if conn_r:
-                        try:
-                            cur_r = conn_r.cursor()
-                            cur_r.execute("UPDATE clinical_records SET receta_generada=TRUE WHERE id=%s",
-                                         (rec_data["id"],))
-                            conn_r.commit(); cur_r.close()
-                            _clear_cache()
-                            st.success("✅ Marcado en el expediente.")
-                        except Exception:
-                            pass
+                if st.button("✅ Marcar como generada en expediente", key="btn_mark_receta"):
+                    try:
+                        conn_r = _db.get_conn()
+                        cur_r  = conn_r.cursor()
+                        cur_r.execute("UPDATE clinical_records SET receta_generada=TRUE WHERE id=%s",
+                                     (rec_data["id"],))
+                        conn_r.commit(); cur_r.close()
+                        _clear_cache(); st.success("✅ Marcado en el expediente.")
+                    except Exception:
+                        pass
+
+elif nav == "infecciones_tx":
+    st.subheader("🦠 Infecciones Post-Trasplante Renal")
+    st.caption("Ref: AST-IDCOP Guidelines 2019 | KDIGO Transplant 2009 | IDSA/EAU 2023 | ESCMID/ECMM 2022")
+
+    # ── TIMELINE DE RIESGO ─────────────────────────────────────────────────────
+    with st.expander("📅 Timeline de riesgo infeccioso post-trasplante", expanded=False):
+        st.markdown("""
+| Período | Infecciones predominantes | Contexto |
+|---------|--------------------------|---------|
+| **0–1 mes** | Infecciones quirúrgicas, bacteriemia, IVU, Candida mucocutánea, VHS recurrente | IS alta + cirugía + catéteres |
+| **1–6 meses** | CMV ⭐, BKV ⭐, PCP, Listerio, Nocardia, Aspergillus, Criptococo, IVU | Período de mayor riesgo oportunista |
+| **>6 meses (IS estable)** | Infecciones comunitarias (influenza, neumococo, COVID-19) | IS en descenso |
+| **>6 meses (IS alta)** | Todas las del período 1–6 meses persisten | Rechazo crónico, múltiples episodios |
+
+> ⭐ CMV y BKV son las infecciones virales más importantes en trasplante renal — requieren screening activo.
+        """)
+
+    inf_sel = st.selectbox("Selecciona la infección", [
+        "🔴 CMV — Citomegalovirus",
+        "🟡 BKV — Virus BK / Nefropatía BK",
+        "🟢 PCP — Pneumocystis jirovecii",
+        "🟣 EBV / PTLD — Post-Transplant Lymphoproliferative Disorder",
+        "🔵 IVU — Infección del Tracto Urinario",
+        "🟠 Infecciones Fúngicas (Candida / Aspergillus)",
+    ], key="inf_sel")
+
+    st.divider()
+
+    # ── CMV ────────────────────────────────────────────────────────────────────
+    if "CMV" in inf_sel:
+        st.markdown("### 🔴 CMV — Citomegalovirus en Trasplante Renal")
+        st.caption("AST-IDCOP CMV Guideline 2019 | KDIGO Transplant 2009 Ch. 13")
+
+        cmv1, cmv2, cmv3, cmv4 = st.tabs([
+            "📊 Estratificación de riesgo",
+            "🛡️ Profilaxis",
+            "🔍 Diagnóstico",
+            "💊 Tratamiento",
+        ])
+
+        with cmv1:
+            st.markdown("#### Estratificación por serología D/R")
+            cmv_d = st.selectbox("Serología CMV del DONANTE", ["Positivo (D+)", "Negativo (D-)"], key="cmv_d")
+            cmv_r = st.selectbox("Serología CMV del RECEPTOR", ["Positivo (R+)", "Negativo (R-)"], key="cmv_r")
+
+            if "D+" in cmv_d and "R-" in cmv_r:
+                st.error("""
+**D+/R− → ALTO RIESGO (25–75% sin profilaxis)**
+El receptor no tiene inmunidad previa — el virus del donante puede replicar libremente.
+- Profilaxis obligatoria: **6 meses** con valganciclovir
+- Monitoreo de carga viral durante y después de profilaxis
+- Mayor riesgo de enfermedad grave y resistencia
+                """)
+                riesgo_cmv = "alto"
+            elif "R+" in cmv_r:
+                st.warning("""
+**D±/R+ → RIESGO INTERMEDIO (8–20%)**
+El receptor tiene inmunidad residual, pero la IS puede reactivar el virus latente.
+- Profilaxis: **3 meses** con valganciclovir
+- O estrategia pre-emptiva (monitoreo + tratamiento si DNAemia detectada)
+                """)
+                riesgo_cmv = "intermedio"
+            else:
+                st.success("""
+**D−/R− → BAJO RIESGO (<5%)**
+Ninguno tiene CMV. Riesgo solo por transfusión o nuevo contacto.
+- No se recomienda profilaxis antiviral específica para CMV
+- Screening solo si se expone a fuente de riesgo
+                """)
+                riesgo_cmv = "bajo"
+
+        with cmv2:
+            st.markdown("#### Estrategia de profilaxis universal — AST-IDCOP 2019")
+            st.markdown("""
+| Serología | Fármaco | Dosis | Duración |
+|-----------|---------|-------|---------|
+| **D+/R−** | **Valganciclovir** | 900 mg VO c/24h (ajustar por TFG) | **6 meses** |
+| **R+ (cualquier D)** | **Valganciclovir** | 900 mg VO c/24h | **3 meses** |
+| **D−/R−** | No indicado | — | — |
+
+**Ajuste de dosis valganciclovir por TFG (AST-IDCOP):**
+| TFG (mL/min) | Dosis profilaxis |
+|-------------|-----------------|
+| ≥60 | 900 mg c/24h |
+| 40–59 | 450 mg c/24h |
+| 25–39 | 450 mg c/48h |
+| 10–24 | 450 mg c/3 días |
+| <10 / diálisis | No recomendado de rutina — individualizar |
+
+> ⚠️ **Profilaxis de baja dosis ("mini-dosis") NO recomendada** — favorece resistencia.
+> Alternativa para pacientes que no toleran valganciclovir: ganciclovir IV 5 mg/kg c/24h.
+            """)
+
+            st.info("""
+**Estrategia pre-emptiva** (alternativa a profilaxis universal para R+):
+- Monitoreo de CMV DNAemia: c/1–2 semanas × primeros 3 meses
+- Si DNAemia supera umbral institucional → iniciar tratamiento dosis plena
+- Ventaja: menor toxicidad, menor gasto
+- Desventaja: no protege contra efectos indirectos del CMV
+            """)
+
+        with cmv3:
+            st.markdown("""
+#### Diagnóstico de infección y enfermedad por CMV
+| Entidad | Criterio diagnóstico |
+|---------|---------------------|
+| **Infección CMV** | CMV DNAemia detectable (PCR cuantitativa en plasma) |
+| **Síndrome CMV** | DNAemia + fiebre, leucopenia, trombocitopenia (≥2 síntomas) |
+| **Enfermedad de órgano** | Histopatología + síntomas (hepatitis, colitis, neumonitis, retinitis) |
+
+**Biopsia de injerto renal + CMV:**
+- Tinción inmunohistoquímica para CMV (si sospecha de nefritis por CMV)
+- CMV puede causar nefritis intersticial del injerto — simula rechazo celular
+
+**Resistencia a ganciclovir:**
+- Sospechar si: no respuesta clínica + DNAemia persistente tras 2 semanas de tratamiento adecuado
+- Mutaciones en UL97 (más frecuente) y UL54 (más rara)
+- Manejo: foscarnet 60 mg/kg IV c/8h o cidofovir (nefrotóxico — evitar en TFG <55)
+            """)
+
+        with cmv4:
+            st.markdown("""
+#### Tratamiento de enfermedad por CMV activa — AST-IDCOP 2019
+| Severidad | Fármaco | Dosis | Duración |
+|-----------|---------|-------|---------|
+| **Leve-moderada** | Valganciclovir VO | **900 mg c/12h** | Hasta DNAemia negativa + 1 semana (mín. 21 días) |
+| **Grave / neumonitis / retinitis** | Ganciclovir IV | **5 mg/kg c/12h** → luego VGCV VO | Hasta estabilización clínica |
+| **Resistente (UL97)** | Foscarnet IV | **60 mg/kg c/8h** o 90 mg/kg c/12h | 3–4 semanas |
+| **Multirresistente** | Maribavir | 400 mg VO c/12h | FDA aprobado 2021 — 8 semanas |
+
+> ⚠️ Reducir inmunosupresión durante tratamiento de CMV grave.
+> Monitorear creatinina con foscarnet (nefrotóxico) y cidofovir (muy nefrotóxico).
+> Control de DNAemia c/1–2 semanas durante tratamiento.
+            """)
+            st.caption("Ref: Kotton CN et al. AST-IDCOP CMV Guidelines. Transplantation 2019. "
+                       "Maribavir (Livtencity): FDA approval 2021. Papanicolaou GA et al. NEJM 2021.")
+
+    # ── BKV ────────────────────────────────────────────────────────────────────
+    elif "BKV" in inf_sel:
+        st.markdown("### 🟡 BKV — Virus BK / Nefropatía BK (BKPyVAN)")
+        st.caption("Ref: Hirsch HH et al. AST-IDCOP BKV Guidelines. Transplant Infect Dis 2019.")
+        st.info("""
+No existe antiviral aprobado para BKV. El único tratamiento efectivo es la **reducción de inmunosupresión (IS)**.
+El objetivo es restaurar la inmunidad específica anti-BKV sin precipitar un rechazo agudo.
+        """)
+
+        bk1, bk2, bk3 = st.tabs(["📊 Screening & Diagnóstico", "🔽 Reducción de IS", "📋 Protocolo"])
+
+        with bk1:
+            st.markdown("""
+#### Screening obligatorio — AST-IDCOP 2019
+**TODOS los receptores de trasplante renal deben ser monitoreados:**
+- BKPyV DNAemia en plasma (PCR cuantitativa): **mensual × 9 meses → c/3 meses hasta 2 años**
+
+#### Umbrales de acción
+| Nivel de DNAemia | Clasificación | Acción |
+|-----------------|--------------|--------|
+| No detectable | Normal | Continuar screening rutinario |
+| >200 copies/mL (detectable) | Viremia presuntiva | Repetir en 2–4 semanas |
+| **>1,000 copies/mL × 3 semanas** o **>10,000 copies/mL** | **BKPyVAN probable / presuntiva** | **Reducir IS** |
+| Biopsia: cambios histológicos | **BKPyVAN confirmada** | Reducir IS + seguimiento estrecho |
+
+> Biopsia renal NO es obligatoria para iniciar reducción de IS si la DNAemia supera los umbrales.
+> Biopsia es útil si hay duda diagnóstica (rechazo vs BKPyVAN) o sin respuesta a la reducción de IS.
+            """)
+
+        with bk2:
+            st.markdown("""
+#### Reducción de inmunosupresión — Esquema por pasos
+| Paso | Acción | Meta DNAemia |
+|------|--------|-------------|
+| **1** | Reducir MMF/MPA 25–50% (o suspender si DNAemia muy alta) | >1 log de reducción en 4–6 semanas |
+| **2** | Si no responde: reducir CNI (tacrolimus → nivel C0 <6 ng/mL) | Continuar descenso |
+| **3** | Si falla: considerar conversión tacrolimus → ciclosporina | — |
+| **4** | Si falla: mTOR inhibidor puede ser útil (sirolimus/everolimus) | Evidencia observacional |
+
+> ⚠️ Monitorear función renal y rechazo c/2–4 semanas tras cada ajuste.
+> Si aparece rechazo: reiniciar IS y aceptar nivel de BKV controlable.
+
+**Fármacos que NO se recomiendan (AST-IDCOP 2019):**
+- ❌ Ciprofloxacino/levofloxacino: sin beneficio clínico demostrado
+- ❌ Cidofovir: nefrotóxico, sin eficacia clara
+- ❌ Leflunomide: sin ensayos controlados sólidos
+- ❌ IVIG: sin evidencia suficiente para uso rutinario
+            """)
+
+        with bk3:
+            st.markdown("""
+#### Protocolo de seguimiento durante BKPyVAN
+```
+BKPyV DNAemia >1,000 c/mL × 3 sem o >10,000 c/mL
+    │
+    └─ Reducir MMF 25–50%
+              │
+    ┌─────────┴────────────┐
+    │ DNAemia <200 c/mL   │ DNAemia persiste >1000 c/mL
+    │ en 4–6 sem          │ a las 4–6 sem
+    │ ✅ Éxito            │ → Paso 2: reducir CNI
+    │ Screening c/3 meses │
+    └─────────────────────┘
+
+Monitoreo durante reducción de IS:
+- Creatinina + orina c/2 semanas
+- DNAemia c/4 semanas
+- Si Cr sube >20%: biopsia para descartar rechazo
+- Si DNAemia negativa × 3 meses: IS puede reanudarse gradualmente
+```
+**Retrasplante post-BKPyVAN:**
+- Posible si DNAemia negativa (independiente de nefrectomía del injerto fallido)
+            """)
+
+    # ── PCP ────────────────────────────────────────────────────────────────────
+    elif "PCP" in inf_sel:
+        st.markdown("### 🟢 PCP — Pneumocystis jirovecii en Trasplante Renal")
+        st.caption("Ref: IDSA Guidelines PCP 2021 | KDIGO Transplant 2009 | Martin SI et al. Clin Infect Dis 2021")
+
+        st.markdown("""
+#### Profilaxis — TODOS los receptores de trasplante renal
+| Fármaco | Dosis | Duración | Evidencia |
+|---------|-------|---------|-----------|
+| **TMP-SMX (Cotrimoxazol)** — 1ª línea | **1 tableta simple (80/400 mg) c/24h VO** | **Mínimo 3–6 meses** (muchos centros 12 meses o indefinido) | Fuerte |
+| Alternativa si alergia: Dapsona | 100 mg c/24h VO | Misma duración | Moderada |
+| Alternativa: Pentamidina inhalada | 300 mg c/mes nebulizada | — | Solo si oral no posible |
+| Atovacuona | 1,500 mg c/24h VO | — | Alternativa oral |
+
+> ⭐ TMP-SMX también protege contra Nocardia, Toxoplasma, Listeria e IVU — ventaja dual.
+> Ajustar dosis TMP-SMX si TFG <30 mL/min (puede ser c/48h).
+
+#### Diagnóstico de PCP activa
+| Estudio | Hallazgo |
+|---------|---------|
+| TC de tórax | Patrón en vidrio esmerilado bilateral, peribronquial |
+| BAL + PCR para P. jirovecii | Más sensible que tinción directa |
+| Tinción de metenamina de plata o GMS en BAL | Gold standard si disponible |
+| β-D-glucano sérico | Elevado (>80 pg/mL) — sensible pero poco específico |
+| LDH sérica | Elevada — marcador de gravedad |
+
+#### Tratamiento de PCP activa
+| Severidad | Tratamiento |
+|-----------|------------|
+| **Leve-moderada** (PaO2 >70 mmHg) | TMP-SMX 15–20 mg/kg/día (componente TMP) VO dividido c/8h × **21 días** |
+| **Grave** (PaO2 <70 mmHg) | TMP-SMX IV misma dosis × 21 días + **prednisona 40 mg c/12h × 5 días → taper** |
+| Intolerancia a TMP-SMX | Pentamidina IV 4 mg/kg/día o Atovacuona VO 750 mg c/12h |
+
+> ⚠️ Reducir inmunosupresión durante el episodio de PCP activa.
+> Monitorear K, glucosa, función renal con TMP-SMX IV a dosis plena.
+        """)
+
+    # ── EBV / PTLD ─────────────────────────────────────────────────────────────
+    elif "EBV" in inf_sel:
+        st.markdown("### 🟣 EBV / PTLD — Desorden Linfoproliferativo Post-Trasplante")
+        st.caption("Ref: AST-IDCOP EBV/PTLD Guidelines 2019 | EBMT/EHA 2021 | Swerdlow SH et al. WHO Classification 2022")
+
+        st.markdown("""
+#### Factores de riesgo y screening
+| Factor de riesgo | Implicación |
+|-----------------|-------------|
+| **D+/R− (EBV)** | Mayor riesgo de PTLD (10–15× vs D+/R+) |
+| IS intensa (timoglobulina, múltiples pulsos) | Riesgo aumentado |
+| Trasplante en niños/adolescentes | EBV primario frecuente |
+| Edad avanzada del receptor | Riesgo de PTLD tardío |
+
+**Screening de EBV DNA (en plasma):** Mensual × 3–6 meses, luego c/3 meses hasta 1 año (especialmente D+/R−).
+
+#### Diagnóstico y clasificación PTLD (WHO 2022)
+| Categoría | Histología | Manejo |
+|-----------|-----------|--------|
+| Hiperplasia plasmacelular/mononucleosis | Benigna, EBV+ | Reducción IS |
+| PTLD polimórfico | Células B polimorfas EBV+ | Reducción IS + rituximab |
+| PTLD monomórfico (DLBCL-like) | CD20+ EBV+/- | Rituximab ± quimioterapia |
+| Linfoma de Hodgkin post-Tx | Células de Reed-Sternberg | Quimioterapia clásica |
+
+#### Algoritmo de manejo
+```
+EBV DNAemia elevada (sin masa)
+    │
+    ├─ Reducir IS (primer paso siempre)
+    │    │
+    │    └─ Si DNAemia desciende: continuar monitoring
+    │
+    └─ Si masa / síntomas → Biopsia (PET-TC para estadificación)
+              │
+              ├─ CD20+: Rituximab 375 mg/m² × 4 ciclos
+              │    │
+              │    └─ Respuesta parcial o agresivo: R-CHOP u otro esquema
+              │
+              └─ CD20−: Quimioterapia según histología
+```
+
+> ⚠️ Biopsia es indispensable para clasificar el PTLD — el manejo difiere radicalmente por subtipo.
+> Rituximab solo sin quimioterapia es adecuado para PTLD polimórfico CD20+, no para monomórfico agresivo.
+        """)
+
+    # ── IVU ────────────────────────────────────────────────────────────────────
+    elif "IVU" in inf_sel:
+        st.markdown("### 🔵 IVU — Infección del Tracto Urinario Post-Trasplante Renal")
+        st.caption("Ref: IDSA/EAU UTI Guidelines 2023 | AST-IDCOP UTI Guidelines 2019")
+        st.info("IVU es la infección bacteriana más frecuente en KT (20–80% en el primer año). "
+                "El uréter del injerto y la vejiga son sitios de riesgo particular.")
+
+        st.markdown("""
+#### Clasificación y manejo por categoría
+
+| Categoría | Definición | Manejo |
+|-----------|-----------|--------|
+| **Bacteriuria asintomática** | Urocultivo+ sin síntomas | **Tratar SOLO en los primeros 2 meses post-Tx** · Después: NO tratar |
+| **Cistitis** | Disuria, urgencia, frecuencia + urocultivo+ | Antibiótico 7–14 días según antibiograma |
+| **Pielonefritis del injerto** | Fiebre + dolor en injerto + urocultivo+ | ATB IV × 14 días + imágenes del injerto |
+| **Urosepsis** | Bacteriemia + origen urinario | ATB IV + UCI si sepsis grave |
+
+> ⚠️ En KT, la pielonefritis del injerto puede ser silenciosa (sin dolor lumbar clásico) —
+> el injerto está denervado. Fiebre sola + urocultivo+ es suficiente para diagnóstico.
+
+#### Profilaxis
+- **TMP-SMX** (ya cubre PCP + IVU): 1 tab simple c/24h × 3–6 meses
+- Si alergia: cefalexina 250–500 mg c/24h o nitrofurantoína (evitar con TFG <30)
+
+#### Patógenos más frecuentes en KT
+| Patógeno | Frecuencia | Preocupación |
+|---------|-----------|-------------|
+| E. coli | ~50% | BLEE frecuente — solicitar antibiograma siempre |
+| Klebsiella pneumoniae | ~15% | Productora de carbapenemasas en centros terciarios |
+| Enterococcus faecalis | ~10% | Resistencia a ampicilina creciente |
+| Pseudomonas aeruginosa | ~5% | KT con estructura urológica compleja |
+| Candida sp. | Raro | Inmunosupresión intensa |
+
+#### Estudio de IVU recurrente en KT
+- Urocultivos seriados con antibiograma
+- Ecografía del injerto (hidronefrosis, litiasis, colección)
+- Cistoscopía si obstrucción del uréter
+- Descontinuar catéter urinario lo antes posible (factor de riesgo mayor)
+        """)
+
+    # ── FÚNGICAS ───────────────────────────────────────────────────────────────
+    else:
+        st.markdown("### 🟠 Infecciones Fúngicas Post-Trasplante")
+        st.caption("Ref: ESCMID/ECMM Candida Guidelines 2023 | IDSA Aspergillus Guidelines 2016 (update 2020)")
+
+        fun1, fun2 = st.tabs(["🍄 Candida", "🫁 Aspergillus / Mohos"])
+
+        with fun1:
+            st.markdown("""
+#### Candida en trasplante renal
+**Presentaciones clínicas:**
+- Candiduria (más frecuente): catéter urinario, IS intensa, ATB de amplio espectro
+- Candidiasis esofágica / mucocutánea
+- Candidemia (menos frecuente pero grave)
+
+#### Candiduria — Manejo (ESCMID 2023)
+| Escenario | Tratamiento |
+|-----------|------------|
+| Asintomática, sin catéter urinario | **No tratar** (retirar catéter si es posible) |
+| Asintomática + catéter | Retirar catéter y repetir urocultivo |
+| **Sintomática** (cistitis) | Fluconazol 200 mg/día VO × 14 días |
+| **Pielonefritis** del injerto por Candida | Fluconazol 400 mg/día × 14 días o equinocandina IV × 14 días |
+| **C. glabrata** (fluconazol resistente) | Anidulafungina o caspofungina IV |
+
+**Profilaxis antifúngica:** Fluconazol 100–200 mg/día VO × 1–3 meses (especialmente post-timoglobulina o en centros de alto riesgo).
+
+#### Candidemia — protocolo urgente
+1. Hemocultivos × 2 + fungemias
+2. Fondo de ojo (descartar retinitis)
+3. Ecocardiograma transtorácico
+4. Tratamiento: Equinocandina IV (micafungina 150 mg c/24h o anidulafungina 200 mg → 100 mg)
+5. Duración: 14 días desde último hemocultivo negativo + resolución de síntomas
+6. Step-down a fluconazol VO si sensible y estabilidad clínica
+            """)
+
+        with fun2:
+            st.markdown("""
+#### Aspergilosis invasiva (AI) en trasplante renal
+**Factores de riesgo:**
+- Inducción con timoglobulina
+- Rechazo con pulsos de esteroides
+- Colonización bronquial previa
+- Construcción/renovación hospitalaria (esporas ambientales)
+- Falla renal post-trasplante + HD o IS intensa
+
+#### Diagnóstico de AI
+| Estudio | Hallazgo |
+|---------|---------|
+| TC tórax (HRCT) | Nódulos con halo, consolidaciones, signo del aire creciente |
+| Galactomanano sérico | ≥0.5 índice (2 muestras) — sensibilidad 60–70% en SOT |
+| Galactomanano en BAL | ≥1.0 índice — más sensible |
+| Beta-D-glucano | Inespecífico — apoya el diagnóstico |
+| Cultivo + PCR BAL | Confirma especie y sensibilidad |
+
+#### Tratamiento — IDSA 2020
+| Escenario | Fármaco | Dosis | Duración |
+|-----------|---------|-------|---------|
+| **1ª línea** | **Voriconazol VO/IV** | 6 mg/kg c/12h × 2 dosis → 4 mg/kg c/12h IV, luego 200 mg c/12h VO | Mínimo 6–12 semanas |
+| **Alternativa** | Isavuconazol | 200 mg c/8h × 6 dosis → 200 mg c/24h | Igual que voriconazol |
+| **Refractario** | Liposomal anfotericina B | 3–5 mg/kg c/24h IV | Según respuesta |
+
+> ⚠️ **Interacción voriconazol + tacrolimus:** voriconazol inhibe fuertemente CYP3A4.
+> Al iniciar voriconazol: reducir tacrolimus 25–33% y monitorear nivel C0 a las 24–48h.
+> Isavuconazol tiene menor inhibición de CYP3A4 — preferible si tacrolimus es crítico.
+            """)
+            st.caption("Ref: Pappas PG et al. IDSA Candida Guidelines. Clin Infect Dis 2016. "
+                       "Patterson TF et al. IDSA Aspergillus Guidelines. Clin Infect Dis 2016. "
+                       "Tissot F et al. ESCMID/ECMM Aspergillus. Clin Microbiol Infect 2020.")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
