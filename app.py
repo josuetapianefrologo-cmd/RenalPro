@@ -9453,20 +9453,24 @@ elif nav == "expediente":
                         if not np_nombre:
                             st.warning("El nombre es obligatorio.")
                         else:
-                            new_id = _db.create_patient(uid, {
-                                "nombre": np_nombre, "expediente": np_exp,
-                                "edad": int(np_edad), "sexo": np_sexo,
-                                "peso": float(np_peso), "tipo": np_tipo,
-                                "diagnostico": np_dx, "notas": np_notas,
-                            })
-                            if new_id:
-                                _clear_cache()
-                                st.session_state["exp_pac_id"] = new_id
-                                st.session_state.pop("exp_modo", None)
-                                st.success(f"✅ Paciente '{np_nombre}' registrado.")
-                                st.rerun()
-                            else:
-                                st.error("Error al registrar paciente.")
+                            try:
+                                new_id = _db.create_patient(uid, {
+                                    "nombre": np_nombre, "expediente": np_exp,
+                                    "edad": int(np_edad), "sexo": np_sexo,
+                                    "peso": float(np_peso), "tipo": np_tipo,
+                                    "diagnostico": np_dx, "notas": np_notas,
+                                })
+                                if new_id:
+                                    _clear_cache()
+                                    st.session_state["exp_pac_id"] = new_id
+                                    st.session_state.pop("exp_modo", None)
+                                    st.success(f"✅ Paciente '{np_nombre}' registrado.")
+                                    st.rerun()
+                                else:
+                                    st.error("Error al registrar paciente.")
+                            except AttributeError:
+                                st.error("⚠️ db.py desactualizado en el servidor. "
+                                         "Sube el db.py que te entregué a GitHub y espera el redeploy.")
 
             # Lista de pacientes
             pacientes_filtrados = [p for p in pacientes
@@ -9951,31 +9955,54 @@ elif nav == "receta":
                             except Exception as e:
                                 st.error(f"Error al generar PDF: {e}")
 
+
                 with bg2:
                     uid_rx = _user_id()
-                    if uid_rx and _DB_ON and _db.db_ok() and pac_data.get("id"):
-                        if st.button("💾 Guardar en expediente del paciente",
-                                     use_container_width=True, key="btn_save_rx"):
-                            resumen_rx = rx_body
+                    db_ok_rx = uid_rx and _DB_ON and _db.db_ok()
+                    pac_id_rx = pac_data.get("id") if pac_data else None
+
+                    if db_ok_rx:
+                        if not pac_id_rx:
                             try:
-                                _db.add_clinical_record(pac_data["id"], uid_rx, {
-                                    "tipo": "Receta médica",
-                                    "titulo": f"Receta — {rx_dx[:40] if rx_dx else 'Indicaciones'}",
-                                    "fecha_consulta": rx_fecha,
-                                    "resumen": resumen_rx,
-                                    "notas": rx_notas,
-                                    "datos": {
-                                        "cie10": rx_cie10, "dx": rx_dx,
-                                        "peso": rx_peso, "talla": rx_talla,
-                                        "ta": rx_ta, "fecha_prox": str(rx_fecha_prox) if rx_fecha_prox else "",
-                                    },
-                                })
-                                _clear_cache()
-                                st.success("✅ Guardado en expediente.")
+                                pacs_disponibles = _cached_patients(uid_rx)
+                                if pacs_disponibles:
+                                    pac_opts = {f"{p['nombre']} (Exp: {p.get('expediente','—')})": p["id"]
+                                                for p in pacs_disponibles}
+                                    sel_pac_rx = st.selectbox("Guardar en expediente de:",
+                                                              list(pac_opts.keys()), key="rx_pac_sel")
+                                    pac_id_rx = pac_opts.get(sel_pac_rx)
+                                else:
+                                    st.caption("Sin pacientes. Crea uno en 🏥 Expediente Clínico primero.")
                             except Exception:
-                                st.info("Para guardar en expediente: abre al paciente desde 🏥 Expediente Clínico → Generar receta.")
+                                st.caption("Crea pacientes en 🏥 Expediente Clínico.")
+
+                        if pac_id_rx:
+                            if st.button("💾 Guardar en expediente",
+                                         use_container_width=True, key="btn_save_rx"):
+                                try:
+                                    _db.add_clinical_record(pac_id_rx, uid_rx, {
+                                        "tipo": "Receta médica",
+                                        "titulo": f"Receta — {(rx_dx or 'Indicaciones')[:40]}",
+                                        "fecha_consulta": rx_fecha,
+                                        "resumen": rx_body,
+                                        "notas": rx_notas,
+                                        "datos": {
+                                            "cie10": rx_cie10, "dx": rx_dx,
+                                            "peso": rx_peso, "talla": rx_talla,
+                                            "ta": rx_ta, "fc": rx_fc,
+                                            "fecha_prox": str(rx_fecha_prox) if rx_fecha_prox else "",
+                                            "hora_prox": str(rx_hora_prox) if rx_hora_prox else "",
+                                        },
+                                    })
+                                    _clear_cache()
+                                    st.success("✅ Receta guardada en el expediente.")
+                                except AttributeError:
+                                    st.error("db.py desactualizado — sube la versión nueva a GitHub.")
+                                except Exception as e_save:
+                                    st.error(f"Error: {e_save}")
                     else:
-                        st.info("Para guardar automáticamente en el expediente, abre la receta desde **🏥 Expediente Clínico** → botón 'Generar receta' en un registro.")
+                        st.caption("Conecta Railway DB para guardar en expedientes.")
+
 
             with rx_tab2:
                 st.markdown("#### Historial de recetas generadas")
@@ -10008,233 +10035,6 @@ elif nav == "receta":
                         st.info("Sube el db.py actualizado a GitHub para activar el historial de recetas.")
                 else:
                     st.info("Conecta Railway DB para ver el historial de recetas.")
-
-    if not _is_auth():
-        st.warning("Inicia sesión para generar recetas.")
-    else:
-        dr_nombre = st.session_state.get("sess_nombre","")
-        dr_cedula = st.session_state.get("sess_cedula","")
-        dr_univ   = st.session_state.get("sess_universidad","")
-        dr_esp    = st.session_state.get("sess_especialidad","")
-        dr_inst   = st.session_state.get("sess_institucion","")
-
-        if not dr_nombre or not dr_cedula:
-            st.warning("⚠️ Perfil incompleto. Ve a **👤 Mi Cuenta** y agrega tu nombre y cédula antes de generar recetas.")
-            if st.button("→ Ir a Mi Cuenta", key="btn_goto_mc"):
-                st.session_state["nav_sel"] = "micuenta"; st.rerun()
-        else:
-            pac_data = st.session_state.get("receta_pac", {})
-            rec_data = st.session_state.get("receta_rec", {})
-
-            col_rx1, col_rx2 = st.columns([1, 1])
-            with col_rx1:
-                st.markdown("#### Datos del paciente")
-                rx_nombre = st.text_input("Nombre del paciente",  value=pac_data.get("nombre",""), key="rx_nombre")
-                rx_exp    = st.text_input("N° Expediente",        value=pac_data.get("expediente",""), key="rx_exp")
-                rx_edad   = st.text_input("Edad",                 value=str(pac_data.get("edad","")) if pac_data.get("edad") else "", key="rx_edad")
-                rx_sexo   = st.text_input("Sexo",                 value=pac_data.get("sexo",""), key="rx_sexo")
-                rx_fecha  = st.date_input("Fecha de consulta",    key="rx_fecha")
-                rx_dx     = st.text_input("Diagnóstico",          value=pac_data.get("diagnostico",""), key="rx_dx")
-
-            with col_rx2:
-                st.markdown("#### Indicaciones médicas")
-                rx_body = st.text_area("Indicaciones / prescripción", height=220,
-                                       value=rec_data.get("resumen","") if rec_data else "",
-                                       key="rx_body",
-                                       placeholder="1. Tacrolimus 2 mg c/12h VO\n2. MMF 500 mg c/12h VO\n3. Prednisona 10 mg c/24h VO")
-                rx_notas = st.text_input("Próxima cita / nota", key="rx_notas",
-                                         placeholder="Próxima cita en 7 días con niveles de tacrolimus")
-                rx_firma = st.text_input("Lugar de expedición (aparece en firma)",
-                                         value=dr_inst.split(",")[0] if dr_inst else "",
-                                         key="rx_firma")
-
-            # ── GENERADOR PDF ──────────────────────────────────────────────
-            def _generar_receta_pdf(dr_nombre, dr_cedula, dr_univ, dr_esp, dr_inst,
-                                    rx_nombre, rx_exp, rx_edad, rx_sexo, rx_fecha,
-                                    rx_dx, rx_body, rx_notas, rx_firma):
-                import io
-                from reportlab.lib.pagesizes import letter
-                from reportlab.lib.units import cm
-                from reportlab.lib.colors import HexColor, white, black
-                from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
-                                                Table, TableStyle, HRFlowable)
-                from reportlab.lib.styles import ParagraphStyle
-                from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-
-                buf = io.BytesIO()
-                doc = SimpleDocTemplate(buf, pagesize=letter,
-                                        leftMargin=2*cm, rightMargin=2*cm,
-                                        topMargin=2*cm, bottomMargin=2*cm)
-
-                AZUL       = HexColor("#1E3A8A")
-                AZUL_CLARO = HexColor("#DBEAFE")
-                GRIS       = HexColor("#6B7280")
-                GRIS_L     = HexColor("#F3F4F6")
-
-                def estilo(name, **kw):
-                    defaults = dict(fontName="Helvetica", fontSize=10,
-                                    leading=14, textColor=black)
-                    defaults.update(kw)
-                    return ParagraphStyle(name, **defaults)
-
-                EST_TITULO  = estilo("titulo",  fontName="Helvetica-Bold",
-                                     fontSize=14, textColor=AZUL, spaceAfter=2)
-                EST_SUB     = estilo("sub",     fontName="Helvetica",
-                                     fontSize=9,  textColor=GRIS, spaceAfter=1)
-                EST_CUERPO  = estilo("cuerpo",  fontSize=10, leading=16, spaceAfter=4)
-                EST_SMALL   = estilo("small",   fontSize=8,  textColor=GRIS)
-                EST_RX      = estilo("rx",      fontName="Helvetica-Bold",
-                                     fontSize=28, textColor=AZUL, spaceAfter=4)
-                EST_LABEL   = estilo("label",   fontName="Helvetica-Bold",
-                                     fontSize=8,  textColor=AZUL)
-                EST_VALUE   = estilo("value",   fontSize=9,  textColor=black)
-                EST_CENTER  = estilo("center",  fontSize=8,  textColor=GRIS,
-                                     alignment=TA_CENTER)
-
-                story = []
-
-                # ── ENCABEZADO ────────────────────────────────────────────
-                header_data = [[
-                    Paragraph(f"<b>{dr_nombre}</b>", EST_TITULO),
-                    Paragraph(f"<b>Cédula Prof.:</b> {dr_cedula}", EST_VALUE),
-                ],[
-                    Paragraph(dr_esp, EST_SUB),
-                    Paragraph(dr_univ, EST_SUB),
-                ],[
-                    Paragraph(dr_inst, EST_SUB),
-                    Paragraph("", EST_SUB),
-                ]]
-                t_header = Table(header_data, colWidths=[10*cm, 7*cm])
-                t_header.setStyle(TableStyle([
-                    ("BACKGROUND",  (0,0), (-1,0), AZUL_CLARO),
-                    ("ROWBACKGROUNDS", (0,0), (-1,-1), [AZUL_CLARO, white, white]),
-                    ("TOPPADDING",  (0,0), (-1,-1), 6),
-                    ("BOTTOMPADDING",(0,0),(-1,-1), 6),
-                    ("LEFTPADDING", (0,0), (-1,-1), 8),
-                    ("BOX",         (0,0), (-1,-1), 1.5, AZUL),
-                    ("LINEABOVE",   (0,0), (-1,0),  2,   AZUL),
-                ]))
-                story.append(t_header)
-                story.append(Spacer(1, 0.4*cm))
-
-                # ── DATOS DEL PACIENTE ────────────────────────────────────
-                story.append(HRFlowable(width="100%", thickness=1, color=AZUL_CLARO))
-                story.append(Spacer(1, 0.2*cm))
-
-                pac_data_rows = [[
-                    Paragraph("<b>Paciente:</b>", EST_LABEL),
-                    Paragraph(rx_nombre or "_____________________", EST_VALUE),
-                    Paragraph("<b>Expediente:</b>", EST_LABEL),
-                    Paragraph(rx_exp or "___________", EST_VALUE),
-                ],[
-                    Paragraph("<b>Edad:</b>", EST_LABEL),
-                    Paragraph(f"{rx_edad} años" if rx_edad else "______", EST_VALUE),
-                    Paragraph("<b>Sexo:</b>", EST_LABEL),
-                    Paragraph(rx_sexo or "______", EST_VALUE),
-                ],[
-                    Paragraph("<b>Fecha:</b>", EST_LABEL),
-                    Paragraph(str(rx_fecha), EST_VALUE),
-                    Paragraph("<b>Diagnóstico:</b>", EST_LABEL),
-                    Paragraph(rx_dx or "______________________________", EST_VALUE),
-                ]]
-                t_pac = Table(pac_data_rows, colWidths=[2.5*cm, 7*cm, 2.5*cm, 5*cm])
-                t_pac.setStyle(TableStyle([
-                    ("TOPPADDING",   (0,0), (-1,-1), 4),
-                    ("BOTTOMPADDING",(0,0), (-1,-1), 4),
-                    ("LEFTPADDING",  (0,0), (-1,-1), 4),
-                    ("BACKGROUND",   (0,0), (-1,-1), GRIS_L),
-                    ("ROWBACKGROUNDS",(0,0),(-1,-1), [GRIS_L, white]),
-                    ("BOX",          (0,0), (-1,-1), 0.5, GRIS),
-                    ("LINEAFTER",    (1,0), (1,-1), 0.5, GRIS),
-                ]))
-                story.append(t_pac)
-                story.append(Spacer(1, 0.5*cm))
-
-                # ── SÍMBOLO ℞ Y CUERPO DE INDICACIONES ───────────────────
-                story.append(Paragraph("&#x211E;", EST_RX))
-
-                # Split body by lines preserving numbering
-                lineas = rx_body.strip().split("\n") if rx_body.strip() else ["_" * 60]
-                for linea in lineas:
-                    story.append(Paragraph(linea if linea.strip() else " ", EST_CUERPO))
-                story.append(Spacer(1, 0.3*cm))
-
-                if rx_notas:
-                    story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS))
-                    story.append(Spacer(1, 0.2*cm))
-                    story.append(Paragraph(rx_notas, EST_SMALL))
-
-                story.append(Spacer(1, 1.5*cm))
-
-                # ── FIRMA ─────────────────────────────────────────────────
-                firma_data = [[
-                    "",
-                    Paragraph("_" * 35, EST_CUERPO),
-                ],[
-                    "",
-                    Paragraph(f"<b>{dr_nombre}</b>", EST_VALUE),
-                ],[
-                    "",
-                    Paragraph(f"Cédula: {dr_cedula} | {rx_firma}", EST_SMALL),
-                ]]
-                t_firma = Table(firma_data, colWidths=[8*cm, 9*cm])
-                t_firma.setStyle(TableStyle([
-                    ("TOPPADDING",   (0,0), (-1,-1), 2),
-                    ("BOTTOMPADDING",(0,0), (-1,-1), 2),
-                    ("ALIGN",        (1,0), (1,-1), "CENTER"),
-                    ("LINEABOVE",    (1,1), (1,1), 1, black),
-                ]))
-                story.append(t_firma)
-                story.append(Spacer(1, 0.5*cm))
-
-                # ── PIE DE PÁGINA ─────────────────────────────────────────
-                story.append(HRFlowable(width="100%", thickness=0.5, color=AZUL_CLARO))
-                story.append(Spacer(1, 0.2*cm))
-                story.append(Paragraph(
-                    f"Generado por RenalPro v3.1.0 | {dr_inst} | "
-                    "Uso académico y clínico — Documento válido con firma del médico tratante",
-                    EST_CENTER))
-
-                doc.build(story)
-                buf.seek(0)
-                return buf.read()
-
-            # ── BOTÓN GENERAR ──────────────────────────────────────────────
-            st.divider()
-            if st.button("📄 Generar Receta PDF", type="primary",
-                         use_container_width=True, key="btn_gen_pdf"):
-                if not rx_nombre or not rx_body:
-                    st.warning("Nombre del paciente e indicaciones son obligatorios.")
-                else:
-                    try:
-                        pdf_bytes = _generar_receta_pdf(
-                            dr_nombre, dr_cedula, dr_univ, dr_esp, dr_inst,
-                            rx_nombre, rx_exp, rx_edad, rx_sexo, rx_fecha,
-                            rx_dx, rx_body, rx_notas, rx_firma
-                        )
-                        nombre_safe = "".join(c for c in rx_nombre if c.isalnum() or c in " _-")[:20].strip()
-                        st.download_button(
-                            label="⬇️ Descargar Receta PDF",
-                            data=pdf_bytes,
-                            file_name=f"Receta_{nombre_safe}_{rx_fecha}.pdf",
-                            mime="application/pdf",
-                            key="btn_dl_receta_pdf",
-                        )
-                        st.success("✅ Receta generada correctamente. Haz clic en 'Descargar' para guardarla.")
-                    except Exception as e_pdf:
-                        st.error(f"Error al generar PDF: {e_pdf}")
-
-            if rec_data and _DB_ON and _db.db_ok():
-                if st.button("✅ Marcar como generada en expediente", key="btn_mark_receta"):
-                    try:
-                        conn_r = _db.get_conn()
-                        cur_r  = conn_r.cursor()
-                        cur_r.execute("UPDATE clinical_records SET receta_generada=TRUE WHERE id=%s",
-                                     (rec_data["id"],))
-                        conn_r.commit(); cur_r.close()
-                        _clear_cache(); st.success("✅ Marcado en el expediente.")
-                    except Exception:
-                        pass
 
 elif nav == "infecciones_tx":
     st.subheader("🦠 Infecciones Post-Trasplante Renal")
@@ -10646,6 +10446,7 @@ elif nav == "inmuno_tx":
     im_tab = st.radio("Módulo", [
         "📚 HLA — Conceptos fundamentales",
         "🧮 Calculadora cPRA",
+        "🔀 Calculadora de Mismatches HLA",
         "📊 Interpretador DSA / Luminex",
         "🔬 Crossmatch — tipos e interpretación",
         "⚠️ Estratificación de riesgo inmunológico",
@@ -10849,6 +10650,117 @@ Ref: OPTN Policy 2023 | Leffell MS et al. Transplantation 2007.
 | 1–79% | Sensibilizado | Tiempo de espera variable |
 | 80–98% | Altamente sensibilizado | Acceso reducido a donantes compatibles |
 | ≥99% | Hipersensibilizado | Prioridad en lista OPTN · Candidato a desensibilización |
+            """)
+
+    # ── CALCULADORA DE MISMATCHES HLA ──────────────────────────────────────────
+    elif "Mismatches" in im_tab:
+        st.markdown("### 🔀 Calculadora de Mismatches HLA")
+
+        st.info("""
+**¿Qué es un mismatch HLA?**
+Cuando el donante tiene un antígeno HLA que el receptor **no tiene** — el sistema inmune del receptor
+lo reconoce como "extraño" y puede generar anticuerpos contra él (DSA) o activar linfocitos T en su contra.
+
+**Máximo 6 mismatches posibles** (2 por locus × 3 loci: A + B + DR).
+**0 mismatches** = trasplante HLA idéntico → mejor sobrevida del injerto a largo plazo.
+
+> 📌 La compatibilidad de **DR** es la más importante — determina la respuesta CD4+.
+> Los mismatches de DR+DQ juntos predicen mejor el riesgo de rechazo crónico.
+        """)
+
+        st.markdown("#### Ingresa la tipificación HLA del Donante y el Receptor")
+        st.caption("Usa los alelos serológicos (ej: A2, B35, DR4). Si solo conoces uno de los dos alelos, deja el segundo en blanco.")
+
+        mm1, mm2, mm3 = st.columns(3)
+        loci_config = {
+            "A": ("HLA-A", mm1),
+            "B": ("HLA-B", mm2),
+            "DR": ("HLA-DR", mm3),
+        }
+
+        donante_hla = {}
+        receptor_hla = {}
+
+        for locus, (label, col) in loci_config.items():
+            with col:
+                st.markdown(f"**{label}**")
+                st.markdown("*Donante:*")
+                d1 = st.text_input(f"D-{locus}-1", placeholder=f"Ej: {locus}2", key=f"d_{locus}_1").strip().upper()
+                d2 = st.text_input(f"D-{locus}-2", placeholder="Opcional", key=f"d_{locus}_2").strip().upper()
+                st.markdown("*Receptor:*")
+                r1 = st.text_input(f"R-{locus}-1", placeholder=f"Ej: {locus}2", key=f"r_{locus}_1").strip().upper()
+                r2 = st.text_input(f"R-{locus}-2", placeholder="Opcional", key=f"r_{locus}_2").strip().upper()
+                donante_hla[locus]  = {a for a in [d1, d2] if a}
+                receptor_hla[locus] = {a for a in [r1, r2] if a}
+
+        # Calculate mismatches
+        if any(donante_hla[l] for l in ["A", "B", "DR"]):
+            st.divider()
+            total_mm = 0
+            mm_details = []
+
+            for locus in ["A", "B", "DR"]:
+                donor_set    = donante_hla[locus]
+                receptor_set = receptor_hla[locus]
+                # Mismatches = donor antigens not present in recipient
+                mismatched = donor_set - receptor_set
+                locus_mm   = len(mismatched)
+                total_mm  += locus_mm
+                mm_details.append({
+                    "Locus": f"HLA-{locus}",
+                    "Donante": " / ".join(sorted(donor_set)) if donor_set else "—",
+                    "Receptor": " / ".join(sorted(receptor_set)) if receptor_set else "—",
+                    "Ag. mismatch": " / ".join(sorted(mismatched)) if mismatched else "✅ Compatible",
+                    "Mismatches": locus_mm,
+                })
+
+            # Display results
+            rm1, rm2, rm3 = st.columns(3)
+            rm1.metric("Total Mismatches", f"{total_mm} / 6")
+            if total_mm == 0:
+                rm2.metric("Compatibilidad", "Excelente")
+                rm3.metric("Riesgo relativo", "Mínimo")
+                st.success("**0 Mismatches — Trasplante HLA idéntico o casi idéntico.** "
+                           "Mejor pronóstico a largo plazo.")
+            elif total_mm <= 2:
+                rm2.metric("Compatibilidad", "Buena")
+                rm3.metric("Riesgo relativo", "Bajo")
+                st.success(f"**{total_mm} Mismatch(es) — Buena compatibilidad.** "
+                           "Riesgo bajo de rechazo crónico.")
+            elif total_mm <= 4:
+                rm2.metric("Compatibilidad", "Moderada")
+                rm3.metric("Riesgo relativo", "Moderado")
+                st.warning(f"**{total_mm} Mismatches — Compatibilidad moderada.** "
+                           "Monitoreo estrecho de DSA post-trasplante recomendado.")
+            else:
+                rm2.metric("Compatibilidad", "Baja")
+                rm3.metric("Riesgo relativo", "Alto")
+                st.error(f"**{total_mm} Mismatches — Alta incompatibilidad HLA.** "
+                         "Mayor riesgo de rechazo crónico y pérdida del injerto a largo plazo. "
+                         "IS más intensa y monitoreo de DSA obligatorio.")
+
+            # Detail table
+            import pandas as pd
+            df_mm = pd.DataFrame(mm_details)
+            st.dataframe(df_mm, use_container_width=True, hide_index=True)
+
+            # Impact table
+            st.markdown("#### Impacto clínico de los mismatches DR")
+            dr_mm = mm_details[2]["Mismatches"]
+            if dr_mm == 0:
+                st.success("✅ Sin mismatches DR — menor riesgo de rechazo crónico mediado por anticuerpos.")
+            elif dr_mm == 1:
+                st.warning("⚠️ 1 mismatch DR — riesgo moderado. Monitoreo DSA a 1, 3, 6, 12 meses.")
+            else:
+                st.error("🔴 2 mismatches DR — alto riesgo de DSA de novo anti-DR y anti-DQ. "
+                         "Monitoreo estricto y biopsia de protocolo recomendada.")
+
+            st.caption("""
+**¿Cómo se calculan?** Un mismatch ocurre cuando el donante tiene un antígeno HLA
+que el receptor no tiene. Cada locus tiene hasta 2 alelos → máximo 2 mismatches por locus.
+No se cuenta si el receptor ya tiene ese antígeno (aunque el donante también lo tenga).
+
+Ref: Meier-Kriesche HU et al. Am J Transplant 2004 | OPTN Policy 2023
             """)
 
     # ── DSA / MFI INTERPRETER ──────────────────────────────────────────────────
