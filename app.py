@@ -6108,7 +6108,7 @@ Los **HIF-PHI** actúan bloqueando la enzima **prolil-hidroxilasa** (PHD), que n
 
         # ── MODO 2: AJUSTE ────────────────────────────────────────────────────
         elif "Ajuste" in aee_modo:
-            st.markdown("#### Ajuste de dosis según respuesta — KDIGO 2012")
+            st.markdown("#### Ajuste de dosis según respuesta — KDIGO 2012/2024")
             st.caption("Evaluar respuesta cada **4 semanas**. No cambiar dosis antes de 4 semanas.")
 
             adj1, adj2, adj3 = st.columns(3)
@@ -6117,51 +6117,83 @@ Los **HIF-PHI** actúan bloqueando la enzima **prolil-hidroxilasa** (PHD), que n
                                           ["Epoetina alfa", "Darbepoetina alfa",
                                            "Metoxi-PEG-epoetina beta (Mircera®)"], key="aee_adj_tipo")
                 if "Epoetina" in aee_actual and "Metoxi" not in aee_actual:
-                    dosis_act = st.number_input("Dosis actual (UI/aplicación)", 1000, 40000, 4000, 1000, key="aee_dosis_act")
-                    unidad = "UI"
+                    dosis_act = st.number_input("Dosis actual (UI/aplicación)", 1000, 40000, 4000, 500, key="aee_dosis_act")
+                    freq_sel  = st.selectbox("Frecuencia", ["3×/semana","2×/semana","c/semana"], key="aee_freq")
+                    unidad    = "UI"
+                    # Weekly dose
+                    freq_factor = {"3×/semana": 3, "2×/semana": 2, "c/semana": 1}.get(freq_sel, 1)
+                    dosis_sem = dosis_act * freq_factor
                 elif "Darb" in aee_actual:
-                    dosis_act = st.number_input("Dosis actual (mcg/aplicación)", 10.0, 500.0, 30.0, 5.0, key="aee_dosis_act")
-                    unidad = "mcg"
+                    dosis_act = st.number_input("Dosis actual (mcg/aplicación)", 10.0, 500.0, 40.0, 5.0, key="aee_dosis_act")
+                    freq_sel  = st.selectbox("Frecuencia", ["c/semana","c/2 semanas","c/mes"], key="aee_freq")
+                    unidad    = "mcg"
+                    freq_factor_darb = {"c/semana": 1, "c/2 semanas": 0.5, "c/mes": 0.25}.get(freq_sel, 1)
+                    dosis_sem = dosis_act * freq_factor_darb
                 else:
                     dosis_act = st.number_input("Dosis actual (mcg/mes)", 30.0, 360.0, 120.0, 30.0, key="aee_dosis_act")
-                    unidad = "mcg"
+                    freq_sel  = "c/mes"
+                    unidad    = "mcg"
+                    dosis_sem = dosis_act / 4.33
+
             with adj2:
-                hgb_hace4s = st.number_input("Hgb hace 4 semanas (g/dL)", 4.0, 20.0, 9.5, 0.1, key="aee_hgb_prev")
+                hgb_hace4s = st.number_input("Hgb hace 4 semanas (g/dL)", 4.0, 20.0, 6.5, 0.1, key="aee_hgb_prev")
+
             with adj3:
                 delta_hgb = hgb - hgb_hace4s
-                st.metric("Δ Hgb en 4 semanas", f"{delta_hgb:+.1f} g/dL")
+                st.metric("Δ Hgb en 4 semanas", f"{delta_hgb:+.1f} g/dL",
+                          delta=f"{'↑ Sube' if delta_hgb>0 else '↓ Baja' if delta_hgb<0 else '→ Estable'}")
+                peso_adj = st.number_input("Peso (kg)", 30.0, 150.0,
+                                           float(st.session_state.get("sb_peso", 70.0)),
+                                           1.0, key="aee_peso_adj")
+
+            # Hiporrespuesta threshold
+            if "Darb" in aee_actual:
+                dosis_kg_sem = dosis_sem / peso_adj
+                hipo_umbral  = 1.5  # mcg/kg/semana para darb
+                es_hiporrespuesta = dosis_kg_sem >= hipo_umbral and hgb < 10.0
+            else:
+                dosis_kg_sem = dosis_sem / peso_adj
+                hipo_umbral  = 300  # UI/kg/semana para epoetina
+                es_hiporrespuesta = dosis_kg_sem >= hipo_umbral and hgb < 10.0
+
+            st.divider()
 
             # Adjustment logic (KDIGO Table 4)
             dosis_nueva = dosis_act
             if hgb > 13.0:
-                accion_aee = "🛑 **SUSPENDER AEE** temporalmente. Hgb >13 g/dL = riesgo cardiovascular."
-                dosis_nueva = 0
-                color_aee = "error"
+                accion_aee = "🛑 **SUSPENDER AEE** temporalmente. Hgb >13 g/dL = riesgo cardiovascular aumentado."
+                dosis_nueva = 0; color_aee = "error"
             elif hgb > 11.5 and delta_hgb > 0:
-                dosis_nueva = dosis_act * 0.75
-                accion_aee = (f"⬇️ **REDUCIR 25%**: {dosis_act:.0f} → **{dosis_nueva:.0f} {unidad}**. "
-                              "Hgb sobre meta o subiendo hacia 13.")
+                dosis_nueva = round(dosis_act * 0.75, 1)
+                accion_aee = (f"⬇️ **REDUCIR 25%**: {dosis_act:.0f} → **{dosis_nueva:.0f} {unidad}** {freq_sel}. "
+                              "Hgb sobre meta o ascendiendo hacia 13.")
                 color_aee = "warning"
             elif delta_hgb > 2.0:
-                dosis_nueva = dosis_act * 0.75
-                accion_aee = (f"⬇️ **REDUCIR 25%**: {dosis_act:.0f} → **{dosis_nueva:.0f} {unidad}**. "
-                              "Subida demasiado rápida (>2 g/dL en 4 sem).")
+                dosis_nueva = round(dosis_act * 0.75, 1)
+                accion_aee = (f"⬇️ **REDUCIR 25%**: {dosis_act:.0f} → **{dosis_nueva:.0f} {unidad}** {freq_sel}. "
+                              "Ascenso demasiado rápido (>2 g/dL en 4 sem).")
                 color_aee = "warning"
             elif delta_hgb >= 1.0 and 10.0 <= hgb <= 11.5:
-                accion_aee = f"✅ **MANTENER** dosis actual ({dosis_act:.0f} {unidad}). Respuesta adecuada."
+                accion_aee = f"✅ **MANTENER** {dosis_act:.0f} {unidad} {freq_sel}. Respuesta adecuada, Hgb en meta."
                 color_aee = "success"
             elif delta_hgb >= 1.0 and hgb < 10.0:
-                accion_aee = f"✅ **MANTENER** dosis actual ({dosis_act:.0f} {unidad}). Subida adecuada, aún bajo meta."
+                accion_aee = (f"✅ **MANTENER** {dosis_act:.0f} {unidad} {freq_sel}. "
+                              "Sube adecuado — aún bajo meta, continuar y reevaluar en 4 semanas.")
                 color_aee = "success"
+            elif es_hiporrespuesta:
+                accion_aee = (f"🔴 **HIPORRESPUESTA AEE** — {dosis_kg_sem:.2f} {unidad[0].lower()}g/kg/sem ≥ umbral "
+                              f"({hipo_umbral} {'mcg' if 'Darb' in aee_actual else 'UI'}/kg/sem) sin alcanzar meta. "
+                              "**No aumentar dosis** — investigar causas. Ver abajo.")
+                color_aee = "error"; dosis_nueva = dosis_act
             elif delta_hgb < 1.0 and hgb < 10.0:
-                dosis_nueva = dosis_act * 1.25
-                accion_aee = (f"⬆️ **AUMENTAR 25%**: {dosis_act:.0f} → **{dosis_nueva:.0f} {unidad}**. "
+                dosis_nueva = round(dosis_act * 1.25, 1)
+                accion_aee = (f"⬆️ **AUMENTAR 25%**: {dosis_act:.0f} → **{dosis_nueva:.0f} {unidad}** {freq_sel}. "
                               "Respuesta insuficiente (<1 g/dL en 4 sem).")
                 color_aee = "warning"
                 if crp > 10:
-                    accion_aee += f" ⚠️ Verificar: PCR {crp:.0f} mg/L → investigar causas de hiporrespuesta."
+                    accion_aee += f" ⚠️ PCR {crp:.0f} mg/L elevada — considerar hiporrespuesta por inflamación."
             else:
-                accion_aee = f"ℹ️ **MANTENER** dosis actual. Evaluar nuevamente en 4 semanas."
+                accion_aee = f"ℹ️ **MANTENER** dosis actual. Reevaluar en 4 semanas."
                 color_aee = "info"
 
             if color_aee == "success": st.success(accion_aee)
@@ -6169,18 +6201,44 @@ Los **HIF-PHI** actúan bloqueando la enzima **prolil-hidroxilasa** (PHD), que n
             elif color_aee == "error": st.error(accion_aee)
             else: st.info(accion_aee)
 
+            # Show dose summary
+            mc1, mc2, mc3 = st.columns(3)
+            mc1.metric("Dosis actual/aplicación", f"{dosis_act:.0f} {unidad}")
+            mc2.metric("Dosis semanal equiv.", f"{dosis_sem:.0f} {unidad}/sem")
+            mc3.metric("Dosis/kg/semana", f"{dosis_kg_sem:.2f} {unidad[0].lower()}g/kg/sem")
+
+            # Hiporrespuesta workup
+            if es_hiporrespuesta or (hgb < 10.0 and delta_hgb < 0.5):
+                st.error("""
+#### 🔍 Protocolo de investigación de hiporrespuesta AEE
+*(Hgb no sube a pesar de dosis AEE adecuada)*
+
+**Causas más frecuentes (buscar en este orden):**
+
+| Causa | Estudio | Hallazgo | Manejo |
+|-------|---------|---------|--------|
+| **Déficit de hierro** | Ferritina + IST | Ferritina <200 o IST <20% | Hierro IV antes de aumentar AEE |
+| **Inflamación / infección** | PCR, leucocitos | PCR >10 mg/L | Tratar causa + hierro si IST <30% |
+| **Pérdida de sangre** | Heces/oculto, diálisis | — | Buscar y tratar fuente |
+| **Déficit B12/ácido fólico** | B12, folato sérico | Bajos | Suplementar |
+| **Hiperparatiroidismo** | PTHi | >300 pg/mL en HD | Control de PTH |
+| **Hemólisis** | LDH, bilirrubina, frotis | Esquistocitos | Descartar TMA/TTP |
+| **Aplasia eritroide (B19)** | PCR Parvovirus B19 | + | IVIG + reducir IS |
+| **Aluminio** | Al sérico | >60 μg/L | Deferoxamina |
+| **Timoglobulina reciente** | Historia | — | Esperar recuperación medular |
+                """)
+
             st.markdown("""
-#### Tabla de ajuste KDIGO 2012
+#### Tabla de ajuste rápido KDIGO 2012
 | Situación | Acción |
 |-----------|--------|
-| Hgb **>13 g/dL** | Suspender AEE temporalmente |
-| Hgb **>11.5 g/dL** subiendo | ↓ Dosis 25% |
-| Δ Hgb **>2 g/dL** en 4 sem | ↓ Dosis 25% |
-| Δ Hgb **1–2 g/dL** + Hgb en meta | Mantener dosis |
-| Δ Hgb **<1 g/dL** + Hgb <10 | ↑ Dosis 25% |
-| Hgb <10 pese a dosis alta* | Investigar hiporrespuesta |
-
-*Hiporrespuesta: Epoetina >300 UI/kg/sem o Darb >1.5 mcg/kg/sem sin alcanzar meta → investigar: déficit de hierro, infección, inflamación, hiperparatiroidismo, hemólisis.
+| Hgb **>13 g/dL** | Suspender AEE |
+| Hgb **>11.5** subiendo | ↓ 25% |
+| Δ Hgb **>2 g/dL** en 4 sem | ↓ 25% |
+| Δ Hgb **1–2 g/dL** en meta | Mantener |
+| Δ Hgb **<1 g/dL** + Hgb <10 | ↑ 25% |
+| Darb **≥1.5 mcg/kg/sem** sin meta | **Hiporrespuesta → investigar** |
+| Epoetina **≥300 UI/kg/sem** sin meta | **Hiporrespuesta → investigar** |
             """)
 
         # ── MODO 3: CONVERSIÓN ────────────────────────────────────────────────
@@ -9881,13 +9939,11 @@ elif nav == "expediente":
                             "✏️ Escribir diagnóstico manualmente",
                         ]
                         dx_cie_sel = st.selectbox("Diagnóstico (CIE-10)", CIE10_EXP, key="np_cie_sel")
-                        if dx_cie_sel.startswith("✏️"):
-                            np_dx = st.text_area("Diagnóstico manual", height=60, key="np_dx",
-                                                 placeholder="Escribe el diagnóstico y código CIE-10")
-                        else:
-                            np_dx = dx_cie_sel
-                            st.text_area("Diagnóstico seleccionado", value=np_dx,
-                                         height=60, key="np_dx", disabled=True)
+                        # Always editable - pre-fill with selected value but allow editing
+                        dx_prefill = "" if dx_cie_sel.startswith("✏️") else dx_cie_sel
+                        np_dx = st.text_area("Diagnóstico (editable)", height=60, key="np_dx",
+                                             value=dx_prefill,
+                                             placeholder="Selecciona arriba o escribe aquí tu propio diagnóstico")
                         np_notas = st.text_area("Notas adicionales", height=40, key="np_notas")
 
                     if st.button("💾 Registrar paciente", type="primary", key="btn_reg_pac"):
