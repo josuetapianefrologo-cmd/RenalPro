@@ -2101,7 +2101,9 @@ with st.sidebar:
     _navbtn("📋 Resumen / PDF", "resumen")
     _navbtn("📂 Mis Pacientes", "pacientes")
     _navbtn("🏥 Expediente Clínico", "expediente")
-    _navbtn("🔁 Recurrencia Glomerulopatías TR", "recurrencia_tx")
+    _navbtn("🫀 Síndrome Cardiorrenal", "scr")
+    _navbtn("🦴 ERC-MBD", "erc_mbd")
+    _navbtn("🩸 HTA en ERC", "hta_erc")
     _navbtn("💉 Vacunas Post-Trasplante", "vacunas_tx")
     _navbtn("📋 Candidato a Trasplante", "eval_candidato")
     _navbtn("🫀 Donante Vivo", "eval_donante_vivo")
@@ -15554,6 +15556,800 @@ COVID-19: Anti-spike IgG a las 4–8 semanas
   → Niveles correlacionan con protección pero no la definen exactamente
 ```
         """)
+
+elif nav == "scr":
+    st.subheader("🫀 Síndrome Cardiorrenal (SCR)")
+    st.caption("Ref: Ronco C et al. JACC 2008 | Rangaswami J et al. Circulation 2019 | "
+               "KDIGO AKI 2012 | ESC Heart Failure Guidelines 2021")
+
+    scr_tab = st.radio("", [
+        "📋 Clasificación y diagnóstico",
+        "💊 SCR Tipo 1 — Manejo agudo",
+        "🔬 SCR Tipo 4 — ERC y cardiopatía",
+        "⚖️ Tolvaptán / Ultrafiltración / Diálisis",
+    ], horizontal=True, key="scr_tab")
+    st.divider()
+
+    if "Clasificación" in scr_tab:
+        st.markdown("""
+### Clasificación del Síndrome Cardiorrenal
+
+| Tipo | Nombre | Mecanismo primario | Ejemplo clínico |
+|------|--------|-------------------|----------------|
+| **SCR 1** | Cardiorrenal agudo | ICA → AKI aguda | Edema agudo pulmonar + Cr sube 0.3 mg/dL |
+| **SCR 2** | Cardiorrenal crónico | ICC crónica → ERC progresiva | Paciente con FE 25% + ERC 3b |
+| **SCR 3** | Renocardíaco agudo | AKI → disfunción cardíaca aguda | SHU + arritmias + edema pulmonar |
+| **SCR 4** | Renocardíaco crónico | ERC → cardiopatía crónica | ERC 5 + HVI + calcificaciones vasculares |
+| **SCR 5** | Sistémico | Enfermedad sistémica → ambos | Sepsis, amiloidosis, LES, DM |
+
+#### Fisiopatología SCR 1 — el más frecuente en guardia
+```
+ICA (aumento PVC / presión venosa renal)
+        ↓
+Congestión venosa renal → ↑ presión intersticial renal
+        ↓
+↓ GFR + activación RAAS + SNS
+        ↓
+Retención de Na/agua → más congestión → círculo vicioso
+
+Simultáneamente:
+↓ Gasto cardíaco → ↓ presión de perfusión renal
+→ vasoconstricción renal refleja
+→ AKI isquémica + cardiogénica
+```
+
+#### Herramientas diagnósticas
+| Estudio | Hallazgo | Interpretación |
+|---------|---------|---------------|
+| **Eco renal Doppler** | IR >0.70 | Congestión venosa renal → SCR |
+| | IR <0.70 | Daño renal intrínseco o isquemia |
+| **BNP / NT-proBNP** | >400 pg/mL | Disfunción cardíaca activa |
+| **FEVI en ecocardiograma** | <40% | Disfunción sistólica — SCR 1 o 2 |
+| | >50% | HFpEF — SCR por congestión |
+| **PVC / PAP (si Swan-Ganz)** | PVC >12 | Congestión → agravar SCR |
+| **ENA, BUN/Cr ratio** | BUN/Cr >20 | Prerrenal — responderá a diuresis |
+| | BUN/Cr <10 | Daño tubular intrínseco |
+| **EF sodio (FENa)** | <1% | Prerrenal (cuidado: diuréticos invalidan) |
+| **EF urea** | <35% | Prerrenal incluso con diuréticos |
+        """)
+
+    elif "SCR Tipo 1" in scr_tab:
+        st.markdown("### 💊 SCR Tipo 1 — Manejo Agudo")
+        st.info("**Meta principal:** descongestión venosa renal → mejora de la perfusión → recuperación del GFR. "
+                "Paradójicamente: diureticar agresivamente MEJORA la función renal en SCR, no la empeora.")
+
+        # Calculator
+        scr1, scr2 = st.columns(2)
+        with scr1:
+            scr_peso   = st.number_input("Peso actual (kg)", 30.0,200.0,80.0,0.5,key="scr_peso")
+            scr_peso_s = st.number_input("Peso seco estimado (kg)", 30.0,200.0,75.0,0.5,key="scr_pesos")
+            scr_sobrecarga = scr_peso - scr_peso_s
+            st.metric("Sobrecarga hídrica estimada", f"{scr_sobrecarga:.1f} kg = {scr_sobrecarga*1000:.0f} mL")
+            scr_cr  = st.number_input("Creatinina actual (mg/dL)", 0.3,20.0,2.5,0.1,key="scr_cr")
+            scr_cr0 = st.number_input("Creatinina basal (mg/dL)", 0.3,20.0,1.2,0.1,key="scr_cr0")
+            delta_cr = scr_cr - scr_cr0
+            if delta_cr >= 0.3:
+                st.error(f"Δ Cr: +{delta_cr:.1f} mg/dL → **AKI confirmada** (criterio KDIGO)")
+            else:
+                st.info(f"Δ Cr: {delta_cr:+.1f} mg/dL")
+        with scr2:
+            scr_k   = st.number_input("K sérico (mEq/L)", 2.0,8.0,4.5,0.1,key="scr_k")
+            scr_fevi= st.number_input("FEVI (%)", 5,80,35,1,key="scr_fevi")
+            scr_pas = st.number_input("PAS (mmHg)", 60,220,110,1,key="scr_pas")
+            scr_diur= st.number_input("Diuresis (mL/h última hora)", 0,500,20,5,key="scr_diur")
+
+        st.divider()
+        st.markdown("#### Algoritmo de manejo — SCR tipo 1 / ICA + AKI")
+
+        # Hemodynamics assessment
+        if scr_pas < 90:
+            st.error("🛑 **HIPOTENSIÓN** (PAS <90) — NO diureticar. "
+                     "Estabilizar hemodinámica primero: noradrenalina / dobutamina. "
+                     "Considerar balón de contrapulsación. Nefrólogo + intensivista urgente.")
+        elif scr_pas < 100:
+            st.warning("⚠️ PAS limítrofe — diuresis muy cautelosa. "
+                       "Inotrópicos primero si FEVI <30%.")
+        else:
+            if scr_sobrecarga > 3:
+                st.error(f"🔴 Sobrecarga {scr_sobrecarga:.1f} kg — Descongestión URGENTE")
+            else:
+                st.warning(f"🟡 Sobrecarga {scr_sobrecarga:.1f} kg — Descongestión activa")
+
+        # Furosemide strategy
+        st.markdown(f"""
+#### Estrategia diurética (DOSE trial + KDIGO)
+
+**Meta de diuresis:** {scr_sobrecarga*1000/48:.0f} mL/h
+*(descongestión gradual: pérdida total estimada en 48h)*
+
+| Escenario | Furosemida | Vía | Monitoreo |
+|-----------|-----------|-----|----------|
+| Naive (sin diurético previo) | **40–80 mg IV** bolo → titular | IV | Diuresis c/1h |
+| Ya en furosemida oral ≤40 mg/día | Misma dosis IV (= x2.5 oral) | IV | — |
+| Ya en furosemida ≥80 mg/día | **Infusión continua 10–20 mg/h** | IV drip | Diuresis c/2h |
+| Sin respuesta en 2h | **Bloqueo secuencial de nefrona:** furosemida + metolazona 2.5–5 mg VO | — | K y Mg c/6h |
+
+**Meta de respuesta:** diuresis >100–150 mL/h × 6h → reevaluar
+
+**ATENCIÓN — paradoja del SCR:**
+> Si Cr sube levemente (0.1–0.3 mg/dL) mientras el paciente se descongestiona:
+> **CONTINUAR la descongestión.** La Cr subirá transitoriamente → bajará cuando la congestión ceda.
+> Solo detener si: Cr sube >0.5 en 24h SIN mejoría clínica + diuresis nula.
+        """)
+
+        # Potassium management
+        if scr_k > 5.5:
+            st.error(f"⚡ **K {scr_k} mEq/L — Hiperkalemia grave.** Ver módulo Hiperkalemia.")
+        elif scr_k < 3.5:
+            st.warning(f"⬇️ K {scr_k} mEq/L — Reponer KCl antes de continuar diuréticos.")
+
+        st.markdown("""
+#### Vasopresores e inotrópicos en SCR 1
+| Fármaco | Indicación | Dosis | Efecto renal |
+|---------|-----------|-------|-------------|
+| **Dobutamina** | FEVI <30% + hipoperfusión | 2–10 mcg/kg/min | Mejora GC → mejora GFR |
+| **Noradrenalina** | Hipotensión + vasoplejía | 0.01–0.5 mcg/kg/min | Aumenta PAM → perfusión |
+| **Levosimendan** | ICA aguda + baja FEVI | 0.1 mcg/kg/min × 24h | Vasodilatador renal directo |
+| **Nesiritida (BNP)** | Vasodilatación + diuresis | No disponible en MX | — |
+| ~~Dopamina dosis renal~~ | ❌ NO usar | — | Sin beneficio — ROSE trial |
+        """)
+
+    elif "SCR Tipo 4" in scr_tab:
+        st.markdown("""
+### 🔬 SCR Tipo 4 — ERC y Cardiopatía Crónica
+
+#### Epidemiología
+- 50–75% de los pacientes con ERC estadio 3–5 tienen cardiopatía
+- Principal causa de muerte en ERC: **cardiovascular (50%)**
+- La HVI está presente en >70% de los pacientes en diálisis
+
+#### Mecanismos de daño cardíaco en ERC
+```
+ERC → Retención de fosfato → ↑ FGF-23 → HVI directa
+ERC → ↑ PTH → calcificaciones vasculares + miocárdicas
+ERC → Anemia → ↑ GC → HVI excéntrica
+ERC → Acumulación toxinas urémicas → cardiomiopatía urémica
+ERC → HTA + sobrecarga de volumen → HVI concéntrica
+ERC → Dislipidemia → aterosclerosis acelerada
+```
+
+#### Factores de riesgo cardiovascular específicos de ERC
+| Factor | Intervención |
+|--------|-------------|
+| **HTA (90% en ERC 5)** | Meta <130/80 — KDIGO 2021 |
+| **HVI** | IECA/ARA-II + control de sobrehidratación en HD |
+| **Calcificaciones vasculares** | Control de P/Ca/PTH + sevelamer |
+| **Anemia** | Hb 10–11.5 g/dL — AEE + hierro IV |
+| **Sobrecarga de volumen** | Peso seco en HD, restricción Na/agua |
+| **Inflamación crónica** | Optimizar nutrición + diálisis adecuada |
+| **Diabetes** | HbA1c 7–8% (menos estricto en ERC avanzada) |
+
+#### Tamizaje cardíaco en ERC avanzada
+| Estudio | Frecuencia | Qué buscar |
+|---------|-----------|-----------|
+| ECG | Anual | Arritmias, HVI voltaje, QT |
+| Ecocardiograma | Cada 1–2 años | FEVI, HVI (IMVI), función diastólica |
+| BNP / NT-proBNP | Si síntomas | Descompensación cardíaca |
+| Rx tórax | Según clínica | Cardiomegalia, congestión |
+| Score de calcio coronario (Agatston) | 1 vez | Calcificación vascular |
+
+#### Medicamentos cardioprotectores — ajuste en ERC
+| Fármaco | ERC 3 | ERC 4 | ERC 5 / HD |
+|---------|-------|-------|-----------|
+| IECA / ARA-II | ✅ Plena dosis | ✅ Reducir 25–50% | ⚠️ Cautela (K, hipotensión) |
+| Betabloqueadores | ✅ | ✅ | ✅ Carvedilol preferido |
+| Estatinas | ✅ | ✅ | ⚠️ Beneficio limitado en HD (SHARP) |
+| SGLT2 inhibidores | ✅ si TFG>20 | ⚠️ TFG 20–45 | ❌ TFG <20 — no eficacia |
+| Espironolactona | ✅ | ⚠️ K>5.0 | ❌ HD — riesgo K |
+| Anticoagulantes (FA) | Dosis reducida | Dosis reducida | ⚠️ Riesgo/beneficio |
+        """)
+
+    else:  # Tolvaptán / UF / Diálisis
+        st.markdown("### ⚖️ Tolvaptán / Ultrafiltración / Diálisis en SCR")
+
+        t1, t2, t3 = st.columns(3)
+        with t1:
+            st.markdown("""
+**🔵 Tolvaptán (Samsca®)**
+Antagonista del receptor V2 de vasopresina → acuaresis sin pérdida de electrolitos
+
+*Indicaciones en SCR:*
+- Hiponatremia dilucional + ICA
+- Congestión refractaria a diuréticos de asa
+- Ascitis en cirrosis + ICA (SCR5)
+
+*Dosis:*
+- 15 mg c/24h VO — en hospital
+- Aumentar a 30–60 mg si no responde
+- NO usar >30 días consecutivos
+
+*Contraindicaciones:*
+- Hipernatremia
+- Incapacidad para acceder a agua
+- Falla hepática grave
+- Con CYP3A4 inhibidores (↑ niveles)
+
+*Monitoreo:*
+- Na c/4–6h las primeras 24h
+- No subir Na >10–12 mEq/L en 24h (mielinólisis)
+            """)
+        with t2:
+            st.markdown("""
+**🔧 Ultrafiltración (UF) aislada**
+Extracción de líquido sin diálisis — UNLOAD trial
+
+*Indicaciones:*
+- Sobrecarga hídrica >3 kg refractaria a diuréticos
+- Cr subiendo CON congestión persistente
+- ICA descompensada en HD crónica
+
+*Parámetros:*
+- Tasa: 100–200 mL/h (no más)
+- Total a extraer: calcular según sobrecarga
+- Acceso: catéter doble lumen temporal
+
+*¿UF vs diuréticos IV?*
+CARESS-HF trial (NEJM 2012):
+→ UF NO fue superior a diuréticos escalonados
+→ Diuréticos IV siguen siendo primera línea
+→ UF: si fracaso diurético documentado
+
+*No confundir con HD:*
+UF = solo extrae agua sin clearance de solutos
+HD = clearance de urea + solutos + agua
+            """)
+        with t3:
+            st.markdown("""
+**🏥 Cuándo iniciar Diálisis en SCR**
+
+*Indicaciones urgentes (AEIOU):*
+- **A**cidosis: pH <7.10 refractaria
+- **E**lectrolitos: K >6.5 con cambios ECG
+- **I**ntoxicación: tóxicos dializables
+- **O**verload: edema pulmonar refractario a diuréticos
+- **U**remia: encefalopatía, pericarditis, sangrado
+
+*Elección de modalidad en SCR:*
+| Modalidad | Ventaja en SCR |
+|-----------|---------------|
+| **TRRC (CVVHDF)** | Inestabilidad hemodinámica — más lenta y segura |
+| **HD intermitente** | HD crónico con SCR descompensado |
+| **UF aislada** | Solo congestión sin indicación de diálisis |
+
+*Patrón de TRRC en SCR:*
+- Dosis mínima: 20 mL/kg/h (RENAL trial)
+- Ultrafiltración neta: 100–200 mL/h según tolerancia
+- Evitar hipotensión → empeora perfusión renal + cardíaca
+            """)
+
+elif nav == "erc_mbd":
+    st.subheader("🦴 ERC-MBD — Enfermedad Mineral y Ósea en ERC")
+    st.caption("Ref: KDIGO CKD-MBD 2017 Update | Evenepoel P et al. NDT 2021 | "
+               "Floege J et al. Kidney Int 2021")
+
+    mbd_tab = st.radio("", [
+        "🎯 Metas por estadio",
+        "💊 Quelantes de fósforo",
+        "🌡️ Vitamina D y análogos",
+        "🧮 Cinacalcet / Etelcalcetide",
+        "🔪 Paratiroidectomía",
+    ], horizontal=True, key="mbd_tab")
+    st.divider()
+
+    if "Metas" in mbd_tab:
+        st.markdown("""
+### 🎯 Metas KDIGO CKD-MBD 2017 por estadio
+
+#### Fósforo sérico
+| Estadio ERC | Meta P | Acción |
+|------------|--------|--------|
+| ERC 3–5 (prediálisis) | **Mantener en rango normal** (2.5–4.5 mg/dL) | Restricción dietética + quelante si necesario |
+| ERC 5D (HD) | **3.5–5.5 mg/dL** | Quelante en cada comida + HD adecuada |
+| ERC 5D (DP) | **3.5–5.5 mg/dL** | Quelante + residual renal |
+| Post-trasplante | <4.5 mg/dL | Restricción + revisión si >6 meses |
+
+#### Calcio sérico (total corregido por albúmina)
+| Situación | Meta | Fórmula corrección |
+|-----------|------|-------------------|
+| Todos los estadios | **8.4–10.2 mg/dL (normal)** | Ca corregido = Ca + 0.8 × (4 − Alb) |
+| Evitar hipercalcemia | <10.2 mg/dL | ↑Ca → suspender análogos VD activa |
+| Evitar hipocalcemia | >8.4 mg/dL | ↓Ca → calcio + VD activa |
+
+#### PTH intacta (PTHi)
+| Estadio | Meta PTHi | Estrategia |
+|---------|----------|-----------|
+| ERC 3 | 35–70 pg/mL | 25-OH-D si deficiencia |
+| ERC 4 | 70–110 pg/mL | Calcitriol/análogo si sube |
+| ERC 5 prediálisis | 150–300 pg/mL | Calcitriol + cinacalcet |
+| **ERC 5D (HD/DP)** | **150–600 pg/mL** | Rango amplio — evitar adinámica ósea |
+| Post-trasplante mes 1–6 | 150–300 pg/mL | Tomar vitamina D activa si persiste |
+| Post-trasplante >6 meses | <130 pg/mL | Cinacalcet si persiste hiperparatiroidismo |
+
+#### Vitamina D (25-OH-D3)
+| Nivel | Clasificación | Acción |
+|-------|-------------|--------|
+| <10 ng/mL | Deficiencia severa | Colecalciferol 50,000 UI/semana × 12 sem |
+| 10–20 ng/mL | Deficiencia | Colecalciferol 2,000–4,000 UI/día |
+| 20–30 ng/mL | Insuficiencia | Colecalciferol 1,000–2,000 UI/día |
+| >30 ng/mL | Suficiente | Mantenimiento 800–1,000 UI/día |
+
+#### Producto calcio-fósforo (Ca × P)
+- Meta: **<55 mg²/dL²** (calcificaciones vasculares si supera)
+- Si Ca × P >55 → priorizar reducción de P + quelante sin calcio
+
+> 📌 **Eje hormonal del MBD:**
+> ↓TFG → ↑FGF-23 → ↑PTH → ↓Calcitriol → ↑P → ↓Ca → círculo vicioso
+        """)
+
+        # Calculator
+        st.markdown("#### Calculadora rápida")
+        mc1, mc2, mc3 = st.columns(3)
+        with mc1:
+            ca_tot = st.number_input("Ca total (mg/dL)", 5.0,15.0,8.8,0.1,key="mbd_ca")
+            alb_m  = st.number_input("Albúmina (g/dL)", 1.0,6.0,3.5,0.1,key="mbd_alb")
+            ca_cor = ca_tot + 0.8*(4.0 - alb_m)
+            st.metric("Ca corregido", f"{ca_cor:.1f} mg/dL",
+                      delta="⬆️ alto" if ca_cor>10.2 else ("⬇️ bajo" if ca_cor<8.4 else "✅ normal"))
+        with mc2:
+            p_ser  = st.number_input("Fósforo (mg/dL)", 0.5,12.0,5.5,0.1,key="mbd_p")
+            caxp   = ca_cor * p_ser
+            st.metric("Ca × P", f"{caxp:.1f} mg²/dL²",
+                      delta="⬆️ ALTO" if caxp>55 else "✅ <55")
+        with mc3:
+            pth_m  = st.number_input("PTHi (pg/mL)", 0.0,3000.0,350.0,10.0,key="mbd_pth")
+            egfr_m = st.number_input("TFG (mL/min)", 0.0,120.0,15.0,1.0,key="mbd_egfr")
+            if egfr_m < 15:
+                meta_pth = "150–600 pg/mL (HD)"
+                en_meta  = 150 <= pth_m <= 600
+            elif egfr_m < 30:
+                meta_pth = "150–300 pg/mL"
+                en_meta  = 150 <= pth_m <= 300
+            elif egfr_m < 45:
+                meta_pth = "70–110 pg/mL"
+                en_meta  = 70 <= pth_m <= 110
+            else:
+                meta_pth = "35–70 pg/mL"
+                en_meta  = 35 <= pth_m <= 70
+            st.metric("PTH en meta", "✅ Sí" if en_meta else "❌ No", delta=meta_pth)
+
+    elif "Quelantes" in mbd_tab:
+        st.markdown("""
+### 💊 Quelantes de Fósforo — Comparativa
+
+| Quelante | Dosis | Con/Sin calcio | Ventaja | Limitación |
+|---------|-------|---------------|---------|-----------|
+| **Sevelamer HCl (Renagel®)** | 800–1600 mg c/comida | Sin calcio | Efecto hipolipemiante + neutro en Ca | Caro, constipación |
+| **Sevelamer Carbonato (Renvela®)** | 800–1600 mg c/comida | Sin calcio | Menos acidosis que HCl | — |
+| **Carbonato de calcio** | 500–1500 mg c/comida | Con calcio | Barato, disponible IMSS | ↑Ca → calcificaciones |
+| **Acetato de calcio (PhosLo®)** | 667 mg c/comida | Con calcio | Más eficaz que carbonato | ↑Ca |
+| **Hidróxido de Al** | 300–600 mg c/comida | Sin calcio | MUY eficaz | ❌ Toxicidad Al — solo corto plazo |
+| **Citrato de Fe (Auryxia®)** | 210 mg Fe c/comida | Sin calcio | Trata anemia + fósforo | Caro |
+| **Oxihidróxido sucroférrico (Velphoro®)** | 500 mg c/comida | Sin calcio | Eficaz, sin Al | Caro, heces negras |
+| **Carbonato de La (Fosrenol®)** | 500–1000 mg c/comida | Sin calcio | Eficaz | Náusea, caro |
+
+#### Cuándo usar cada uno — algoritmo práctico
+```
+Ca sérico NORMAL (8.4–10.2) + P alto:
+  → Primera línea: Sevelamer carbonato (si disponible) o Carbonato de Ca
+  → Segunda: combinación (Ca + sevelamer)
+
+Ca sérico ALTO (>10.2) + P alto:
+  → ❌ NO dar calcio como quelante
+  → Sevelamer + reducir análogos de VD activa
+  → Cinacalcet si PTH alta
+
+Ca sérico BAJO (<8.4) + P alto:
+  → Carbonato de calcio (efecto dual: quelante + suplemento)
+  → + VD activa
+
+Ca × P >55:
+  → Priorizar quelante SIN calcio (sevelamer)
+  → Meta: bajar P antes que Ca
+
+En IMSS disponibles habitualmente:
+  → Carbonato de Ca ✅ · Sevelamer ✅ (en algunos centros) · Hidróxido de Al (solo emergencia)
+```
+
+#### Instrucciones clave para el paciente
+- Tomar CON las comidas (no antes, no después)
+- No masticar / triturar sevelamer (pierde efecto)
+- Si olvida una comida → no tomar el quelante
+- Separar de otros medicamentos ≥2 horas (sevelamer absorbe fármacos)
+        """)
+
+    elif "Vitamina D" in mbd_tab:
+        st.markdown("""
+### 🌡️ Vitamina D — Nativa vs Activa
+
+#### Vitamina D nativa (Colecalciferol / Ergocalciferol)
+- Indicación: corregir deficiencia de 25-OH-D3 (<30 ng/mL)
+- Vías metabólicas requieren riñón → menos eficaz en ERC avanzada para PTH
+
+| Nivel 25-OH-D | Dosis |
+|--------------|-------|
+| <10 ng/mL | 50,000 UI VO c/semana × 12 semanas → luego 2,000 UI/día |
+| 10–20 ng/mL | 4,000 UI/día × 3 meses → 2,000 UI/día |
+| 20–30 ng/mL | 2,000 UI/día |
+| >30 ng/mL | 800–1,000 UI/día mantenimiento |
+
+#### Vitamina D activa y análogos — para PTH
+
+| Fármaco | Dosis | Selectividad VDR | Hipercalcemia |
+|---------|-------|-----------------|--------------|
+| **Calcitriol** (Rocaltrol®) | 0.25–1 mcg c/24h VO o IV × 3/sem en HD | No selectivo | Alta |
+| **Paricalcitol** (Zemplar®) | 1–4 mcg IV × 3/sem o 1–2 mcg VO c/24h | VDR renal selectivo | Menor |
+| **Alfacalcidol** | 0.25–2 mcg/día VO | Moderada | Moderada |
+| **Doxercalciferol** | 2.5–10 mcg × 3/sem IV | Moderada | Moderada |
+
+#### Cuándo agregar VD activa
+```
+PTH > límite superior de meta para el estadio
++ Ca normal o bajo
++ P controlado (<5.5 mg/dL)
+→ Agregar calcitriol 0.25 mcg/día o paricalcitol 1 mcg/día
+
+Ajuste:
+  → Medir PTH, Ca, P cada 4 semanas al inicio
+  → Si Ca sube >10.2 → SUSPENDER VD activa temporalmente
+  → Si P sube >5.5 → Reforzar quelante antes de agregar VD
+
+Paricalcitol vs Calcitriol:
+  → Paricalcitol: menos hipercalcemia, menos absorción GI de Ca
+  → Evidencia de mayor reducción de HVI y mortalidad CV (observacional)
+  → En HD: paricalcitol preferido por menores efectos en Ca/P
+```
+        """)
+
+    elif "Cinacalcet" in mbd_tab:
+        st.markdown("""
+### 🧮 Cinacalcet y Etelcalcetide — Calcimiméticos
+
+#### Mecanismo
+Activan el receptor sensor de calcio (CaSR) en las células paratiroideas
+→ Suprimen PTH SIN aumentar Ca ni P (efecto contrario a VD activa)
+
+#### Cinacalcet (Sensipar®)
+| Parámetro | Detalle |
+|-----------|---------|
+| **Indicación** | Hiperparatiroidismo secundario en HD — PTH persistentemente alta |
+| **Dosis inicial** | 30 mg c/24h VO con comida |
+| **Ajuste** | ↑ a 60 → 90 → 120 → 180 mg c/4 semanas según PTH/Ca |
+| **Meta** | PTH 150–300 pg/mL |
+| **Contraindicación** | Ca <8.4 mg/dL — riesgo de hipocalcemia severa |
+| **Efecto adverso** | Náusea/vómito (40%) → tomar con comida abundante |
+| **Monitoreo** | Ca y PTH 1 semana después de cada ajuste |
+
+#### Etelcalcetide (Parsabiv®) — IV en HD
+| Parámetro | Detalle |
+|-----------|---------|
+| **Ventaja** | Administración IV al final de HD (adherencia asegurada) |
+| **Dosis** | 5 mg 3×/semana → ajustar c/4 semanas |
+| **Disponibilidad MX** | Limitada |
+
+#### Algoritmo de uso — cinacalcet vs VD activa vs combinación
+```
+PTH alta + Ca NORMAL o ALTO:
+  → Cinacalcet (REDUCE Ca + PTH)
+
+PTH alta + Ca BAJO:
+  → VD activa (SUBE Ca + reduce PTH)
+
+PTH muy alta (>600 en HD) + Ca alto + P alto:
+  → Cinacalcet + quelante sin Ca
+  → Evaluar paratiroidectomía si PTH >800–1000 × 6 meses
+
+PTH alta + Ca normal + P normal:
+  → Cualquiera de los dos — preferencia institucional
+  → Combinación a dosis bajas: menos efectos adversos
+```
+
+#### ¿Cuándo cambiar a paratiroidectomía?
+- PTH persistentemente >800 pg/mL a pesar de tratamiento médico × 6 meses
+- Hipercalcemia refractaria (Ca >10.5) sin responder a cinacalcet
+- Hiperparatiroidismo terciario (post-trasplante Ca alto + PTH alta)
+- Calcificaciones progresivas / calcifilaxia
+        """)
+
+    else:  # Paratiroidectomía
+        st.markdown("""
+### 🔪 Paratiroidectomía en ERC
+
+#### Indicaciones (KDIGO 2017)
+```
+Hiperparatiroidismo refractario que NO responde a tratamiento médico:
+  ✅ PTH > 800–1000 pg/mL × ≥6 meses de tratamiento óptimo
+  ✅ Hipercalcemia persistente (Ca >10.5 mg/dL)
+  ✅ Hiperfosfatemia severa refractaria a quelantes
+  ✅ Calcifilaxia (urgencia — paratiroidectomía acelera resolución)
+  ✅ Nódulos paratiroideos >1 cm en USG / MIBI scan
+  ✅ Síntomas: dolor óseo, fracturas, prurito refractario
+```
+
+#### Tipos de paratiroidectomía
+| Técnica | Descripción | Cuándo |
+|---------|-----------|--------|
+| **Total** | Extirpación de las 4 glándulas | Hiperplasia difusa nodular |
+| **Subtotal** | Deja 50 mg de glándula menor | Tejido residual para Ca |
+| **Total + autotrasplante** | Total + implante en antebrazo | Permite reoperación accesible |
+
+#### Cuidados post-paratiroidectomía — "Hungry Bone Syndrome"
+```
+Las primeras 24–72h post-cirugía:
+  → Ca cae abruptamente (los huesos absorben calcio ávido amente)
+  → Hipocalcemia severa con tetania, QT largo, convulsiones
+
+Protocolo:
+  1. Gluconato de Ca 1–2 g IV c/4–6h las primeras 24h
+  2. Calcitriol 2–4 mcg/día (dosis alta post-operatoria)
+  3. Monitoreo Ca c/4–6h × 48h
+  4. Mg sérico (hipomagnesemia asociada)
+  5. Oral: Carbonato de Ca 1–2 g c/8h + calcitriol 0.5–1 mcg c/8h
+
+Meta: Ca ≥8.0 mg/dL sin síntomas
+Hungry bone puede durar semanas → reducir dosis gradualmente
+```
+
+#### Calcifilaxia — urgencia
+```
+Calcifilaxia = calcificación de vasos pequeños + necrosis isquémica de piel
+Apariencia: placas purpúricas dolorosas → úlceras necróticas (gangrena)
+Mortalidad: 60–80% si hay infección sobreañadida
+
+Tratamiento urgente:
+  1. Tiosulfato de sodio 25 g IV × 3/semana post-HD
+  2. Suspender calcio (quelantes, VD activa con calcio)
+  3. Paratiroidectomía urgente si PTH alta
+  4. Curación de heridas especializada
+  5. Analgesia (dolor severo)
+  6. Evitar traumatismos, catéteres en zonas afectadas
+```
+        """)
+
+elif nav == "hta_erc":
+    st.subheader("🩸 Hipertensión Arterial en ERC")
+    st.caption("Ref: KDIGO HTA 2021 | SPRINT trial 2015 | ESC/ESH Guidelines 2023 | "
+               "Cheung AK et al. Kidney Int 2021")
+
+    hta_tab = st.radio("", [
+        "🎯 Metas y diagnóstico",
+        "💊 Selección de antihipertensivo",
+        "🔬 HTA resistente en ERC",
+        "🩺 HTA renovascular",
+        "⚡ Crisis hipertensiva en ERC",
+    ], horizontal=True, key="hta_tab")
+    st.divider()
+
+    if "Metas" in hta_tab:
+        st.markdown("""
+### 🎯 Metas de PA — KDIGO 2021
+
+#### Actualización KDIGO 2021 (más estricta que 2012)
+
+| Situación | Meta PA (KDIGO 2021) | Método medición |
+|-----------|---------------------|----------------|
+| ERC con o sin DM | **<120/80 mmHg** (si tolerada) | Automedición estandarizada |
+| ERC con proteinuria >0.5 g/día | **<120/80 mmHg** | — |
+| ERC en HD | Individual — PA pre-HD <140/90 | PA fuera de HD |
+| ERC post-Tx | **<130/80 mmHg** | — |
+| Adulto mayor >75 años | **<130/80 si tolerada** | Cuidado con hipotensión |
+
+#### Medición estandarizada (SPRINT protocol)
+```
+Requisitos para PA estandarizada (más baja que clínica habitual):
+  1. Paciente sentado, en silencio 5 min antes
+  2. Espalda y pies apoyados
+  3. Sin hablar durante la medición
+  4. Brazo al nivel del corazón
+  5. Promedio de 3 mediciones en 1 visita
+  6. Idealmente: automedición en casa (AMPA)
+
+⚠️ PA "blanca" (clínica alta + casa normal): tratar si hay lesión de órgano blanco
+⚠️ PA "enmascarada" (clínica normal + casa alta): mayor riesgo CV — tratar igual
+```
+
+#### Evaluación del paciente hipertenso con ERC
+| Estudio | Por qué |
+|---------|---------|
+| BH, QS, electrolitos | Función renal basal, K (IECA/ARA-II) |
+| Orina 24h (proteínas + Cr) | Cuantificar proteinuria — guía tratamiento |
+| Ecocardiograma | HVI — marcador de daño |
+| Fondo de ojo | Retinopatía hipertensiva |
+| Doppler renal | Estenosis arteria renal (ver pestaña) |
+| Aldosterona/renina (ARP/ARP) | Si K bajo + HTA resistente → hiperaldosteronismo |
+| Catecolaminas urinarias | Si episódica, sudoración → feocromocitoma |
+        """)
+
+        # BP calculator
+        st.markdown("#### Calculadora de riesgo cardiovascular")
+        bp1, bp2 = st.columns(2)
+        with bp1:
+            hta_pas = st.number_input("PAS (mmHg)", 80, 260, 145, 1, key="hta_pas")
+            hta_pad = st.number_input("PAD (mmHg)", 40, 140, 90, 1, key="hta_pad")
+            hta_egfr = st.number_input("TFG (mL/min)", 0.0, 120.0, 35.0, 1.0, key="hta_egfr")
+        with bp2:
+            hta_prot = st.number_input("Proteinuria (g/día)", 0.0, 20.0, 0.5, 0.1, key="hta_prot")
+            hta_dm2 = st.checkbox("Diabetes mellitus", key="hta_dm2")
+            hta_hvi = st.checkbox("HVI en ecocardio", key="hta_hvi")
+        # Risk assessment
+        en_meta_hta = hta_pas < 130 and hta_pad < 80
+        if not en_meta_hta:
+            st.error(f"⚠️ PA {hta_pas}/{hta_pad} — FUERA de meta (<130/80 KDIGO 2021)")
+        else:
+            st.success(f"✅ PA {hta_pas}/{hta_pad} — En meta KDIGO 2021")
+
+    elif "Selección" in hta_tab:
+        st.markdown("""
+### 💊 Selección de Antihipertensivo en ERC
+
+#### Primera línea según perfil
+
+| Situación clínica | 1ª elección | 2ª línea | Evitar |
+|------------------|------------|---------|--------|
+| ERC + proteinuria >0.5 g/día | **IECA o ARA-II** | Diurético tiazídico | AINEs, IECA+ARA-II juntos |
+| ERC + DM + proteinuria | **IECA o ARA-II** | Calcioantagonista | — |
+| ERC + HTA sin proteinuria | Cualquiera | IECA/ARA-II + tiazídico | — |
+| ERC en HD | Cualquiera (sin restricción especial) | — | Evitar IECA si hipotensión |
+| Post-trasplante | **Amlodipino** (no diltiazem/verapamilo) | IECA/ARA-II | Diltiazem (↑ tacrolimus) |
+| ERC + eritrocitosis | **IECA o ARA-II** | — | — |
+| ERC + HF con FEVI reducida | IECA/ARA-II + betabloqueador | Espironolactona (cuidado K) | — |
+
+#### IECA / ARA-II en ERC — puntos clave
+
+| Punto | Detalle |
+|-------|---------|
+| **Indicación** | ERC con proteinuria >0.5 g/día — renoprotector |
+| **Inicio** | Esperar estabilidad hemodinámica (no en AKI activa) |
+| **Aumento esperado de Cr** | Hasta 30% sobre basal = aceptable (vasodilata eferente) |
+| **Detener si** | Cr sube >30% en 2 semanas o K >5.5 mEq/L |
+| **NO combinar** | IECA + ARA-II (ONTARGET) → mayor daño renal sin beneficio adicional |
+| **Aliskiren** | No combinar con IECA/ARA-II en DM |
+
+#### Diuréticos — ajuste por TFG
+| TFG | Tiazídicos | Diuréticos de asa |
+|-----|-----------|-----------------|
+| >30 mL/min | ✅ Hidroclorotiazida/Clortalidona | Segunda línea |
+| 15–30 mL/min | ⚠️ Eficacia reducida | ✅ Furosemida (dosis mayores) |
+| <15 mL/min | ❌ Ineficaces | ✅ Furosemida 80–160 mg/día |
+
+> 📌 **Clortalidona vs Hidroclorotiazida:**
+> Clortalidona más potente, vida media más larga, MEJOR evidencia en ERC avanzada
+> (CLICK trial: clortalidona 12.5–25 mg efectiva hasta TFG 30)
+
+#### Calcioantagonistas
+- **Dihidropiridínicos** (amlodipino, nifedipino LP): seguros en ERC, primera línea si no hay proteinuria
+- **No-dihidropiridínicos** (diltiazem, verapamilo): antiproteinúricos + eficaces, pero INTERACCIÓN con CNI en trasplante
+        """)
+
+    elif "Resistente" in hta_tab:
+        st.markdown("""
+### 🔬 HTA Resistente en ERC
+
+**Definición:** PA >130/80 mmHg a pesar de ≥3 antihipertensivos en dosis máximas toleradas
+(incluyendo un diurético) con buen apego terapéutico.
+
+#### Causas secundarias a descartar en ERC
+| Causa | Sospecha | Estudio |
+|-------|---------|---------|
+| **Hipervolemia** (más frecuente en ERC) | Edema, ganancia de peso | Ajuste del peso seco en HD |
+| **Hiperaldosteronismo primario** | K bajo espontáneo, HTR | Aldosterona/renina >30 |
+| **Estenosis arteria renal** | Asimetría renal, soplo | Doppler renal (ver tab) |
+| **Feocromocitoma** | Cefalea episódica, sudoración, palpitaciones | Metanefrinas urinarias/plasma |
+| **Síndrome de Cushing** | Obesidad central, estrías | Cortisol libre urinario |
+| **Apnea obstructiva del sueño** | HTA nocturna, somnolencia | Polisomnografía |
+| **No adherencia** | Historia clínica | Medir niveles de fármacos |
+
+#### Manejo escalonado de HTA resistente en ERC
+```
+Paso 1: Verificar adherencia + técnica de medición correcta
+Paso 2: Optimizar diurético (cambiar HCTZ por clortalidona 12.5–25 mg)
+Paso 3: Si K normal/bajo → Espironolactona 25–50 mg/día
+         (PATHWAY-2 trial: espironolactona más eficaz que bisoprolol o doxazosina)
+         Monitorear K c/2 semanas las primeras 8 semanas
+Paso 4: Si K alto → Finerenona (menos hiperpotasemia que espironolactona)
+         O doxazosina alfa-bloqueador
+Paso 5: Intervencionismo — si estenosis arteria renal: angioplastia
+Paso 6: Denervación renal simpática (catéter ablación) — experimental en ERC
+```
+        """)
+
+    elif "Renovascular" in hta_tab:
+        st.markdown("""
+### 🩺 HTA Renovascular — Estenosis de Arteria Renal (EAR)
+
+#### Cuándo sospechar EAR
+```
+Alta probabilidad:
+  ✅ HTA de aparición súbita en >55 años o <30 años sin causa
+  ✅ HTA resistente a 3+ fármacos en dosis plena
+  ✅ Deterioro de función renal al iniciar IECA/ARA-II (>30% de Cr)
+  ✅ Edema pulmonar "flash" recurrente sin causa cardíaca clara
+  ✅ Asimetría renal >1.5 cm en ultrasonido
+  ✅ Soplo abdominal paraumbilical
+  ✅ Aterosclerosis diffusa (enfermedad coronaria, PAD)
+```
+
+#### Causas
+| Causa | Frecuencia | Perfil |
+|-------|-----------|--------|
+| **Aterosclerosis** | 90% | >55 años, factores CV, afecta ostium |
+| **Displasia fibromuscular (FMD)** | 10% | Mujer joven, afecta tercio medio, "rosario" |
+
+#### Diagnóstico
+| Estudio | Sensibilidad | Especificidad | Recomendación |
+|---------|------------|--------------|--------------|
+| **Doppler renal** | 85–90% | 85–90% | Primera línea — no invasivo |
+| **AngioTC renal** | >95% | >95% | Si Doppler no concluyente (contraste → riesgo ERC) |
+| **AngioRM renal** | >90% | >90% | Si ERC + sin contraste yodado |
+| **Arteriografía** (patrón de oro) | 100% | 100% | Solo si se planea revascularización |
+
+#### Tratamiento — ¿cuándo revascularizar?
+
+```
+EAR aterosclerótica:
+  CORAL trial (NEJM 2014): angioplastia + stent NO superior a médico solo
+  → Tratamiento médico es la norma (IECA/ARA-II, estatina, antiagregación)
+  → Revascularizar SOLO si:
+     • HTA verdaderamente resistente (falla 3+ fármacos)
+     • Progresión de ERC documentada bilateralmente
+     • Edema pulmonar flash recurrente
+     • Riñón funcionante único con estenosis significativa
+
+EAR por displasia fibromuscular (FMD):
+  → Angioplastia transluminal (sin stent) = tratamiento de elección
+  → Excelentes resultados (curación HTA en 50%)
+```
+        """)
+
+    else:  # Crisis hipertensiva
+        st.markdown("### ⚡ Crisis Hipertensiva en ERC")
+
+        cris1, cris2 = st.columns(2)
+        with cris1:
+            cr_pas = st.number_input("PAS (mmHg)", 100, 280, 210, 1, key="cr_pas")
+            cr_pad = st.number_input("PAD (mmHg)", 60, 160, 130, 1, key="cr_pad")
+        with cris2:
+            cr_sinto = st.selectbox("Síntomas / Daño de órgano blanco", [
+                "Asintomático (urgencia hipertensiva)",
+                "Cefalea intensa + alteración visual",
+                "Dolor precordial (descartar SCA)",
+                "Déficit neurológico focal (descartar EVC)",
+                "Disnea aguda (EAP hipertensivo)",
+                "Encefalopatía hipertensiva",
+            ], key="cr_sinto")
+
+        if "Asintomático" in cr_sinto:
+            st.info(f"""
+**URGENCIA HIPERTENSIVA — PA {cr_pas}/{cr_pad}**
+No hay daño de órgano blanco. No requiere reducción parenteral urgente.
+
+Manejo oral:
+- Captoprilo 25 mg SL o VO → repetir c/1h hasta 100 mg
+- Amlodipino 10 mg VO (inicio más lento)
+- Meta: reducir 25% en 24–48h, no de golpe
+- Referir a consulta de HTA en 24–72h
+            """)
+        else:
+            st.error(f"**EMERGENCIA HIPERTENSIVA — PA {cr_pas}/{cr_pad} + SÍNTOMAS**")
+            st.markdown(f"""
+**Requiere reducción parenteral URGENTE en UTI/UCI:**
+
+| Situación | Fármaco de elección | Meta en 1h | Meta en 6h |
+|-----------|--------------------|-----------|-----------| 
+| **Encefalopatía** | Nicardipino IV | ↓20% | ↓25% |
+| **EAP hipertensivo** | Nitroglicerina IV + furosemida | ↓25% | PA normal |
+| **SCA** | Nitroglicerina IV + betabloqueador | ↓25% | PA normal |
+| **EVC isquémico** | Labetalol IV (solo si PAS >220) | ↓15% en 24h | Gradual |
+| **EVC hemorrágico** | Nicardipino IV (si PAS >180) | ↓15% en 1h | <160 |
+| **General** | Labetalol IV 20 mg c/10 min o Nicardipino 5 mg/h IV | ↓20–25% | — |
+
+⚠️ **NUNCA bajar la PA más de 25% en la primera hora** — riesgo de isquemia orgánica
+⚠️ En EVC isquémico: NO tratar si PAS <220/110 (presión necesaria para la penumbra)
+
+**En ERC con oliguria + emergencia hipertensiva:**
+- Nicardipino IV 5–15 mg/h (filtrado renal mínimo)
+- Evitar nitroprusiato (acumulación de cianuro en ERC)
+- Diálisis urgente si anuria + edema pulmonar
+            """)
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
