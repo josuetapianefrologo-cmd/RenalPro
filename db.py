@@ -146,6 +146,7 @@ def init_tables() -> bool:
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS telefono_consultorio VARCHAR(50)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula_general VARCHAR(50)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS universidad_general VARCHAR(200)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS especialidad VARCHAR(200)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula_especialidad VARCHAR(50)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS universidad_especialidad VARCHAR(200)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS consejo_nombre VARCHAR(100)",
@@ -628,6 +629,7 @@ def update_user_profile(user_id: int, nombre: str, email: str,
         cur.execute("""
             UPDATE users SET
                 nombre=%s, email=%s, avatar=%s, institucion=%s,
+                especialidad=%s,
                 cedula_profesional=%s, universidad=%s,
                 domicilio_consultorio=%s, telefono_consultorio=%s,
                 cedula_general=%s, universidad_general=%s,
@@ -635,6 +637,7 @@ def update_user_profile(user_id: int, nombre: str, email: str,
                 consejo_nombre=%s, consejo_numero=%s
             WHERE id=%s
         """, (nombre, email, avatar, institucion,
+              especialidad,
               cedula, universidad,
               domicilio, telefono,
               cedula_general, universidad_general,
