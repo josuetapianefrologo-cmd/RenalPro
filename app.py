@@ -2102,6 +2102,7 @@ with st.sidebar:
     _navbtn("📂 Mis Pacientes", "pacientes")
     _navbtn("🏥 Expediente Clínico", "expediente")
     _navbtn("🔴 Nota Post-Trasplante", "nota_tx")
+    _navbtn("📅 Seguimiento Post-TR", "seguimiento_tx")
     _navbtn("📄 Receta Médica", "receta")
     _navbtn("📚 Fundamento", "fund")
     _navbtn("📖 Referencias", "refs")
@@ -6113,7 +6114,7 @@ Los **HIF-PHI** actúan bloqueando la enzima **prolil-hidroxilasa** (PHD), que n
             st.caption("Ref: Fishbane S et al., NEJM 2019 | Singh AK et al., NEJM 2021 | Akebia Therapeutics 2023")
 
         # ── MODO 2: AJUSTE ────────────────────────────────────────────────────
-        elif "Ajuste" in aee_modo:
+        elif "ajuste" in aee_modo.lower():
             st.markdown("#### Ajuste de dosis según respuesta — KDIGO 2012/2024")
             st.caption("Evaluar respuesta cada **4 semanas**. No cambiar dosis antes de 4 semanas.")
 
@@ -7471,18 +7472,12 @@ o rechazo por niveles subterapéuticos.
             else:
                 tm3.metric("Nivel en meta ✅", f"{tc_nivel_actual} ng/mL")
 
-        st.markdown("""
-#### Interacciones farmacológicas relevantes
-| Aumentan niveles (inhibidores CYP3A4) | Disminuyen niveles (inductores CYP3A4) |
-|---------------------------------------|---------------------------------------|
-| Fluconazol, Voriconazol, Itraconazol | Rifampicina |
-| Claritromicina, Eritromicina | Fenitoína, Carbamazepina |
-| Diltiazem, Verapamilo, Amlodipino | Rifabutina |
-| Omeprazol (leve) | Hierba de San Juan |
-| Jugo de toronja | Rifapentina |
-        """)
+        st.info("💡 Para el protocolo completo de interacciones (voriconazol, rifampicina, diltiazem, "
+                "hierba de San Juan, calculadora de ajuste empírico) ve a **⚡ Interacciones Farmacológicas** "
+                "en el selector de módulo arriba.")
         st.caption("Monitorear niveles C0 (valle, antes de la dosis): diario × 1 semana → semanal × 1 mes → mensual. "
                    "Ref: KDIGO Transplant 2009 | Webster AC, Cochrane 2005")
+
 
     # ── MICOFENOLATO ───────────────────────────────────────────────────────────
     elif "Micofenolato" in tx_modo:
@@ -9455,7 +9450,23 @@ elif nav == "expediente":
                 st.markdown(f"### {tipo_icon} {sel_exp.get('nombre','—')} · "
                             f"Exp: {sel_exp.get('expediente','—')} · "
                             f"{sel_exp.get('edad','—')} años · {sel_exp.get('sexo','—')}")
-                st.caption(f"**Dx:** {sel_exp.get('diagnostico','—')} · **Peso:** {sel_exp.get('peso','—')} kg")
+                dx_disp  = sel_exp.get("diagnostico","—")
+                peso_disp = sel_exp.get("peso","—")
+                # Fetch tx date from records if available
+                _recs_hdr = _cached_clinical_records(sel_exp["id"])
+                try:
+                    import json as _jh
+                    _tx_hdr = next((r for r in _recs_hdr
+                                    if "Trasplante / Nota inicial" in r.get("tipo","") or
+                                    "post-trasplante" in r.get("titulo","").lower()), None)
+                    if _tx_hdr:
+                        _td = _jh.loads(_tx_hdr.get("datos_json","{}"))
+                        _ft = _td.get("fecha_tx","")
+                        if _ft:
+                            dx_disp = dx_disp + f" · 🔴 TR: {_ft}"
+                except Exception:
+                    pass
+                st.caption(f"**Dx:** {dx_disp} · **Peso:** {peso_disp} kg")
 
             st.divider()
             records = _cached_clinical_records(sel_exp["id"])
@@ -9466,12 +9477,56 @@ elif nav == "expediente":
             import json as _jrec
             last_datos = {}
             last_receta = ""
+
+            # Find transplant initial note for background header
+            nota_tx_rec = next((r for r in records
+                                if "Post-TR" in r.get("titulo","") or
+                                "post-trasplante" in r.get("titulo","").lower() or
+                                "Trasplante / Nota inicial" in r.get("tipo","")), None)
+            tx_background = {}
+            if nota_tx_rec:
+                try:
+                    tx_background = _jrec.loads(nota_tx_rec.get("datos_json","{}"))
+                except Exception:
+                    tx_background = {}
+
             if last_rec:
                 try:
                     last_datos = _jrec.loads(last_rec.get("datos_json","{}"))
-                    last_receta = last_rec.get("resumen","") if last_rec.get("tipo") == "Receta médica" else last_datos.get("receta","")
+                    if last_rec.get("tipo") == "Receta médica":
+                        last_receta = last_rec.get("resumen","")
+                    else:
+                        last_receta = last_datos.get("receta","") or last_datos.get("is_inicial","")
                 except Exception:
                     pass
+
+            # ── TRANSPLANT BACKGROUND BANNER ──────────────────────────────
+            if tx_background:
+                fecha_tx_bg   = tx_background.get("fecha_tx","—")
+                don_tipo_bg   = tx_background.get("donante_tipo","—").split("—")[0].strip() if tx_background.get("donante_tipo") else "—"
+                isq_fri_bg    = tx_background.get("isquemia_fria_h","—")
+                kdpi_bg       = tx_background.get("kdpi")
+                riesgo_inm_bg = tx_background.get("riesgo_inm","—")
+                cmv_d_bg      = tx_background.get("donante_cmv","—")
+                cmv_r_bg      = tx_background.get("cmv_receptor","—")
+                fun_inj_bg    = tx_background.get("funcion_injerto","—").split("(")[0].strip() if tx_background.get("funcion_injerto") else "—"
+                induccion_bg  = tx_background.get("induccion","—").split("(")[0].strip() if tx_background.get("induccion") else "—"
+
+                st.markdown(f"""
+<div style="background:#EFF6FF;border-left:4px solid #2563EB;border-radius:6px;
+     padding:10px 16px;margin-bottom:12px;font-size:0.85em;">
+<b>🔴 Trasplante renal: {fecha_tx_bg}</b> &nbsp;|&nbsp;
+Donante: {don_tipo_bg} &nbsp;|&nbsp;
+Isq. fría: {isq_fri_bg}h &nbsp;|&nbsp;
+{"KDPI: " + str(kdpi_bg) + "% &nbsp;|&nbsp;" if kdpi_bg else ""}
+Función inicial: {fun_inj_bg} &nbsp;|&nbsp;
+Riesgo inmunológico: {riesgo_inm_bg} &nbsp;|&nbsp;
+CMV: D{cmv_d_bg.split("(")[0].split("+")[0].split("-")[0].strip()[:2] if cmv_d_bg else "?"} / R{cmv_r_bg.split("(")[0].strip()[:2] if cmv_r_bg else "?"} &nbsp;|&nbsp;
+Inducción: {induccion_bg}
+</div>
+                """, unsafe_allow_html=True)
+
+
 
             with st.expander("➕ Nueva consulta — Formato SOAP", expanded=len(records)==0):
                 st.caption("Estructura SOAP — Subjetivo / Objetivo / Análisis / Plan")
@@ -10121,6 +10176,209 @@ elif nav == "nota_tx":
         except AttributeError:
             st.error("Sube el db.py actualizado a GitHub y espera el redeploy.")
 
+elif nav == "seguimiento_tx":
+    st.subheader("📅 Seguimiento Post-Trasplante Renal")
+    st.caption("Protocolos de seguimiento para donante vivo y cadavérico. "
+               "Ref: KDIGO Transplant Work Group 2009 | AST Guidelines 2020")
+
+    stx_tab = st.radio("", [
+        "📋 Protocolo general",
+        "🟢 Donante Vivo — específico",
+        "🔴 Donante Cadavérico — específico",
+        "⚠️ DGF — manejo semana a semana",
+    ], horizontal=True, key="stx_tab")
+    st.divider()
+
+    if "general" in stx_tab:
+        st.markdown("""
+### Calendario de seguimiento post-TR — Protocolo general KDIGO 2009
+
+#### Fase 1: Hospitalización (Días 0–7)
+| Frecuencia | Estudios | Objetivo |
+|-----------|---------|---------|
+| **Diario** | Creatinina, BUN, electrolitos (K, Na, Ca, P, HCO₃) | Función del injerto + complicaciones metabólicas |
+| **Diario** | BH completa | Leucopenia por inmunosupresión |
+| **Días 1, 3, 7** | Nivel C0 Tacrolimus | Ajustar a rango objetivo (10–15 ng/mL fase 1) |
+| **Días 1 y 3** | Glucosa c/6h | NODAT por esteroides + tacrolimus |
+| **Día 1** | Eco Doppler renal | Descartar trombosis, evaluar IR |
+| **Si oliguria** | Eco Doppler urgente | Descartar trombosis → cirugía si <6h |
+| **Cada 24h** | Balance hídrico + peso | Control de volemia |
+| **Diario** | TA, FC, temperatura | Rechazo, infección |
+
+#### Fase 2: Primer mes (Semanas 1–4)
+| Semana | Labs | Consulta | Objetivo |
+|--------|------|---------|---------|
+| Semana 1 | Cr, BUN, EGO, K, Na, BH, Tac C0 | 2–3 veces | Ajuste IS intensivo |
+| Semana 2 | Cr, BUN, K, Na, BH, Tac C0 | 1–2 veces | Estabilización |
+| Semana 3–4 | Cr, BUN, K, Na, BH, Tac C0 | Semanal | Ajuste fino |
+| Mes 1 | Perfil lipídico, glucosa, HbA1c, orina | Al mes | NODAT, hiperlipidemia |
+
+#### Fase 3: Meses 2–12
+| Período | Labs mínimos | Frecuencia | Notas |
+|---------|-------------|-----------|-------|
+| Meses 1–3 | Cr, BUN, K, Na, BH, Tac C0, glucosa | Cada 2 semanas | Ajuste IS según niveles |
+| Meses 3–6 | Cr, BUN, BH, Tac C0, glucosa, lípidos | Mensual | KDIGO recomienda biopsia protocolo mes 3 |
+| Meses 6–12 | Cr, BUN, BH, Tac C0, orina 24h | Cada 1–2 meses | Biopsia protocolo mes 12 |
+| Anual | Cr, BUN, BH, Tac C0, HbA1c, lípidos, DSA, orina 24h | Anual | DSA de novo = marcador de rechazo crónico |
+
+#### Umbrales de alarma — cuándo actuar de inmediato
+| Hallazgo | Acción |
+|---------|--------|
+| Cr sube >20% sobre basal | Biopsia renal urgente + DSA |
+| Tac C0 <6 ng/mL × 2 mediciones | Ajustar dosis + investigar cumplimiento |
+| Tac C0 >20 ng/mL | Reducir dosis + investigar interacción |
+| K >5.5 mEq/L | Ajustar dieta, reducir tacrolimus, valorar patiromer |
+| Proteinuria >500 mg/día (nuevo) | Biopsia + DSA de novo |
+| Fiebre >38°C | Cultivos + hemocultivos + buscar foco infeccioso |
+| DSA de novo positivos | Biopsia de protocolo acelerada |
+        """)
+
+    elif "Vivo" in stx_tab:
+        st.markdown("""
+### 🟢 Seguimiento post-TR — Donante Vivo
+
+**Expectativa:** La mayoría de los injertos de donante vivo tienen función inmediata (IFG).
+Isquemia fría típica: 1–3 horas. DGF muy poco frecuente (<5%).
+
+#### Protocolo específico donante vivo
+| Período | Expectativa | Seguimiento especial |
+|---------|------------|---------------------|
+| **Día 0–1** | Diuresis inmediata intraoperatoria | Eco Doppler día 1 (rutina, no urgente si buen flujo) |
+| **Días 1–3** | Cr cae rápidamente (objetivo Cr <2 mg/dL día 3) | Si Cr no cae → sospechar rechazo o trombosis |
+| **Semana 1** | Cr basal del injerto aproximada | Tac C0 al día 1, 3 y 7 |
+| **Mes 1** | IS en descenso gradual | Reducir prednisona → taper rápido |
+| **Mes 3** | Biopsia protocolo (algunos centros) | Si Cr estable y Tac en rango → opcional |
+
+#### Reducción de IS más rápida en donante vivo
+```
+Prednisona: algunos centros retiran a los 3–6 meses (controversial)
+Tacrolimus C0 objetivo:
+  Mes 1: 10–15 ng/mL
+  Mes 3–6: 8–12 ng/mL
+  >12 meses: 5–8 ng/mL (si sin rechazo)
+MMF: mantener ≥1 g/día × 12 meses, luego reducir según tolerancia
+```
+
+#### Seguimiento del DONANTE VIVO (obligatorio)
+| Período | Estudio | Objetivo |
+|---------|---------|---------|
+| 2 semanas | Cr, depuración, orina | Función renal con 1 riñón |
+| 1, 3, 6 meses | Cr, PA, orina | Hipertensión post-nefrectomía |
+| Anual × indefinido | Cr, PA, proteinuria | Detección precoz de ERC de novo |
+| — | Educación sobre estilo de vida | Proteger el riñón restante |
+
+> 📌 El donante vivo tiene riesgo aumentado de ERC y HTA a largo plazo vs población general.
+> El seguimiento del donante es una obligación ética del programa de trasplante.
+        """)
+
+    elif "Cadavérico" in stx_tab:
+        st.markdown("""
+### 🔴 Seguimiento post-TR — Donante Cadavérico
+
+**Expectativa:** DGF en 20–50% (más en KDPI alto, DCD, isquemia fría >18h).
+Mayor riesgo de complicaciones en el perioperatorio vs donante vivo.
+
+#### Protocolo específico cadavérico
+| Período | Expectativa | Acción |
+|---------|------------|--------|
+| **Día 0** | Diuresis variable | Si anuria: Eco Doppler urgente + considerar HD |
+| **Días 1–3** | DGF posible | HD si K>5.5, acidosis, sobrecarga |
+| **Semana 1–2** | Inicio de diuresis (si DGF) | Cr empieza a caer → buen pronóstico |
+| **Día 7** | Eco Doppler de control | Evaluar IR + descartar obstrucción |
+| **Mes 1** | Cr basal establecida | Si no cae a <3 mg/dL → biopsia |
+| **Mes 3** | Biopsia protocolo obligatoria | Muchos centros la recomiendan en cadavérico |
+
+#### Isquemia fría y DGF — impacto en el seguimiento
+| CIT | DGF esperado | Frecuencia labs |
+|-----|-------------|----------------|
+| <12h | <15% | Estándar |
+| 12–18h | 15–30% | Cr diario + Doppler |
+| 18–24h | 30–45% | Cr c/12h + Doppler días 1, 3, 7 |
+| >24h | >45% | ICU-level: Cr c/6h primeras 48h |
+
+#### Ajuste de IS en cadavérico
+```
+Tacrolimus: más cauteloso en DGF (nefrotóxico en isquemia tubular)
+  - DGF activo: Tac C0 objetivo 5–8 ng/mL (reducir para proteger túbulo)
+  - Recuperando función: escalar gradualmente hasta 10–12 ng/mL
+MMF: mantener a dosis plena incluso en DGF (diferente a BKV)
+Prednisona: NO reducir durante DGF — imprescindible para prevenir rechazo
+```
+        """)
+
+    else:  # DGF semana a semana
+        st.markdown("""
+### ⚠️ Manejo semana a semana de la Función Retardada del Injerto (DGF)
+
+Ver también el módulo **⏱️ Función Retardada (DGF)** para calculadoras de riesgo y KDPI.
+
+#### Semana 1 (Días 0–7): Soporte y diagnóstico
+```
+✅ HACER:
+  • Eco Doppler urgente día 0-1 (descartar trombosis)
+  • Diálisis si: K>5.5, pH<7.20, sobrecarga hídrica, oligoanuria
+  • Mantener PA >90 mmHg sistólica (perfusión del injerto)
+  • Reducir tacrolimus (C0 objetivo 5-8 ng/mL)
+  • Nivel de tacrolimus c/48h
+
+❌ NO HACER:
+  • Biopsia de rutina si Doppler conservado (esperar semana 3 si no mejora)
+  • Furosemida IV en dosis altas repetidas (vasoconstricción renal)
+  • Reducir MMF ni prednisona
+```
+
+#### Semana 2 (Días 8–14): ¿Inicio de recuperación?
+```
+Indicadores positivos (el riñón va a funcionar):
+  ✅ Diuresis aparece aunque sea pequeña
+  ✅ Cr cae aunque sea 0.1-0.2 mg/dL por día
+  ✅ Doppler: flujo diastólico conservado (IR <0.80)
+  ✅ Sin fiebre, DSA negativos
+
+Indicadores de alarma (posible rechazo sobreañadido):
+  ⚠️ Fiebre >38°C + sin causa infecciosa
+  ⚠️ Cr que no cae después de 10 días
+  ⚠️ DSA de novo positivos
+  → Biopsia renal si se cumplen ≥2 criterios
+```
+
+#### Semana 3–4: Decisión de biopsia
+```
+Indicación de biopsia en DGF:
+  • Sin inicio de diuresis en 3 semanas
+  • Cr no cae >10% en 5 días
+  • DSA de novo positivos
+  • Fiebre persistente sin foco
+
+Hallazgos esperables en biopsia DGF sin rechazo:
+  • Lesión tubular aguda isquémica (vacuolización, descamación)
+  • Sin infiltrado linfocítico (si hay → rechazo T celular sobreañadido)
+  • Sin C4d en capilares (si hay → AMR)
+```
+
+#### Semana >4: DGF prolongada
+```
+DGF >3-4 semanas sin recuperación:
+  1. Biopsia OBLIGATORIA
+  2. Si rechazo T celular: bolos MP → ¿timoglobulina?
+  3. Si AMR: plasmaféresis + IVIG + rituximab
+  4. Si solo isquemia pura (NTA): paciencia + soporte dialítico
+  5. Si no hay recuperación en 8 semanas: evaluar no-función primaria (PNF)
+
+PNF (No Función Primaria):
+  • Considerar nefrectomía si: fiebre persistente, dolor del injerto, plaquetopenia de consumo
+  • Sin nefrectomía: dejar injerto si asintomático (no impide retrasplante)
+  • Enlistar para retrasplante: DNAemia BKV negativa pre-trasplante siguiente
+```
+        """)
+
+
+        st.info("Regístrate gratis — 7 días de acceso completo.")
+        if st.button("📝 Registrarme gratis", type="primary", key="btn_reg_rx"):
+            st.session_state["show_register"] = True
+            st.rerun()
+        st.stop()
+
 elif nav == "receta":
     # ── BLOQUEO PARA INVITADOS ─────────────────────────────────────────────────
     if _rol() in ("guest", "free", "expirado"):
@@ -10133,7 +10391,7 @@ elif nav == "receta":
         st.stop()
 
     # ══════════════════════════════════════════════════════════════════════════
-    # RECETA MÉDICA — NOM-004-SSA3-2012 / COFEPRIS — rediseño completo
+    # RECETA MÉDICA — NOM-004-SSA3-2012 / COFEPRIS
     # ══════════════════════════════════════════════════════════════════════════
     st.subheader("📄 Receta Médica — NOM-004-SSA3-2012 / COFEPRIS")
 
