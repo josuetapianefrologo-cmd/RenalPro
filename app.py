@@ -7020,18 +7020,54 @@ elif nav == "trasplante":
         elif dosis_acum > 7.5:
             st.warning(f"⚠️ Acumulada {dosis_acum:.1f} mg/kg > 7.5 mg/kg — mayor riesgo de infecciones y PTLD.")
 
-        st.markdown("""
-#### Protocolo de administración
+        st.markdown(f"""
+#### Preparación y administración — Ficha técnica Thymoglobulin® (Sanofi/Genzyme)
+
+> 📌 **El vial de Thymoglobulin® contiene 25 mg de polvo liofilizado** (sólido) en vial de vidrio de 10 mL — **NO es un líquido de 50 mL**. El "50 mL" es el volumen de diluyente que se agrega después.
+
+**Paso 1 — Reconstitución (en cada vial):**
+- Agregar **5 mL de agua estéril para inyección** al vial con polvo
+- Rotar suavemente hasta disolver por completo → concentración: **5 mg/mL**
+- Inspeccionar: si persiste materia particulada después de rotar → desechar ese vial
+- Usar dentro de **4 horas** tras reconstitución a temperatura ambiente
+
+**Paso 2 — Dilución en bolsa de infusión:**
+- Transferir el contenido de los viales necesarios a una bolsa de **SSF 0.9%** o **SG5%**
+- Volumen recomendado: **50 mL de diluyente por cada vial de 25 mg** (concentración final 0.5 mg/mL)
+- Volumen total: entre 50 y 500 mL según el número de viales
+- Invertir la bolsa suavemente 1–2 veces para mezclar — **NO agitar**
+- Usar **inmediatamente** (sin conservantes)
+
+**Ejemplo para este paciente ({dosis_dia_mg:.0f} mg = {viales_dia:.1f} viales):**
+- Viales necesarios (redondeando): **{int(viales_dia) + (1 if viales_dia % 1 > 0 else 0)} viales**
+- Volumen de reconstitución: {int(viales_dia) + (1 if viales_dia % 1 > 0 else 0)} × 5 mL = **{(int(viales_dia) + (1 if viales_dia % 1 > 0 else 0)) * 5} mL de agua estéril**
+- Volumen de dilución: {int(viales_dia) + (1 if viales_dia % 1 > 0 else 0)} × 50 mL = **{(int(viales_dia) + (1 if viales_dia % 1 > 0 else 0)) * 50} mL de SSF o SG5%**
+
 | Parámetro | Detalles |
 |-----------|---------|
-| **Dosis** | **1.5 mg/kg/día** IV (rango: 1–2 mg/kg) |
+| **Dosis** | **1.5 mg/kg/día** IV |
 | **Meta acumulada** | 3 mg/kg (bajo) · **4.5 mg/kg (estándar)** · 6 mg/kg (alto/rechazo) |
 | **Inicio** | **Día 0** (intraoperatorio, antes del clampeo) o Día 1 post-Tx |
-| **Dilución** | 500 mL SSF o SG5% — concentración máx 0.5 mg/mL |
-| **1ª infusión** | Mínimo **6 horas** · Dosis subsecuentes: ≥4 horas |
-| **Vía** | Vena central preferida (flebitis en periférica) |
-| **Pretratamiento** | MP 500 mg IV + Difenhidramina 25 mg IV + Paracetamol 1 g VO · 30 min antes |
+| **Concentración final** | **0.5 mg/mL** (50 mL SSF por cada vial de 25 mg) |
+| **Filtro** | **Filtro de 0.22 μm en línea — OBLIGATORIO** |
+| **1ª infusión** | Mínimo **6 horas** |
+| **Dosis subsecuentes** | Mínimo **4 horas** |
+| **Vía** | Vena de alto flujo — **central preferida** (periférica: agregar heparina + hidrocortisona al SSF para reducir flebitis) |
         """)
+
+        st.warning("""
+#### 💉 Premedicación — **1 hora antes de CADA dosis**
+| Fármaco | Dosis | Vía | Objetivo |
+|---------|-------|-----|---------|
+| **Metilprednisolona** | 1 mg/kg IV (o 500 mg fijo) | IV | Reacción infusional + IS |
+| **Difenhidramina** | 25–50 mg | IV | Antihistamínico |
+| **Paracetamol / Acetaminofén** | 650–1,000 mg | VO | Antipirético |
+
+⚠️ Sin premedicación hay riesgo de **síndrome de liberación de citocinas**: fiebre, escalofríos, hipotensión, taquicardia durante la infusión.
+Si ocurre: reducir velocidad de infusión, no detener abruptamente.
+        """)
+
+
 
         st.error("""
 #### 🛑 CRITERIOS DE PARO — verificar BH antes de CADA dosis
@@ -11392,16 +11428,95 @@ elif nav == "dgf":
 ### ¿Qué es la Función Retardada del Injerto?
 
 **Definición operacional:** Necesidad de diálisis en los **primeros 7 días** post-trasplante.
+        """)
 
-**Definiciones alternativas usadas en la literatura:**
+        # ── ISQUEMIA FRÍA Y CALIENTE ────────────────────────────────────────────
+        with st.expander("🧊 Isquemia fría e isquemia caliente — ¿qué son y cómo se miden?", expanded=True):
+            st.markdown("""
+#### Concepto fundamental
+Cuando un riñón pierde el flujo sanguíneo, sus células comienzan a sufrir daño.
+La velocidad del daño depende de la **temperatura**:
+- A temperatura corporal → daño muy rápido (minutos-horas) = **Isquemia caliente**
+- A 4°C con solución fría → metabolismo casi en pausa → puede tolerar horas = **Isquemia fría**
+
+---
+
+#### Secuencia de eventos en el trasplante renal — línea de tiempo
+
+```
+DONANTE FALLECIDO
+│
+├─ [Paro cardíaco / muerte cerebral]
+│
+├─ 🔴 WIT1 — Isquemia Caliente 1 (solo en donante DCD)
+│   │  Tiempo sin flujo a temperatura corporal antes de enfriar
+│   │  Meta: <20 min · Cada minuto cuenta
+│   │
+├─ ❄️ INICIO ISQUEMIA FRÍA ← aquí empieza
+│   │  Cirujanos perfunden riñón in situ con solución fría (UW, Custodiol, HTK)
+│   │  Temperatura cae a 4°C
+│   │
+├─ Extracción del riñón → bolsas con hielo
+│   │
+├─ Transporte en hielera
+│   │  ← Todo esto sigue siendo ISQUEMIA FRÍA →
+│   │
+├─ Quirófano del receptor:
+│   │  
+│   ├─ "Back table" (mesa de preparación/disección)
+│   │   El cirujano prepara los vasos renales mientras el riñón
+│   │   está en un recipiente con HIELO y solución fría
+│   │   ← SIGUE SIENDO ISQUEMIA FRÍA (esto es lo que se pregunta)
+│   │
+│   ├─ ❄️ FIN ISQUEMIA FRÍA
+│   │   El riñón sale del hielo para colocarse en la fosa ilíaca
+│   │
+│   ├─ 🟡 WIT2 — Isquemia Caliente 2
+│   │   El riñón empieza a calentarse durante la anastomosis
+│   │   (sutura de arteria y vena renal) — a temperatura ambiente
+│   │   Meta: <45 minutos
+│   │
+└─ 🔴 REPERFUSIÓN → retiro de clamps → sangre fluye → FIN ISQUEMIA
+```
+
+---
+
+#### Definiciones precisas
+
+| Tipo | Definición | Duración aceptable | Riesgo DGF |
+|------|-----------|-------------------|-----------|
+| **WIT1** (caliente 1) | Paro cardíaco → inicio perfusión fría (solo DCD) | <20 min | ⭐⭐⭐⭐ |
+| **CIT** (fría) | Inicio perfusión fría → riñón sale del hielo para anastomosis | **<18–24h** (riñón cadavérico) | ⭐⭐⭐ |
+| **WIT2** (caliente 2) | Riñón fuera de hielo → reperfusión (durante anastomosis) | <45 min | ⭐⭐ |
+
+> 📌 **La "mesa de preparación" o back table** es parte de la isquemia fría — el riñón está en hielo, a 4°C.
+> La isquemia caliente 2 empieza cuando el cirujano saca el riñón del recipiente con hielo
+> para colocarlo en la fosa ilíaca del receptor.
+
+#### Impacto clínico
+- **Cada hora adicional de CIT >18h** → aumenta el riesgo de DGF ~6%
+- **CIT <12h** en donante vivo: DGF <2%
+- **CIT >24h** en donante cadavérico: DGF hasta 40–60%
+- **WIT1 >30 min** en DCD: riñón probablemente no viable
+- **WIT2 >60 min**: aumento significativo de DGF y retardo de recuperación
+
+> 💡 **Regla práctica para el fellow:**
+> Cuando te digan que un riñón "lleva X horas de isquemia", están hablando de isquemia fría total (CIT).
+> Eso incluye la extracción, el transporte, y la preparación en el back table.
+> La isquemia caliente 1 solo aplica en DCD y la intraoperatoria (WIT2) la mide el cirujano.
+            """)
+
+        st.markdown("""
+### Incidencia y expectativa según tipo de donante
+
+**Definiciones alternativas también usadas:**
 - Cr sérica >3 mg/dL al día 5 post-Tx (Halloran PF)
 - Diuresis <1,200 mL/día en las primeras 24h
 - Caída de Cr <10% en 24h durante los primeros 3 días
 
-> 📌 Para tu práctica clínica: la definición de **diálisis en la primera semana** es la más usada y
-> la que aplica para KDPI y para estadísticas de registro.
+> 📌 Para tu práctica clínica: la definición de **diálisis en la primera semana** es la más usada.
 
-#### Incidencia
+#### Incidencia por tipo de donante
 | Tipo de donante | DGF |
 |----------------|-----|
 | Donante vivo | 1–5% |
