@@ -142,6 +142,16 @@ def init_tables() -> bool:
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS institucion VARCHAR(200)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula_profesional VARCHAR(50)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS universidad VARCHAR(200)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS domicilio_consultorio VARCHAR(300)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS telefono_consultorio VARCHAR(50)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula_general VARCHAR(50)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS universidad_general VARCHAR(200)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula_especialidad VARCHAR(50)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS universidad_especialidad VARCHAR(200)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS consejo_nombre VARCHAR(100)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS consejo_numero VARCHAR(50)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS receta_folio_counter INTEGER DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS diagnosticos_custom TEXT DEFAULT '[]'",
         ]:
             try:
                 cur.execute(alter)
@@ -604,18 +614,96 @@ def delete_clinical_record(record_id: int, user_id: int) -> bool:
 
 def update_user_profile(user_id: int, nombre: str, email: str,
                         especialidad: str, institucion: str, avatar: str,
-                        cedula: str = "", universidad: str = "") -> bool:
-    """Actualiza perfil del usuario incluyendo credenciales profesionales."""
+                        cedula: str = "", universidad: str = "",
+                        domicilio: str = "", telefono: str = "",
+                        cedula_general: str = "", universidad_general: str = "",
+                        cedula_especialidad: str = "", universidad_especialidad: str = "",
+                        consejo_nombre: str = "", consejo_numero: str = "") -> bool:
+    """Actualiza perfil completo del usuario incluyendo credenciales COFEPRIS."""
     conn = get_conn()
     if not conn:
         return False
     try:
         cur = conn.cursor()
         cur.execute("""
-            UPDATE users SET nombre=%s, email=%s, avatar=%s,
-                institucion=%s, cedula_profesional=%s, universidad=%s
+            UPDATE users SET
+                nombre=%s, email=%s, avatar=%s, institucion=%s,
+                cedula_profesional=%s, universidad=%s,
+                domicilio_consultorio=%s, telefono_consultorio=%s,
+                cedula_general=%s, universidad_general=%s,
+                cedula_especialidad=%s, universidad_especialidad=%s,
+                consejo_nombre=%s, consejo_numero=%s
             WHERE id=%s
-        """, (nombre, email, avatar, institucion, cedula, universidad, user_id))
+        """, (nombre, email, avatar, institucion,
+              cedula, universidad,
+              domicilio, telefono,
+              cedula_general, universidad_general,
+              cedula_especialidad, universidad_especialidad,
+              consejo_nombre, consejo_numero,
+              user_id))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+def get_next_folio(user_id: int) -> str:
+    """Genera el siguiente folio de receta para el usuario."""
+    conn = get_conn()
+    if not conn:
+        from datetime import datetime
+        return f"SIN-{datetime.now().strftime('%y%m%d%H%M')}"
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE users SET receta_folio_counter = receta_folio_counter + 1
+            WHERE id=%s RETURNING receta_folio_counter
+        """, (user_id,))
+        row = cur.fetchone()
+        conn.commit()
+        cur.close()
+        counter = row["receta_folio_counter"] if row else 1
+        from datetime import datetime
+        return f"{datetime.now().strftime('%y%m')}-{counter:04d}"
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        from datetime import datetime
+        return f"SIN-{datetime.now().strftime('%y%m%d')}"
+
+def get_user_diagnosticos(user_id: int) -> list:
+    """Obtiene los diagnósticos personalizados del usuario."""
+    conn = get_conn()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT diagnosticos_custom FROM users WHERE id=%s", (user_id,))
+        row = cur.fetchone()
+        cur.close()
+        if row and row["diagnosticos_custom"]:
+            import json
+            return json.loads(row["diagnosticos_custom"])
+        return []
+    except Exception:
+        return []
+
+def save_user_diagnosticos(user_id: int, diagnosticos: list) -> bool:
+    """Guarda la lista de diagnósticos personalizados del usuario."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        import json
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET diagnosticos_custom=%s WHERE id=%s",
+                    (json.dumps(diagnosticos, ensure_ascii=False), user_id))
         conn.commit()
         cur.close()
         return True
