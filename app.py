@@ -2101,6 +2101,7 @@ with st.sidebar:
     _navbtn("📋 Resumen / PDF", "resumen")
     _navbtn("📂 Mis Pacientes", "pacientes")
     _navbtn("🏥 Expediente Clínico", "expediente")
+    _navbtn("🔴 Nota Post-Trasplante", "nota_tx")
     _navbtn("📄 Receta Médica", "receta")
     _navbtn("📚 Fundamento", "fund")
     _navbtn("📖 Referencias", "refs")
@@ -4691,10 +4692,15 @@ elif nav == "premium":
 | | |
 |---|---|
 | **Banco** | {banco} |
-| **CLABE** | `{clabe}` |
 | **Titular** | {titular} |
 | **Monto** | $99 MXN / mes |
 """)
+            st.markdown(f"**CLABE:** {clabe}",
+                        help="Copia este número para tu transferencia")
+            # Also show as selectable text field for easy copy
+            st.text_input("CLABE (toca para copiar)", value=clabe,
+                         key="clabe_display", disabled=True,
+                         label_visibility="collapsed")
             st.info(f"📱 Envía tu comprobante a WhatsApp **{wa}** con tu usuario. "
                     f"Activación en <24h.")
 
@@ -9314,6 +9320,15 @@ elif nav == "contraste":
         st.caption("Ref: Mehran R et al. A simple risk score for prediction of contrast-induced nephropathy. JACC 2004;44(7):1393-1399.")
 
 elif nav == "expediente":
+    # ── BLOQUEO PARA INVITADOS ─────────────────────────────────────────────────
+    if _rol() in ("guest", "free", "expirado"):
+        st.warning("🔒 **El Expediente Clínico Digital requiere registro.** "
+                   "Los datos del invitado no se guardan entre sesiones.")
+        st.info("Regístrate gratis — 7 días de acceso completo sin tarjeta de crédito.")
+        if st.button("📝 Registrarme gratis", type="primary", key="btn_reg_exp"):
+            st.session_state["show_register"] = True
+            st.rerun()
+        st.stop()
     # ══════════════════════════════════════════════════════════════════════════
     # EXPEDIENTE CLÍNICO — centrado en el paciente
     # ══════════════════════════════════════════════════════════════════════════
@@ -9726,7 +9741,397 @@ elif nav == "expediente":
             if not records:
                 st.info("Sin registros aún. Usa '➕ Nueva consulta' arriba para agregar el primero.")
 
+elif nav == "nota_tx":
+    # ══════════════════════════════════════════════════════════════════════════
+    # NOTA INICIAL NEFROLÓGICA POST-TRASPLANTE RENAL
+    # ══════════════════════════════════════════════════════════════════════════
+    st.subheader("🔴 Nota Inicial Nefrológica Post-Trasplante Renal")
+    st.caption("Genera y guarda la nota de ingreso post-TR en el expediente del paciente.")
+
+    if _rol() in ("guest", "free", "expirado"):
+        st.warning("🔒 Requiere registro para guardar notas.")
+        if st.button("📝 Registrarme", type="primary", key="btn_reg_ntx"):
+            st.session_state["show_register"] = True; st.rerun()
+        st.stop()
+
+    uid_ntx = _user_id()
+
+    # ── SELECCIÓN O CREACIÓN DEL PACIENTE ─────────────────────────────────────
+    st.markdown("### 👤 Ficha de Identificación del Paciente")
+    st.caption("Los datos aquí capturados quedan guardados en el expediente y "
+               "se pre-cargan en notas de evolución, recetas y calculadoras.")
+
+    ntx_pac_mode = st.radio("", ["🔍 Paciente ya registrado",
+                                 "➕ Registro nuevo (primer trasplante)"],
+                            horizontal=True, key="ntx_pac_mode")
+
+    pac_ntx = {}
+    pac_id_ntx = None
+
+    if "ya registrado" in ntx_pac_mode:
+        if uid_ntx and _DB_ON and _db.db_ok():
+            try:
+                pacs_ntx = _cached_patients(uid_ntx)
+                tx_pacs  = [p for p in pacs_ntx if "Trasplante" in (p.get("tipo","") or "")]
+                todos    = tx_pacs + [p for p in pacs_ntx if p not in tx_pacs]
+                if todos:
+                    opts = {f"{p['nombre']} — Exp:{p.get('expediente','—')}": p for p in todos}
+                    sel  = st.selectbox("Selecciona paciente", list(opts.keys()), key="ntx_pac_sel")
+                    pac_ntx  = opts[sel]
+                    pac_id_ntx = pac_ntx.get("id")
+                else:
+                    st.info("Sin pacientes registrados. Usa 'Registro nuevo'.")
+            except Exception:
+                st.info("Sube el db.py actualizado a GitHub.")
+        else:
+            st.info("Conecta Railway DB.")
+    else:
+        # Ficha de identificación completa
+        fid1, fid2, fid3 = st.columns(3)
+        with fid1:
+            ntx_nombre  = st.text_input("Nombre completo *", key="ntx_nombre")
+            ntx_exp     = st.text_input("N° expediente", key="ntx_exp")
+            ntx_fecha_n = st.date_input("Fecha de nacimiento", key="ntx_fecha_n")
+            ntx_edad    = st.number_input("Edad (años)", 0, 100, 45, 1, key="ntx_edad")
+        with fid2:
+            ntx_sexo    = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="ntx_sexo")
+            ntx_edo_civ = st.selectbox("Estado civil",
+                          ["Soltero","Casado","Unión libre","Divorciado","Viudo"], key="ntx_edo_civ")
+            ntx_ocup    = st.text_input("Ocupación", key="ntx_ocup")
+            ntx_origi   = st.text_input("Lugar de origen / residencia", key="ntx_origi")
+        with fid3:
+            ntx_peso    = st.number_input("Peso (kg)", 20.0, 200.0, 70.0, 0.5, key="ntx_peso")
+            ntx_talla   = st.number_input("Talla (cm)", 100.0, 220.0, 170.0, 0.5, key="ntx_talla")
+            ntx_imc     = ntx_peso / ((ntx_talla/100)**2) if ntx_talla > 0 else 0
+            st.metric("IMC", f"{ntx_imc:.1f} kg/m²")
+            ntx_tel     = st.text_input("Teléfono / contacto", key="ntx_tel")
+
+        # Diagnóstico de base
+        CIE10_TX = [
+            "N18.5 — ERC Estadio 5 (ERCT)","N18.4 — ERC Estadio 4",
+            "E11.21 — Nefropatía diabética DM2","E10.21 — Nefropatía diabética DM1",
+            "I12 — Nefroesclerosis hipertensiva","N04 — Síndrome nefrótico",
+            "M32.1 — Nefritis lúpica","N02 — IgA Nefropatía",
+            "N04.0 — Nefropatía membranosa","M31.1 — Vasculitis ANCA",
+            "D59.3 — SHU atípico","Q61 — Enfermedad poliquística renal",
+            "N18.0 — ERC de causa no determinada","Otro (escribir)",
+        ]
+        ntx_dx_sel = st.selectbox("Diagnóstico de base (CIE-10)", CIE10_TX, key="ntx_dx_sel")
+        if ntx_dx_sel.startswith("Otro"):
+            ntx_dx = st.text_input("Diagnóstico manual", key="ntx_dx_txt")
+        else:
+            ntx_dx = ntx_dx_sel
+
+        fid4, fid5 = st.columns(2)
+        with fid4:
+            ntx_dialisis_tipo = st.selectbox("Modalidad de diálisis previa",
+                                ["Hemodiálisis crónica","Diálisis peritoneal",
+                                 "Prediálisis (trasplante anticipado)","Ninguna"], key="ntx_dial_tipo")
+            ntx_t_dialisis = st.number_input("Tiempo en diálisis (meses)", 0, 360, 24, 1, key="ntx_t_dial")
+        with fid5:
+            ntx_tx_previo = st.checkbox("Retrasplante (trasplante previo)", key="ntx_retx")
+            if ntx_tx_previo:
+                ntx_causa_falla = st.text_input("Causa de falla del trasplante previo", key="ntx_causa_falla")
+            ntx_alergias = st.text_input("Alergias conocidas", key="ntx_alergias",
+                                          placeholder="Ej: Penicilina — rash. No otras conocidas.")
+
+    st.divider()
+
+    # ── DATOS DEL DONANTE ──────────────────────────────────────────────────────
+    st.markdown("### 🫀 Datos del Donante")
+    don1, don2, don3 = st.columns(3)
+    with don1:
+        don_tipo = st.selectbox("Tipo de donante", [
+            "Donante fallecido — Muerte encefálica (DBD)",
+            "Donante fallecido — Muerte cardíaca (DCD)",
+            "Donante vivo relacionado",
+            "Donante vivo no relacionado",
+            "Donante vivo altruista",
+        ], key="don_tipo")
+        don_edad = st.number_input("Edad del donante", 0, 90, 45, 1, key="don_edad")
+        don_sexo = st.selectbox("Sexo donante", ["Masculino","Femenino"], key="don_sexo")
+    with don2:
+        don_causa = st.text_input("Causa de muerte / motivo donación",
+                                  placeholder="Ej: TCE por accidente automovilístico",
+                                  key="don_causa")
+        don_hta  = st.checkbox("Historia de HTA en donante", key="don_hta")
+        don_dm   = st.checkbox("Historia de DM en donante", key="don_dm")
+        don_cr   = st.number_input("Creatinina terminal donante (mg/dL)",
+                                   0.0, 15.0, 1.0, 0.1, key="don_cr")
+    with don3:
+        don_cmv_d = st.selectbox("Serología CMV donante",
+                                 ["Positivo (D+)","Negativo (D-)","Desconocido"], key="don_cmv")
+        don_vhb   = st.selectbox("VHB donante",
+                                 ["Negativo","HBsAg positivo","Anti-HBc positivo"], key="don_vhb")
+        don_vhc   = st.selectbox("VHC donante",
+                                 ["Negativo","Anti-VHC positivo","RNA VHC positivo"], key="don_vhc")
+        don_hiv   = st.selectbox("HIV donante", ["Negativo","Positivo","Desconocido"], key="don_hiv")
+
+    # KDPI
+    with st.expander("📊 KDPI del donante (opcional — si ya lo calculaste)"):
+        ntx_kdpi = st.number_input("KDPI calculado (%)", 0, 100, 0, 1, key="ntx_kdpi")
+        if ntx_kdpi:
+            if ntx_kdpi < 20:
+                st.success(f"KDPI {ntx_kdpi}% — Órgano de alta calidad")
+            elif ntx_kdpi < 85:
+                st.warning(f"KDPI {ntx_kdpi}% — Criterio estándar/expandido")
+            else:
+                st.error(f"KDPI {ntx_kdpi}% — Alto riesgo. DGF probable.")
+
+    st.divider()
+
+    # ── DATOS DE LA CIRUGÍA ────────────────────────────────────────────────────
+    st.markdown("### 🔪 Datos de la Cirugía")
+    cir1, cir2, cir3 = st.columns(3)
+    with cir1:
+        cir_fecha   = st.date_input("Fecha del trasplante", key="cir_fecha")
+        cir_isq_fri = st.number_input("Isquemia fría total (horas)", 0.0, 48.0, 16.0, 0.5, key="cir_isq_fri")
+        cir_wit2    = st.number_input("Isquemia caliente 2 / WIT2 (min)", 0, 120, 35, 1, key="cir_wit2")
+    with cir2:
+        cir_wit1    = st.number_input("Isquemia caliente 1 / WIT1 (min, solo DCD)",
+                                      0, 60, 0, 1, key="cir_wit1",
+                                      disabled="DCD" not in don_tipo)
+        cir_diuresis_intra = st.selectbox("Diuresis intraoperatoria",
+            ["Sí — inmediata al clampeo","Sí — tardía (>15 min)","No — anuria intraoperatoria"],
+            key="cir_diuresis")
+        cir_anastomosis = st.selectbox("Anastomosis",
+            ["Arteria ilíaca externa + vena ilíaca externa",
+             "Arteria ilíaca interna (hipogástrica) + vena ilíaca externa",
+             "Arteria aorta + vena cava (pediátrico)",
+             "Otro"], key="cir_anastomosis")
+    with cir3:
+        cir_eventualidades = st.text_area("Eventualidades quirúrgicas",
+            height=100, key="cir_event",
+            placeholder="Ej: Sin eventualidades. / Lesión vascular reparada. / Arteria polar reimplantada.")
+
+    st.divider()
+
+    # ── RIESGO INMUNOLÓGICO ────────────────────────────────────────────────────
+    st.markdown("### 🧬 Riesgo Inmunológico del Receptor")
+    rim1, rim2, rim3 = st.columns(3)
+    with rim1:
+        ntx_cpra    = st.number_input("cPRA (%)", 0, 100, 0, 1, key="ntx_cpra")
+        ntx_xm      = st.selectbox("Crossmatch",
+            ["Virtual negativo / CDC negativo",
+             "FCXM débilmente positivo (CDC neg)",
+             "CDC positivo células B",
+             "CDC positivo células T"], key="ntx_xm")
+    with rim2:
+        ntx_dsa_pre = st.selectbox("DSA preformados",
+            ["No detectados","MFI <3,000 (débiles)","MFI 3,000–5,000","MFI >5,000 (fuertes)"],
+            key="ntx_dsa")
+        ntx_mm_dr   = st.number_input("Mismatches HLA-DR", 0, 2, 0, 1, key="ntx_mm_dr")
+        ntx_mm_tot  = st.number_input("Mismatches totales (A+B+DR)", 0, 6, 2, 1, key="ntx_mm_tot")
+    with rim3:
+        if ntx_cpra >= 80 or "positivo células T" in ntx_xm or "5,000" in ntx_dsa_pre:
+            st.error("🔴 **Riesgo inmunológico ALTO**")
+            riesgo_inm = "Alto"
+        elif ntx_cpra >= 30 or ntx_mm_tot >= 4 or ntx_tx_previo if "ya registrado" not in ntx_pac_mode else False:
+            st.warning("🟡 **Riesgo inmunológico MODERADO**")
+            riesgo_inm = "Moderado"
+        else:
+            st.success("🟢 **Riesgo inmunológico BAJO-ESTÁNDAR**")
+            riesgo_inm = "Estándar"
+
+    st.divider()
+
+    # ── RIESGO INFECCIOSO ──────────────────────────────────────────────────────
+    st.markdown("### 🦠 Riesgo Infeccioso")
+    rin1, rin2 = st.columns(2)
+    with rin1:
+        ntx_cmv_r = st.selectbox("Serología CMV receptor",
+                                 ["Positivo (R+)","Negativo (R-)","Desconocido"], key="ntx_cmv_r")
+        ntx_tb    = st.selectbox("Riesgo de tuberculosis",
+            ["Bajo (Quantiferon negativo, sin contactos)",
+             "Moderado (contacto TB, zona endémica, sin Quantiferon)",
+             "Alto (Quantiferon positivo, TB latente)"], key="ntx_tb")
+        ntx_vhb_r = st.selectbox("VHB receptor",
+            ["Anti-HBs positivo (vacunado/inmune)","HBsAg positivo","Susceptible (sin inmunidad)"],
+            key="ntx_vhb_r")
+    with rin2:
+        # CMV risk
+        if "D+" in don_cmv_d and "R-" in ntx_cmv_r:
+            st.error("🔴 **CMV D+/R- → Alto riesgo** — Profilaxis 6 meses con valganciclovir")
+        elif "R+" in ntx_cmv_r:
+            st.warning("🟡 **CMV R+ → Riesgo intermedio** — Profilaxis 3 meses con valganciclovir")
+        else:
+            st.success("🟢 **CMV D-/R- → Bajo riesgo** — Sin profilaxis CMV específica")
+
+        if "Alto" in ntx_tb:
+            st.error("🔴 **TB latente** → Iniciar isoniazida profilaxis tras establecer fecha de cirugía")
+        elif "Moderado" in ntx_tb:
+            st.warning("🟡 **Riesgo TB moderado** → Solicitar Quantiferon + Rx tórax")
+
+    st.divider()
+
+    # ── INDUCCIÓN ──────────────────────────────────────────────────────────────
+    st.markdown("### 💉 Inducción de Inmunosupresión")
+    ind1, ind2 = st.columns(2)
+    with ind1:
+        ntx_induccion = st.selectbox("Agente de inducción",
+            ["Basiliximab (20 mg día 0 + día 4)",
+             "Timoglobulina (ATG-r) — bajo riesgo 3 mg/kg",
+             "Timoglobulina (ATG-r) — estándar 4.5 mg/kg",
+             "Timoglobulina (ATG-r) — alto riesgo 6 mg/kg",
+             "Sin inducción biológica"], key="ntx_ind")
+        ntx_ind_dosis = st.text_area("Dosis administradas / incidencias",
+                                     height=80, key="ntx_ind_dosis",
+                                     placeholder="Ej: Timoglobulina 1.5 mg/kg/día × 3 dosis = 4.5 mg/kg total. Sin reacciones.")
+    with ind2:
+        ntx_is_inicial = st.text_area("Inmunosupresión de mantenimiento inicial",
+                                      height=80, key="ntx_is_ini",
+                                      placeholder="Ej: Tacrolimus 0.1 mg/kg/día c/12h + MMF 1g c/12h + Prednisona 60 mg/día taper")
+        ntx_profilaxis = st.text_area("Profilaxis infecciosa indicada",
+                                      height=80, key="ntx_profilaxis",
+                                      placeholder="Ej: Valganciclovir 900 mg/día × 6 meses. TMP-SMX 1 tab/día × 12 meses.")
+
+    st.divider()
+
+    # ── EVALUACIÓN POST-Tx ─────────────────────────────────────────────────────
+    st.markdown("### 🏥 Evaluación Inicial Post-Trasplante")
+    ep1, ep2, ep3 = st.columns(3)
+    with ep1:
+        ntx_funcion = st.selectbox("Función inicial del injerto",
+            ["Función inmediata (IFG) — diuresis >500 mL/h",
+             "Función lenta (SGF) — oliguria <500 mL/h sin diálisis",
+             "Función retardada (DGF) — requirió diálisis en 1ª semana",
+             "No función primaria (PNF) — anuria sin recuperación"], key="ntx_funcion")
+        ntx_diuresis_24h = st.number_input("Diuresis primeras 24h (mL)", 0, 20000, 0, 100, key="ntx_diuresis")
+    with ep2:
+        ntx_cr_post = st.number_input("Creatinina post-Tx (mg/dL)", 0.0, 30.0, 0.0, 0.1, key="ntx_cr_post")
+        ntx_k_post  = st.number_input("K post-Tx (mEq/L)", 0.0, 10.0, 0.0, 0.1, key="ntx_k_post")
+        ntx_ta_post = st.text_input("TA post-Tx", placeholder="Ej: 140/90", key="ntx_ta_post")
+    with ep3:
+        ntx_doppler = st.selectbox("Eco Doppler renal",
+            ["Pendiente","Normal — flujo conservado, IR <0.70",
+             "IR 0.70–0.80 — monitoreo estrecho",
+             "IR >0.80 — anormal, trombosis excluida",
+             "Trombosis arterial — cirugía urgente",
+             "Trombosis venosa — cirugía urgente"], key="ntx_doppler")
+
+    ntx_notas_ev = st.text_area("Notas adicionales de la evaluación / plan inicial",
+                                 height=100, key="ntx_notas_ev",
+                                 placeholder="Ej: Se inicia manitol IV 50g en QX. HD post-Tx día 1 por K 6.2. "
+                                             "Se ajusta tacrolimus a niveles 10-12 ng/mL. "
+                                             "Control con eco Doppler mañana.")
+
+    # ── GUARDAR NOTA ───────────────────────────────────────────────────────────
+    st.divider()
+    if st.button("💾 Guardar Nota Post-Trasplante", type="primary",
+                 use_container_width=True, key="btn_save_nota_tx"):
+
+        if not uid_ntx or not _DB_ON or not _db.db_ok():
+            st.error("Sube el db.py actualizado a GitHub.")
+            st.stop()
+
+        # Create patient if new
+        if "ya registrado" not in ntx_pac_mode and ntx_nombre:
+            try:
+                pac_id_ntx = _db.create_patient(uid_ntx, {
+                    "nombre": ntx_nombre, "expediente": ntx_exp,
+                    "edad": int(ntx_edad), "sexo": ntx_sexo,
+                    "peso": float(ntx_peso), "tipo": "Trasplante renal",
+                    "diagnostico": ntx_dx,
+                    "notas": f"Estado civil: {ntx_edo_civ} | Ocupación: {ntx_ocup} | Tel: {ntx_tel}",
+                })
+                _clear_cache()
+            except Exception as e_pac:
+                st.error(f"Error al crear paciente: {e_pac}"); st.stop()
+
+        if not pac_id_ntx:
+            st.warning("Selecciona o registra un paciente primero.")
+            st.stop()
+
+        # Build structured note data
+        datos_nota_tx = {
+            # Ficha identificación
+            "peso": ntx_peso if "ya registrado" not in ntx_pac_mode else pac_ntx.get("peso"),
+            "talla": ntx_talla if "ya registrado" not in ntx_pac_mode else 0,
+            "ta": ntx_ta_post,
+            # Donante
+            "donante_tipo": don_tipo, "donante_edad": don_edad,
+            "donante_causa": don_causa, "donante_cmv": don_cmv_d,
+            "donante_cr": don_cr, "kdpi": ntx_kdpi,
+            # Cirugía
+            "fecha_tx": str(cir_fecha),
+            "isquemia_fria_h": cir_isq_fri,
+            "wit2_min": cir_wit2, "wit1_min": cir_wit1,
+            "diuresis_intra": cir_diuresis_intra,
+            "eventualidades": cir_eventualidades,
+            # Inmunología
+            "cpra": ntx_cpra, "xm": ntx_xm, "dsa_pre": ntx_dsa_pre,
+            "mm_dr": ntx_mm_dr, "mm_total": ntx_mm_tot,
+            "riesgo_inm": riesgo_inm,
+            # Riesgo infeccioso
+            "cmv_receptor": ntx_cmv_r, "tb_riesgo": ntx_tb,
+            # Inducción
+            "induccion": ntx_induccion, "induccion_dosis": ntx_ind_dosis,
+            "is_inicial": ntx_is_inicial, "profilaxis": ntx_profilaxis,
+            # Evaluación
+            "funcion_injerto": ntx_funcion, "diuresis_24h": ntx_diuresis_24h,
+            "cr": ntx_cr_post, "k": ntx_k_post, "doppler": ntx_doppler,
+        }
+
+        resumen_nota = (
+            f"NOTA POST-TR | {str(cir_fecha)} | "
+            f"Donante: {don_tipo.split('—')[0].strip()} | "
+            f"Isq. fría: {cir_isq_fri}h | WIT2: {cir_wit2}min | "
+            f"Función: {ntx_funcion.split('(')[0].strip()} | "
+            f"Diuresis 24h: {ntx_diuresis_24h} mL | "
+            f"Cr: {ntx_cr_post} mg/dL | "
+            f"Inducción: {ntx_induccion.split('(')[0].strip()}\n"
+            f"IS inicial: {ntx_is_inicial}\n"
+            f"Profilaxis: {ntx_profilaxis}"
+        )
+
+        try:
+            rec_id_ntx = _db.add_clinical_record(pac_id_ntx, uid_ntx, {
+                "tipo": "Trasplante / Nota inicial post-TR",
+                "titulo": f"Nota inicial post-trasplante renal — {cir_fecha}",
+                "fecha_consulta": cir_fecha,
+                "resumen": resumen_nota,
+                "notas": ntx_notas_ev,
+                "datos": datos_nota_tx,
+            })
+            if rec_id_ntx:
+                _clear_cache()
+                st.success("✅ Nota post-trasplante guardada correctamente en el expediente del paciente.")
+                st.info("💡 Ahora puedes ir a **🏥 Expediente Clínico** para ver el paciente "
+                        "y agregar notas de evolución. La receta y los datos de inducción "
+                        "se pre-cargarán en cada nueva consulta.")
+                # Store patient for quick navigation
+                st.session_state["exp_pac_id"] = pac_id_ntx
+                col_nx1, col_nx2 = st.columns(2)
+                with col_nx1:
+                    if st.button("📋 Ver expediente del paciente",
+                                 key="btn_ver_exp_tx"):
+                        st.session_state["nav_sel"] = "expediente"; st.rerun()
+                with col_nx2:
+                    if st.button("📄 Generar receta inicial",
+                                 key="btn_rx_post_tx"):
+                        p_data = {"id": pac_id_ntx,
+                                  "nombre": ntx_nombre if "ya registrado" not in ntx_pac_mode else pac_ntx.get("nombre",""),
+                                  "diagnostico": ntx_dx if "ya registrado" not in ntx_pac_mode else pac_ntx.get("diagnostico",""),
+                                  "peso": ntx_peso if "ya registrado" not in ntx_pac_mode else pac_ntx.get("peso",70)}
+                        st.session_state["receta_pac"] = p_data
+                        st.session_state["receta_rec"] = {"resumen": ntx_is_inicial, "tipo": "Receta médica"}
+                        st.session_state["nav_sel"] = "receta"; st.rerun()
+            else:
+                st.error("Error al guardar. Revisa la conexión con Railway.")
+        except AttributeError:
+            st.error("Sube el db.py actualizado a GitHub y espera el redeploy.")
+
 elif nav == "receta":
+    # ── BLOQUEO PARA INVITADOS ─────────────────────────────────────────────────
+    if _rol() in ("guest", "free", "expirado"):
+        st.warning("🔒 **La Receta Médica requiere registro.** "
+                   "Como invitado las recetas no se guardan ni se asocian a un médico.")
+        st.info("Regístrate gratis — 7 días de acceso completo.")
+        if st.button("📝 Registrarme gratis", type="primary", key="btn_reg_rx"):
+            st.session_state["show_register"] = True
+            st.rerun()
+        st.stop()
+
     # ══════════════════════════════════════════════════════════════════════════
     # RECETA MÉDICA — NOM-004-SSA3-2012 / COFEPRIS — rediseño completo
     # ══════════════════════════════════════════════════════════════════════════
