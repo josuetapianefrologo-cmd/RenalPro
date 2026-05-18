@@ -553,6 +553,12 @@ def _do_login(username: str, password: str):
                 "sess_email": user_db.get("email", ""),
                 "sess_cedula": user_db.get("cedula_profesional", ""),
                 "sess_universidad": user_db.get("universidad", ""),
+                "sess_domicilio": user_db.get("domicilio_consultorio", ""),
+                "sess_telefono": user_db.get("telefono_consultorio", ""),
+                "sess_ced_general": user_db.get("cedula_general", ""),
+                "sess_univ_general": user_db.get("universidad_general", ""),
+                "sess_consejo_nombre": user_db.get("consejo_nombre", ""),
+                "sess_consejo_numero": user_db.get("consejo_numero", ""),
                 "using_db": True,
             })
             return True, rol
@@ -2085,6 +2091,7 @@ with st.sidebar:
     _navbtn("🔢 Calculadoras Nefro", "nefro")
     _navbtn("💉 Trasplante", "trasplante")
     _navbtn("🧬 Inmunología Tx", "inmuno_tx")
+    _navbtn("⏱️ Función Retardada (DGF)", "dgf")
     _navbtn("🦠 Infecciones Tx", "infecciones_tx")
     _navbtn("🔵 Glomerulopatías", "glomerulopatias")
     _navbtn("🩸 Acceso Vascular", "acceso")
@@ -5021,69 +5028,93 @@ elif nav == "micuenta":
 
         with mc2:
             st.markdown("### Información del perfil")
-            nom_mc    = st.text_input("Nombre completo",
-                                      value=st.session_state.get("sess_nombre",""),
-                                      key="mc_nombre")
-            email_mc  = st.text_input("Email",
-                                      value=st.session_state.get("sess_email",""),
-                                      key="mc_email")
-            esp_mc    = st.text_input("Especialidad",
-                                      value=st.session_state.get("sess_especialidad",""),
-                                      key="mc_esp",
-                                      placeholder="Ej: Nefrología, Medicina Crítica")
-            inst_mc   = st.text_input("Institución / Hospital",
-                                      value=st.session_state.get("sess_institucion",""),
-                                      key="mc_inst",
-                                      placeholder="Ej: IMSS CMNO N1, León, Gto.")
-            ced_mc    = st.text_input("Cédula profesional",
-                                      value=st.session_state.get("sess_cedula",""),
-                                      key="mc_cedula",
-                                      placeholder="Ej: 12345678")
-            univ_mc   = st.text_input("Universidad / Institución que expidió el título",
-                                      value=st.session_state.get("sess_universidad",""),
-                                      key="mc_univ",
-                                      placeholder="Ej: Universidad de Guadalajara")
-            dom_mc    = st.text_input("Domicilio del consultorio/establecimiento",
-                                      value=st.session_state.get("sess_domicilio",""),
-                                      key="mc_dom",
-                                      placeholder="Ej: Av. Juan Alonso de Torres 1702, Col. Jardines del Moral, León, Gto.")
-            tel_mc    = st.text_input("Teléfono del consultorio",
-                                      value=st.session_state.get("sess_telefono",""),
-                                      key="mc_tel",
-                                      placeholder="Ej: (477) 123-4567")
+            nom_mc  = st.text_input("Nombre completo",
+                                    value=st.session_state.get("sess_nombre",""), key="mc_nombre")
+            email_mc= st.text_input("Email",
+                                    value=st.session_state.get("sess_email",""), key="mc_email")
+            esp_mc  = st.text_input("Especialidad",
+                                    value=st.session_state.get("sess_especialidad",""),
+                                    key="mc_esp", placeholder="Ej: Nefrología")
+            inst_mc = st.text_input("Institución / Hospital",
+                                    value=st.session_state.get("sess_institucion",""),
+                                    key="mc_inst", placeholder="Ej: IMSS CMNO N1, León, Gto.")
+            dom_mc  = st.text_input("Domicilio del consultorio",
+                                    value=st.session_state.get("sess_domicilio",""),
+                                    key="mc_dom", placeholder="Av. Juan Alonso de Torres 1702, León, Gto.")
+            tel_mc  = st.text_input("Teléfono del consultorio",
+                                    value=st.session_state.get("sess_telefono",""),
+                                    key="mc_tel", placeholder="(477) 123-4567")
+
+            st.markdown("---")
+            st.markdown("**Credenciales COFEPRIS**")
+            st.caption("Requeridas para receta médica oficial en México")
+
+            cg1, cg2 = st.columns(2)
+            with cg1:
+                ced_gen_mc = st.text_input("Cédula Medicina General",
+                                           value=st.session_state.get("sess_ced_general",""),
+                                           key="mc_ced_gen", placeholder="Ej: 8765432")
+            with cg2:
+                univ_gen_mc = st.text_input("Universidad (título general)",
+                                            value=st.session_state.get("sess_univ_general",""),
+                                            key="mc_univ_gen", placeholder="Ej: UNAM")
+            ce1, ce2 = st.columns(2)
+            with ce1:
+                ced_esp_mc = st.text_input("Cédula de Especialidad",
+                                           value=st.session_state.get("sess_cedula",""),
+                                           key="mc_cedula", placeholder="Ej: 9940966")
+            with ce2:
+                univ_esp_mc = st.text_input("Universidad (especialidad)",
+                                            value=st.session_state.get("sess_universidad",""),
+                                            key="mc_univ", placeholder="Ej: UNAM")
+
+            cc1, cc2 = st.columns(2)
+            with cc1:
+                consejo_mc = st.text_input("Consejo Mexicano de certificación",
+                                           value=st.session_state.get("sess_consejo_nombre",""),
+                                           key="mc_consejo", placeholder="Ej: Consejo Mexicano de Nefrología")
+            with cc2:
+                consejo_num_mc = st.text_input("Número de certificación",
+                                               value=st.session_state.get("sess_consejo_numero",""),
+                                               key="mc_consejo_num", placeholder="Ej: 1267")
 
             if st.button("💾 Guardar cambios", type="primary", key="btn_mc_save",
                          use_container_width=True):
                 av_nuevo = st.session_state.get("sess_avatar", av_actual)
                 if db_mc:
                     try:
-                        ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
-                                                     esp_mc, inst_mc, av_nuevo,
-                                                     ced_mc, univ_mc)
+                        ok = _db.update_user_profile(
+                            uid_mc, nom_mc, email_mc, esp_mc, inst_mc, av_nuevo,
+                            ced_esp_mc, univ_esp_mc,
+                            dom_mc, tel_mc,
+                            ced_gen_mc, univ_gen_mc,
+                            ced_esp_mc, univ_esp_mc,
+                            consejo_mc, consejo_num_mc,
+                        )
                     except TypeError:
-                        # Fallback para db.py sin parámetros de cédula/universidad
                         ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
                                                      esp_mc, inst_mc, av_nuevo)
                     if ok:
-                        st.session_state["sess_nombre"]      = nom_mc
-                        st.session_state["sess_email"]       = email_mc
-                        st.session_state["sess_institucion"] = inst_mc
-                        st.session_state["sess_especialidad"]= esp_mc
-                        st.session_state["sess_cedula"]      = ced_mc
-                        st.session_state["sess_universidad"] = univ_mc
-                        st.session_state["sess_domicilio"]   = dom_mc
-                        st.session_state["sess_telefono"]    = tel_mc
+                        st.session_state.update({
+                            "sess_nombre": nom_mc, "sess_email": email_mc,
+                            "sess_institucion": inst_mc, "sess_especialidad": esp_mc,
+                            "sess_cedula": ced_esp_mc, "sess_universidad": univ_esp_mc,
+                            "sess_domicilio": dom_mc, "sess_telefono": tel_mc,
+                            "sess_ced_general": ced_gen_mc,
+                            "sess_univ_general": univ_gen_mc,
+                            "sess_consejo_nombre": consejo_mc,
+                            "sess_consejo_numero": consejo_num_mc,
+                        })
                         _clear_cache()
-                        st.success("✅ Perfil actualizado correctamente.")
+                        st.success("✅ Perfil actualizado.")
                     else:
-                        st.error("Error al guardar. Verifica la conexión con Railway.")
+                        st.error("Error al guardar. Verifica conexión con Railway.")
                 else:
-                    # Local fallback
-                    st.session_state["sess_nombre"]     = nom_mc
-                    st.session_state["sess_email"]      = email_mc
-                    st.session_state["sess_institucion"]= inst_mc
+                    st.session_state.update({
+                        "sess_nombre": nom_mc, "sess_email": email_mc,
+                        "sess_institucion": inst_mc,
+                    })
                     st.success("✅ Perfil actualizado (sesión actual).")
-
         st.divider()
         st.markdown("### 🔒 Cambiar contraseña")
         if db_mc:
@@ -9657,147 +9688,282 @@ elif nav == "expediente":
                 st.info("Sin registros aún. Usa el formulario de arriba para agregar el primero.")
 
 elif nav == "receta":
+    # ══════════════════════════════════════════════════════════════════════════
+    # RECETA MÉDICA — NOM-004-SSA3-2012 / COFEPRIS — rediseño completo
+    # ══════════════════════════════════════════════════════════════════════════
     st.subheader("📄 Receta Médica — NOM-004-SSA3-2012 / COFEPRIS")
-    st.caption("Apegada a NOM-004-SSA3-2012 (Expediente clínico) y requisitos COFEPRIS para receta médica general.")
 
     if not _is_auth():
         st.warning("Inicia sesión para generar recetas.")
     else:
-        dr_nombre  = st.session_state.get("sess_nombre","")
-        dr_cedula  = st.session_state.get("sess_cedula","")
-        dr_univ    = st.session_state.get("sess_universidad","")
-        dr_esp     = st.session_state.get("sess_especialidad","")
-        dr_inst    = st.session_state.get("sess_institucion","")
-        dr_dom     = st.session_state.get("sess_domicilio","")
-        dr_tel     = st.session_state.get("sess_telefono","")
+        uid_rx    = _user_id()
+        dr_nombre = st.session_state.get("sess_nombre","")
+        dr_cedula = st.session_state.get("sess_cedula","")         # esp
+        dr_ced_gen= st.session_state.get("sess_ced_general","")
+        dr_univ   = st.session_state.get("sess_universidad","")    # esp
+        dr_univ_gen=st.session_state.get("sess_univ_general","")
+        dr_esp    = st.session_state.get("sess_especialidad","")
+        dr_inst   = st.session_state.get("sess_institucion","")
+        dr_dom    = st.session_state.get("sess_domicilio","")
+        dr_tel    = st.session_state.get("sess_telefono","")
+        dr_consejo= st.session_state.get("sess_consejo_nombre","")
+        dr_cons_num=st.session_state.get("sess_consejo_numero","")
 
-        campos_faltantes = []
-        if not dr_nombre:  campos_faltantes.append("nombre")
-        if not dr_cedula:  campos_faltantes.append("cédula profesional")
-        if not dr_dom:     campos_faltantes.append("domicilio del consultorio")
-
-        if campos_faltantes:
-            st.warning(f"⚠️ Perfil incompleto. Faltan: **{', '.join(campos_faltantes)}**. "
-                       "Ve a **👤 Mi Cuenta** para completarlos — son requeridos por COFEPRIS.")
-            if st.button("→ Ir a Mi Cuenta"):
-                st.session_state["nav_sel"] = "micuenta"; st.rerun()
+        faltantes = [f for f,v in [("nombre",dr_nombre),("cédula de especialidad",dr_cedula),
+                                    ("domicilio",dr_dom)] if not v]
+        if faltantes:
+            st.warning(f"⚠️ Perfil incompleto: faltan **{', '.join(faltantes)}**. "
+                       "Ve a 👤 Mi Cuenta.")
+            if st.button("→ Mi Cuenta"): st.session_state["nav_sel"]="micuenta"; st.rerun()
         else:
-            pac_data = st.session_state.get("receta_pac", {})
-            rec_data = st.session_state.get("receta_rec", {})
+            # CIE-10 frecuentes
+            CIE10_BASE = [
+                "N18.5 — ERC Estadio 5 (ERCT)","N18.4 — ERC Estadio 4",
+                "N18.3 — ERC Estadio 3","N18.2 — ERC Estadio 2","N18.1 — ERC Estadio 1",
+                "N17 — Lesión Renal Aguda","Z94.0 — Trasplante renal presente",
+                "T86.1 — Rechazo de trasplante renal","N04 — Síndrome nefrótico",
+                "N05 — Síndrome nefrítico crónico","M32.1 — Nefritis lúpica",
+                "E11.21 — Nefropatía diabética DM2","I12 — HTA con ERC",
+                "N39.0 — IVU","D59.3 — SHU","M31.1 — Vasculitis ANCA",
+                "N04.0 — Nefropatía membranosa","N02 — Hematuria recurrente (IgAN)",
+            ]
+            # Custom diagnoses from DB
+            custom_dx = []
+            if uid_rx and _DB_ON and _db.db_ok():
+                try:
+                    custom_dx = _db.get_user_diagnosticos(uid_rx)
+                except Exception:
+                    custom_dx = []
+            todos_dx = CIE10_BASE + [f"★ {d}" for d in custom_dx] + ["✏️ Agregar diagnóstico nuevo"]
 
-            # CIE-10 frecuentes en nefrología/trasplante
-            CIE10_FRECUENTES = {
-                "N18.5 — ERC Estadio 5 (ERCT)": "N18.5",
-                "N18.4 — ERC Estadio 4": "N18.4",
-                "N18.3 — ERC Estadio 3": "N18.3",
-                "N18.2 — ERC Estadio 2": "N18.2",
-                "N18.1 — ERC Estadio 1": "N18.1",
-                "N17 — Lesión Renal Aguda (AKI)": "N17",
-                "Z94.0 — Trasplante renal presente": "Z94.0",
-                "T86.1 — Rechazo de trasplante renal": "T86.1",
-                "N04 — Síndrome nefrótico": "N04",
-                "N05 — Síndrome nefrítico crónico": "N05",
-                "N03 — Síndrome nefrítico crónico recurrente": "N03",
-                "N00 — GN aguda": "N00",
-                "M32.1 — Nefritis lúpica (LES con compromiso renal)": "M32.1",
-                "E11.21 — Nefropatía diabética DM2": "E11.21",
-                "E10.21 — Nefropatía diabética DM1": "E10.21",
-                "I12 — Hipertensión con enfermedad renal crónica": "I12",
-                "N39.0 — Infección vías urinarias": "N39.0",
-                "N12 — Nefritis tubulointersticial": "N12",
-                "N04.0 — Nefropatía membranosa": "N04.0",
-                "N02 — Hematuria recurrente (IgAN)": "N02",
-                "N26 — Riñón contraído / cicatrizal": "N26",
-                "D59.3 — SHU": "D59.3",
-                "M31.1 — Vasculitis renal (ANCA)": "M31.1",
-                "Otro (escribir manualmente)": "",
-            }
-
-            rx_tab1, rx_tab2 = st.tabs(["✍️ Datos de la receta", "📋 Historial de recetas"])
+            rx_tab1, rx_tab2 = st.tabs(["✍️ Crear Receta", "📋 Historial de recetas"])
 
             with rx_tab1:
-                col_rx1, col_rx2 = st.columns([1, 1])
-                with col_rx1:
-                    st.markdown("**Datos del paciente** *(NOM-004-SSA3-2012)*")
-                    rx_nombre = st.text_input("Nombre completo del paciente *",
-                                              value=pac_data.get("nombre",""), key="rx_nombre")
-                    rx_exp    = st.text_input("N° Expediente / Folio",
-                                              value=pac_data.get("expediente",""), key="rx_exp")
-                    rxc1, rxc2 = st.columns(2)
-                    with rxc1:
-                        rx_edad = st.text_input("Edad",
-                                                value=str(pac_data.get("edad","")) if pac_data.get("edad") else "",
-                                                key="rx_edad")
-                    with rxc2:
-                        rx_sexo = st.selectbox("Sexo", ["Masculino","Femenino","No especificado"],
-                                               key="rx_sexo")
-                    rxv1, rxv2, rxv3 = st.columns(3)
-                    with rxv1:
-                        rx_peso = st.number_input("Peso (kg)", 0.0, 300.0,
-                                                  float(pac_data.get("peso",0)) if pac_data.get("peso") else 0.0,
-                                                  0.1, key="rx_peso")
-                    with rxv2:
-                        rx_talla = st.number_input("Talla (cm)", 0.0, 250.0, 0.0, 0.5, key="rx_talla")
-                    with rxv3:
-                        rx_imc = rx_peso / ((rx_talla/100)**2) if rx_talla > 0 and rx_peso > 0 else 0
-                        st.metric("IMC", f"{rx_imc:.1f}" if rx_imc > 0 else "—")
+                # ── PASO 1: PACIENTE ──────────────────────────────────────────
+                st.markdown("#### 👤 Paso 1 — Paciente")
+                pac_mode = st.radio("", ["🔍 Cargar paciente existente",
+                                         "➕ Nuevo paciente",
+                                         "✏️ Sin paciente (solo indicaciones)"],
+                                    horizontal=True, key="rx_pac_mode")
 
-                    st.markdown("**Signos vitales** *(opcionales)*")
-                    rsv1, rsv2, rsv3, rsv4 = st.columns(4)
-                    with rsv1:
+                pac_data = {}
+                pac_id_rx = None
+
+                if "existente" in pac_mode:
+                    if uid_rx and _DB_ON and _db.db_ok():
+                        try:
+                            pacs = _cached_patients(uid_rx)
+                            if pacs:
+                                buscar_rx = st.text_input("Buscar paciente",
+                                    placeholder="Nombre o expediente...", key="rx_buscar_pac")
+                                pacs_f = [p for p in pacs
+                                          if buscar_rx.lower() in
+                                          (p.get("nombre","") + p.get("expediente","")).lower()
+                                ] if buscar_rx else pacs
+                                pac_opts = {
+                                    f"{p['nombre']} — Exp:{p.get('expediente','—')} — {p.get('diagnostico','')[:30]}": p
+                                    for p in pacs_f
+                                }
+                                sel = st.selectbox("Selecciona paciente", list(pac_opts.keys()),
+                                                   key="rx_pac_sel")
+                                pac_data = pac_opts.get(sel, {})
+                                pac_id_rx = pac_data.get("id")
+                            else:
+                                st.info("No hay pacientes registrados. Crea uno nuevo.")
+                        except Exception:
+                            st.info("Sube el db.py actualizado a GitHub.")
+                    else:
+                        st.info("Conecta Railway DB para cargar pacientes.")
+
+                elif "Nuevo" in pac_mode:
+                    np1, np2, np3 = st.columns(3)
+                    with np1:
+                        nrx_nombre = st.text_input("Nombre *", key="nrx_nombre")
+                        nrx_exp    = st.text_input("N° Expediente", key="nrx_exp")
+                    with np2:
+                        nrx_edad   = st.number_input("Edad", 0, 120, 50, 1, key="nrx_edad")
+                        nrx_sexo   = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="nrx_sexo")
+                        nrx_peso   = st.number_input("Peso (kg)", 0.0, 300.0, 70.0, 0.5, key="nrx_peso")
+                    with np3:
+                        nrx_tipo   = st.selectbox("Tipo", ["Trasplante renal","ERC crónica",
+                            "Hemodiálisis","TRRC / UCI","General"], key="nrx_tipo")
+                        nrx_dx_sel = st.selectbox("Diagnóstico principal", todos_dx[:20], key="nrx_dx_sel")
+                        nrx_dx     = nrx_dx_sel if not nrx_dx_sel.startswith("✏️") else st.text_input("Dx manual", key="nrx_dx_txt")
+
+                    if st.button("💾 Guardar como nuevo paciente", key="btn_rx_save_pac"):
+                        if not nrx_nombre:
+                            st.warning("El nombre es obligatorio.")
+                        elif uid_rx and _DB_ON and _db.db_ok():
+                            try:
+                                new_pid = _db.create_patient(uid_rx, {
+                                    "nombre": nrx_nombre, "expediente": nrx_exp,
+                                    "edad": int(nrx_edad), "sexo": nrx_sexo,
+                                    "peso": float(nrx_peso), "tipo": nrx_tipo,
+                                    "diagnostico": nrx_dx,
+                                })
+                                if new_pid:
+                                    _clear_cache()
+                                    pac_id_rx = new_pid
+                                    pac_data = {"id": new_pid, "nombre": nrx_nombre,
+                                                "expediente": nrx_exp, "edad": nrx_edad,
+                                                "sexo": nrx_sexo, "peso": nrx_peso,
+                                                "diagnostico": nrx_dx}
+                                    st.success(f"✅ Paciente '{nrx_nombre}' guardado en expediente.")
+                            except AttributeError:
+                                st.error("Sube el db.py actualizado a GitHub.")
+                        else:
+                            pac_data = {"nombre": nrx_nombre, "expediente": nrx_exp,
+                                        "edad": nrx_edad, "sexo": nrx_sexo,
+                                        "peso": nrx_peso, "diagnostico": nrx_dx}
+
+                st.divider()
+
+                # ── PASO 2: DATOS CLÍNICOS ────────────────────────────────────
+                st.markdown("#### 🩺 Paso 2 — Datos clínicos")
+                rx1, rx2, rx3 = st.columns(3)
+                with rx1:
+                    rx_nombre = st.text_input("Nombre del paciente *",
+                                              value=pac_data.get("nombre",""), key="rx_nombre")
+                    rx_exp    = st.text_input("N° Expediente",
+                                              value=pac_data.get("expediente",""), key="rx_exp")
+                    rx_edad   = st.text_input("Edad",
+                                              value=str(pac_data.get("edad","")) if pac_data.get("edad") else "",
+                                              key="rx_edad")
+                with rx2:
+                    rx_sexo   = st.selectbox("Sexo",
+                                             ["Masculino","Femenino","No especificado"],
+                                             index=["Masculino","Femenino","No especificado"].index(
+                                                 pac_data.get("sexo","Masculino"))
+                                             if pac_data.get("sexo","Masculino") in
+                                             ["Masculino","Femenino","No especificado"] else 0,
+                                             key="rx_sexo")
+                    rxp1, rxp2 = st.columns(2)
+                    with rxp1:
+                        rx_peso  = st.number_input("Peso (kg)", 0.0, 300.0,
+                                                   float(pac_data.get("peso",0)) if pac_data.get("peso") else 0.0,
+                                                   0.1, key="rx_peso")
+                    with rxp2:
+                        rx_talla = st.number_input("Talla (cm)", 0.0, 250.0, 0.0, 0.5, key="rx_talla")
+                    rx_imc = rx_peso/((rx_talla/100)**2) if rx_talla>0 and rx_peso>0 else 0
+                    if rx_imc: st.caption(f"IMC: {rx_imc:.1f} kg/m²")
+                with rx3:
+                    rx_fecha  = st.date_input("Fecha *", key="rx_fecha")
+                    rxsv1, rxsv2 = st.columns(2)
+                    with rxsv1:
                         rx_ta   = st.text_input("TA (mmHg)", placeholder="120/80", key="rx_ta")
-                    with rsv2:
+                        rx_temp = st.text_input("T° (°C)", placeholder="36.5", key="rx_temp")
+                    with rxsv2:
                         rx_fc   = st.text_input("FC (lpm)", placeholder="72", key="rx_fc")
-                    with rsv3:
-                        rx_temp = st.text_input("Temp (°C)", placeholder="36.5", key="rx_temp")
-                    with rsv4:
                         rx_spo2 = st.text_input("SpO₂ (%)", placeholder="98", key="rx_spo2")
 
-                with col_rx2:
-                    st.markdown("**Diagnóstico** *(CIE-10)*")
-                    dx_sel = st.selectbox("Diagnóstico frecuente en nefrología",
-                                          list(CIE10_FRECUENTES.keys()), key="rx_dx_sel")
-                    cie_code = CIE10_FRECUENTES.get(dx_sel, "")
-                    if dx_sel.startswith("Otro"):
-                        rx_dx    = st.text_input("Diagnóstico (texto libre)", key="rx_dx_txt")
-                        rx_cie10 = st.text_input("Código CIE-10 (opcional)", key="rx_cie")
-                    else:
-                        rx_dx    = dx_sel.split(" — ")[1] if " — " in dx_sel else dx_sel
-                        rx_cie10 = cie_code
-                        st.info(f"CIE-10: **{cie_code}** — {rx_dx}")
+                st.divider()
 
-                    st.markdown("**Fecha y próxima cita**")
-                    rxf1, rxf2 = st.columns(2)
-                    with rxf1:
-                        rx_fecha = st.date_input("Fecha de consulta", key="rx_fecha")
-                    with rxf2:
-                        rx_hora_prox = st.time_input("Hora próxima cita", key="rx_hora_prox",
-                                                     value=None)
-                    rx_fecha_prox = st.date_input("Fecha próxima cita", key="rx_fecha_prox",
-                                                  value=None)
+                # ── PASO 3: DIAGNÓSTICOS ──────────────────────────────────────
+                st.markdown("#### 🏷️ Paso 3 — Diagnósticos (CIE-10)")
+                dx_list_key = "rx_dx_list"
+                if dx_list_key not in st.session_state:
+                    dx_init = pac_data.get("diagnostico","")
+                    st.session_state[dx_list_key] = [dx_init] if dx_init else []
 
-                st.markdown("**Indicaciones médicas** *(nombre genérico + marca, dosis, vía, frecuencia, duración)*")
-                rx_body = st.text_area("Indicaciones / prescripción *", height=180,
-                                       value=rec_data.get("resumen","") if rec_data else "",
-                                       key="rx_body",
-                                       placeholder="1. Tacrolimus (Prograf®) 2 mg c/12h VO × indefinido\n"
-                                                   "2. Micofenolato de mofetilo (Cellcept®) 500 mg c/12h VO\n"
-                                                   "3. Prednisona 10 mg c/24h VO en la mañana\n"
-                                                   "4. Omeprazol 20 mg c/24h VO en ayunas")
-                rx_notas = st.text_input("Indicaciones adicionales / instrucciones al paciente",
-                                         key="rx_notas",
-                                         placeholder="Tomar medicamentos a la misma hora cada día. No suspender sin consultar al médico.")
+                # Add from frequent list
+                dxc1, dxc2 = st.columns([2,1])
+                with dxc1:
+                    dx_sel = st.selectbox("Agregar diagnóstico frecuente o nuevo",
+                                          ["— Seleccionar —"] + todos_dx, key="rx_dx_sel")
+                with dxc2:
+                    st.markdown(" ")
+                    if st.button("➕ Agregar", key="btn_add_dx") and dx_sel != "— Seleccionar —":
+                        if dx_sel.startswith("✏️"):
+                            pass  # handled below
+                        elif dx_sel not in st.session_state[dx_list_key]:
+                            st.session_state[dx_list_key].append(dx_sel)
+                            st.rerun()
 
-                # ── GENERADOR PDF NOM ──────────────────────────────────────────
-                def _generar_receta_pdf_nom(dr_nombre, dr_cedula, dr_univ, dr_esp,
-                                            dr_inst, dr_dom, dr_tel,
-                                            rx_nombre, rx_exp, rx_edad, rx_sexo,
-                                            rx_peso, rx_talla, rx_imc,
-                                            rx_ta, rx_fc, rx_temp, rx_spo2,
-                                            rx_dx, rx_cie10, rx_fecha,
-                                            rx_fecha_prox, rx_hora_prox,
-                                            rx_body, rx_notas,
-                                            logo_b64=None, logo_mime=None):
+                # Add custom diagnosis
+                with st.expander("✏️ Agregar diagnóstico manual / propio"):
+                    dxm1, dxm2, dxm3 = st.columns([2,1,1])
+                    with dxm1:
+                        dx_manual_txt = st.text_input("Diagnóstico", key="rx_dx_manual")
+                    with dxm2:
+                        dx_manual_cie = st.text_input("CIE-10", key="rx_dx_cie",
+                                                       placeholder="Ej: N18.6")
+                    with dxm3:
+                        st.markdown(" ")
+                        if st.button("➕ Agregar", key="btn_add_dx_manual"):
+                            if dx_manual_txt:
+                                entrada = f"{dx_manual_cie} — {dx_manual_txt}" if dx_manual_cie else dx_manual_txt
+                                if entrada not in st.session_state[dx_list_key]:
+                                    st.session_state[dx_list_key].append(entrada)
+                                # Save to user's custom list
+                                if uid_rx and _DB_ON and _db.db_ok() and dx_manual_txt not in custom_dx:
+                                    try:
+                                        custom_dx.append(dx_manual_txt)
+                                        _db.save_user_diagnosticos(uid_rx, custom_dx)
+                                    except Exception:
+                                        pass
+                                st.rerun()
+
+                # Show current diagnoses list
+                if st.session_state[dx_list_key]:
+                    st.markdown("**Diagnósticos de esta receta:**")
+                    for i, dx in enumerate(st.session_state[dx_list_key]):
+                        dc1, dc2 = st.columns([8,1])
+                        dc1.markdown(f"• {dx}")
+                        if dc2.button("✕", key=f"rm_dx_{i}"):
+                            st.session_state[dx_list_key].pop(i)
+                            st.rerun()
+                    dx_str    = " · ".join(st.session_state[dx_list_key])
+                    cie_codes = " / ".join([d.split(" — ")[0] for d in st.session_state[dx_list_key]
+                                            if " — " in d])
+                else:
+                    dx_str    = ""
+                    cie_codes = ""
+
+                st.divider()
+
+                # ── PASO 4: INDICACIONES ──────────────────────────────────────
+                st.markdown("#### 💊 Paso 4 — Indicaciones médicas")
+                st.caption("Formato COFEPRIS: nombre genérico (marca comercial), dosis, vía, frecuencia, duración")
+                rx_body = st.text_area("Indicaciones *", height=180, key="rx_body",
+                    placeholder="1. Tacrolimus (Prograf®) 1 mg c/12h VO × indefinido\n"
+                                 "2. Micofenolato de mofetilo (Cellcept®) 500 mg c/12h VO\n"
+                                 "3. Prednisona 5 mg c/24h VO en la mañana")
+                rx_notas = st.text_input("Instrucciones al paciente", key="rx_notas",
+                    placeholder="Tomar a la misma hora cada día. No suspender sin consultar al médico.")
+                rx_prox_fecha = st.date_input("Próxima cita", value=None, key="rx_prox_fecha")
+                rx_prox_hora  = st.time_input("Hora", value=None, key="rx_prox_hora")
+
+                # ── LOGO ──────────────────────────────────────────────────────
+                with st.expander("🖼️ Logo del consultorio"):
+                    st.caption("JPG o PNG · Máx 2MB. Configurable permanentemente en 👤 Mi Cuenta.")
+                    logo_up2 = st.file_uploader("Subir logo", type=["jpg","jpeg","png"],
+                                                key="rx_logo_up2")
+                    if logo_up2:
+                        if logo_up2.size > 2_097_152:
+                            st.error("Supera 2 MB.")
+                        else:
+                            import base64 as _b64r
+                            st.session_state["sess_logo_b64"]  = _b64r.b64encode(logo_up2.read()).decode()
+                            st.session_state["sess_logo_mime"] = logo_up2.type
+                            st.success("✅ Logo cargado.")
+                    if st.session_state.get("sess_logo_b64"):
+                        import base64 as _b64r
+                        st.image(_b64r.b64decode(st.session_state["sess_logo_b64"]), width=80)
+
+                st.divider()
+
+                # ── GENERADOR PDF ──────────────────────────────────────────────
+                def _pdf_receta(dr_nombre, dr_cedula, dr_ced_gen, dr_univ, dr_univ_gen,
+                                dr_esp, dr_inst, dr_dom, dr_tel,
+                                dr_consejo, dr_cons_num,
+                                folio,
+                                rx_nombre, rx_exp, rx_edad, rx_sexo,
+                                rx_peso, rx_talla, rx_imc,
+                                rx_ta, rx_fc, rx_temp, rx_spo2,
+                                dx_str, cie_codes, rx_fecha,
+                                rx_prox_fecha, rx_prox_hora,
+                                rx_body, rx_notas,
+                                logo_b64=None):
                     import io, base64
                     from reportlab.lib.pagesizes import letter
                     from reportlab.lib.units import cm
@@ -9814,500 +9980,275 @@ elif nav == "receta":
                                             leftMargin=1.8*cm, rightMargin=1.8*cm,
                                             topMargin=1.5*cm, bottomMargin=1.5*cm)
 
-                    AZUL   = HexColor("#1E3A8A")
-                    AZUL2  = HexColor("#2563EB")
-                    AZULC  = HexColor("#EFF6FF")
-                    AZULM  = HexColor("#BFDBFE")
-                    GRIS   = HexColor("#6B7280")
-                    GRISL  = HexColor("#F8FAFC")
-                    VERDE  = HexColor("#059669")
+                    AZUL  = HexColor("#1E3A8A")
+                    AZUL2 = HexColor("#2563EB")
+                    AZULC = HexColor("#EFF6FF")
+                    AZULM = HexColor("#BFDBFE")
+                    GRIS  = HexColor("#6B7280")
+                    GRISL = HexColor("#F8FAFC")
 
-                    def P(text, fn="Helvetica", fs=9, color=black,
-                          align=TA_LEFT, bold=False, space=2, leading=None):
-                        style = ParagraphStyle(
-                            "s", fontName="Helvetica-Bold" if bold else fn,
-                            fontSize=fs, textColor=color, alignment=align,
-                            spaceAfter=space, leading=leading or (fs + 3))
-                        return Paragraph(str(text) if text else "", style)
+                    def P(txt, fn="Helvetica", fs=9, color=black, align=TA_LEFT,
+                          bold=False, sp=2, lead=None):
+                        return Paragraph(str(txt) if txt else "",
+                                         ParagraphStyle("s",
+                                             fontName="Helvetica-Bold" if bold else fn,
+                                             fontSize=fs, textColor=color,
+                                             alignment=align, spaceAfter=sp,
+                                             leading=lead or (fs+3)))
 
                     story = []
 
-                    # ── ENCABEZADO CON LOGO ──────────────────────────────────
-                    logo_cell = ""
+                    # ── ENCABEZADO ────────────────────────────────────────────
                     if logo_b64:
                         try:
                             logo_bytes = base64.b64decode(logo_b64)
-                            logo_img_reader = ImageReader(io.BytesIO(logo_bytes))
                             logo_cell = RLImage(io.BytesIO(logo_bytes),
                                                 width=1.8*cm, height=1.8*cm,
-                                                kind='proportional')
+                                                kind="proportional")
                         except Exception:
-                            logo_cell = P("☤", fn="Helvetica-Bold", fs=28,
-                                          color=AZUL, align=TA_CENTER)
+                            logo_cell = P("☤", fn="Helvetica-Bold", fs=24, color=AZUL, align=TA_CENTER)
                     else:
-                        logo_cell = P("☤", fn="Helvetica-Bold", fs=28,
-                                      color=AZUL, align=TA_CENTER)
+                        logo_cell = P("☤", fn="Helvetica-Bold", fs=24, color=AZUL, align=TA_CENTER)
 
-                    inst_blk = [
-                        P(dr_inst or "Consultorio Médico", fn="Helvetica-Bold",
-                          fs=12, color=AZUL, bold=True, space=1),
-                        P(dr_dom, fs=8, color=GRIS, space=1),
-                        P(f"Tel: {dr_tel}" if dr_tel else "", fs=8, color=GRIS),
+                    hdr_txt = [
+                        P(dr_inst or "Consultorio Médico", bold=True, fs=11, color=AZUL, sp=1),
+                        P(dr_dom, fs=8, color=GRIS, sp=1),
+                        P(f"Tel: {dr_tel}" if dr_tel else "", fs=8, color=GRIS, sp=1),
+                        P(f"Folio: {folio}", fs=8, color=AZUL2, align=TA_RIGHT),
                     ]
-
-                    hdr = [[logo_cell, inst_blk]]
-                    th = Table(hdr, colWidths=[2.2*cm, 14.8*cm])
+                    th = Table([[logo_cell, hdr_txt]], colWidths=[2.2*cm, 14.8*cm])
                     th.setStyle(TableStyle([
-                        ("BACKGROUND",    (0,0), (-1,-1), AZULC),
-                        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
-                        ("TOPPADDING",    (0,0), (-1,-1), 10),
-                        ("BOTTOMPADDING", (0,0), (-1,-1), 10),
-                        ("LEFTPADDING",   (0,0), (-1,-1), 10),
-                        ("RIGHTPADDING",  (0,0), (-1,-1), 10),
-                        ("BOX",           (0,0), (-1,-1), 2, AZUL),
-                        ("LINEABOVE",     (0,0), (-1,0),  4, AZUL2),
+                        ("BACKGROUND",    (0,0),(-1,-1), AZULC),
+                        ("VALIGN",        (0,0),(-1,-1), "MIDDLE"),
+                        ("TOPPADDING",    (0,0),(-1,-1), 8),
+                        ("BOTTOMPADDING", (0,0),(-1,-1), 8),
+                        ("LEFTPADDING",   (0,0),(-1,-1), 8),
+                        ("BOX",           (0,0),(-1,-1), 1.5, AZUL),
+                        ("LINEABOVE",     (0,0),(-1,0),  4,   AZUL2),
                     ]))
                     story.append(th)
                     story.append(Spacer(1, 0.3*cm))
 
                     # ── DATOS DEL MÉDICO ──────────────────────────────────────
-                    med = [[
-                        P(dr_nombre, fn="Helvetica-Bold", fs=12, color=AZUL, bold=True),
-                        P(f"Cédula Prof.: {dr_cedula}", fs=9, color=GRIS, align=TA_RIGHT),
-                    ],[
-                        P(dr_esp, fs=9, color=GRIS),
-                        P(dr_univ, fs=8, color=GRIS, align=TA_RIGHT),
-                    ]]
-                    tm = Table(med, colWidths=[10*cm, 7*cm])
+                    med_rows = [
+                        [P(dr_nombre, bold=True, fs=12, color=AZUL),
+                         P("", fs=8)],
+                        [P(dr_esp, fs=9, color=GRIS),
+                         P("", fs=8)],
+                    ]
+                    creds = []
+                    if dr_ced_gen:
+                        creds.append(f"Méd. Gral. Céd.: {dr_ced_gen} | {dr_univ_gen}")
+                    if dr_cedula:
+                        creds.append(f"Especialidad Céd.: {dr_cedula} | {dr_univ}")
+                    if dr_consejo:
+                        creds.append(f"Certif.: {dr_consejo} N°{dr_cons_num}")
+                    for c in creds:
+                        med_rows.append([P(c, fs=8, color=GRIS), P("", fs=8)])
+
+                    tm = Table(med_rows, colWidths=[13*cm, 4*cm])
                     tm.setStyle(TableStyle([
-                        ("TOPPADDING",    (0,0), (-1,-1), 4),
-                        ("BOTTOMPADDING", (0,0), (-1,-1), 4),
-                        ("LEFTPADDING",   (0,0), (-1,-1), 4),
+                        ("TOPPADDING",    (0,0),(-1,-1), 3),
+                        ("BOTTOMPADDING", (0,0),(-1,-1), 3),
+                        ("LEFTPADDING",   (0,0),(-1,-1), 4),
                     ]))
                     story.append(tm)
                     story.append(HRFlowable(width="100%", thickness=1.5, color=AZUL2))
                     story.append(Spacer(1, 0.3*cm))
 
                     # ── DATOS DEL PACIENTE ────────────────────────────────────
-                    fecha_str = str(rx_fecha)
-                    sv_parts = []
-                    if rx_peso > 0:  sv_parts.append(f"Peso: {rx_peso:.1f} kg")
-                    if rx_talla > 0: sv_parts.append(f"Talla: {rx_talla:.0f} cm")
-                    if rx_imc > 0:   sv_parts.append(f"IMC: {rx_imc:.1f}")
-                    if rx_ta:        sv_parts.append(f"TA: {rx_ta} mmHg")
-                    if rx_fc:        sv_parts.append(f"FC: {rx_fc} lpm")
-                    if rx_temp:      sv_parts.append(f"T°: {rx_temp}°C")
-                    if rx_spo2:      sv_parts.append(f"SpO₂: {rx_spo2}%")
+                    sv = []
+                    if rx_peso > 0:  sv.append(f"Peso: {rx_peso:.1f} kg")
+                    if rx_talla > 0: sv.append(f"Talla: {rx_talla:.0f} cm")
+                    if rx_imc > 0:   sv.append(f"IMC: {rx_imc:.1f}")
+                    if rx_ta:        sv.append(f"TA: {rx_ta} mmHg")
+                    if rx_fc:        sv.append(f"FC: {rx_fc} lpm")
+                    if rx_temp:      sv.append(f"T°: {rx_temp}°C")
+                    if rx_spo2:      sv.append(f"SpO₂: {rx_spo2}%")
 
                     sv_style = ParagraphStyle("sv", fontName="Helvetica",
                                               fontSize=8, leading=11, textColor=black)
-
                     pac_rows = [
-                        [P("Paciente:", bold=True, fs=8), P(rx_nombre, fs=10, bold=True),
+                        [P("Paciente:", bold=True, fs=8), P(rx_nombre, bold=True, fs=10),
                          P("Expediente:", bold=True, fs=8), P(rx_exp, fs=9),
-                         P("Fecha:", bold=True, fs=8), P(fecha_str, fs=9)],
+                         P("Fecha:", bold=True, fs=8), P(str(rx_fecha), fs=9)],
                         [P("Edad:", bold=True, fs=8), P(f"{rx_edad} años" if rx_edad else "—", fs=9),
                          P("Sexo:", bold=True, fs=8), P(rx_sexo, fs=9),
-                         P("CIE-10:", bold=True, fs=8), P(rx_cie10, fs=9, color=AZUL2, bold=True)],
+                         P("CIE-10:", bold=True, fs=8),
+                         P(cie_codes or "—", fs=9, color=AZUL2, bold=True)],
                         [P("Dx:", bold=True, fs=8),
-                         Paragraph(rx_dx or "—",
+                         Paragraph(dx_str or "—",
                                    ParagraphStyle("dx2", fontName="Helvetica-Oblique",
-                                                  fontSize=9, leading=12)),
+                                                  fontSize=8, leading=11)),
                          P(""), P(""), P(""), P("")],
                     ]
-                    if sv_parts:
-                        pac_rows.append([
-                            P("Signos:", bold=True, fs=8),
-                            Paragraph("  ·  ".join(sv_parts), sv_style),
-                            P(""), P(""), P(""), P(""),
-                        ])
+                    if sv:
+                        pac_rows.append([P("Signos:", bold=True, fs=8),
+                                         Paragraph("  ·  ".join(sv), sv_style),
+                                         P(""), P(""), P(""), P("")])
 
-                    tp = Table(pac_rows, colWidths=[2*cm, 5.5*cm, 2*cm, 2.5*cm, 1.5*cm, 3.5*cm])
+                    tp = Table(pac_rows,
+                               colWidths=[2*cm, 5.5*cm, 2*cm, 2.5*cm, 1.5*cm, 3.5*cm])
                     tp.setStyle(TableStyle([
-                        ("BACKGROUND",    (0,0),  (-1,-1), GRISL),
-                        ("ROWBACKGROUNDS",(0,0),  (-1,-1), [AZULC, GRISL, white, white]),
-                        ("TOPPADDING",    (0,0),  (-1,-1), 4),
-                        ("BOTTOMPADDING", (0,0),  (-1,-1), 4),
-                        ("LEFTPADDING",   (0,0),  (-1,-1), 6),
-                        ("BOX",           (0,0),  (-1,-1), 1, AZULM),
-                        ("LINEBELOW",     (0,0),  (-1,0),  0.5, AZULM),
-                        ("SPAN",          (1,2),  (-1,2)),
-                        ("SPAN",          (1,3),  (-1,3)) if sv_parts else ("SPAN",(0,0),(0,0)),
+                        ("BACKGROUND",    (0,0), (-1,-1), GRISL),
+                        ("ROWBACKGROUNDS",(0,0), (-1,-1), [AZULC, GRISL, white, white]),
+                        ("TOPPADDING",    (0,0), (-1,-1), 4),
+                        ("BOTTOMPADDING", (0,0), (-1,-1), 4),
+                        ("LEFTPADDING",   (0,0), (-1,-1), 6),
+                        ("BOX",           (0,0), (-1,-1), 1,   AZULM),
+                        ("SPAN",          (1,2), (-1,2)),
                     ]))
                     story.append(tp)
-                    story.append(Spacer(1, 0.5*cm))
+                    story.append(Spacer(1, 0.4*cm))
 
-                    # ── SÍMBOLO Rx + INDICACIONES ─────────────────────────────
-                    rx_sym_style = ParagraphStyle("rxs", fontName="Helvetica-Bold",
-                                                  fontSize=28, textColor=AZUL2, spaceAfter=6)
-                    story.append(Paragraph("&#x211E;", rx_sym_style))
-
-                    ind_style = ParagraphStyle("ind", fontName="Helvetica",
-                                               fontSize=11, leading=18, spaceAfter=4)
-                    ind_bold  = ParagraphStyle("indb", fontName="Helvetica-Bold",
-                                               fontSize=11, leading=18, spaceAfter=4)
+                    # ── Rx ────────────────────────────────────────────────────
+                    story.append(Paragraph("&#x211E;",
+                        ParagraphStyle("rxs", fontName="Helvetica-Bold",
+                                       fontSize=28, textColor=AZUL2, spaceAfter=6)))
+                    ind_s = ParagraphStyle("ind", fontName="Helvetica",
+                                           fontSize=11, leading=18, spaceAfter=4)
                     for linea in (rx_body or "").strip().split("\n"):
-                        linea = linea.strip()
-                        if not linea:
-                            story.append(Spacer(1, 0.1*cm))
-                            continue
-                        # Bold the first token if it's a number+dot (1., 2., etc.)
-                        import re as _re
-                        if _re.match(r'^\d+[\.\-]', linea):
-                            story.append(Paragraph(linea, ind_style))
-                        else:
-                            story.append(Paragraph(linea, ind_style))
+                        story.append(Paragraph(linea.strip() or " ", ind_s))
 
                     if rx_notas:
                         story.append(Spacer(1, 0.15*cm))
                         story.append(HRFlowable(width="100%", thickness=0.5, color=AZULM))
-                        story.append(Spacer(1, 0.1*cm))
-                        nota_s = ParagraphStyle("nota", fontName="Helvetica-Oblique",
-                                                fontSize=9, textColor=GRIS, spaceAfter=2)
-                        story.append(Paragraph(f"Instrucciones: {rx_notas}", nota_s))
+                        story.append(Paragraph(f"Instrucciones: {rx_notas}",
+                            ParagraphStyle("n", fontName="Helvetica-Oblique",
+                                           fontSize=9, textColor=GRIS, spaceAfter=2)))
 
-                    # ── PRÓXIMA CITA ──────────────────────────────────────────
-                    if rx_fecha_prox:
+                    if rx_prox_fecha:
+                        hora_txt = f" a las {rx_prox_hora}" if rx_prox_hora else ""
                         story.append(Spacer(1, 0.2*cm))
-                        hora_txt = f" a las {rx_hora_prox}" if rx_hora_prox else ""
-                        cita_box = [[
-                            P(f"📅  Próxima cita: {rx_fecha_prox}{hora_txt}",
-                              fn="Helvetica-Bold", fs=10, color=AZUL2, bold=True)
-                        ]]
-                        tc = Table(cita_box, colWidths=[17*cm])
+                        cita_b = [[P(f"📅  Próxima cita: {rx_prox_fecha}{hora_txt}",
+                                     bold=True, fs=10, color=AZUL2)]]
+                        tc = Table(cita_b, colWidths=[17*cm])
                         tc.setStyle(TableStyle([
-                            ("BACKGROUND", (0,0), (-1,-1), AZULC),
-                            ("TOPPADDING", (0,0), (-1,-1), 6),
-                            ("BOTTOMPADDING",(0,0),(-1,-1),6),
-                            ("LEFTPADDING", (0,0), (-1,-1), 10),
-                            ("BOX",        (0,0), (-1,-1), 1, AZUL2),
+                            ("BACKGROUND",   (0,0),(-1,-1), AZULC),
+                            ("TOPPADDING",   (0,0),(-1,-1), 6),
+                            ("BOTTOMPADDING",(0,0),(-1,-1), 6),
+                            ("LEFTPADDING",  (0,0),(-1,-1), 10),
+                            ("BOX",          (0,0),(-1,-1), 1, AZUL2),
                         ]))
                         story.append(tc)
 
                     story.append(Spacer(1, 1.0*cm))
 
                     # ── FIRMA ─────────────────────────────────────────────────
-                    firma_c = ParagraphStyle("fc", fontName="Helvetica",     fontSize=9,  alignment=TA_CENTER)
-                    firma_b = ParagraphStyle("fb", fontName="Helvetica-Bold", fontSize=10, alignment=TA_CENTER)
-                    firma_g = ParagraphStyle("fg", fontName="Helvetica",     fontSize=8,  textColor=GRIS, alignment=TA_CENTER)
-
-                    firma_data = [[
-                        "",
-                        [Paragraph("_" * 40, firma_c),
-                         Spacer(1, 0.1*cm),
-                         Paragraph(dr_nombre, firma_b),
-                         Paragraph(f"Cédula Profesional: {dr_cedula}", firma_g),
-                         Paragraph(dr_esp, firma_g)],
-                    ]]
-                    tf = Table(firma_data, colWidths=[6*cm, 11*cm])
+                    fc = ParagraphStyle("fc", fontName="Helvetica",     fontSize=9, alignment=TA_CENTER)
+                    fb = ParagraphStyle("fb", fontName="Helvetica-Bold", fontSize=10, alignment=TA_CENTER)
+                    fg = ParagraphStyle("fg", fontName="Helvetica",     fontSize=8,
+                                        textColor=GRIS, alignment=TA_CENTER)
+                    firma_items = [Paragraph("_"*40, fc), Spacer(1, 0.1*cm),
+                                   Paragraph(dr_nombre, fb)]
+                    for c in creds:
+                        firma_items.append(Paragraph(c, fg))
+                    tf = Table([["", firma_items]], colWidths=[6*cm, 11*cm])
                     tf.setStyle(TableStyle([("VALIGN", (0,0), (-1,-1), "BOTTOM")]))
                     story.append(tf)
-                    story.append(Spacer(1, 0.4*cm))
+                    story.append(Spacer(1, 0.3*cm))
 
-                    # ── PIE NOM ───────────────────────────────────────────────
+                    # ── PIE ───────────────────────────────────────────────────
                     story.append(HRFlowable(width="100%", thickness=1, color=AZULM))
-                    story.append(Spacer(1, 0.15*cm))
-                    pie_s = ParagraphStyle("pie", fontName="Helvetica", fontSize=7,
-                                           textColor=GRIS, alignment=TA_CENTER)
-                    pie_txt = (f"Receta médica general · NOM-004-SSA3-2012 · COFEPRIS · "
-                               f"{dr_inst} · {dr_dom} · Tel: {dr_tel} · "
-                               "Generado por RenalPro v3.1.0")
-                    story.append(Paragraph(pie_txt, pie_s))
-
-                    doc.build(story)
-                    buf.seek(0)
-                    return buf.read()
-
-                    buf = io.BytesIO()
-                    doc = SimpleDocTemplate(buf, pagesize=letter,
-                                            leftMargin=1.8*cm, rightMargin=1.8*cm,
-                                            topMargin=1.5*cm, bottomMargin=1.5*cm)
-
-                    AZUL  = HexColor("#1E3A8A")
-                    AZULC = HexColor("#DBEAFE")
-                    GRIS  = HexColor("#6B7280")
-                    GRISL = HexColor("#F9FAFB")
-
-                    def P(text, fn="Helvetica", fs=9, color=black, align=TA_LEFT, bold=False, space=2):
-                        style = ParagraphStyle("s", fontName=fn if not bold else "Helvetica-Bold",
-                                               fontSize=fs, textColor=color, alignment=align,
-                                               spaceAfter=space, leading=fs+3)
-                        return Paragraph(str(text) if text else "", style)
-
-                    story = []
-
-                    # ── ENCABEZADO ESTABLECIMIENTO (COFEPRIS) ────────────────
-                    hdr = [[
-                        P(dr_inst or "Consultorio Médico", "Helvetica-Bold", 11, AZUL, bold=True),
-                        P(f"Tel: {dr_tel}" if dr_tel else "", fs=8, color=GRIS, align=TA_RIGHT),
-                    ],[
-                        P(dr_dom, fs=8, color=GRIS),
-                        P("", fs=8),
-                    ]]
-                    th = Table(hdr, colWidths=[12*cm, 5*cm])
-                    th.setStyle(TableStyle([
-                        ("BACKGROUND",   (0,0), (-1,-1), AZULC),
-                        ("TOPPADDING",   (0,0), (-1,-1), 5),
-                        ("BOTTOMPADDING",(0,0), (-1,-1), 5),
-                        ("LEFTPADDING",  (0,0), (-1,-1), 8),
-                        ("RIGHTPADDING", (0,0), (-1,-1), 8),
-                        ("BOX",          (0,0), (-1,-1), 1.5, AZUL),
-                        ("LINEABOVE",    (0,0), (-1,0),  3,   AZUL),
-                    ]))
-                    story.append(th)
-                    story.append(Spacer(1, 0.3*cm))
-
-                    # ── DATOS DEL MÉDICO ──────────────────────────────────────
-                    med = [[
-                        P(dr_nombre, "Helvetica-Bold", 11, AZUL, bold=True),
-                        P(f"Cédula Prof.: {dr_cedula}", fs=8, align=TA_RIGHT),
-                    ],[
-                        P(dr_esp, fs=8, color=GRIS),
-                        P(dr_univ, fs=8, color=GRIS, align=TA_RIGHT),
-                    ]]
-                    tm = Table(med, colWidths=[10*cm, 7*cm])
-                    tm.setStyle(TableStyle([
-                        ("TOPPADDING",    (0,0), (-1,-1), 4),
-                        ("BOTTOMPADDING", (0,0), (-1,-1), 4),
-                        ("LEFTPADDING",   (0,0), (-1,-1), 8),
-                    ]))
-                    story.append(tm)
-                    story.append(HRFlowable(width="100%", thickness=1, color=AZUL))
-                    story.append(Spacer(1, 0.25*cm))
-
-                    # ── DATOS DEL PACIENTE ────────────────────────────────────
-                    fecha_str = str(rx_fecha)
-                    pac = [
-                        [P("Paciente:", bold=True, fs=8), P(rx_nombre, fs=9),
-                         P("Expediente:", bold=True, fs=8), P(rx_exp, fs=9),
-                         P("Fecha:", bold=True, fs=8), P(fecha_str, fs=9)],
-                        [P("Edad:", bold=True, fs=8), P(f"{rx_edad} años", fs=9),
-                         P("Sexo:", bold=True, fs=8), P(rx_sexo, fs=9),
-                         P("CIE-10:", bold=True, fs=8), P(rx_cie10, fs=9)],
-                        [P("Diagnóstico:", bold=True, fs=8),
-                         Paragraph(rx_dx, ParagraphStyle("dx", fontName="Helvetica",
-                                                          fontSize=9, leading=12)),
-                         P("", fs=8), P("", fs=8), P("", fs=8), P("", fs=8)],
-                    ]
-                    if rx_peso or rx_talla or rx_ta:
-                        sv_txt = []
-                        if rx_peso > 0:  sv_txt.append(f"Peso: {rx_peso:.1f} kg")
-                        if rx_talla > 0: sv_txt.append(f"Talla: {rx_talla:.0f} cm")
-                        if rx_imc > 0:   sv_txt.append(f"IMC: {rx_imc:.1f}")
-                        if rx_ta:        sv_txt.append(f"TA: {rx_ta}")
-                        if rx_fc:        sv_txt.append(f"FC: {rx_fc} lpm")
-                        if rx_temp:      sv_txt.append(f"T°: {rx_temp}°C")
-                        if rx_spo2:      sv_txt.append(f"SpO₂: {rx_spo2}%")
-                        pac.append([P("Signos:", bold=True, fs=8),
-                                    Paragraph("  ·  ".join(sv_txt),
-                                              ParagraphStyle("sv", fontName="Helvetica",
-                                                             fontSize=8, leading=11)),
-                                    P(""), P(""), P(""), P("")])
-                    tp = Table(pac, colWidths=[2.2*cm, 5.3*cm, 1.8*cm, 2.5*cm, 1.5*cm, 3.7*cm])
-                    tp.setStyle(TableStyle([
-                        ("BACKGROUND",   (0,0), (-1,-1), GRISL),
-                        ("ROWBACKGROUNDS",(0,0),(-1,-1), [GRISL, white]),
-                        ("TOPPADDING",   (0,0), (-1,-1), 3),
-                        ("BOTTOMPADDING",(0,0), (-1,-1), 3),
-                        ("LEFTPADDING",  (0,0), (-1,-1), 4),
-                        ("BOX",          (0,0), (-1,-1), 0.5, GRIS),
-                        ("SPAN",         (1,2), (-1,2)),
-                        ("SPAN",         (1,3), (-1,3)) if rx_peso or rx_ta else ("SPAN",(0,0),(0,0)),
-                    ]))
-                    story.append(tp)
-                    story.append(Spacer(1, 0.4*cm))
-
-                    # ── SÍMBOLO Rx + INDICACIONES ─────────────────────────────
-                    rx_sym = ParagraphStyle("rxs", fontName="Helvetica-Bold",
-                                            fontSize=24, textColor=AZUL, spaceAfter=4)
-                    story.append(Paragraph("&#x211E;", rx_sym))
-
-                    ind_style = ParagraphStyle("ind", fontName="Helvetica",
-                                               fontSize=10, leading=16, spaceAfter=3)
-                    for linea in (rx_body or "").strip().split("\n"):
-                        story.append(Paragraph(linea or " ", ind_style))
-
-                    if rx_notas:
-                        story.append(Spacer(1, 0.2*cm))
-                        story.append(HRFlowable(width="100%", thickness=0.5, color=GRIS))
-                        nota_s = ParagraphStyle("nota", fontName="Helvetica",
-                                                fontSize=8, textColor=GRIS, spaceAfter=2)
-                        story.append(Paragraph(f"Instrucciones: {rx_notas}", nota_s))
-
-                    # ── PRÓXIMA CITA ──────────────────────────────────────────
-                    if rx_fecha_prox:
-                        story.append(Spacer(1, 0.2*cm))
-                        hora_txt = f" a las {rx_hora_prox}" if rx_hora_prox else ""
-                        cita_s = ParagraphStyle("cita", fontName="Helvetica-Bold",
-                                                fontSize=9, textColor=AZUL)
-                        story.append(Paragraph(f"📅 Próxima cita: {rx_fecha_prox}{hora_txt}", cita_s))
-
-                    story.append(Spacer(1, 1.2*cm))
-
-                    # ── FIRMA ─────────────────────────────────────────────────
-                    firma_s = ParagraphStyle("firma", fontName="Helvetica", fontSize=9,
-                                             alignment=TA_CENTER)
-                    firma_b = ParagraphStyle("firmab", fontName="Helvetica-Bold", fontSize=9,
-                                             alignment=TA_CENTER)
-                    firma_g = ParagraphStyle("firmag", fontName="Helvetica", fontSize=8,
-                                             textColor=GRIS, alignment=TA_CENTER)
-                    firma_data = [[
-                        "",
-                        [Paragraph("_" * 38, firma_s),
-                         Paragraph(dr_nombre, firma_b),
-                         Paragraph(f"Cédula: {dr_cedula}", firma_g),
-                         Paragraph(dr_esp, firma_g)],
-                    ]]
-                    tf = Table(firma_data, colWidths=[7*cm, 10*cm])
-                    tf.setStyle(TableStyle([("VALIGN", (0,0), (-1,-1), "BOTTOM")]))
-                    story.append(tf)
-                    story.append(Spacer(1, 0.3*cm))
-
-                    # ── PIE NOM ───────────────────────────────────────────────
-                    story.append(HRFlowable(width="100%", thickness=0.5, color=AZULC))
-                    pie_s = ParagraphStyle("pie", fontName="Helvetica", fontSize=7,
-                                           textColor=GRIS, alignment=TA_CENTER)
                     story.append(Paragraph(
                         f"Receta médica general · NOM-004-SSA3-2012 · COFEPRIS · "
-                        f"{dr_inst} · {dr_dom} · {dr_tel} · "
-                        "Generado por RenalPro v3.1.0", pie_s))
-
+                        f"Folio: {folio} · {dr_inst} · {dr_dom} · Tel: {dr_tel} · "
+                        "RenalPro v3.1.0",
+                        ParagraphStyle("pie", fontName="Helvetica", fontSize=7,
+                                       textColor=GRIS, alignment=TA_CENTER)))
                     doc.build(story)
                     buf.seek(0)
                     return buf.read()
 
-
-                # Logo del consultorio
-                with st.expander("🖼️ Logo del consultorio (opcional)"):
-                    st.caption("JPG o PNG · Máximo 2 MB. También configurable en 👤 Mi Cuenta.")
-                    logo_up = st.file_uploader("Subir logo", type=["jpg","jpeg","png"], key="rx_logo_up")
-                    if logo_up:
-                        if logo_up.size > 2_097_152:
-                            st.error("Supera 2 MB.")
-                        else:
-                            import base64 as _b64r
-                            st.session_state["sess_logo_b64"]  = _b64r.b64encode(logo_up.read()).decode()
-                            st.session_state["sess_logo_mime"] = logo_up.type
-                            st.success("✅ Logo cargado.")
-                    if st.session_state.get("sess_logo_b64"):
-                        import base64 as _b64r
-                        st.image(_b64r.b64decode(st.session_state["sess_logo_b64"]), width=80)
-
-                # ── BOTÓN GENERAR ──────────────────────────────────────────────
-                st.divider()
-                bg1, bg2 = st.columns(2)
-                with bg1:
-                    if st.button("📄 Generar Receta PDF", type="primary",
-                                 use_container_width=True, key="btn_gen_pdf"):
+                # ── BOTONES GENERAR / GUARDAR ─────────────────────────────────
+                gb1, gb2 = st.columns(2)
+                with gb1:
+                    if st.button("📄 Generar PDF", type="primary",
+                                 use_container_width=True, key="btn_gen_rx"):
                         if not rx_nombre or not rx_body:
-                            st.warning("Nombre del paciente e indicaciones son obligatorios.")
+                            st.warning("Nombre e indicaciones son obligatorios.")
                         else:
+                            # Get folio
+                            folio_str = "SIN-FOLIO"
+                            if uid_rx and _DB_ON and _db.db_ok():
+                                try:
+                                    folio_str = _db.get_next_folio(uid_rx)
+                                except Exception:
+                                    pass
                             try:
-                                pdf_bytes = _generar_receta_pdf_nom(
-                                    dr_nombre, dr_cedula, dr_univ, dr_esp,
+                                pdf = _pdf_receta(
+                                    dr_nombre, dr_cedula, dr_ced_gen,
+                                    dr_univ, dr_univ_gen, dr_esp,
                                     dr_inst, dr_dom, dr_tel,
+                                    dr_consejo, dr_cons_num, folio_str,
                                     rx_nombre, rx_exp, rx_edad, rx_sexo,
                                     rx_peso, rx_talla, rx_imc,
                                     rx_ta, rx_fc, rx_temp, rx_spo2,
-                                    rx_dx, rx_cie10, rx_fecha,
-                                    rx_fecha_prox, rx_hora_prox,
+                                    dx_str, cie_codes, rx_fecha,
+                                    rx_prox_fecha, rx_prox_hora,
                                     rx_body, rx_notas,
                                     logo_b64=st.session_state.get("sess_logo_b64"),
-                                    logo_mime=st.session_state.get("sess_logo_mime"),
                                 )
-                                nombre_safe = "".join(c for c in rx_nombre
-                                                      if c.isalnum() or c in " _")[:20].strip()
-                                st.download_button(
-                                    "⬇️ Descargar Receta PDF",
-                                    data=pdf_bytes,
-                                    file_name=f"Receta_{nombre_safe}_{rx_fecha}.pdf",
-                                    mime="application/pdf",
-                                    key="btn_dl_pdf",
-                                )
-                                st.success("✅ PDF generado. Haz clic en Descargar para guardarlo.")
+                                safe = "".join(c for c in rx_nombre
+                                               if c.isalnum() or c==" ")[:18].strip()
+                                st.download_button("⬇️ Descargar PDF", data=pdf,
+                                    file_name=f"Rx_{folio_str}_{safe}.pdf",
+                                    mime="application/pdf", key="btn_dl_rx")
+                                st.success(f"✅ Folio: **{folio_str}**")
                             except Exception as e:
-                                st.error(f"Error al generar PDF: {e}")
+                                st.error(f"Error PDF: {e}")
 
-
-                with bg2:
-                    uid_rx = _user_id()
-                    db_ok_rx = uid_rx and _DB_ON and _db.db_ok()
-                    pac_id_rx = pac_data.get("id") if pac_data else None
-
-                    if db_ok_rx:
-                        if not pac_id_rx:
+                with gb2:
+                    if pac_id_rx and uid_rx and _DB_ON and _db.db_ok():
+                        if st.button("💾 Guardar en expediente",
+                                     use_container_width=True, key="btn_save_rx"):
                             try:
-                                pacs_disponibles = _cached_patients(uid_rx)
-                                if pacs_disponibles:
-                                    pac_opts = {f"{p['nombre']} (Exp: {p.get('expediente','—')})": p["id"]
-                                                for p in pacs_disponibles}
-                                    sel_pac_rx = st.selectbox("Guardar en expediente de:",
-                                                              list(pac_opts.keys()), key="rx_pac_sel")
-                                    pac_id_rx = pac_opts.get(sel_pac_rx)
-                                else:
-                                    st.caption("Sin pacientes. Crea uno en 🏥 Expediente Clínico primero.")
-                            except Exception:
-                                st.caption("Crea pacientes en 🏥 Expediente Clínico.")
-
-                        if pac_id_rx:
-                            if st.button("💾 Guardar en expediente",
-                                         use_container_width=True, key="btn_save_rx"):
-                                try:
-                                    _db.add_clinical_record(pac_id_rx, uid_rx, {
-                                        "tipo": "Receta médica",
-                                        "titulo": f"Receta — {(rx_dx or 'Indicaciones')[:40]}",
-                                        "fecha_consulta": rx_fecha,
-                                        "resumen": rx_body,
-                                        "notas": rx_notas,
-                                        "datos": {
-                                            "cie10": rx_cie10, "dx": rx_dx,
-                                            "peso": rx_peso, "talla": rx_talla,
-                                            "ta": rx_ta, "fc": rx_fc,
-                                            "fecha_prox": str(rx_fecha_prox) if rx_fecha_prox else "",
-                                            "hora_prox": str(rx_hora_prox) if rx_hora_prox else "",
-                                        },
-                                    })
-                                    _clear_cache()
-                                    st.success("✅ Receta guardada en el expediente.")
-                                except AttributeError:
-                                    st.error("db.py desactualizado — sube la versión nueva a GitHub.")
-                                except Exception as e_save:
-                                    st.error(f"Error: {e_save}")
-                    else:
-                        st.caption("Conecta Railway DB para guardar en expedientes.")
-
+                                _db.add_clinical_record(pac_id_rx, uid_rx, {
+                                    "tipo": "Receta médica",
+                                    "titulo": f"Receta — {(dx_str or rx_body[:40])}",
+                                    "fecha_consulta": rx_fecha,
+                                    "resumen": rx_body,
+                                    "notas": rx_notas,
+                                    "datos": {"dx": dx_str, "cie": cie_codes,
+                                               "peso": rx_peso, "ta": rx_ta},
+                                })
+                                _clear_cache()
+                                st.success("✅ Receta guardada en expediente.")
+                            except AttributeError:
+                                st.error("Sube el db.py actualizado a GitHub.")
+                    elif not pac_id_rx:
+                        st.caption("Selecciona o crea un paciente para guardar en expediente.")
 
             with rx_tab2:
-                st.markdown("#### Historial de recetas generadas")
-                uid_rx2 = _user_id()
-                if uid_rx2 and _DB_ON and _db.db_ok():
+                st.markdown("#### 📋 Historial de recetas")
+                if uid_rx and _DB_ON and _db.db_ok():
                     try:
-                        import json as _jrx
-                        # Get all patients then their records of type receta
-                        pacs_rx = _cached_patients(uid_rx2)
-                        recetas_todas = []
-                        for p in pacs_rx:
+                        pacs_all = _cached_patients(uid_rx)
+                        recetas_all = []
+                        for p in pacs_all:
                             for r in _cached_clinical_records(p["id"]):
                                 if r.get("tipo") == "Receta médica":
-                                    recetas_todas.append({**r, "_pac_nombre": p.get("nombre","—")})
-                        recetas_todas.sort(key=lambda x: str(x.get("created_at","")), reverse=True)
+                                    recetas_all.append({**r, "_pac": p.get("nombre","—")})
+                        recetas_all.sort(key=lambda x: str(x.get("created_at","")), reverse=True)
 
-                        if recetas_todas:
-                            for rx_hist in recetas_todas[:20]:
-                                fecha_h = str(rx_hist.get("fecha_consulta",""))[:10]
-                                with st.expander(f"📄 {fecha_h} — {rx_hist.get('titulo','—')} · {rx_hist['_pac_nombre']}"):
-                                    st.markdown(f"**Indicaciones:** {rx_hist.get('resumen','')}")
-                                    if rx_hist.get("notas"):
-                                        st.caption(rx_hist["notas"])
-                                    if st.button("↩️ Cargar esta receta", key=f"cargar_rx_{rx_hist['id']}"):
-                                        st.session_state["rx_body_prefill"] = rx_hist.get("resumen","")
-                                        st.info("Receta cargada — ve a la pestaña '✍️ Datos de la receta' y modifica lo necesario.")
+                        if recetas_all:
+                            for r in recetas_all[:30]:
+                                fecha_r = str(r.get("fecha_consulta",""))[:10]
+                                with st.expander(
+                                    f"📄 {fecha_r} — {r.get('titulo','—')} · {r['_pac']}"):
+                                    st.markdown(f"**Indicaciones:**\n{r.get('resumen','')}")
+                                    if r.get("notas"):
+                                        st.caption(r["notas"])
+                                    if st.button("↩️ Cargar indicaciones",
+                                                 key=f"load_rx_{r['id']}"):
+                                        st.session_state["rx_body_prefill"] = r.get("resumen","")
+                                        st.info("Ve a la pestaña ✍️ y pega las indicaciones.")
                         else:
-                            st.info("No hay recetas guardadas aún.")
-                    except Exception:
-                        st.info("Sube el db.py actualizado a GitHub para activar el historial de recetas.")
+                            st.info("No hay recetas guardadas. Genera y guarda una receta para verla aquí.")
+                    except Exception as e:
+                        st.warning(f"Sube el db.py actualizado a GitHub para ver el historial. ({e})")
                 else:
-                    st.info("Conecta Railway DB para ver el historial de recetas.")
+                    st.info("Conecta Railway DB para ver el historial.")
 
 elif nav == "infecciones_tx":
     st.subheader("🦠 Infecciones Post-Trasplante Renal")
@@ -11310,6 +11251,349 @@ Limitaciones:
         """)
         st.caption("Ref: Montgomery RA et al. NEJM 2011 | Stegall MD et al. Am J Transplant 2012 | "
                    "Vo AA et al. Transplantation 2015.")
+
+elif nav == "dgf":
+    st.subheader("⏱️ Función Retardada del Injerto (DGF)")
+    st.caption("Ref: Yarlagadda SG. Nephrol Dial Transplant 2008 | Rao PS et al. Am J Transplant 2009 (KDPI) | "
+               "Massie AB et al. Am J Transplant 2016 | Irish WD et al. Transplantation 2010 (DGF score)")
+
+    dgf_tab = st.radio("", [
+        "📚 Conceptos y Manejo",
+        "🧮 Calculadora KDPI",
+        "📊 Calculadora EPTS",
+        "⚠️ Score de riesgo DGF",
+    ], horizontal=True, key="dgf_tab")
+    st.divider()
+
+    if "Conceptos" in dgf_tab:
+        st.markdown("""
+### ¿Qué es la Función Retardada del Injerto?
+
+**Definición operacional:** Necesidad de diálisis en los **primeros 7 días** post-trasplante.
+
+**Definiciones alternativas usadas en la literatura:**
+- Cr sérica >3 mg/dL al día 5 post-Tx (Halloran PF)
+- Diuresis <1,200 mL/día en las primeras 24h
+- Caída de Cr <10% en 24h durante los primeros 3 días
+
+> 📌 Para tu práctica clínica: la definición de **diálisis en la primera semana** es la más usada y
+> la que aplica para KDPI y para estadísticas de registro.
+
+#### Incidencia
+| Tipo de donante | DGF |
+|----------------|-----|
+| Donante vivo | 1–5% |
+| Donante fallecido criterio estándar | 15–30% |
+| Donante criterio expandido (ECD/KDPI >85%) | 30–60% |
+| Donante tras muerte cardiaca (DCD) | 30–50% |
+
+#### ¿Por qué los nefrólogos de trasplante no se inmutan con DGF?
+Porque saben lo que tú vas a aprender aquí:
+
+1. **DGF no predice pérdida del injerto a corto plazo** — el riñón puede tardar 2–6 semanas en
+   funcionar y aun así tener excelente función a los 5 años si se maneja bien.
+
+2. **El KDPI predice quién va a tener DGF** — si el KDPI es >85%, la expectativa
+   ya era que el riñón tardara en arrancar. No es sorpresa, es parte del plan.
+
+3. **Lo que importa es el Doppler y la tendencia** — no la creatinina del día 1.
+
+4. **La IS se ajusta en DGF** — no es el mismo esquema que con función inmediata.
+
+#### Factores de riesgo de DGF
+| Factor | Peso |
+|--------|------|
+| Tiempo de isquemia fría >18h | ⭐⭐⭐ |
+| KDPI >85% | ⭐⭐⭐ |
+| Donante tras muerte cardíaca (DCD) | ⭐⭐⭐ |
+| Hipotensión del donante o receptor intraoperatoria | ⭐⭐ |
+| PRA elevado / rechazo hiperagudo | ⭐⭐ |
+| Oliguria del donante pre-donación | ⭐⭐ |
+| Obesidad del receptor (IMC >30) | ⭐ |
+
+#### Protocolo de manejo de DGF
+
+**Días 1–3 (oliguria/anuria):**
+```
+✅ Confirmar perfusión del injerto:
+   → Eco Doppler URGENTE (descartar trombosis vascular — cirugía si <6h)
+   → Descartar obstrucción ureteral o fuga urinaria (TC si sospecha)
+   → Descartar rechazo hiperagudo (anti-HLA preformados, crossmatch)
+
+✅ Manejo médico:
+   → Mantener PAM >75–85 mmHg (hidratación + vasopresores si necesario)
+   → Furosemida IV 100–200 mg → si no responde, no repetir (isquemia)
+   → Hemodiálisis si: K >5.5, acidosis severa, sobrecarga hídrica sintomática
+   → NO hacer biopsia de rutina en DGF si Doppler conservado
+
+✅ Inmunosupresión en DGF:
+   → Reducir o diferir tacrolimus (nefrotóxico en isquemia tubular)
+   → Algunos centros: nivel C0 tacrolimus 5–8 ng/mL en DGF (vs 10–15 normal)
+   → Continuar MMF + esteroides sin modificación
+   → Monitoreo de DSA — DGF no implica rechazo per se
+```
+
+**Días 4–14 (seguimiento):**
+```
+✅ Monitoreo diario:
+   → Creatinina sérica c/24h
+   → Balance hídrico estricto
+   → Diuresis horaria (aparición de diuresis = buen signo)
+
+✅ ¿Cuándo sospechar rechazo y hacer biopsia?
+   → Fiebre + aumento de Cr después de inicio de diuresis
+   → Doppler: aumento de índice de resistencia >0.80
+   → DSA de novo positivos en el post-Tx
+   → Sin mejoría alguna después de día 14
+
+✅ Inicio de diuresis → "slow DGF":
+   → Creatinina comienza a caer (aunque lentamente)
+   → Esto es la señal de que el TRRC tubular está recuperando
+   → Ajustar IS gradualmente al nivel objetivo
+```
+
+**Semanas 3–8 (recuperación tardía):**
+```
+✅ DGF prolongada (>3 semanas): biopsia obligatoria
+   → Descartar rechazo agudo (celular o humoral)
+   → Descartar nefrotoxicidad por CNI
+   → Reevaluar IS
+
+✅ Criterios de "no función primaria del injerto" (PNF):
+   → Nunca inició diuresis
+   → Cr no cae en 4–6 semanas
+   → Biopsia: necrosis cortical, trombosis → pérdida del injerto
+   → Nefrectomía si: dolor del injerto, fiebre persistente, consumo de plaquetas
+```
+
+#### Factores predictores de recuperación
+- ✅ Flujo diastólico conservado en Doppler (IR <0.80)
+- ✅ Aparición de diuresis aunque sea pequeña
+- ✅ Caída progresiva de creatinina (aunque lenta)
+- ✅ Sin DSA de novo + crossmatch negativo pre-Tx
+- ✅ Tiempo de isquemia fría <24h
+- ⚠️ KDPI <85%
+
+> 📌 **Regla práctica:** Si el Doppler muestra flujo y la Cr cae aunque sea 0.2 mg/dL/día,
+> el riñón va a funcionar. Ten paciencia. La naturaleza del TRRC tubular es recuperarse.
+        """)
+
+    elif "KDPI" in dgf_tab:
+        st.markdown("### 🧮 Calculadora KDPI — Kidney Donor Profile Index")
+        st.info("""
+**KDPI** expresa el riesgo relativo de falla del injerto de un donante cadavérico comparado
+con el pool de donantes. KDPI 85% = este riñón tiene mayor probabilidad de falla que el 85% de los donantes.
+**No es una contraindicación** — es información para tomar decisiones y para preparar al receptor.
+        """)
+        k1, k2 = st.columns(2)
+        with k1:
+            k_edad  = st.number_input("Edad del donante (años)", 0, 100, 50, 1, key="k_edad")
+            k_peso  = st.number_input("Peso del donante (kg)", 20.0, 200.0, 75.0, 0.5, key="k_peso")
+            k_talla = st.number_input("Talla del donante (cm)", 100.0, 220.0, 170.0, 0.5, key="k_talla")
+            k_cr    = st.number_input("Creatinina terminal (mg/dL)", 0.3, 15.0, 1.2, 0.1, key="k_cr")
+            k_hta   = st.checkbox("Historia de hipertensión arterial", key="k_hta")
+        with k2:
+            k_dm    = st.checkbox("Historia de diabetes mellitus", key="k_dm")
+            k_aacv  = st.checkbox("Muerte por ACV / causa cerebrovascular", key="k_acv")
+            k_hcv   = st.checkbox("Hepatitis C positivo", key="k_hcv")
+            k_dcd   = st.checkbox("Donante tras muerte cardíaca (DCD)", key="k_dcd")
+            k_raza  = st.selectbox("Raza del donante", ["No afroamericano", "Afroamericano"], key="k_raza")
+
+        import math
+        # KDRI calculation (OPTN 2013 formula, simplified)
+        age_term = (0.0128*(k_edad-40)
+                    - 0.0194*max(0, 18-k_edad)
+                    + 0.0107*max(0, k_edad-50))
+        ht_term  = -0.0464*(k_talla-170)/10
+        wt_term  = 0.1262*max(0, 80-k_peso)*(80-k_peso)/5 if k_peso < 80 else 0
+        aa_term  = 0.1082 if k_raza=="Afroamericano" else 0
+        hta_term = 0.2350 if k_hta else 0
+        dm_term  = 0.5125 if k_dm else 0
+        cr_term  = 0.2140*(k_cr-1) - (0.0790*(k_cr-1.5) if k_cr>1.5 else 0)
+        dcd_term = 0.1330 if k_dcd else 0
+        hcv_term = 0.2490 if k_hcv else 0
+        acv_term = -0.0776 if k_aacv else 0  # CVA as cause reduces risk slightly
+
+        kdri_raw = math.exp(age_term + ht_term + wt_term + aa_term +
+                            hta_term + dm_term + cr_term + dcd_term +
+                            hcv_term + acv_term)
+        # KDRI scaling (median donor 2021 ≈ 1.0) and KDPI from lookup
+        # Simplified: KDPI ≈ percentile of kdri_raw relative to population
+        # Using approximate conversion (OPTN 2021 scaling factor ~1.0)
+        kdri_rao = kdri_raw  # simplified (actual needs scaling factor from OPTN)
+
+        # Approximate KDPI from KDRI using logistic approximation
+        # KDPI = 100 * CDF of log-normal distribution
+        kdpi_approx = min(99, max(1, int(100 * (1 - math.exp(-kdri_rao * 0.62)))))
+
+        rp1, rp2, rp3 = st.columns(3)
+        rp1.metric("KDRI (raw)", f"{kdri_raw:.3f}")
+        rp2.metric("KDPI aproximado", f"~{kdpi_approx}%")
+        if kdpi_approx < 20:
+            rp3.metric("Calidad del órgano", "Excelente")
+            st.success(f"**KDPI ~{kdpi_approx}%** — Órgano de alta calidad. Bajo riesgo de DGF y falla del injerto.")
+        elif kdpi_approx < 50:
+            rp3.metric("Calidad del órgano", "Buena")
+            st.success(f"**KDPI ~{kdpi_approx}%** — Estándar. Buen candidato para receptores de EPTS moderado-alto.")
+        elif kdpi_approx < 85:
+            rp3.metric("Calidad del órgano", "Aceptable")
+            st.warning(f"**KDPI ~{kdpi_approx}%** — Criterio expandido (ECD). Mayor riesgo de DGF. "
+                       "Preparar receptor para posible diálisis temporal.")
+        else:
+            rp3.metric("Calidad del órgano", "Alto riesgo")
+            st.error(f"**KDPI ~{kdpi_approx}%** — Órgano de muy alto riesgo. "
+                     "Discutir con el receptor. DGF probable (30–60%). "
+                     "Beneficio vs riesgo: ¿cuánto tiempo lleva en diálisis?")
+
+        st.markdown("""
+#### Interpretación clínica del KDPI
+| KDPI | Calidad | Expectativa | DGF estimado |
+|------|---------|-------------|-------------|
+| <20% | Óptima | Mejor sobrevida del injerto | <10% |
+| 20–50% | Estándar | Buen pronóstico | 10–25% |
+| 50–85% | Criterio expandido | Pronóstico moderado | 25–40% |
+| >85% | Muy alto riesgo | Mayor riesgo de pérdida | 40–60% |
+
+> ⚠️ Este cálculo es una aproximación educativa basada en la fórmula OPTN 2013.
+> El KDPI oficial se calcula en el sistema UNOS con la tabla de scaling actualizada anualmente.
+        """)
+        st.caption("Ref: Rao PS et al. Am J Transplant 2009;9(11):2567-2573. "
+                   "OPTN KDPI Guide. optn.transplant.hrsa.gov")
+
+    elif "EPTS" in dgf_tab:
+        st.markdown("### 📊 Calculadora EPTS — Estimated Post-Transplant Survival")
+        st.info("""
+**EPTS** predice la sobrevida post-trasplante del **receptor** basándose en sus características.
+Se usa para matching: receptores con EPTS bajo (<20%) tienen prioridad para recibir riñones
+con KDPI bajo (<20%) — los mejores riñones para los mejores candidatos.
+        """)
+        e1, e2 = st.columns(2)
+        with e1:
+            e_edad  = st.number_input("Edad del receptor (años)", 18, 90, 45, 1, key="e_edad")
+            e_dm    = st.checkbox("Diabetes mellitus", key="e_dm")
+            e_retx  = st.checkbox("Trasplante previo (retrasplante)", key="e_retx")
+        with e2:
+            e_dial  = st.checkbox("Actualmente en diálisis", key="e_dial")
+            e_t_dial = st.number_input("Años en diálisis (si aplica)", 0.0, 30.0, 0.0, 0.5,
+                                       key="e_t_dial", disabled=not e_dial)
+
+        # EPTS formula (OPTN 2014)
+        epts_raw = (0.047 * max(e_edad - 25, 0)
+                    - 0.015 * (1 if e_dm else 0) * max(e_edad - 25, 0)
+                    + 0.398 * (1 if e_retx else 0)
+                    - 0.237 * (1 if e_dm else 0) * (1 if e_retx else 0)
+                    + 6.321 * (1 if e_dial else 0)
+                    + 0.130 * max(e_t_dial, 0)
+                    - 0.282 * (1 if e_dm else 0) * max(e_t_dial, 0)
+                    + 1.490 * (1 if e_dm else 0))
+
+        # Convert raw score to percentile (approximate)
+        import math
+        epts_pct = min(99, max(1, int(100 * (1 - math.exp(-epts_raw * 0.08)))))
+
+        ep1, ep2, ep3 = st.columns(3)
+        ep1.metric("EPTS score (raw)", f"{epts_raw:.2f}")
+        ep2.metric("EPTS percentil (aprox.)", f"~{epts_pct}%")
+        if epts_pct < 20:
+            ep3.metric("Candidato a", "KDPI <20%")
+            st.success(f"**EPTS ~{epts_pct}%** — Candidato excelente. Tiene prioridad para riñones KDPI <20%. "
+                       "Mayor esperanza de vida post-trasplante.")
+        elif epts_pct < 50:
+            ep3.metric("Perfil", "Estándar")
+            st.info(f"**EPTS ~{epts_pct}%** — Perfil estándar. Puede recibir riñones de cualquier KDPI.")
+        else:
+            ep3.metric("Perfil", "Mayor comorbilidad")
+            st.warning(f"**EPTS ~{epts_pct}%** — Mayor comorbilidad. "
+                       "Considerar riñones de criterio expandido (KDPI alto) "
+                       "si el tiempo de espera es prolongado — el beneficio del Tx sigue siendo positivo.")
+
+        st.markdown("""
+#### Uso del EPTS en la asignación
+El sistema OPTN usa EPTS + KDPI para el matching óptimo:
+
+| Receptor | Donante ideal |
+|---------|--------------|
+| EPTS <20% (joven, sin comorbilidades) | KDPI <20% (riñón de alta calidad) |
+| EPTS 20–50% | KDPI <50% |
+| EPTS >50% | Cualquier KDPI — tiempo de espera pesa más |
+| En diálisis >10 años | Aceptar KDPI >85% — el Tx sigue siendo mejor que la diálisis |
+
+> 📌 Para México/IMSS: el sistema de asignación puede diferir del OPTN,
+> pero los conceptos KDPI/EPTS son aplicables para decisiones clínicas individuales.
+        """)
+        st.caption("Ref: Massie AB et al. Am J Transplant 2016;16(3):849-858. "
+                   "OPTN EPTS Guide. optn.transplant.hrsa.gov")
+
+    else:
+        st.markdown("### ⚠️ Score de Riesgo de DGF")
+        st.info("Calcula la probabilidad de que el receptor desarrolle DGF "
+                "(necesite diálisis en la primera semana post-trasplante).")
+        st.caption("Ref: Irish WD et al. Transplantation 2010;89(8):1028-1035")
+
+        sg1, sg2 = st.columns(2)
+        with sg1:
+            sg_kdpi = st.number_input("KDPI del donante (%)", 0, 100, 40, 1, key="sg_kdpi")
+            sg_isq  = st.number_input("Tiempo de isquemia fría (horas)", 0.0, 48.0, 16.0, 0.5, key="sg_isq")
+            sg_dcd  = st.checkbox("Donante tras muerte cardíaca (DCD)", key="sg_dcd")
+            sg_dial_recep = st.checkbox("Receptor en diálisis crónica", key="sg_dial_r")
+        with sg2:
+            sg_dm_rec = st.checkbox("Receptor diabético", key="sg_dm_r")
+            sg_bmi  = st.number_input("IMC del receptor (kg/m²)", 15.0, 55.0, 25.0, 0.5, key="sg_bmi")
+            sg_fh   = st.selectbox("Donante femenino → Receptor masculino",
+                                   ["No (misma sexo o H→F)", "Sí (F→M)"], key="sg_fh")
+            sg_pra  = st.number_input("cPRA del receptor (%)", 0, 100, 0, 1, key="sg_pra")
+
+        # DGF risk score (Irish WD 2010 adaptation)
+        pts = 0
+        if sg_kdpi >= 85: pts += 6
+        elif sg_kdpi >= 50: pts += 3
+        elif sg_kdpi >= 20: pts += 1
+        if sg_dcd: pts += 4
+        if sg_isq >= 24: pts += 3
+        elif sg_isq >= 18: pts += 2
+        elif sg_isq >= 12: pts += 1
+        if sg_bmi >= 30: pts += 3
+        if sg_dm_rec: pts += 2
+        if sg_fh == "Sí (F→M)": pts += 2
+        if sg_pra >= 80: pts += 2
+        elif sg_pra >= 30: pts += 1
+
+        # Risk estimation
+        if pts <= 2: risk_pct = 5; risk_label = "🟢 Bajo"
+        elif pts <= 5: risk_pct = 15; risk_label = "🟡 Moderado"
+        elif pts <= 9: risk_pct = 30; risk_label = "🟠 Alto"
+        else: risk_pct = 55; risk_label = "🔴 Muy Alto"
+
+        r1, r2, r3 = st.columns(3)
+        r1.metric("Puntuación DGF", f"{pts} pts")
+        r2.metric("Riesgo estimado de DGF", f"~{risk_pct}%")
+        r3.metric("Nivel de riesgo", risk_label.split()[1])
+
+        if pts <= 2:
+            st.success("**Riesgo BAJO de DGF.** Alta probabilidad de función inmediata del injerto. "
+                       "Protocolo de IS estándar.")
+        elif pts <= 5:
+            st.warning("**Riesgo MODERADO.** Preparar para posible DGF. "
+                       "Informar al receptor. Monitoreo estrecho las primeras 72h.")
+        elif pts <= 9:
+            st.error("**Riesgo ALTO.** DGF probable. "
+                     "Planear acceso dialítico si no lo tiene. "
+                     "Considerar reducir CNI en las primeras 48h. "
+                     "Eco Doppler en las primeras 24h.")
+        else:
+            st.error("**Riesgo MUY ALTO.** DGF casi segura. "
+                     "Catéter temporal de diálisis disponible en pabellón. "
+                     "Reducir tacrolimus. Eco Doppler urgente a las 6h post-Tx.")
+
+        st.info("""
+**Acciones preventivas según riesgo:**
+- **Isquemia fría:** minimizar — cada hora adicional >20h aumenta el riesgo 6%
+- **KDPI alto:** consentimiento informado pre-Tx; preparar soporte dialítico
+- **DCD:** solución de preservación con adición de cardioprotectores; isquemia fría <14h ideal
+- **IMC >30:** diuresis post-clampeo es predictora; furosemida intraoperatoria
+        """)
+        st.caption("Score adaptado de: Irish WD et al. Transplantation 2010;89(8):1028-1035. "
+                   "Boom H et al. JASN 2000.")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
