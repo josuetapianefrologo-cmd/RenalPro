@@ -6820,615 +6820,9 @@ elif nav == "acceso":
         st.caption("Ref: KDOQI Clinical Practice Guidelines for Vascular Access 2019 | ESVS 2018")
 
 elif nav == "pacientes":
-    st.subheader("📂 Mis Pacientes — Historial Clínico")
-
-    rol_actual = _rol()
-    uid = _user_id()
-    db_activa = _DB_ON and _db.db_ok()
-
-    # ── TEASER PARA USUARIOS FREE ──────────────────────────────────────────────
-    if rol_actual in ("free", "guest", "expirado", "grace"):
-        st.info("👀 Así se ve el historial clínico completo en la versión **Pro**:")
-        st.markdown("""<style>.card-blur{filter:blur(4px);pointer-events:none;user-select:none;
-        background:#fff;border:1px solid #BFDBFE;border-left:4px solid #2563EB;
-        border-radius:10px;padding:12px 16px;margin:6px 0;}</style>""", unsafe_allow_html=True)
-        for e in [
-            ("Paciente UCI-01","CVVHDF","72 kg","Citrato RCA","HNF","3 sesiones","Cr: 8.2→4.1"),
-            ("Paciente UCI-02","CVVH",  "85 kg","HNF",        "—", "1 sesión", "Cr: 6.8→—"),
-        ]:
-            st.markdown(f"""<div class="card-blur"><b>🩺 {e[0]}</b> · {e[1]} · {e[2]} · {e[3]}<br>
-            <small>{e[4]} · {e[5]} · {e[6]}</small></div>""", unsafe_allow_html=True)
-        st.markdown("---")
-        st.markdown("### ✨ Con RenalPro Pro tienes:")
-        c1, c2 = st.columns(2)
-        c1.markdown("""
-- 💾 Guardar prescripciones ilimitadas
-- 📈 Gráficas de creatinina, balance, K, SOFA
-- 🧬 Calculadora de pérdidas nutricionales TRRC
-- 💊 Log de anticoagulación con gráfica
-        """)
-        c2.markdown("""
-- 🚦 Semáforo de criterios para suspender TRRC
-- 📝 Nota de evolución automática para expediente
-- 📄 Reimprimir PDF de cualquier sesión
-- ↩️ Cargar parámetros de vuelta al calculador
-        """)
-        if rol_actual == "grace":
-            st.warning("⏳ Tus datos están guardados 60 días. Renueva para recuperar acceso.")
-        if st.button("💳 Activar Pro — $99 MXN/mes", type="primary", key="btn_upg_pac"):
-            st.session_state["nav_sel"] = "premium"; st.rerun()
-
-    # ── VISTA PRO/ADMIN ────────────────────────────────────────────────────────
-    else:
-        if not db_activa:
-            st.warning("⚠️ Base de datos Railway no conectada. Agrega DATABASE_URL en Streamlit Secrets.")
-        elif uid is None:
-            st.warning("⚠️ Inicia sesión con tu cuenta Railway para ver tus pacientes.")
-        else:
-            prescriptions = _cached_prescriptions(uid)
-
-            # Limpiar selección si el paciente ya no existe
-            if st.session_state.get("sel_pac_id") and not any(
-                p["id"] == st.session_state["sel_pac_id"] for p in prescriptions
-            ):
-                st.session_state.pop("sel_pac_id", None)
-
-            # ── VISTA DETALLE DE UN PACIENTE ──────────────────────────────────
-            sel_id = st.session_state.get("sel_pac_id")
-            sel_pac = next((p for p in prescriptions if p["id"] == sel_id), None) if sel_id else None
-
-            if sel_pac:
-                # ── HEADER DEL PACIENTE ────────────────────────────────────────
-                col_back, col_title = st.columns([1, 6])
-                with col_back:
-                    if st.button("← Volver", key="btn_volver"):
-                        st.session_state.pop("sel_pac_id", None)
-                        st.rerun()
-                with col_title:
-                    fecha_str = str(sel_pac.get("created_at",""))[:10]
-                    st.markdown(f"### 🩺 {sel_pac.get('alias','—')} &nbsp;·&nbsp; {sel_pac.get('modality','—')} &nbsp;·&nbsp; <span style='color:#64748B;font-size:14px'>{fecha_str}</span>", unsafe_allow_html=True)
-
-                # ── BOTONES ACCIÓN ─────────────────────────────────────────────
-                ba1, ba2, ba3, ba4 = st.columns(4)
-                with ba1:
-                    if st.button("📄 Reimprimir PDF", key="btn_reprint", use_container_width=True):
-                        try:
-                            datos = _json.loads(sel_pac.get("datos_json", "{}"))
-                            for k, v in datos.items():
-                                st.session_state[k] = v
-                            buf = export_pdf_pro()
-                            ts = datetime.now().strftime("%Y%m%d_%H%M")
-                            alias_safe = "".join(c for c in (sel_pac.get("alias","pac")) if c.isalnum())
-                            st.download_button("⬇️ Descargar", data=buf,
-                                file_name=f"RenalPro_{alias_safe}_{ts}.pdf",
-                                mime="application/pdf", key="btn_dl_reprint")
-                        except Exception as e:
-                            st.error(f"Error al generar PDF: {e}")
-                with ba2:
-                    if st.button("↩️ Cargar en calculador", key="btn_cargar", use_container_width=True):
-                        try:
-                            datos = _json.loads(sel_pac.get("datos_json", "{}"))
-                            for k, v in datos.items():
-                                if k != "alias":
-                                    st.session_state[k] = v
-                            st.session_state["presc_alias_cargado"] = sel_pac.get("alias", "")
-                            st.session_state["update_presc_id"] = sel_pac["id"]
-                            st.session_state["nav_sel"] = "presc"
-                            st.session_state.pop("sel_pac_id", None)
-                            st.rerun()
-                        except Exception:
-                            st.error("Error al cargar parámetros.")
-                with ba3:
-                    sessions = _cached_sessions(sel_pac["id"])
-                    st.metric("Sesiones registradas", len(sessions))
-                with ba4:
-                    if st.button("🗑️ Eliminar paciente", key="btn_del_pac"):
-                        _db.delete_prescription(sel_pac["id"], uid)
-                        _clear_cache()
-                        st.session_state.pop("sel_pac_id", None)
-                        st.rerun()
-
-                st.divider()
-
-                # ── SECCIONES DEL PACIENTE ─────────────────────────────────────
-                pac_sec = st.radio("", [
-                    "📊 Resumen", "📈 Seguimiento", "🧬 Nutrición",
-                    "💊 Log Anticoag.", "🚦 Criterios Alta", "📝 Nota Evolución"
-                ], horizontal=True, key="pac_sec")
-
-                # ── RESUMEN ────────────────────────────────────────────────────
-                if pac_sec == "📊 Resumen":
-                    m1,m2,m3,m4,m5,m6 = st.columns(6)
-                    m1.metric("Peso", f"{sel_pac.get('peso','—')} kg")
-                    m2.metric("Modalidad", sel_pac.get("modality","—"))
-                    m3.metric("Anticoag.", sel_pac.get("anticoag","—"))
-                    qe = sel_pac.get("qeff")
-                    m4.metric("Qe", f"{qe:.0f} mL/h" if qe else "—")
-                    dose = sel_pac.get("dosis_mlkgh")
-                    m5.metric("Dosis", f"{dose:.0f} mL/kg/h" if dose else "—")
-                    m6.metric("UF", f"{sel_pac.get('uf','—')} mL/h")
-
-                    # Detalles de anticoagulación
-                    anticoag_r = sel_pac.get("anticoag","")
-                    datos_r = {}
-                    try: datos_r = _json.loads(sel_pac.get("datos_json","{}"))
-                    except Exception: pass
-                    if "RCA" in anticoag_r or "Citrato" in anticoag_r:
-                        cit_r = datos_r.get("rca_citrato_ml_h") or datos_r.get("cit_ml_h")
-                        ca_r  = datos_r.get("rca_calcio_ml_h")  or datos_r.get("ca_ml_h")
-                        st.info(f"🧪 **RCA:** Citrato trisódico 4% → **{cit_r or '—'} mL/h** · "
-                                f"Ca-gluconato → **{ca_r or '—'} mL/h** (líneas pre/post-filtro)")
-                    elif "HNF" in anticoag_r:
-                        hnf_r = datos_r.get("hnf_ui_h")
-                        if hnf_r:
-                            st.info(f"💉 **HNF:** {hnf_r:.0f} UI/h IV continuo · Meta aPTT: 45–80 s · Control c/4–6h")
-
-                    if sel_pac.get("escenarios"):
-                        st.info(f"📋 **Escenarios:** {sel_pac['escenarios']}")
-                    if sel_pac.get("notas"):
-                        st.caption(f"📝 {sel_pac['notas']}")
-
-                    if sessions:
-                        st.markdown("#### Última sesión registrada")
-                        last = sessions[-1]
-                        ts_last = str(last.get("created_at",""))[:16].replace("T"," ")
-                        st.caption(f"📅 {ts_last} UTC (hora local León = restar 6h)")
-                        ls1,ls2,ls3,ls4,ls5 = st.columns(5)
-                        ls1.metric("Creatinina", f"{last.get('creatinina','—')} mg/dL" if last.get('creatinina') else "—")
-                        ls2.metric("Diuresis",   f"{float(last.get('diuresis_ml',0)):.0f} mL/24h" if last.get('diuresis_ml') else "—")
-                        ls3.metric("K",          f"{last.get('k_val','—')} mEq/L" if last.get('k_val') else "—")
-                        ls4.metric("SOFA",       str(last.get('sofa_val','—')) if last.get('sofa_val') else "—")
-                        ls5.metric("PAM",        f"{float(last.get('pam_val',0)):.0f} mmHg" if last.get('pam_val') else "—")
-
-                # ── SEGUIMIENTO ────────────────────────────────────────────────
-                elif pac_sec == "📈 Seguimiento":
-                    import pandas as pd
-                    with st.expander("➕ Registrar nueva sesión / turno", expanded=len(sessions)==0):
-                        st.markdown("**Datos del turno** — deja en 0 los no disponibles:")
-                        sg1,sg2,sg3 = st.columns(3)
-                        with sg1:
-                            sg_label  = st.text_input("Etiqueta", value=f"Hora {len(sessions)*24}", key="sg_label")
-                            sg_horas  = st.number_input("Horas de TRRC en este período", 1.0, 48.0, 24.0, 1.0, key="sg_horas")
-                            sg_cr     = st.number_input("Creatinina (mg/dL)", 0.0, 30.0, 0.0, 0.1, key="sg_cr")
-                            sg_bun    = st.number_input("BUN (mg/dL)", 0.0, 200.0, 0.0, 1.0, key="sg_bun")
-                        with sg2:
-                            sg_diur   = st.number_input("Diuresis (mL/24h)", 0.0, 5000.0, 0.0, 50.0, key="sg_diur")
-                            sg_k      = st.number_input("K (mEq/L)", 0.0, 10.0, 0.0, 0.1, key="sg_k")
-                            sg_na     = st.number_input("Na (mEq/L) — 0 si no disponible", 0.0, 180.0, 0.0, 1.0, key="sg_na")
-                            sg_p      = st.number_input("Fósforo (mg/dL)", 0.0, 10.0, 0.0, 0.1, key="sg_p")
-                        with sg3:
-                            sg_sofa   = st.number_input("SOFA score", 0, 24, 0, 1, key="sg_sofa")
-                            sg_pam    = st.number_input("PAM (mmHg)", 0.0, 150.0, 0.0, 1.0, key="sg_pam")
-                            sg_nore   = st.number_input("Norepinefrina (mcg/kg/min)", 0.0, 5.0, 0.0, 0.01, key="sg_nore", format="%.2f")
-                            sg_filtros = st.number_input("Filtros cambiados en este turno", 0, 5, 0, 1, key="sg_filtros")
-                        sg_notas = st.text_area("Notas del turno", key="sg_notas", height=60)
-                        if st.button("💾 Guardar sesión", type="primary", key="btn_sg_save"):
-                            data_sg = {
-                                "label": sg_label, "horas_trrc": sg_horas,
-                                "creatinina": sg_cr or None, "bun": sg_bun or None,
-                                "diuresis_ml": sg_diur or None,
-                                "k_val": sg_k or None, "na_val": sg_na or None,
-                                "fosfato": sg_p or None, "sofa_val": sg_sofa or None,
-                                "pam_val": sg_pam or None, "norepinefrina": sg_nore or None,
-                                "filtros_cambiados": sg_filtros, "notas_sesion": sg_notas,
-                            }
-                            if _db.add_session(sel_pac["id"], uid, data_sg):
-                                _clear_cache()
-                                st.success("✅ Sesión guardada.")
-                                st.rerun()
-                            else:
-                                st.error("Error al guardar.")
-
-                    sessions = _cached_sessions(sel_pac["id"])
-                    if len(sessions) >= 2:
-                        df_s = pd.DataFrame(sessions)
-                        df_s["turno"] = [s.get("session_label", f"T{i+1}") for i, s in enumerate(sessions)]
-                        df_s = df_s.set_index("turno")
-                        st.markdown("#### 📈 Tendencias")
-                        g1, g2 = st.columns(2)
-                        with g1:
-                            if df_s["creatinina"].notna().any():
-                                st.markdown("**Creatinina (mg/dL)**"); st.line_chart(df_s["creatinina"].dropna())
-                            if df_s["diuresis_ml"].notna().any():
-                                st.markdown("**Diuresis (mL/24h)**"); st.line_chart(df_s["diuresis_ml"].dropna())
-                        with g2:
-                            if df_s["k_val"].notna().any():
-                                st.markdown("**Potasio (mEq/L)**"); st.line_chart(df_s["k_val"].dropna())
-                            if df_s["sofa_val"].notna().any():
-                                st.markdown("**SOFA score**"); st.line_chart(df_s["sofa_val"].dropna())
-                    elif len(sessions) == 1:
-                        st.info("Agrega al menos 2 sesiones para ver las gráficas de tendencia.")
-
-                    st.markdown("#### Historial de sesiones")
-                    for i, sess in enumerate(sessions):
-                        ts_s = str(sess.get("created_at",""))[:16].replace("T"," ")
-                        with st.expander(f"📋 {sess.get('session_label',f'Sesión {i+1}')} — {ts_s} UTC"):
-                            sc1,sc2,sc3,sc4,sc5 = st.columns(5)
-                            sc1.metric("Creatinina", f"{sess.get('creatinina','—')} mg/dL" if sess.get('creatinina') else "—")
-                            sc2.metric("Diuresis",   f"{float(sess.get('diuresis_ml',0)):.0f} mL" if sess.get('diuresis_ml') else "—")
-                            sc3.metric("K",          f"{sess.get('k_val','—')} mEq/L" if sess.get('k_val') else "—")
-                            sc4.metric("SOFA",       str(sess.get('sofa_val','—')) if sess.get('sofa_val') else "—")
-                            sc5.metric("PAM",        f"{float(sess.get('pam_val',0)):.0f}" if sess.get('pam_val') else "—")
-                            if sess.get("notas_sesion"):
-                                st.caption(f"📝 {sess['notas_sesion']}")
-                            if sess.get("filtros_cambiados"):
-                                st.caption(f"🔄 Filtros cambiados: {sess['filtros_cambiados']}")
-                            if st.button("🗑️ Eliminar", key=f"del_sess_{sess['id']}"):
-                                _db.delete_session(sess["id"], uid)
-                                _clear_cache(); st.rerun()
-                    if not sessions:
-                        st.info("Aún no hay sesiones. Usa el formulario de arriba para registrar el primer turno.")
-
-                # ── NUTRICIÓN ──────────────────────────────────────────────────
-                elif pac_sec == "🧬 Nutrición":
-                    st.markdown("### 🧬 Pérdidas nutricionales en TRRC")
-                    st.caption("Las terapias continuas generan pérdidas significativas de aminoácidos, "
-                               "fósforo y vitaminas. La desnutrición es frecuentemente subestimada en TRRC.")
-
-                    qe_nut = sel_pac.get("qeff") or 2100
-                    peso_nut = sel_pac.get("peso") or 70
-
-                    n1, n2 = st.columns(2)
-                    with n1:
-                        qe_input = st.number_input("Qe real (mL/h)", 500.0, 5000.0, float(qe_nut), 100.0, key="nut_qe")
-                        horas_input = st.number_input("Horas de TRRC", 12.0, 168.0, 24.0, 12.0, key="nut_h")
-                        peso_input = st.number_input("Peso (kg)", 30.0, 200.0, float(peso_nut), 1.0, key="nut_peso")
-                    with n2:
-                        vol_efluente = qe_input * horas_input / 1000  # litros
-
-                        # Pérdidas calculadas (basadas en literatura CRRT nutrición)
-                        perdida_aa = vol_efluente * 0.2      # ~0.2 g/L aminoácidos libres
-                        perdida_p = vol_efluente * 0.8       # ~0.8 mmol/L fósforo
-                        perdida_mg = vol_efluente * 0.5      # ~0.5 mmol/L magnesio
-                        perdida_selenio = vol_efluente * 0.4 # ~0.4 mcg/L selenio estimado
-
-                        st.metric("Volumen efluente", f"{vol_efluente:.1f} L")
-                        st.metric("Pérdida estimada aminoácidos", f"{perdida_aa:.1f} g",
-                                  help="~0.2 g/L de efluente. Considerar suplemento proteico.")
-                        st.metric("Pérdida estimada fósforo", f"{perdida_p:.1f} mmol",
-                                  help="Explica hipofosforemia frecuente en TRRC prolongado.")
-
-                    st.divider()
-                    st.markdown("#### Recomendaciones nutricionales durante TRRC")
-
-                    # Protein recommendation
-                    prot_base = peso_input * 1.2    # baseline 1.2 g/kg/day
-                    prot_extra = perdida_aa / peso_input  # extra from CRRT losses
-                    prot_total = prot_base + perdida_aa
-
-                    nr1, nr2, nr3 = st.columns(3)
-                    nr1.metric("Proteína basal recomendada",
-                               f"{prot_base:.0f} g/día",
-                               help="1.2–2.0 g/kg/día en críticos con TRRC (ASPEN/ESPEN)")
-                    nr2.metric("Suplemento extra por TRRC",
-                               f"+{perdida_aa:.0f} g/día",
-                               help="Reponer pérdidas estimadas en el efluente")
-                    nr3.metric("Proteína TOTAL recomendada",
-                               f"{prot_total:.0f} g/día",
-                               delta=f"+{prot_extra:.1f} g/kg/día vs basal")
-
-                    st.info(f"""
-**Plan nutricional sugerido para {peso_input:.0f} kg en TRRC {horas_input:.0f}h:**
-- Proteína total: **{prot_total:.0f} g/día** ({prot_total/peso_input:.1f} g/kg/día)
-- Reponer fósforo: **{perdida_p:.0f} mmol/día** — ver módulo Electrolitos & Bolsas
-- Reponer magnesio: **{perdida_mg:.0f} mmol/día** — si niveles bajos
-- Vitaminas hidrosolubles (C, B1, folato): suplementar diariamente en TRRC prolongado
-- Selenio: considerar suplemento si TRRC >7 días
-                    """)
-                    st.caption("Ref: ASPEN/SCCM Critical Care Nutrition 2022 | ESPEN Intensive Care Nutrition 2023 | "
-                               "Btaiche IF et al. Nutr Clin Pract 2008")
-
-                # ── LOG ANTICOAGULACIÓN ────────────────────────────────────────
-                elif pac_sec == "💊 Log Anticoag.":
-                    import pandas as pd
-                    anticoag_tipo = sel_pac.get("anticoag", "HNF")
-                    st.markdown(f"### 💊 Log de Anticoagulación — {anticoag_tipo}")
-
-                    with st.expander("➕ Registrar medición", expanded=len(sessions)==0):
-                        la1, la2 = st.columns(2)
-                        with la1:
-                            la_label = st.text_input("Etiqueta / hora", value=f"T{len(sessions)+1}", key="la_label")
-                            if "HNF" in anticoag_tipo or not anticoag_tipo:
-                                la_aptt = st.number_input("aPTT (s)", 0.0, 300.0, 0.0, 1.0, key="la_aptt")
-                                la_hnf = st.number_input("Dosis HNF actual (UI/h)", 0.0, 5000.0, 0.0, 50.0, key="la_hnf")
-                                la_ica_post = None; la_ica_sist = None
-                            else:
-                                la_ica_post = st.number_input("iCa post-filtro (mmol/L)", 0.0, 2.0, 0.0, 0.01, key="la_ica_post", format="%.2f")
-                                la_ica_sist = st.number_input("iCa sistémico (mmol/L)", 0.0, 3.0, 0.0, 0.01, key="la_ica_sist", format="%.2f")
-                                la_aptt = None; la_hnf = None
-                        with la2:
-                            la_notas_ac = st.text_area("Notas / ajuste realizado", key="la_notas_ac", height=100)
-
-                        if st.button("💾 Guardar medición", key="btn_la_save"):
-                            data_la = {
-                                "label": la_label,
-                                "aptt_valor": la_aptt or None,
-                                "hnf_dosis_actual": la_hnf or None,
-                                "ica_post": la_ica_post,
-                                "ica_sist": la_ica_sist,
-                                "notas_sesion": la_notas_ac,
-                            }
-                            if _db.add_session(sel_pac["id"], uid, data_la):
-                                st.success("✅ Medición guardada."); st.rerun()
-
-                    sessions = _db.get_sessions(sel_pac["id"])
-                    ac_data = [s for s in sessions if (s.get("aptt_valor") or s.get("ica_post"))]
-                    if len(ac_data) >= 2:
-                        df_ac = pd.DataFrame(ac_data)
-                        df_ac["turno"] = [s.get("session_label", f"T{i+1}") for i, s in enumerate(ac_data)]
-                        df_ac = df_ac.set_index("turno")
-
-                        if "HNF" in anticoag_tipo:
-                            g1, g2 = st.columns(2)
-                            with g1:
-                                if df_ac["aptt_valor"].notna().any():
-                                    st.markdown("**aPTT (s) — Meta: 45–80 s**")
-                                    st.line_chart(df_ac["aptt_valor"].dropna())
-                            with g2:
-                                if df_ac["hnf_dosis_actual"].notna().any():
-                                    st.markdown("**Dosis HNF (UI/h)**")
-                                    st.line_chart(df_ac["hnf_dosis_actual"].dropna())
-                        else:
-                            g1, g2 = st.columns(2)
-                            with g1:
-                                if df_ac["ica_post"].notna().any():
-                                    st.markdown("**iCa post-filtro — Meta: 0.25–0.40**")
-                                    st.line_chart(df_ac["ica_post"].dropna())
-                            with g2:
-                                if df_ac["ica_sist"].notna().any():
-                                    st.markdown("**iCa sistémico — Meta: 1.0–1.2**")
-                                    st.line_chart(df_ac["ica_sist"].dropna())
-                    elif not ac_data:
-                        st.info("Registra mediciones de anticoagulación para ver la gráfica.")
-
-                # ── CRITERIOS DE ALTA ──────────────────────────────────────────
-                elif pac_sec == "🚦 Criterios Alta":
-                    st.markdown("### 🚦 Semáforo de Criterios para Suspender TRRC")
-                    st.caption("Basado en KDIGO 2012 + Wald R, NEJM 2020. El semáforo se actualiza con los datos del seguimiento.")
-
-                    if not sessions:
-                        st.info("📋 **¿Cómo funciona?** — Los criterios se calculan automáticamente usando los datos "
-                                "que registres en la sección **📈 Seguimiento**. Agrega al menos una sesión con "
-                                "diuresis, creatinina, PAM y SOFA para ver el semáforo actualizado.")
-                    else:
-                        st.caption(f"Calculado con datos de {len(sessions)} sesión(es) registrada(s).")
-
-                    sessions = _db.get_sessions(sel_pac["id"])
-                    last  = sessions[-1] if sessions else {}
-                    prev  = sessions[-2] if len(sessions) >= 2 else {}
-                    una_sesion = len(sessions) == 1
-
-                    diuresis = last.get("diuresis_ml") or 0
-                    cr_last  = last.get("creatinina") or 0
-                    cr_prev  = prev.get("creatinina") or 0
-                    pam      = last.get("pam_val") or 0
-                    nore     = last.get("norepinefrina") or 0
-                    sofa_l   = last.get("sofa_val") or 0
-                    sofa_p   = prev.get("sofa_val") or 0
-
-                    causa_resuelta = st.checkbox("✅ Causa desencadenante resuelta o controlada", key="causa_resuelta")
-
-                    criterios = [
-                        ("Diuresis espontánea",
-                         "Diuresis >500 mL/día sin diuréticos",
-                         diuresis >= 500,
-                         bool(diuresis),
-                         f"{diuresis:.0f} mL/24h (meta >500)" if diuresis else "Sin datos"),
-                        ("Creatinina",
-                         "Creatinina estable o en descenso",
-                         (cr_last <= cr_prev and cr_prev > 0) if not una_sesion else False,
-                         bool(cr_last),
-                         (f"{cr_prev:.1f}→{cr_last:.1f} mg/dL" if not una_sesion
-                          else f"{cr_last:.1f} mg/dL — necesita ≥2 sesiones para comparar")),
-                        ("Hemodinámica",
-                         "PAM >65 mmHg con vasopresores mínimos (NE ≤0.1)",
-                         pam >= 65 and nore <= 0.1,
-                         bool(pam),
-                         f"PAM {pam:.0f} mmHg · NE {nore:.2f} mcg/kg/min" if pam else "Sin datos"),
-                        ("SOFA",
-                         "SOFA en descenso vs sesión anterior",
-                         (sofa_l < sofa_p and sofa_p > 0) if not una_sesion else False,
-                         bool(sofa_l),
-                         (f"{sofa_p}→{sofa_l}" if not una_sesion
-                          else f"SOFA {sofa_l} — necesita ≥2 sesiones para comparar")),
-                    ]
-
-                    todos_verde  = all(c[2] for c in criterios) and causa_resuelta
-                    algun_verde  = sum(1 for c in criterios if c[2])
-
-                    for nombre, descripcion, cumple, tiene_dato, detalle in criterios:
-                        if cumple:
-                            color, border, icono = "#F0FDF4","#16A34A","🟢"
-                        elif tiene_dato and not cumple and not una_sesion:
-                            color, border, icono = "#FEF2F2","#DC2626","🔴"
-                        else:
-                            color, border, icono = "#FFFBEB","#D97706","🟡"
-                        st.markdown(f"""
-<div style="border-left:4px solid {border};background:{color};
-     padding:10px 14px;border-radius:0 8px 8px 0;margin:4px 0;">
-  <b style="color:#1E293B;-webkit-text-fill-color:#1E293B;">{icono} {nombre}: {descripcion}</b><br>
-  <small style="color:#64748B;-webkit-text-fill-color:#64748B;">{detalle}</small>
-</div>""", unsafe_allow_html=True)
-
-                    st.divider()
-                    if todos_verde:
-                        st.markdown("""<div style="background:#F0FDF4;border-left:4px solid #16A34A;padding:12px 16px;border-radius:0 8px 8px 0;">
-<b style="color:#166534;-webkit-text-fill-color:#166534;">🟢 TODOS LOS CRITERIOS CUMPLIDOS</b><br>
-<span style="color:#166534;-webkit-text-fill-color:#166534;">Considerar weaning de TRRC. Suspender 24–48h en prueba y monitorear.</span>
-</div>""", unsafe_allow_html=True)
-                    elif una_sesion or algun_verde >= 2:
-                        msg = ("Solo 1 sesión registrada — agrega más para evaluación completa del semáforo."
-                               if una_sesion else f"{algun_verde}/4 criterios cumplidos. Reevaluar en 24h.")
-                        st.markdown(f"""<div style="background:#FFFBEB;border-left:4px solid #D97706;padding:12px 16px;border-radius:0 8px 8px 0;">
-<b style="color:#92400E;-webkit-text-fill-color:#92400E;">🟡 En evaluación</b><br>
-<span style="color:#92400E;-webkit-text-fill-color:#92400E;">{msg}</span>
-</div>""", unsafe_allow_html=True)
-                    else:
-                        st.markdown("""<div style="background:#FEF2F2;border-left:4px solid #DC2626;padding:12px 16px;border-radius:0 8px 8px 0;">
-<b style="color:#991B1B;-webkit-text-fill-color:#991B1B;">🔴 Criterios insuficientes</b><br>
-<span style="color:#991B1B;-webkit-text-fill-color:#991B1B;">Continuar TRRC. Reevaluar en 12–24h.</span>
-</div>""", unsafe_allow_html=True)
-                    st.info("**Trial de suspensión:** suspender 24–48h. Si Cr no sube >0.3 mg/dL "
-                            "y diuresis ≥500 mL/día → éxito. Si deteriora → reiniciar.")
-                    st.caption("Ref: KDIGO AKI 2012 | Wald R et al. NEJM 2020 (STARRT-AKI)")
-
-                else:
-                    st.markdown("### 📝 Nota de Evolución TRRC")
-                    st.caption("Lista para copiar al expediente. Hora en UTC — hora local León, Gto. = restar 6h.")
-
-                    last_n = sessions[-1] if sessions else {}
-
-                    def _fmt_n(val, decimals=1, suffix=""):
-                        if val is None or val == 0: return "—"
-                        try: return f"{float(val):.{decimals}f}{suffix}"
-                        except Exception: return str(val)
-
-                    ts_nota   = datetime.now().strftime("%d/%m/%Y %H:%M UTC")
-                    alias_n   = sel_pac.get("alias","—")
-                    modal_n   = sel_pac.get("modality","—")
-                    escen_n   = sel_pac.get("escenarios","—")
-                    anticoag_n = sel_pac.get("anticoag","—")
-                    peso_n    = _fmt_n(sel_pac.get("peso"),1," kg")
-                    qe_n      = _fmt_n(sel_pac.get("qeff"),0," mL/h")
-                    dosis_n   = _fmt_n(sel_pac.get("dosis_mlkgh"),0," mL/kg/h")
-                    uf_n      = _fmt_n(sel_pac.get("uf"),0," mL/h")
-                    total_h   = sum(s.get("horas_trrc",24) for s in sessions)
-
-                    cr_n   = _fmt_n(last_n.get("creatinina"),1," mg/dL")
-                    bun_n  = _fmt_n(last_n.get("bun"),0," mg/dL")
-                    diur_n = _fmt_n(last_n.get("diuresis_ml"),0," mL/24h")
-                    k_n    = _fmt_n(last_n.get("k_val"),1," mEq/L")
-                    na_n   = _fmt_n(last_n.get("na_val"),0," mEq/L")
-                    p_n    = _fmt_n(last_n.get("fosfato"),1," mg/dL")
-                    sofa_n = str(last_n.get("sofa_val","—")) if last_n.get("sofa_val") else "—"
-                    pam_n  = _fmt_n(last_n.get("pam_val"),0," mmHg")
-                    nore_n = _fmt_n(last_n.get("norepinefrina"),2," mcg/kg/min")
-                    filt_n = last_n.get("filtros_cambiados",0) or 0
-                    notas_n = last_n.get("notas_sesion","") or ""
-
-                    datos_n = {}
-                    try: datos_n = _json.loads(sel_pac.get("datos_json","{}"))
-                    except Exception: pass
-
-                    if "RCA" in anticoag_n:
-                        cit_n = _fmt_n(datos_n.get("rca_citrato_ml_h"),0," mL/h")
-                        ca_n  = _fmt_n(datos_n.get("rca_calcio_ml_h"),0," mL/h")
-                        ac_det = f"RCA citrato trisódico 4% {cit_n} (línea pre-filtro) / Ca-gluconato {ca_n} (post-filtro sistémico)"
-                        monit_ac = (f"iCa post-filtro: {_fmt_n(last_n.get('ica_post'),2,' mmol/L')} "
-                                    f"(meta 0.25–0.40) · iCa sistémico: {_fmt_n(last_n.get('ica_sist'),2,' mmol/L')} (meta 1.0–1.2)")
-                        plan_ac = "Control de iCa post-filtro y sistémico c/4–6h, ajustar citrato y calcio según resultado"
-                    else:
-                        hnf_rate = _fmt_n(datos_n.get("hnf_ui_h"),0," UI/h")
-                        ac_det = f"HNF {hnf_rate} IV infusión continua"
-                        monit_ac = f"aPTT: {_fmt_n(last_n.get('aptt_valor'),0,' s')} (meta 45–80 s) · HNF actual: {_fmt_n(last_n.get('hnf_dosis_actual'),0,' UI/h')}"
-                        plan_ac = "Control de aPTT c/4–6h, ajustar HNF según nomograma. Vigilar plaquetas c/12h (HIT)"
-
-                    nota_texto = f"""NOTA DE EVOLUCIÓN — TERAPIA DE REEMPLAZO RENAL CONTINUA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Fecha/hora: {ts_nota}  (hora local León, Gto. = UTC −6h)
-Paciente: {alias_n}  ·  Peso: {peso_n}
-
-TERAPIA EN CURSO
-━━━━━━━━━━━━━━━━
-Modalidad: {modal_n}
-Dosis prescrita: {dosis_n}  |  Qe: {qe_n}  |  UF neta: {uf_n}
-Anticoagulación: {ac_det}
-Indicación: {escen_n}
-Horas acumuladas de TRRC: {total_h:.0f} h  ({len(sessions)} turno(s) registrado(s))
-Filtros cambiados en último turno: {filt_n}
-
-LABORATORIO (último turno registrado)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Función renal:  Creatinina {cr_n}  |  BUN {bun_n}  |  Diuresis {diur_n}
-Electrolitos:   K {k_n}  |  Na {na_n}  |  Fósforo {p_n}
-Clínica:        SOFA {sofa_n}  |  PAM {pam_n}  |  NE {nore_n}
-Anticoagulación: {monit_ac}
-{('Notas del turno: ' + notas_n) if notas_n else ''}
-
-PLAN
-━━━━
-- Continuar TRRC con modalidad {modal_n} y parámetros actuales
-- {plan_ac}
-- Electrolitos c/6–8h (Na, K, Ca, Mg, Fósforo) — ajustar bolsas según resultado
-- Soporte nutricional: reponer pérdidas proteicas del efluente (ver módulo Nutrición TRRC)
-- Reevaluar criterios de suspensión de TRRC en próximo turno (diuresis, creatinina, SOFA, hemodinámica)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Generado por RenalPro v3.1.0 — Dr. Josué Tapia Nefrólogo
-León, Guanajuato, México — Uso académico y de apoyo clínico
-Este documento no reemplaza el juicio clínico del médico tratante."""
-
-                    st.code(nota_texto, language=None)
-                    st.download_button("📥 Descargar como .txt", data=nota_texto,
-                                       file_name=f"Nota_TRRC_{alias_n}_{datetime.now().strftime('%Y%m%d')}.txt",
-                                       mime="text/plain", key="btn_dl_nota")
-
-            else:
-                total = len(prescriptions)
-
-                # Limpiar selección si el paciente ya no existe
-                if st.session_state.get("sel_pac_id") and not any(
-                    p["id"] == st.session_state["sel_pac_id"] for p in prescriptions
-                ):
-                    st.session_state.pop("sel_pac_id", None)
-
-                buscar = st.text_input("🔍 Buscar paciente", key="pac_buscar", placeholder="Nombre o alias...")
-                filtradas = [p for p in prescriptions
-                             if buscar.lower() in (p.get("alias") or "").lower()] if buscar else prescriptions
-
-                st.markdown(f"**{total} paciente(s) guardado(s)**")
-
-                if total == 0:
-                    st.info("Aún no tienes prescripciones guardadas. "
-                            "Ve a 🩺 Prescripción → llena los parámetros → botón 💾 al final.")
-                else:
-                    for p in filtradas:
-                        sessions_p = _db.get_sessions(p["id"])
-                        n_sess = len(sessions_p)
-                        last_p = sessions_p[-1] if sessions_p else {}
-                        fecha_str = str(p.get("created_at",""))[:10]
-
-                        st.markdown(f"""
-<div style="background:#fff;border:1px solid #BFDBFE;border-left:4px solid #2563EB;
-     border-radius:10px;padding:12px 16px;margin:6px 0;">
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <span style="font-size:16px;font-weight:700;color:#1E3A8A;-webkit-text-fill-color:#1E3A8A;">🩺 {p.get('alias','—')}</span>
-    <span style="font-size:12px;color:#64748B;-webkit-text-fill-color:#64748B;">{fecha_str} · {n_sess} sesión(es)</span>
-  </div>
-  <div style="color:#475569;-webkit-text-fill-color:#475569;font-size:13px;margin-top:4px;">
-    {p.get('modality','—')} · {p.get('peso','—')} kg · {p.get('anticoag','—')}
-    {' · Cr: ' + str(last_p.get('creatinina','')) + ' mg/dL' if last_p.get('creatinina') else ''}
-    {' · Diuresis: ' + str(int(last_p.get('diuresis_ml',0))) + ' mL' if last_p.get('diuresis_ml') else ''}
-  </div>
-</div>""", unsafe_allow_html=True)
-
-                        bc1, bc2, bc3 = st.columns([2, 2, 1])
-                        with bc1:
-                            if st.button(f"📂 Ver detalle y seguimiento",
-                                         key=f"ver_{p['id']}", use_container_width=True):
-                                st.session_state["sel_pac_id"] = p["id"]
-                                st.rerun()
-                        with bc2:
-                            if st.button(f"↩️ Cargar en calculador",
-                                         key=f"load_{p['id']}", use_container_width=True):
-                                try:
-                                    datos = _json.loads(p.get("datos_json","{}"))
-                                    for k, v in datos.items():
-                                        if k != "alias":
-                                            st.session_state[k] = v
-                                    st.session_state["presc_alias_cargado"] = p.get("alias","")
-                                    st.session_state["update_presc_id"] = p["id"]
-                                    st.session_state["nav_sel"] = "presc"
-                                    st.rerun()
-                                except Exception:
-                                    st.error("Error al cargar.")
-                        with bc3:
-                            if st.button("🗑️", key=f"del_{p['id']}", use_container_width=True,
-                                         help="Eliminar este paciente"):
-                                _db.delete_prescription(p["id"], uid)
-                                _clear_cache()
-                                st.rerun()
-
+    # Redirigir a expediente clínico digital
+    st.session_state["nav_sel"] = "expediente"
+    st.rerun()
 
 
 elif nav == "enfermeria":
@@ -10016,88 +9410,271 @@ elif nav == "expediente":
             records = _cached_clinical_records(sel_exp["id"])
 
             # Nuevo registro
-            with st.expander("➕ Agregar nuevo registro clínico", expanded=len(records)==0):
-                nr1, nr2 = st.columns(2)
-                with nr1:
-                    nr_tipo   = st.selectbox("Tipo de registro", [
-                        "TRRC / Prescripción","Nefrología / Calculadoras",
-                        "Trasplante / Inmunosupresores","Glomerulopatía",
-                        "Guardia / Urgencias","Consulta externa","Seguimiento","Otro"
+            # ── GET PREVIOUS RECORD FOR PRE-LOADING ─────────────────────
+            last_rec = records[0] if records else None
+            import json as _jrec
+            last_datos = {}
+            last_receta = ""
+            if last_rec:
+                try:
+                    last_datos = _jrec.loads(last_rec.get("datos_json","{}"))
+                    last_receta = last_rec.get("resumen","") if last_rec.get("tipo") == "Receta médica" else last_datos.get("receta","")
+                except Exception:
+                    pass
+
+            with st.expander("➕ Nueva consulta — Formato SOAP", expanded=len(records)==0):
+                st.caption("Estructura SOAP — Subjetivo / Objetivo / Análisis / Plan")
+
+                # ── ENCABEZADO ─────────────────────────────────────────────────
+                soap1, soap2, soap3 = st.columns(3)
+                with soap1:
+                    nr_fecha = st.date_input("Fecha de consulta", key="nr_fecha")
+                with soap2:
+                    nr_tipo  = st.selectbox("Tipo", [
+                        "Consulta externa","Seguimiento","Urgencias / Guardia",
+                        "Trasplante","TRRC / UCI","Interconsulta","Otro"
                     ], key="nr_tipo")
-                    nr_titulo = st.text_input("Título del registro", key="nr_titulo",
-                                             placeholder="Ej: Ajuste de tacrolimus por nivel alto")
-                    nr_fecha  = st.date_input("Fecha de consulta", key="nr_fecha")
-                with nr2:
-                    nr_resumen = st.text_area("Resumen clínico / hallazgos", height=100, key="nr_resumen",
-                                             placeholder="Ej: Nivel tacrolimus 18 ng/mL. Se reduce a 2 mg c/12h. K 5.8 mEq/L, se inicia patiromer.")
-                    nr_notas   = st.text_area("Plan / notas adicionales", height=70, key="nr_notas")
+                with soap3:
+                    nr_titulo = st.text_input("Título / motivo", key="nr_titulo",
+                                              placeholder="Ej: Control trasplante mes 3")
 
-                # Datos calculados que se quieran guardar
-                nr_datos = {}
-                with st.expander("📊 Vincular datos de calculadoras actuales (opcional)"):
-                    st.caption("Los valores actuales de las calculadoras se pueden guardar junto al registro:")
-                    if st.checkbox("Incluir parámetros TRRC actuales", key="nr_trrc"):
-                        nr_datos["peso_kg"]     = peso
-                        nr_datos["qb"]          = qb
-                        nr_datos["dosis_mlkgh"] = dosis_mlkg
-                        nr_datos["uf_mlh"]      = uf
-                        nr_datos["modalidad"]   = st.session_state.get("sb_escenarios","")
-                    cr_reg = st.number_input("Creatinina actual (mg/dL) — 0 si no aplica",
-                                            0.0, 30.0, 0.0, 0.1, key="nr_cr")
-                    k_reg  = st.number_input("K sérico (mEq/L) — 0 si no aplica",
-                                            0.0, 10.0, 0.0, 0.1, key="nr_k")
-                    if cr_reg: nr_datos["creatinina"] = cr_reg
-                    if k_reg:  nr_datos["k_meql"]     = k_reg
+                st.divider()
 
-                if st.button("💾 Guardar registro", type="primary", key="btn_guardar_rec"):
-                    if not nr_titulo:
-                        st.warning("El título es obligatorio.")
+                # ── S — SUBJETIVO ──────────────────────────────────────────────
+                st.markdown("**S — Subjetivo**")
+                s1, s2 = st.columns(2)
+                with s1:
+                    nr_motivo = st.text_area("Motivo de consulta",
+                                             height=80, key="nr_motivo",
+                                             placeholder="Ej: Paciente acude a control post-trasplante mes 3. Refiere edema leve en miembros inferiores.")
+                with s2:
+                    nr_evolucion = st.text_area("Evolución del padecimiento / síntomas",
+                                                height=80, key="nr_evolucion",
+                                                placeholder="Ej: Sin fiebre. Diuresis conservada aprox 2L/día. Adherente a medicamentos.")
+
+                st.divider()
+
+                # ── O — OBJETIVO ────────────────────────────────────────────────
+                st.markdown("**O — Objetivo**")
+
+                # Signos vitales
+                with st.expander("🩺 Signos vitales y exploración física", expanded=True):
+                    sv1, sv2, sv3, sv4, sv5, sv6 = st.columns(6)
+                    with sv1:
+                        nr_peso_sv  = st.number_input("Peso (kg)", 0.0, 300.0,
+                                                      float(last_datos.get("peso",0) or sel_exp.get("peso",70) or 70),
+                                                      0.1, key="nr_peso_sv")
+                    with sv2:
+                        nr_talla_sv = st.number_input("Talla (cm)", 0.0, 220.0,
+                                                      float(last_datos.get("talla",0) or 0), 0.5, key="nr_talla_sv")
+                    with sv3:
+                        nr_ta_sv    = st.text_input("TA (mmHg)", value=last_datos.get("ta",""), key="nr_ta_sv", placeholder="120/80")
+                    with sv4:
+                        nr_fc_sv    = st.text_input("FC (lpm)", value=str(last_datos.get("fc","") or ""), key="nr_fc_sv", placeholder="72")
+                    with sv5:
+                        nr_temp_sv  = st.text_input("T° (°C)", value=str(last_datos.get("temp","") or ""), key="nr_temp_sv", placeholder="36.5")
+                    with sv6:
+                        nr_spo2_sv  = st.text_input("SpO₂ (%)", value=str(last_datos.get("spo2","") or ""), key="nr_spo2_sv", placeholder="98")
+
+                    imc_sv = nr_peso_sv / ((nr_talla_sv/100)**2) if nr_talla_sv > 0 and nr_peso_sv > 0 else 0
+                    if imc_sv: st.caption(f"IMC: {imc_sv:.1f} kg/m²")
+
+                    ef1, ef2 = st.columns(2)
+                    with ef1:
+                        nr_exp_gen  = st.text_area("Exploración general / HEENT",
+                                                   height=60, key="nr_exp_gen",
+                                                   placeholder="Ej: Consciente, orientado, sin dificultad respiratoria. Mucosas hidratadas.")
+                        nr_exp_card = st.text_area("Cardiopulmonar",
+                                                   height=60, key="nr_exp_card",
+                                                   placeholder="Ej: Ruidos cardíacos rítmicos. Campos pulmonares limpios.")
+                    with ef2:
+                        nr_exp_abd  = st.text_area("Abdomen e injerto",
+                                                   height=60, key="nr_exp_abd",
+                                                   placeholder="Ej: Abdomen blando. Injerto en FID sin dolor a la palpación, bien delimitado.")
+                        nr_exp_ext  = st.text_area("Extremidades / neurológico",
+                                                   height=60, key="nr_exp_ext",
+                                                   placeholder="Ej: Edema ++/++++ bilateral. Sin focalización neurológica.")
+
+                # Laboratorios
+                with st.expander("🔬 Laboratorios", expanded=True):
+                    lab_col1, lab_col2, lab_col3, lab_col4 = st.columns(4)
+                    with lab_col1:
+                        st.caption("**Función renal**")
+                        nr_cr  = st.number_input("Cr (mg/dL)", 0.0, 30.0, float(last_datos.get("cr",0) or 0), 0.1, key="nr_cr")
+                        nr_bun = st.number_input("BUN (mg/dL)", 0.0, 200.0, float(last_datos.get("bun",0) or 0), 1.0, key="nr_bun")
+                        st.caption("**Electrolitos**")
+                        nr_k   = st.number_input("K (mEq/L)", 0.0, 10.0, float(last_datos.get("k",0) or 0), 0.1, key="nr_k_lab")
+                        nr_na  = st.number_input("Na (mEq/L)", 100.0, 170.0, float(last_datos.get("na",138) or 138), 1.0, key="nr_na_lab")
+                        nr_co3 = st.number_input("HCO₃ (mEq/L)", 0.0, 40.0, float(last_datos.get("hco3",0) or 0), 0.5, key="nr_hco3")
+                    with lab_col2:
+                        st.caption("**Biometría**")
+                        nr_hb  = st.number_input("Hb (g/dL)", 0.0, 20.0, float(last_datos.get("hb",0) or 0), 0.1, key="nr_hb")
+                        nr_hto = st.number_input("Hto (%)", 0.0, 65.0, float(last_datos.get("hto",0) or 0), 0.5, key="nr_hto_lab")
+                        nr_leu = st.number_input("Leucos (/mm³)", 0.0, 50000.0, float(last_datos.get("leu",0) or 0), 100.0, key="nr_leu")
+                        nr_plt = st.number_input("Plaquetas (/mm³)", 0.0, 800000.0, float(last_datos.get("plt",0) or 0), 1000.0, key="nr_plt")
+                        st.caption("**Inflamación**")
+                        nr_pcr = st.number_input("PCR (mg/L)", 0.0, 500.0, float(last_datos.get("pcr",0) or 0), 1.0, key="nr_pcr")
+                    with lab_col3:
+                        st.caption("**Metabolismo óseo**")
+                        nr_ca   = st.number_input("Ca (mg/dL)", 0.0, 15.0, float(last_datos.get("ca",0) or 0), 0.1, key="nr_ca")
+                        nr_p    = st.number_input("P (mg/dL)", 0.0, 15.0, float(last_datos.get("p",0) or 0), 0.1, key="nr_p")
+                        nr_pth  = st.number_input("PTHi (pg/mL)", 0.0, 3000.0, float(last_datos.get("pth",0) or 0), 10.0, key="nr_pth")
+                        st.caption("**Anemia ERC**")
+                        nr_ferr = st.number_input("Ferritina (ng/mL)", 0.0, 3000.0, float(last_datos.get("ferr",0) or 0), 10.0, key="nr_ferr")
+                        nr_ist  = st.number_input("IST (%)", 0.0, 60.0, float(last_datos.get("ist",0) or 0), 1.0, key="nr_ist")
+                    with lab_col4:
+                        st.caption("**Trasplante**")
+                        nr_tac  = st.number_input("Tacrolimus C0 (ng/mL)", 0.0, 30.0, float(last_datos.get("tac",0) or 0), 0.5, key="nr_tac")
+                        nr_csA  = st.number_input("CsA C0 (ng/mL)", 0.0, 600.0, float(last_datos.get("csa",0) or 0), 5.0, key="nr_csa")
+                        st.caption("**Hígado / glucosa**")
+                        nr_alb  = st.number_input("Albúmina (g/dL)", 0.0, 6.0, float(last_datos.get("alb",0) or 0), 0.1, key="nr_alb")
+                        nr_glu  = st.number_input("Glucosa (mg/dL)", 0.0, 600.0, float(last_datos.get("glu",0) or 0), 5.0, key="nr_glu")
+                        nr_hba1c= st.number_input("HbA1c (%)", 0.0, 15.0, float(last_datos.get("hba1c",0) or 0), 0.1, key="nr_hba1c")
+
+                st.divider()
+
+                # ── A — ANÁLISIS ────────────────────────────────────────────────
+                st.markdown("**A — Análisis / Impresión diagnóstica**")
+                nr_analisis = st.text_area("Análisis clínico e impresión diagnóstica",
+                                           height=100, key="nr_analisis",
+                                           placeholder="Ej: Paciente post-Tx mes 3. Función estable, Cr basal. Nivel de tacrolimus en rango. Anemia leve con hierro adecuado. Sin datos de rechazo.")
+
+                st.divider()
+
+                # ── P — PLAN ────────────────────────────────────────────────────
+                st.markdown("**P — Plan**")
+
+                # Pre-load previous prescription
+                prev_receta = last_receta or (last_rec.get("resumen","") if last_rec and last_rec.get("tipo") == "Receta médica" else "")
+
+                nr_receta = st.text_area("💊 Indicaciones / Receta (pre-cargada de última consulta — modifica lo necesario)",
+                                         height=180, key="nr_receta",
+                                         value=prev_receta,
+                                         placeholder="1. Tacrolimus 2 mg c/12h VO\n2. MMF 500 mg c/12h VO\n3. Prednisona 5 mg c/24h VO")
+
+                if prev_receta:
+                    st.caption("✅ Receta pre-cargada de la última consulta. Modifica lo que cambió.")
+                else:
+                    st.caption("ℹ️ Sin receta previa. Escribe las indicaciones para esta consulta.")
+
+                p1, p2 = st.columns(2)
+                with p1:
+                    nr_labs_sol = st.text_area("🔬 Laboratorios solicitados",
+                                               height=80, key="nr_labs_sol",
+                                               placeholder="Ej: BH, QS, niveles de tacrolimus, orina de 24h")
+                with p2:
+                    nr_notas = st.text_area("📋 Plan adicional / notas",
+                                            height=80, key="nr_notas",
+                                            placeholder="Ej: Reducir tacrolimus a 1.5 mg c/12h. Próxima cita en 4 semanas.")
+
+                p3, p4 = st.columns(2)
+                with p3:
+                    nr_prox_cita = st.date_input("📅 Próxima cita", value=None, key="nr_prox_cita")
+                with p4:
+                    nr_interconsulta = st.text_input("🔄 Interconsulta",
+                                                     key="nr_interconsulta",
+                                                     placeholder="Ej: Cardiología — control de HTA post-Tx")
+
+                # ── GUARDAR ───────────────────────────────────────────────────
+                if st.button("💾 Guardar registro clínico", type="primary",
+                             key="btn_guardar_rec", use_container_width=True):
+                    if not nr_titulo and not nr_analisis:
+                        st.warning("Agrega al menos un título o análisis.")
                     else:
-                        rec_id = _db.add_clinical_record(sel_exp["id"], uid, {
-                            "tipo": nr_tipo, "titulo": nr_titulo,
-                            "fecha_consulta": nr_fecha,
-                            "resumen": nr_resumen, "notas": nr_notas,
-                            "datos": nr_datos,
-                        })
-                        if rec_id:
-                            _clear_cache()
-                            st.success("✅ Registro guardado.")
-                            st.rerun()
-                        else:
-                            st.error("Error al guardar registro.")
+                        nr_datos = {
+                            "peso": nr_peso_sv, "talla": nr_talla_sv,
+                            "ta": nr_ta_sv, "fc": nr_fc_sv, "temp": nr_temp_sv, "spo2": nr_spo2_sv,
+                            "imc": round(imc_sv, 1) if imc_sv else 0,
+                            "exp_gen": nr_exp_gen, "exp_card": nr_exp_card,
+                            "exp_abd": nr_exp_abd, "exp_ext": nr_exp_ext,
+                            "cr": nr_cr, "bun": nr_bun, "k": nr_k, "na": nr_na, "hco3": nr_co3,
+                            "hb": nr_hb, "hto": nr_hto, "leu": nr_leu, "plt": nr_plt, "pcr": nr_pcr,
+                            "ca": nr_ca, "p": nr_p, "pth": nr_pth, "ferr": nr_ferr, "ist": nr_ist,
+                            "tac": nr_tac, "csa": nr_csA, "alb": nr_alb, "glu": nr_glu, "hba1c": nr_hba1c,
+                            "motivo": nr_motivo, "evolucion": nr_evolucion,
+                            "exp_fisica": {"gen": nr_exp_gen, "card": nr_exp_card,
+                                           "abd": nr_exp_abd, "ext": nr_exp_ext},
+                            "analisis": nr_analisis,
+                            "receta": nr_receta,
+                            "labs_solicitados": nr_labs_sol,
+                            "interconsulta": nr_interconsulta,
+                            "prox_cita": str(nr_prox_cita) if nr_prox_cita else "",
+                        }
+                        titulo_final = nr_titulo or f"Consulta {nr_fecha}"
+                        resumen_final = (f"S: {nr_motivo[:100] if nr_motivo else '—'}\n"
+                                         f"A: {nr_analisis[:200] if nr_analisis else '—'}\n"
+                                         f"P: {nr_receta[:200] if nr_receta else '—'}")
+                        try:
+                            rec_id = _db.add_clinical_record(sel_exp["id"], uid, {
+                                "tipo": nr_tipo,
+                                "titulo": titulo_final,
+                                "fecha_consulta": nr_fecha,
+                                "resumen": resumen_final,
+                                "notas": nr_notas,
+                                "datos": nr_datos,
+                            })
+                            if rec_id:
+                                _clear_cache()
+                                st.success("✅ Consulta guardada correctamente.")
+                                st.rerun()
+                            else:
+                                st.error("Error al guardar.")
+                        except AttributeError:
+                            st.error("Sube el db.py actualizado a GitHub.")
 
             # Lista de registros
             st.markdown(f"#### Registros clínicos ({len(records)})")
             tipo_icons = {"TRRC / Prescripción":"🏥","Nefrología / Calculadoras":"🔢",
                           "Trasplante / Inmunosupresores":"💉","Glomerulopatía":"🔵",
                           "Guardia / Urgencias":"⚡","Consulta externa":"🩺",
-                          "Seguimiento":"📊","Otro":"📋"}
+                          "Seguimiento":"📊","Interconsulta":"🔄","Otro":"📋"}
             for rec in records:
                 fecha_r = str(rec.get("fecha_consulta",""))[:10] or str(rec.get("created_at",""))[:10]
                 icono_r = tipo_icons.get(rec.get("tipo","Otro"), "📋")
                 with st.expander(f"{icono_r} {fecha_r} — **{rec.get('titulo','—')}** · _{rec.get('tipo','—')}_"):
-                    if rec.get("resumen"):
-                        st.markdown(f"**Resumen:** {rec['resumen']}")
-                    if rec.get("notas"):
-                        st.caption(f"**Plan:** {rec['notas']}")
-                    # Show datos_json if any
                     import json as _json_rec
                     try:
                         datos_r = _json_rec.loads(rec.get("datos_json","{}"))
-                        if datos_r:
-                            d1, d2, d3, d4 = st.columns(4)
-                            if datos_r.get("creatinina"):
-                                d1.metric("Creatinina", f"{datos_r['creatinina']} mg/dL")
-                            if datos_r.get("k_meql"):
-                                d2.metric("K", f"{datos_r['k_meql']} mEq/L")
-                            if datos_r.get("peso_kg"):
-                                d3.metric("Peso", f"{datos_r['peso_kg']} kg")
-                            if datos_r.get("dosis_mlkgh"):
-                                d4.metric("Dosis TRRC", f"{datos_r['dosis_mlkgh']} mL/kg/h")
                     except Exception:
-                        pass
+                        datos_r = {}
 
-                    rc1, rc2 = st.columns(2)
+                    # Vital signs row
+                    sv_items = []
+                    if datos_r.get("peso"): sv_items.append(f"**Peso:** {datos_r['peso']} kg")
+                    if datos_r.get("ta"):   sv_items.append(f"**TA:** {datos_r['ta']}")
+                    if datos_r.get("fc"):   sv_items.append(f"**FC:** {datos_r['fc']} lpm")
+                    if datos_r.get("temp"): sv_items.append(f"**T°:** {datos_r['temp']}°C")
+                    if datos_r.get("spo2"): sv_items.append(f"**SpO₂:** {datos_r['spo2']}%")
+                    if sv_items:
+                        st.markdown(" · ".join(sv_items))
+
+                    # Key lab values as metrics
+                    lab_show = [(k, label, fmt) for k, label, fmt in [
+                        ("cr","Cr","mg/dL"), ("k","K","mEq/L"), ("hb","Hb","g/dL"),
+                        ("tac","Tac C0","ng/mL"), ("pth","PTH","pg/mL"),
+                        ("p","P","mg/dL"), ("ferr","Ferr","ng/mL"),
+                    ] if datos_r.get(k)]
+                    if lab_show:
+                        cols = st.columns(min(len(lab_show), 7))
+                        for idx, (k, label, fmt) in enumerate(lab_show[:7]):
+                            cols[idx].metric(label, f"{datos_r[k]} {fmt}")
+
+                    # SOAP sections
+                    if datos_r.get("motivo"):
+                        st.markdown(f"**S:** {datos_r['motivo']}")
+                    if datos_r.get("exp_abd") or datos_r.get("exp_gen"):
+                        st.markdown(f"**O (exploración):** {datos_r.get('exp_gen','')} {datos_r.get('exp_abd','')}")
+                    if datos_r.get("analisis"):
+                        st.markdown(f"**A:** {datos_r['analisis']}")
+                    if datos_r.get("receta"):
+                        with st.expander("💊 Ver receta / indicaciones"):
+                            st.text(datos_r["receta"])
+                    if rec.get("notas"):
+                        st.caption(f"**Plan adicional:** {rec['notas']}")
+                    if datos_r.get("prox_cita"):
+                        st.info(f"📅 Próxima cita: {datos_r['prox_cita']}")
+
+                    rc1, rc2, rc3 = st.columns(3)
                     with rc1:
                         if st.button("📄 Generar receta", key=f"receta_{rec['id']}", use_container_width=True):
                             st.session_state["receta_pac"] = sel_exp
@@ -10108,8 +9685,10 @@ elif nav == "expediente":
                         if st.button("🗑️ Eliminar", key=f"del_rec_{rec['id']}", use_container_width=True):
                             _db.delete_clinical_record(rec["id"], uid)
                             _clear_cache(); st.rerun()
+                    with rc3:
+                        pass  # future: edit record
             if not records:
-                st.info("Sin registros aún. Usa el formulario de arriba para agregar el primero.")
+                st.info("Sin registros aún. Usa '➕ Nueva consulta' arriba para agregar el primero.")
 
 elif nav == "receta":
     # ══════════════════════════════════════════════════════════════════════════
