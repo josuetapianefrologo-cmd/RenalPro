@@ -10793,235 +10793,913 @@ PNF (No Función Primaria):
 
 elif nav == "eval_candidato":
     st.subheader("📋 Evaluación del Candidato a Trasplante Renal")
-    st.caption("Workup pre-trasplante completo. Ref: KDIGO Transplant 2009 | UNOS/OPTN Policy | AST Guidelines 2020")
+    st.caption("Workup pre-trasplante completo para presentación en Comité. "
+               "Ref: KDIGO Transplant 2009 | UNOS/OPTN Policy | AST Guidelines 2020 | "
+               "NOM-006-SSA3-2011 (Trasplante México)")
 
-    uid_ec = _user_id()
     if _rol() in ("guest","free","expirado"):
         st.warning("🔒 Requiere registro."); st.stop()
 
-    def _pdf_eval(titulo, contenido_dict, dr_nombre, dr_cedula, dr_esp, dr_inst, pac_nombre):
-        import io
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.units import cm
-        from reportlab.lib.colors import HexColor, black, white
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-        from reportlab.lib.styles import ParagraphStyle
-        from reportlab.lib.enums import TA_LEFT, TA_CENTER
-        buf = io.BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=letter,
-                                leftMargin=2*cm, rightMargin=2*cm,
-                                topMargin=2*cm, bottomMargin=2*cm)
-        AZUL = HexColor("#1E3A8A"); AZULC = HexColor("#EFF6FF"); GRIS = HexColor("#6B7280")
-        def P(txt, fs=9, bold=False, color=black, align=TA_LEFT):
-            return Paragraph(str(txt) if txt else "",
-                             ParagraphStyle("s", fontName="Helvetica-Bold" if bold else "Helvetica",
-                                            fontSize=fs, textColor=color, alignment=align,
-                                            spaceAfter=2, leading=fs+3))
-        story = []
-        # Header
-        hdr = [[P(dr_inst or "Nefrología", 11, True, AZUL),
-                P(f"Cédula: {dr_cedula}", 8, color=GRIS, align=TA_CENTER)],
-               [P(f"{dr_nombre} · {dr_esp}", 9, color=GRIS), P("", 8)]]
-        th = Table(hdr, colWidths=[12*cm, 5*cm])
-        th.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),AZULC),
-                                ("BOX",(0,0),(-1,-1),1.5,AZUL),
-                                ("LINEABOVE",(0,0),(-1,0),3,AZUL),
-                                ("TOPPADDING",(0,0),(-1,-1),6),
-                                ("BOTTOMPADDING",(0,0),(-1,-1),6),
-                                ("LEFTPADDING",(0,0),(-1,-1),8)]))
-        story.append(th); story.append(Spacer(1, 0.4*cm))
-        story.append(P(titulo, 14, True, AZUL)); story.append(Spacer(1,0.1*cm))
-        story.append(P(f"Paciente: {pac_nombre}", 10, True))
-        story.append(HRFlowable(width="100%", thickness=1.5, color=AZUL))
-        story.append(Spacer(1, 0.3*cm))
-        for seccion, items in contenido_dict.items():
-            story.append(P(seccion, 11, True, AZUL))
-            if isinstance(items, dict):
-                rows = [[P(k, 8, True), P(str(v), 9)] for k,v in items.items() if v]
-                if rows:
-                    t = Table(rows, colWidths=[6*cm, 11*cm])
-                    t.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),3),
-                                           ("BOTTOMPADDING",(0,0),(-1,-1),3),
-                                           ("LEFTPADDING",(0,0),(-1,-1),4),
-                                           ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC,white])]))
-                    story.append(t)
-            elif isinstance(items, str):
-                story.append(P(items, 9))
-            story.append(Spacer(1, 0.3*cm))
-        story.append(HRFlowable(width="100%", thickness=0.5, color=AZULC))
-        story.append(P("RenalPro v3.1.0 · NOM-004-SSA3-2012 · Uso académico y clínico",
-                        7, color=GRIS, align=TA_CENTER))
-        doc.build(story); buf.seek(0)
-        return buf.read()
+    uid_ec = _user_id()
+    import datetime as _dt_ec
 
-    # ── FICHA DEL PACIENTE ─────────────────────────────────────────────────────
-    st.markdown("### 👤 Datos del paciente candidato")
-    ec1, ec2, ec3 = st.columns(3)
-    with ec1:
-        ec_nombre = st.text_input("Nombre completo *", key="ec_nombre")
-        ec_exp    = st.text_input("N° expediente", key="ec_exp")
-        ec_edad   = st.number_input("Edad", 0, 100, 45, 1, key="ec_edad")
-        ec_sexo   = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="ec_sexo")
-    with ec2:
-        ec_peso   = st.number_input("Peso (kg)", 20.0, 200.0, 70.0, 0.5, key="ec_peso")
-        ec_talla  = st.number_input("Talla (cm)", 100.0, 220.0, 170.0, 0.5, key="ec_talla")
-        ec_imc    = ec_peso/((ec_talla/100)**2) if ec_talla > 0 else 0
-        st.metric("IMC", f"{ec_imc:.1f} kg/m²")
-        ec_dm     = st.checkbox("Diabetes mellitus", key="ec_dm")
-        ec_hta    = st.checkbox("Hipertensión arterial", key="ec_hta")
-    with ec3:
-        ECIE_BASE = [
-            "N18.5 — ERC Estadio 5","N18.4 — ERC Estadio 4",
-            "E11.21 — Nefropatía diabética DM2","M32.1 — Nefritis lúpica",
-            "N04.0 — Nefropatía membranosa","N02 — IgA Nefropatía",
-            "Q61 — Poliquistosis renal","I12 — Nefroesclerosis",
-            "M31.1 — Vasculitis ANCA","Otro",
-        ]
-        ec_dx_sel = st.selectbox("Causa de ERC", ECIE_BASE, key="ec_dx_sel")
-        ec_dx     = ec_dx_sel if not ec_dx_sel.startswith("Otro") else st.text_input("Dx manual", key="ec_dx_txt")
-        ec_dial   = st.selectbox("Diálisis previa", ["HD crónica","DP","Prediálisis","Ninguna"], key="ec_dial")
-        ec_t_dial = st.number_input("Tiempo en diálisis (meses)", 0, 360, 24, 1, key="ec_t_dial")
-    ec_fecha = st.date_input("Fecha de evaluación", key="ec_fecha")
-
+    # ── TABS ──────────────────────────────────────────────────────────────────
+    ec_tab = st.radio("", [
+        "👤 Datos del candidato",
+        "🫀 Cardiología",
+        "🫁 Neumología",
+        "🏥 Gastroenterología",
+        "🦷 Odontología / Nutrición / Psicología",
+        "🩺 Urología / Vascular",
+        "🩺 Especialidades condicionales",
+        "✅ Inmunología & Serología",
+        "📄 Resultado & Comité",
+    ], horizontal=False, key="ec_tab_sel")
     st.divider()
-    st.markdown("### 🫀 Workup cardiovascular")
-    cv1, cv2 = st.columns(2)
-    with cv1:
-        ec_ecg    = st.selectbox("ECG", ["Normal","Alteración (especificar)","Pendiente"], key="ec_ecg")
-        ec_eco    = st.selectbox("Ecocardiograma", ["Normal","FEVI >55% sin patología","FEVI 40–55%","FEVI <40%","Pendiente"], key="ec_eco")
-        ec_ergom  = st.selectbox("Prueba de esfuerzo / imagen nuclear",
-                                 ["No indicada","Normal","Isquemia inducible","No realizable","Pendiente"], key="ec_ergom")
-    with cv2:
-        ec_cv_nota = st.text_area("Notas cardiovasculares / interconsulta", height=80, key="ec_cv_nota",
-                                   placeholder="Ej: Cardiopatía isquémica. Revascularizado 2023. FEVI 55%.")
 
-    st.divider()
-    st.markdown("### 🦠 Workup infeccioso y serológico")
-    inf1, inf2, inf3 = st.columns(3)
-    with inf1:
-        ec_hiv  = st.selectbox("HIV", ["Negativo","Positivo (indetectable)","Positivo activo","Pendiente"], key="ec_hiv")
-        ec_vhb  = st.selectbox("VHB (HBsAg/anti-HBc/DNA)", ["Inmune vacuna","HBsAg neg/anti-HBc pos","HBsAg positivo","Susceptible","Pendiente"], key="ec_vhb")
-        ec_vhc  = st.selectbox("VHC", ["Negativo","Curado (RNA neg)","Activo","Pendiente"], key="ec_vhc")
-    with inf2:
-        ec_tb   = st.selectbox("Tuberculosis (QuantiFeron/PPD)", ["Negativo","Latente tratada","Latente sin tratamiento","Activa","Pendiente"], key="ec_tb")
-        ec_cmv  = st.selectbox("CMV (receptor)", ["Positivo (R+)","Negativo (R-)","Pendiente"], key="ec_cmv_r")
-        ec_ebv  = st.selectbox("EBV", ["Positivo","Negativo","Pendiente"], key="ec_ebv_r")
-    with inf3:
-        ec_vzv  = st.selectbox("VZV (varicela)", ["Inmune","Susceptible","Pendiente"], key="ec_vzv")
-        ec_sifilis = st.selectbox("Sífilis (VDRL/FTA-ABS)", ["Negativo","Positivo tratado","Positivo activo","Pendiente"], key="ec_sifilis")
+    # Session state key for persisting form across tabs
+    def _ec(k, default=""):
+        return st.session_state.get(f"ec_{k}", default)
+    def _ecs(k, v):
+        st.session_state[f"ec_{k}"] = v
 
-    if "Latente sin tratamiento" in ec_tb:
-        st.warning("⚠️ TB latente sin tratamiento — iniciar isoniazida profilaxis ANTES del trasplante (mínimo 9 meses)")
-    if "Activa" in ec_tb:
-        st.error("🛑 TB activa — contraindicación absoluta hasta completar tratamiento estándar")
+    if "👤" in ec_tab:
+        st.markdown("### 👤 Datos del paciente candidato")
+        ec1, ec2, ec3 = st.columns(3)
+        with ec1:
+            ec_nombre = st.text_input("Nombre completo *", value=_ec("nombre"), key="ec_nombre_inp")
+            _ecs("nombre", ec_nombre)
+            ec_exp    = st.text_input("N° expediente", value=_ec("exp"), key="ec_exp_inp")
+            _ecs("exp", ec_exp)
+            ec_fecha_nac = st.date_input("Fecha de nacimiento", key="ec_fnac_inp")
+            ec_edad   = st.number_input("Edad (años)", 0, 100, 45, 1, key="ec_edad_inp")
+            _ecs("edad", ec_edad)
+            ec_sexo   = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="ec_sexo_inp")
+            _ecs("sexo", ec_sexo)
+        with ec2:
+            ec_peso   = st.number_input("Peso (kg)", 20.0, 200.0, 70.0, 0.5, key="ec_peso_inp")
+            _ecs("peso", ec_peso)
+            ec_talla  = st.number_input("Talla (cm)", 100.0, 220.0, 170.0, 0.5, key="ec_talla_inp")
+            _ecs("talla", ec_talla)
+            ec_imc    = ec_peso/((ec_talla/100)**2) if ec_talla > 0 else 0
+            st.metric("IMC", f"{ec_imc:.1f} kg/m²")
+            ec_dm    = st.checkbox("Diabetes mellitus", key="ec_dm_inp")
+            ec_hta   = st.checkbox("Hipertensión arterial", key="ec_hta_inp")
+            ec_taba  = st.checkbox("Tabaquismo activo o reciente", key="ec_taba_inp")
+        with ec3:
+            CAUSAS_ERC = [
+                "N18.5 — ERC Estadio 5","E11.21 — Nefropatía diabética DM2",
+                "E10.21 — Nefropatía diabética DM1","M32.1 — Nefritis lúpica",
+                "N04.0 — Nefropatía membranosa","N02 — IgA Nefropatía",
+                "Q61 — Poliquistosis renal","I12 — Nefroesclerosis hipertensiva",
+                "M31.1 — Vasculitis ANCA","D59.3 — SHU atípico",
+                "N18.0 — Causa no determinada","Otra (especificar)",
+            ]
+            ec_dx_sel = st.selectbox("Causa de ERC", CAUSAS_ERC, key="ec_dx_sel_inp")
+            ec_dx = ec_dx_sel if not ec_dx_sel.startswith("Otra") else st.text_input("Diagnóstico", key="ec_dx_txt_inp")
+            _ecs("dx", ec_dx)
+            ec_dial   = st.selectbox("Modalidad de diálisis", ["Hemodiálisis","Diálisis peritoneal","Prediálisis","Ninguna"], key="ec_dial_inp")
+            _ecs("dial", ec_dial)
+            ec_t_dial = st.number_input("Tiempo en diálisis (meses)", 0, 360, 24, 1, key="ec_tdial_inp")
+            _ecs("t_dial", ec_t_dial)
+            ec_retx   = st.checkbox("Retrasplante", key="ec_retx_inp")
+        ec_fecha_eval = st.date_input("Fecha de evaluación", key="ec_fecha_eval_inp")
+        _ecs("fecha_eval", str(ec_fecha_eval))
+        ec_medico     = st.text_input("Médico responsable de la evaluación",
+                                       value=st.session_state.get("sess_nombre",""),
+                                       key="ec_medico_inp")
+        _ecs("medico", ec_medico)
 
-    st.divider()
-    st.markdown("### 🔬 Workup inmunológico")
-    im1, im2 = st.columns(2)
-    with im1:
-        ec_grupo  = st.selectbox("Grupo sanguíneo", ["O","A","B","AB"], key="ec_grupo")
-        ec_rh     = st.selectbox("Factor Rh", ["Positivo","Negativo"], key="ec_rh")
-        ec_hla    = st.text_input("Tipificación HLA (si disponible)", key="ec_hla",
-                                   placeholder="Ej: A2,A3 / B35,B44 / DR4,DR7")
-        ec_cpra   = st.number_input("cPRA (%)", 0, 100, 0, 1, key="ec_cpra")
-    with im2:
-        ec_dsa    = st.selectbox("DSA preformados", ["No detectados","MFI <3,000","MFI 3,000–5,000","MFI >5,000"], key="ec_dsa")
-        if ec_cpra >= 80:
-            st.error(f"🔴 cPRA {ec_cpra}% — Candidato de alto riesgo. Prioridad en lista de espera.")
-        elif ec_cpra >= 30:
-            st.warning(f"🟡 cPRA {ec_cpra}% — Riesgo moderado. Monitoreo estrecho.")
+    elif "🫀 Cardio" in ec_tab:
+        st.markdown("### 🫀 Evaluación Cardiológica")
+        st.caption("Obligatoria en todos los candidatos. Alta prioridad en DM, HTA, ERC avanzada.")
 
-    st.divider()
-    st.markdown("### 🩺 Tamizaje oncológico")
-    on1, on2 = st.columns(2)
-    with on1:
-        ec_colon  = st.selectbox("Colonoscopía", ["Normal","Pólipos resecados","Pendiente (>45 años)","No indicada"], key="ec_colon")
-        ec_psa    = st.selectbox("PSA (H >50 años)", ["Normal","Elevado","Pendiente","No aplica"], key="ec_psa")
-        ec_mama   = st.selectbox("Mamografía (M >40 años)", ["Normal","Pendiente","No aplica"], key="ec_mama")
-    with on2:
-        ec_cancer_prev = st.checkbox("Cáncer previo", key="ec_cancer")
-        if ec_cancer_prev:
-            ec_cancer_tipo = st.text_input("Tipo y tiempo libre de enfermedad", key="ec_cancer_txt")
-            st.warning("⚠️ Cáncer previo: generalmente esperar ≥2 años libre de enfermedad (varía según tipo)")
-
-    st.divider()
-    st.markdown("### ✅ Resultado de la evaluación")
-    ec_resultado = st.selectbox("Resultado", [
-        "✅ APTO para trasplante — sin restricciones",
-        "⚠️ APTO CONDICIONAL — requiere completar estudios",
-        "⚠️ APTO CONDICIONAL — requiere intervención previa",
-        "⏳ EVALUACIÓN EN PROCESO — estudios pendientes",
-        "❌ NO APTO — contraindicación relativa",
-        "❌ NO APTO — contraindicación absoluta",
-    ], key="ec_resultado")
-    ec_notas_fin = st.text_area("Observaciones y plan", height=100, key="ec_notas_fin",
-                                 placeholder="Ej: Completar ecocardiograma. Iniciar isoniazida. Repetir cPRA en 3 meses.")
-
-    # ── GUARDAR + PDF ──────────────────────────────────────────────────────────
-    st.divider()
-    sb1, sb2 = st.columns(2)
-    with sb1:
-        if st.button("💾 Guardar en expediente", type="primary",
-                     use_container_width=True, key="btn_save_ec"):
-            if not ec_nombre:
-                st.warning("El nombre es obligatorio.")
-            elif uid_ec and _DB_ON and _db.db_ok():
-                try:
-                    pid = _db.create_patient(uid_ec, {
-                        "nombre": ec_nombre, "expediente": ec_exp,
-                        "edad": int(ec_edad), "sexo": ec_sexo,
-                        "peso": float(ec_peso), "tipo": "Candidato a trasplante",
-                        "diagnostico": ec_dx,
-                    })
-                    if pid:
-                        _db.add_clinical_record(pid, uid_ec, {
-                            "tipo": "Evaluación pre-trasplante",
-                            "titulo": f"Evaluación candidato — {ec_fecha}",
-                            "fecha_consulta": ec_fecha,
-                            "resumen": f"Resultado: {ec_resultado}\n{ec_notas_fin}",
-                            "notas": ec_notas_fin,
-                            "datos": {"resultado": ec_resultado, "cpra": ec_cpra,
-                                      "dx": ec_dx, "dial": ec_dial, "tb": ec_tb,
-                                      "cmv": ec_cmv_r, "hiv": ec_hiv, "grupo": ec_grupo,
-                                      "dsa": ec_dsa, "eco": ec_eco},
-                        })
-                        _clear_cache()
-                        st.success("✅ Evaluación guardada en expediente del candidato.")
-                        st.session_state["exp_pac_id"] = pid
-                except Exception as e:
-                    st.error(f"Error: {e}")
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            st.markdown("**Ecocardiograma transtorácico (ECOTT)**")
+            ec_fevi = st.number_input("FEVI (%)", 0, 80, 60, 1, key="ec_fevi")
+            _ecs("fevi", ec_fevi)
+            if ec_fevi < 35:
+                st.error("🛑 FEVI <35% — contraindicación relativa fuerte / cirugía de alto riesgo")
+            elif ec_fevi < 50:
+                st.warning(f"⚠️ FEVI {ec_fevi}% — disfunción sistólica. Riesgo quirúrgico aumentado.")
             else:
-                st.error("Sube el db.py actualizado a GitHub.")
+                st.success(f"✅ FEVI {ec_fevi}% — función sistólica conservada")
 
-    with sb2:
-        if st.button("📄 Generar PDF", use_container_width=True, key="btn_pdf_ec"):
-            dr_n = st.session_state.get("sess_nombre","")
-            dr_c = st.session_state.get("sess_cedula","")
-            dr_e = st.session_state.get("sess_especialidad","")
-            dr_i = st.session_state.get("sess_institucion","")
-            contenido = {
-                "Datos del paciente": {"Nombre": ec_nombre, "Edad": f"{ec_edad} años",
-                                        "Sexo": ec_sexo, "Causa ERC": ec_dx,
-                                        "Diálisis": f"{ec_dial} — {ec_t_dial} meses",
-                                        "Fecha evaluación": str(ec_fecha)},
-                "Workup cardiovascular": {"ECG": ec_ecg, "Ecocardiograma": ec_eco,
-                                           "Prueba esfuerzo": ec_ergom, "Notas": ec_cv_nota},
-                "Serología infecciosa": {"HIV": ec_hiv, "VHB": ec_vhb, "VHC": ec_vhc,
-                                          "TB/QuantiFeron": ec_tb, "CMV": ec_cmv_r,
-                                          "Sífilis": ec_sifilis},
-                "Inmunología": {"Grupo/Rh": f"{ec_grupo} {ec_rh}", "HLA": ec_hla,
-                                 "cPRA": f"{ec_cpra}%", "DSA": ec_dsa},
-                "Tamizaje oncológico": {"Colonoscopía": ec_colon, "PSA": ec_psa, "Mamografía": ec_mama},
-                "Resultado": {"Conclusión": ec_resultado, "Plan": ec_notas_fin},
-            }
-            try:
-                pdf = _pdf_eval("Evaluación Candidato a Trasplante Renal",
-                                contenido, dr_n, dr_c, dr_e, dr_i, ec_nombre)
-                st.download_button("⬇️ Descargar PDF", data=pdf,
-                                   file_name=f"Eval_candidato_{ec_nombre[:15]}_{ec_fecha}.pdf",
-                                   mime="application/pdf", key="btn_dl_ec")
-            except Exception as e:
-                st.error(f"Error PDF: {e}")
+            ec_ecott_dd = st.selectbox("Función diastólica", [
+                "Normal","Disfunción diastólica Gr I (leve)","Disfunción diastólica Gr II",
+                "Disfunción diastólica Gr III (severa)","No evaluable"], key="ec_ecott_dd")
+            _ecs("ecott_dd", ec_ecott_dd)
+            ec_tap = st.number_input("TAP / PSAP (mmHg)", 0, 120, 25, 1, key="ec_tap")
+            _ecs("tap", ec_tap)
+            if ec_tap > 50:
+                st.error(f"🛑 TAP {ec_tap} mmHg — HTP severa. Contraindicación relativa.")
+            elif ec_tap > 35:
+                st.warning(f"⚠️ TAP {ec_tap} mmHg — HTP moderada. Evaluación con neumología.")
+            ec_valvulas = st.text_area("Valvulopatías", height=60, key="ec_valvulas",
+                                       placeholder="Ej: Insuficiencia aórtica leve. Sin estenosis significativa.")
+            _ecs("valvulas", ec_valvulas)
+            ec_ecott_otros = st.text_area("Otros hallazgos (derrame, hipertrofia, movimiento parietal)",
+                                          height=60, key="ec_ecott_otros",
+                                          placeholder="Ej: HVI excéntrica. Sin derrame pericárdico.")
+            _ecs("ecott_otros", ec_ecott_otros)
+
+        with cc2:
+            st.markdown("**Prueba de esfuerzo / imagen funcional**")
+            ec_pe = st.selectbox("Prueba de esfuerzo / SPECT", [
+                "No realizada — no indicada","Normal — sin isquemia inducible",
+                "Isquemia inducible leve","Isquemia inducible moderada-severa",
+                "No concluyente / limitada por condición física","Pendiente"], key="ec_pe")
+            _ecs("pe", ec_pe)
+            if "Isquemia inducible moderada" in ec_pe or "severa" in ec_pe:
+                st.error("🛑 Isquemia inducible significativa → coronariografía obligatoria")
+
+            st.markdown("**Coronariografía / CT coronario**")
+            ec_coro = st.selectbox("Estudio coronario", [
+                "No realizado — no indicado","Coronariografía: sin lesiones significativas",
+                "CT coronario: sin lesiones / calcificación leve",
+                "CT coronario: calcificación moderada-severa",
+                "Coronariografía: lesión 1 vaso — tratada (ICP/CABG)",
+                "Coronariografía: enfermedad multivaso — tratada",
+                "Coronariografía: enfermedad multivaso — sin revascularizar",
+                "Pendiente"], key="ec_coro")
+            _ecs("coro", ec_coro)
+            ec_icp = st.text_input("ICP / CABG previa (fecha y vasos)", key="ec_icp",
+                                    placeholder="Ej: ICP DA + CX 2022. CABG 2019.")
+            _ecs("icp", ec_icp)
+            ec_frcv = st.multiselect("Factores de riesgo cardiovascular",
+                                     ["DM","HTA","Tabaquismo","Dislipidemia","Obesidad (IMC>30)",
+                                      "HF (Framingham >20%)","EVC previo","IAM previo"], key="ec_frcv")
+            _ecs("frcv", ", ".join(ec_frcv))
+
+        ec_cardio_op = st.selectbox("Opinión del cardiólogo", [
+            "✅ APTO — riesgo cardiovascular bajo-moderado, sin restricciones",
+            "⚠️ APTO CONDICIONAL — optimización médica requerida",
+            "⚠️ APTO CONDICIONAL — completar estudios pendientes",
+            "❌ NO APTO — riesgo cardiovascular prohibitivo",
+            "⏳ Pendiente evaluación"], key="ec_cardio_op")
+        _ecs("cardio_op", ec_cardio_op)
+        ec_cardio_notas = st.text_area("Comentarios del cardiólogo", height=80, key="ec_cardio_notas",
+                                       placeholder="Ej: 'Paciente con cardiopatía isquémica estable, revascularizado, FEVI 55%. "
+                                                   "Riesgo quirúrgico moderado. Continuar doble antiagregación hasta 1 semana pre-Tx.'")
+        _ecs("cardio_notas", ec_cardio_notas)
+
+    elif "🫁 Neumo" in ec_tab:
+        st.markdown("### 🫁 Evaluación Neumológica")
+        nn1, nn2 = st.columns(2)
+        with nn1:
+            st.markdown("**Espirometría**")
+            ec_fvc   = st.number_input("FVC (%)", 0, 150, 90, 1, key="ec_fvc")
+            _ecs("fvc", ec_fvc)
+            ec_fev1  = st.number_input("FEV1 (%)", 0, 150, 85, 1, key="ec_fev1")
+            _ecs("fev1", ec_fev1)
+            ec_rel   = st.number_input("FEV1/FVC (%)", 0, 100, 78, 1, key="ec_rel_fev")
+            _ecs("fev1_fvc", ec_rel)
+            if ec_fvc < 50 or ec_fev1 < 50:
+                st.error("🛑 Función pulmonar severamente reducida — riesgo anestésico alto")
+            elif ec_fvc < 70 or ec_fev1 < 70:
+                st.warning("⚠️ Función pulmonar reducida — evaluar con anestesiología")
+            ec_espiro_patron = st.selectbox("Patrón", [
+                "Normal","Obstructivo leve","Obstructivo moderado","Obstructivo severo",
+                "Restrictivo","Mixto","No realizada"], key="ec_espiro_pat")
+            _ecs("espiro_patron", ec_espiro_patron)
+        with nn2:
+            ec_rx_torax = st.selectbox("Rx tórax", [
+                "Normal","Cardiomegalia","Derrame pleural","Infiltrado / opacidad",
+                "Fibrosis / enfisema","Calcificaciones pleurales","Pendiente"], key="ec_rxt")
+            _ecs("rx_torax", ec_rx_torax)
+            ec_tc_torax = st.selectbox("TC de tórax", [
+                "No indicada","Normal","EPOC / Enfisema","Fibrosis pulmonar",
+                "Nódulo pulmonar (caracterizar)","Pendiente","No realizada"], key="ec_tct")
+            _ecs("tc_torax", ec_tc_torax)
+            if "Nódulo" in ec_tc_torax:
+                st.warning("⚠️ Nódulo pulmonar — protocolo oncológico antes de trasplante")
+            ec_oximetria = st.number_input("SpO₂ basal (%)", 50, 100, 97, 1, key="ec_spo2_n")
+            _ecs("spo2_basal", ec_oximetria)
+            if ec_oximetria < 90:
+                st.error("🛑 SpO₂ <90% — hipoxemia significativa. Contraindicación relativa.")
+        ec_neumo_op = st.selectbox("Opinión del neumólogo", [
+            "✅ APTO — función pulmonar adecuada para cirugía",
+            "⚠️ APTO CONDICIONAL — control de patología de base requerido",
+            "❌ NO APTO — insuficiencia respiratoria severa","⏳ Pendiente"], key="ec_neumo_op")
+        _ecs("neumo_op", ec_neumo_op)
+        ec_neumo_notas = st.text_area("Comentarios del neumólogo", height=80, key="ec_neumo_notas",
+                                      placeholder="Ej: EPOC moderado, en broncodilatadores. Riesgo anestésico moderado. Apto con broncodilatación preoperatoria.")
+        _ecs("neumo_notas", ec_neumo_notas)
+
+    elif "🏥 Gastro" in ec_tab:
+        st.markdown("### 🏥 Gastroenterología / Hepatología")
+        gg1, gg2 = st.columns(2)
+        with gg1:
+            st.markdown("**Endoscopía digestiva**")
+            ec_eda = st.selectbox("Endoscopía superior (EDA)", [
+                "Normal","Gastritis crónica","Esofagitis / ERGE","Úlcera péptica",
+                "Varices esofágicas","Pendiente (>45 años o síntomas)","No indicada"], key="ec_eda")
+            _ecs("eda", ec_eda)
+            ec_colon = st.selectbox("Colonoscopía", [
+                "Normal","Pólipos resecados — sin displasia",
+                "Pólipos — displasia — seguimiento","Diverticulosis",
+                "Pendiente (≥45 años, recomendada)","No indicada"], key="ec_colon_g")
+            _ecs("colon", ec_colon)
+            ec_h_pylori = st.selectbox("H. pylori", [
+                "Negativo","Positivo — tratado","Positivo — sin tratar","No evaluado"], key="ec_hpyl")
+            _ecs("h_pylori", ec_h_pylori)
+            if "Positivo — sin tratar" in ec_h_pylori:
+                st.warning("⚠️ H. pylori sin tratar → erradicación antes del trasplante")
+        with gg2:
+            st.markdown("**Hígado y función hepática**")
+            ec_us_hep = st.selectbox("Ultrasonido hepático", [
+                "Normal","Esteatosis hepática leve","Esteatosis moderada-severa",
+                "Cirrosis — Child A","Cirrosis — Child B/C","Quistes hepáticos",
+                "Hemangioma","Lesión focal (requiere caracterización)","Pendiente"], key="ec_ush")
+            _ecs("us_hep", ec_us_hep)
+            if "Cirrosis — Child B" in ec_us_hep or "Child C" in ec_us_hep:
+                st.error("🛑 Cirrosis Child B/C — contraindicación absoluta para trasplante renal aislado")
+            ec_alt = st.number_input("ALT (U/L)", 0, 2000, 25, 1, key="ec_alt")
+            _ecs("alt", ec_alt)
+            ec_ast = st.number_input("AST (U/L)", 0, 2000, 20, 1, key="ec_ast")
+            _ecs("ast", ec_ast)
+            ec_bili = st.number_input("Bilirrubina total (mg/dL)", 0.0, 30.0, 0.8, 0.1, key="ec_bili")
+            _ecs("bili", ec_bili)
+            ec_vhb_hep = st.selectbox("Estado VHB hepático", [
+                "Portador inactivo (carga viral neg)","Hepatitis B activa (carga viral +)",
+                "Cirrosis por VHB","No aplica — VHB negativo"], key="ec_vhb_hep")
+            _ecs("vhb_hep", ec_vhb_hep)
+            ec_vhc_hep = st.selectbox("Estado VHC hepático", [
+                "RNA VHC negativo (curado/nunca infectado)","RNA VHC positivo — sin cirrosis",
+                "RNA VHC positivo — con cirrosis","No aplica — VHC negativo"], key="ec_vhc_hep")
+            _ecs("vhc_hep", ec_vhc_hep)
+            if "RNA VHC positivo" in ec_vhc_hep:
+                st.warning("⚠️ VHC activo → tratar con antivirales de acción directa ANTES del trasplante")
+        ec_gastro_op = st.selectbox("Opinión del gastroenterólogo", [
+            "✅ APTO — sin contraindicación gastrointestinal",
+            "⚠️ APTO CONDICIONAL — erradicación H. pylori / control de lesiones",
+            "❌ NO APTO — patología hepática severa","⏳ Pendiente"], key="ec_gastro_op")
+        _ecs("gastro_op", ec_gastro_op)
+        ec_gastro_notas = st.text_area("Comentarios del gastroenterólogo", height=70, key="ec_gastro_notas",
+                                       placeholder="Ej: Gastritis H. pylori positivo, erradicación con triple terapia completada. Mucosa gástrica sin lesiones en control.")
+        _ecs("gastro_notas", ec_gastro_notas)
+
+    elif "🦷 Odonto" in ec_tab:
+        st.markdown("### 🦷 Odontología · Nutrición · Psicología / Psiquiatría")
+        od1, od2, od3 = st.columns(3)
+        with od1:
+            st.markdown("**Odontología**")
+            ec_dental = st.selectbox("Evaluación dental", [
+                "✅ Sin focos infecciosos — saneamiento completo",
+                "⚠️ Focos infecciosos — en tratamiento",
+                "❌ Focos infecciosos — sin tratar (contraindicación temporal)",
+                "⏳ Pendiente"], key="ec_dental")
+            _ecs("dental", ec_dental)
+            if "❌" in ec_dental:
+                st.error("🛑 Focos infecciosos activos → tratamiento dental obligatorio antes del trasplante")
+            ec_dental_notas = st.text_area("Notas odontología", height=60, key="ec_dental_notas",
+                                           placeholder="Ej: Caries múltiples tratadas. Extracción de #47 realizada. Sin focos activos.")
+            _ecs("dental_notas", ec_dental_notas)
+
+        with od2:
+            st.markdown("**Nutrición**")
+            ec_nutri_estado = st.selectbox("Estado nutricional", [
+                "Normal / bien nutrido (IMC 18.5–25)",
+                "Sobrepeso (IMC 25–30)",
+                "Obesidad grado I (IMC 30–35)",
+                "Obesidad grado II (IMC 35–40) — riesgo aumentado",
+                "Obesidad grado III (IMC >40) — contraindicación relativa",
+                "Desnutrición leve-moderada",
+                "Desnutrición severa — contraindicación temporal"], key="ec_nutri")
+            _ecs("nutri_estado", ec_nutri_estado)
+            if "Grado III" in ec_nutri_estado or ">40" in ec_nutri_estado:
+                st.error("🛑 Obesidad mórbida IMC >40 — contraindicación relativa fuerte")
+            elif "Grado II" in ec_nutri_estado:
+                st.warning("⚠️ Obesidad grado II — evaluar pérdida de peso pre-Tx")
+            ec_albumina = st.number_input("Albúmina sérica (g/dL)", 0.0, 6.0, 3.8, 0.1, key="ec_albumina")
+            _ecs("albumina", ec_albumina)
+            if ec_albumina < 3.0:
+                st.warning("⚠️ Hipoalbuminemia — riesgo de complicaciones post-Tx aumentado")
+            ec_nutri_notas = st.text_area("Notas nutrición", height=60, key="ec_nutri_notas",
+                                          placeholder="Ej: Plan de restricción proteica y control de P/K. Pérdida de peso de 5kg en 3 meses.")
+            _ecs("nutri_notas", ec_nutri_notas)
+
+        with od3:
+            st.markdown("**Psicología / Psiquiatría**")
+            ec_psico_result = st.selectbox("Evaluación psicosocial", [
+                "✅ APTO — buena adherencia, red de apoyo adecuada",
+                "⚠️ APTO CONDICIONAL — apoyo psicológico en proceso",
+                "⚠️ APTO CONDICIONAL — rehabilitación de sustancias completada",
+                "❌ NO APTO — trastorno psiquiátrico descompensado",
+                "❌ NO APTO — consumo activo de sustancias",
+                "❌ NO APTO — ausencia total de red de apoyo","⏳ Pendiente"], key="ec_psico")
+            _ecs("psico_result", ec_psico_result)
+            ec_adherencia = st.selectbox("Adherencia documentada", [
+                "Buena adherencia (sin faltas reiteradas a HD/citas)",
+                "Adherencia irregular — se compromete a mejorar",
+                "No adherente — en plan de mejora","No evaluable"], key="ec_adher")
+            _ecs("adherencia", ec_adherencia)
+            ec_sustancias = st.selectbox("Consumo de sustancias", [
+                "Ninguno","Tabaquismo suspendido >6 meses","Alcohol — abstemio >6 meses",
+                "Tabaquismo activo","Alcohol activo","Drogas ilícitas — activo (contraindicación)"], key="ec_sust")
+            _ecs("sustancias", ec_sustancias)
+            if "activo" in ec_sustancias.lower() and "tabaquismo" not in ec_sustancias.lower():
+                st.error("🛑 Consumo activo de alcohol o drogas — contraindicación hasta abstinencia ≥6 meses")
+            ec_psico_notas = st.text_area("Notas psicología", height=60, key="ec_psico_notas",
+                                          placeholder="Ej: Paciente con buena comprensión de la enfermedad, red de apoyo familiar sólida (esposa + 2 hijos). Sin trastornos psiquiátricos.")
+            _ecs("psico_notas", ec_psico_notas)
+
+    elif "🩺 Urología" in ec_tab:
+        st.markdown("### 🩺 Urología y Cirugía Vascular")
+        uv1, uv2 = st.columns(2)
+        with uv1:
+            st.markdown("**Urología**")
+            ec_orina_res = st.selectbox("Cistouretrografía miccional", [
+                "No indicada — vejiga clínica sin patología","Normal",
+                "Reflujo vesicoureteral (grado)","Obstrucción infravesical",
+                "Vejiga neurogénica","Pendiente"], key="ec_cug")
+            _ecs("orina_res", ec_orina_res)
+            ec_cap_vesical = st.number_input("Capacidad vesical (mL)", 0, 800, 0, 25, key="ec_capves")
+            _ecs("cap_vesical", ec_cap_vesical)
+            if ec_cap_vesical > 0 and ec_cap_vesical < 200:
+                st.warning("⚠️ Capacidad vesical reducida — evaluar reconstrucción urológica previa")
+            ec_diuresis_res = st.number_input("Diuresis residual (mL/24h)", 0, 3000, 0, 50, key="ec_diures")
+            _ecs("diuresis_res", ec_diuresis_res)
+            ec_prostate = st.selectbox("Próstata / obstrucción infravesical", [
+                "No aplicable (mujer)","Normal — sin obstrucción",
+                "Prostatismo leve — controlado",
+                "Prostatismo moderado-severo — requiere tratamiento","Pendiente"], key="ec_prost")
+            _ecs("prostate", ec_prostate)
+            ec_uro_notas = st.text_area("Notas urología", height=80, key="ec_uro_notas",
+                                        placeholder="Ej: Vejiga de capacidad normal. Sin reflujo. Diuresis residual 300 mL/día.")
+            _ecs("uro_notas", ec_uro_notas)
+        with uv2:
+            st.markdown("**Cirugía Vascular / Doppler ilíaco**")
+            ec_iliaco_d = st.selectbox("Arteria ilíaca derecha (FID)", [
+                "Permeable — sin lesiones significativas",
+                "Calcificación leve — accesible",
+                "Calcificación moderada — técnicamente desafiante",
+                "Estenosis severa / oclusión","Pendiente"], key="ec_iliaco_d")
+            _ecs("iliaco_d", ec_iliaco_d)
+            ec_iliaco_i = st.selectbox("Arteria ilíaca izquierda (FII)", [
+                "Permeable — sin lesiones significativas",
+                "Calcificación leve — accesible",
+                "Calcificación moderada — técnicamente desafiante",
+                "Estenosis severa / oclusión","Pendiente"], key="ec_iliaco_i")
+            _ecs("iliaco_i", ec_iliaco_i)
+            ec_acceso_qx = st.selectbox("Sitio recomendado para anastomosis", [
+                "Fosa ilíaca derecha (FID) — preferida",
+                "Fosa ilíaca izquierda (FII)","Bilateral accesible","Requiere planificación especial"], key="ec_acceso")
+            _ecs("acceso_qx", ec_acceso_qx)
+            if "oclusión" in ec_iliaco_d and "oclusión" in ec_iliaco_i:
+                st.error("🛑 Ambas ilíacas comprometidas — evaluación con cirugía vascular antes del trasplante")
+            ec_vasc_notas = st.text_area("Notas vascular", height=80, key="ec_vasc_notas",
+                                         placeholder="Ej: Doppler ilíaco bilateral permeable. Calcificación leve en ilíaca común izquierda. Se prefiere FID para anastomosis.")
+            _ecs("vasc_notas", ec_vasc_notas)
+
+    elif "🩺 Especialidades" in ec_tab:
+        st.markdown("### 🩺 Especialidades Condicionales")
+        st.caption("Completar solo las especialidades indicadas según el perfil del paciente.")
+
+        with st.expander("🧬 Reumatología (si LES, vasculitis, artritis, esclerodermia)"):
+            ec_reuma_ind = st.checkbox("¿Se realizó evaluación reumatológica?", key="ec_reuma_ind")
+            if ec_reuma_ind:
+                ec_reuma_act = st.selectbox("Actividad de la enfermedad", [
+                    "Remisión completa","Actividad mínima controlada",
+                    "Actividad moderada — ajuste terapéutico","Actividad severa — contraindicación temporal"], key="ec_reuma_act")
+                _ecs("reuma_act", ec_reuma_act)
+                ec_reuma_notas = st.text_area("Comentarios reumatología", height=60, key="ec_reuma_notas")
+                _ecs("reuma_notas", ec_reuma_notas)
+
+        with st.expander("🩸 Hematología (si trombofilia, coagulopatía, discrasias)"):
+            ec_hema_ind = st.checkbox("¿Se realizó evaluación hematológica?", key="ec_hema_ind")
+            if ec_hema_ind:
+                ec_trombo = st.multiselect("Trombofilias detectadas",
+                                           ["Factor V Leiden","Mutación protrombina G20210A",
+                                            "Déficit proteína C/S","Anticoagulante lúpico",
+                                            "Anti-β2GP1","Hiperhomocisteinemia","Ninguna"], key="ec_trombo")
+                _ecs("trombo", ", ".join(ec_trombo))
+                ec_hema_notas = st.text_area("Comentarios hematología", height=60, key="ec_hema_notas")
+                _ecs("hema_notas", ec_hema_notas)
+
+        with st.expander("🦠 Infectología (si TB latente, HIV, infecciones complejas)"):
+            ec_infecto_ind = st.checkbox("¿Se realizó evaluación de infectología?", key="ec_infecto_ind")
+            if ec_infecto_ind:
+                ec_tb_plan = st.selectbox("Plan para TB latente", [
+                    "No aplica — QuantiFeron negativo",
+                    "Isoniazida 300 mg/día × 9 meses — en curso",
+                    "Isoniazida 300 mg/día × 9 meses — completada",
+                    "Rifampicina × 4 meses — en curso","Rifampicina × 4 meses — completada",
+                    "TB activa — tratamiento estándar en curso"], key="ec_tb_plan")
+                _ecs("tb_plan", ec_tb_plan)
+                ec_infecto_notas = st.text_area("Comentarios infectología", height=60, key="ec_infecto_notas")
+                _ecs("infecto_notas", ec_infecto_notas)
+
+        with st.expander("🍬 Endocrinología (si DM descontrolada, tiroidopatía)"):
+            ec_endo_ind = st.checkbox("¿Se realizó evaluación endocrinológica?", key="ec_endo_ind")
+            if ec_endo_ind:
+                ec_hba1c_e = st.number_input("HbA1c (%)", 4.0, 15.0, 7.0, 0.1, key="ec_hba1c_e")
+                _ecs("hba1c_endo", ec_hba1c_e)
+                if ec_hba1c_e > 9.0:
+                    st.warning("⚠️ HbA1c >9% — optimización glucémica preoperatoria recomendada")
+                ec_endo_notas = st.text_area("Comentarios endocrinología", height=60, key="ec_endo_notas")
+                _ecs("endo_notas", ec_endo_notas)
+
+        with st.expander("🎗️ Oncología (si cáncer previo o sospecha)"):
+            ec_onco_ind = st.checkbox("¿Se realizó evaluación oncológica?", key="ec_onco_ind")
+            if ec_onco_ind:
+                ec_cancer_tipo = st.text_input("Tipo de cáncer y tratamiento", key="ec_cancer_tipo2",
+                                               placeholder="Ej: Ca mama estadio I, mastectomía 2019, libre de enfermedad 5 años")
+                _ecs("cancer_tipo", ec_cancer_tipo)
+                ec_t_libre = st.number_input("Años libre de enfermedad", 0, 50, 2, 1, key="ec_t_libre")
+                _ecs("t_libre_cancer", ec_t_libre)
+                if ec_t_libre < 2:
+                    st.error("🛑 <2 años libre de enfermedad — la mayoría de centros requieren ≥2–5 años según tipo")
+                ec_onco_notas = st.text_area("Comentarios oncología", height=60, key="ec_onco_notas")
+                _ecs("onco_notas", ec_onco_notas)
+
+        with st.expander("🧠 Neurología / Oftalmología"):
+            ec_neuro_ind = st.checkbox("¿Se realizó evaluación neurológica?", key="ec_neuro_ind")
+            if ec_neuro_ind:
+                ec_neuro_notas = st.text_area("Neurología", height=60, key="ec_neuro_notas",
+                                              placeholder="Ej: Polineuropatía diabética documentada. Sin déficit focal.")
+                _ecs("neuro_notas", ec_neuro_notas)
+            ec_oftalmo_ind = st.checkbox("¿Se realizó evaluación oftalmológica?", key="ec_oftalmo_ind")
+            if ec_oftalmo_ind:
+                ec_oftalmo_notas = st.text_area("Oftalmología", height=60, key="ec_oftalmo_notas",
+                                                placeholder="Ej: Retinopatía diabética no proliferativa leve. Fotocoagulación no requerida.")
+                _ecs("oftalmo_notas", ec_oftalmo_notas)
+
+    elif "✅ Inmuno" in ec_tab:
+        st.markdown("### ✅ Inmunología y Serología")
+        im1, im2, im3 = st.columns(3)
+        with im1:
+            st.markdown("**Grupo sanguíneo e inmunología**")
+            ec_grupo  = st.selectbox("Grupo sanguíneo", ["O","A","B","AB"], key="ec_grupo2")
+            _ecs("grupo", ec_grupo)
+            ec_rh     = st.selectbox("Factor Rh", ["Positivo","Negativo"], key="ec_rh2")
+            _ecs("rh", ec_rh)
+            ec_hla    = st.text_input("Tipificación HLA", key="ec_hla2",
+                                      placeholder="A2,A3 / B35,B44 / DR4,DR7")
+            _ecs("hla", ec_hla)
+            ec_cpra   = st.number_input("cPRA (%)", 0, 100, 0, 1, key="ec_cpra2")
+            _ecs("cpra", ec_cpra)
+            ec_dsa    = st.selectbox("DSA preformados", [
+                "No detectados","MFI <3,000 (débiles)","MFI 3,000–5,000","MFI >5,000 (fuertes)"], key="ec_dsa2")
+            _ecs("dsa", ec_dsa)
+            if ec_cpra >= 80:
+                st.error(f"🔴 cPRA {ec_cpra}% — candidato altamente sensibilizado. Prioridad especial en lista de espera.")
+            elif ec_cpra >= 30:
+                st.warning(f"🟡 cPRA {ec_cpra}% — riesgo moderado.")
+        with im2:
+            st.markdown("**Serología viral**")
+            for key_s, label_s in [("hiv","HIV"),("vhb_sag","HBsAg"),("vhb_abc","Anti-HBc"),
+                                     ("vhb_abs","Anti-HBs"),("vhc","Anti-VHC"),
+                                     ("cmv","CMV (IgG receptor)"),("ebv","EBV (IgG)"),
+                                     ("vzv","VZV — Varicela (IgG)"),("sifilis","Sífilis (VDRL/RPR)")]:
+                opts = ["Negativo","Positivo","Pendiente"]
+                if key_s in ("vhb_abs","cmv","ebv","vzv"):
+                    opts = ["Positivo (inmune)","Negativo (susceptible)","Pendiente"]
+                val = st.selectbox(label_s, opts, key=f"ec_ser_{key_s}")
+                _ecs(f"ser_{key_s}", val)
+        with im3:
+            st.markdown("**Bacteriología y parásitos**")
+            ec_quant = st.selectbox("QuantiFeron TB Gold", [
+                "Negativo","Positivo (TB latente)","Indeterminado","No realizado"], key="ec_quant")
+            _ecs("quantiferon", ec_quant)
+            ec_chagas = st.selectbox("Enfermedad de Chagas (zona endémica)", [
+                "Negativo","Positivo (tratado)","Positivo (sin tratamiento)","No realizado"], key="ec_chagas")
+            _ecs("chagas", ec_chagas)
+            if "Positivo (sin tratamiento)" in ec_chagas:
+                st.warning("⚠️ Chagas sin tratamiento — tratamiento con benznidazol antes del trasplante")
+            ec_toxo = st.selectbox("Toxoplasma (IgG)", ["Positivo","Negativo","No realizado"], key="ec_toxo")
+            _ecs("toxo", ec_toxo)
+            ec_htlv = st.selectbox("HTLV I/II", ["Negativo","Positivo","No realizado"], key="ec_htlv")
+            _ecs("htlv", ec_htlv)
+            if "Positivo" in ec_htlv:
+                st.error("🛑 HTLV I/II positivo — contraindicación en la mayoría de centros")
+
+    else:  # ✅ Resultado & Comité
+        st.markdown("### 📄 Resultado Final y Documento para Comité")
+        res1, res2 = st.columns(2)
+        with res1:
+            ec_resultado = st.selectbox("Resultado de la evaluación", [
+                "✅ APTO para trasplante — sin restricciones",
+                "⚠️ APTO CONDICIONAL — requiere completar estudios",
+                "⚠️ APTO CONDICIONAL — requiere intervención previa",
+                "❌ NO APTO — contraindicación relativa (temporal)",
+                "❌ NO APTO — contraindicación absoluta",
+            ], key="ec_resultado2")
+            _ecs("resultado", ec_resultado)
+            ec_condiciones = st.text_area("Condiciones para aprobación (si condicional)", height=80,
+                                          key="ec_condiciones",
+                                          placeholder="Ej: 1. Erradicar H. pylori\n2. Completar cateterismo si isquemia\n3. Reducción de peso a IMC <35")
+            _ecs("condiciones", ec_condiciones)
+        with res2:
+            ec_comite_fecha = st.date_input("Fecha de presentación en comité", key="ec_comite_fecha")
+            _ecs("comite_fecha", str(ec_comite_fecha))
+            ec_comite_decision = st.selectbox("Decisión del Comité", [
+                "⏳ Pendiente de revisión en comité",
+                "✅ APROBADO por el Comité",
+                "⚠️ APROBADO CON CONDICIONES",
+                "❌ NO APROBADO — revaloración en ___",
+                "❌ NO APROBADO — contraindicación definitiva",
+            ], key="ec_comite_dec")
+            _ecs("comite_decision", ec_comite_decision)
+            ec_comite_obs = st.text_area("Observaciones del Comité", height=80, key="ec_comite_obs")
+            _ecs("comite_obs", ec_comite_obs)
+
+        st.markdown("**Miembros del Comité presentes:**")
+        cm1, cm2, cm3 = st.columns(3)
+        with cm1:
+            ec_cm1 = st.text_input("Nefrólogo presidente", value=st.session_state.get("sess_nombre",""), key="ec_cm1")
+            _ecs("cm1", ec_cm1)
+            ec_cm2 = st.text_input("Cirujano de trasplante", key="ec_cm2")
+            _ecs("cm2", ec_cm2)
+        with cm2:
+            ec_cm3 = st.text_input("Cardiólogo", key="ec_cm3")
+            _ecs("cm3", ec_cm3)
+            ec_cm4 = st.text_input("Anestesiología", key="ec_cm4")
+            _ecs("cm4", ec_cm4)
+        with cm3:
+            ec_cm5 = st.text_input("Enfermería / Trabajo social", key="ec_cm5")
+            _ecs("cm5", ec_cm5)
+            ec_cm6 = st.text_input("Otro miembro", key="ec_cm6")
+            _ecs("cm6", ec_cm6)
+
+        st.divider()
+        btn_save_c, btn_pdf_c = st.columns(2)
+
+        with btn_save_c:
+            if st.button("💾 Guardar evaluación completa", type="primary",
+                         use_container_width=True, key="btn_save_ec_full"):
+                ec_nombre_s = _ec("nombre")
+                if not ec_nombre_s:
+                    st.warning("Completa al menos los datos del candidato (pestaña 👤).")
+                elif uid_ec and _DB_ON and _db.db_ok():
+                    try:
+                        pid = _db.create_patient(uid_ec, {
+                            "nombre": ec_nombre_s, "expediente": _ec("exp"),
+                            "edad": int(_ec("edad") or 0), "sexo": _ec("sexo"),
+                            "peso": float(_ec("peso") or 0), "tipo": "Candidato a trasplante",
+                            "diagnostico": _ec("dx"),
+                        })
+                        if pid:
+                            import json as _jec
+                            datos_ec = {k.replace("ec_",""):v for k,v in st.session_state.items() if k.startswith("ec_")}
+                            _db.add_clinical_record(pid, uid_ec, {
+                                "tipo": "Evaluación pre-trasplante",
+                                "titulo": f"Evaluación candidato para comité — {_ec('comite_fecha') or _ec('fecha_eval')}",
+                                "fecha_consulta": _ec("fecha_eval") or str(_dt_ec.date.today()),
+                                "resumen": f"Resultado: {_ec('resultado')}\nComité: {_ec('comite_decision')}\n{_ec('condiciones')}",
+                                "notas": _ec("condiciones"),
+                                "datos": datos_ec,
+                            })
+                            _clear_cache()
+                            st.success(f"✅ Evaluación de '{ec_nombre_s}' guardada en expediente.")
+                            st.session_state["exp_pac_id"] = pid
+                    except Exception as _e_ec:
+                        st.error(f"Error: {_e_ec}")
+                else:
+                    st.error("Sube el db.py actualizado a GitHub.")
+
+        with btn_pdf_c:
+            if st.button("📄 Generar documento para Comité", type="primary",
+                         use_container_width=True, key="btn_pdf_comite"):
+                try:
+                    import io
+                    from reportlab.lib.pagesizes import letter
+                    from reportlab.lib.units import cm
+                    from reportlab.lib.colors import HexColor, black, white
+                    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
+                                                    Table, TableStyle, HRFlowable,
+                                                    PageBreak)
+                    from reportlab.lib.styles import ParagraphStyle
+                    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+
+                    buf = io.BytesIO()
+                    doc = SimpleDocTemplate(buf, pagesize=letter,
+                                            leftMargin=2.2*cm, rightMargin=2.2*cm,
+                                            topMargin=2.5*cm, bottomMargin=2.5*cm)
+                    AZUL=HexColor("#1E3A8A"); AZUL2=HexColor("#2563EB")
+                    AZULC=HexColor("#EFF6FF"); GRIS=HexColor("#6B7280")
+                    VERDE=HexColor("#15803D"); ROJO=HexColor("#DC2626")
+                    NARANJA=HexColor("#D97706")
+
+                    def _P(txt, fs=9, bold=False, color=black, align=TA_LEFT, sp=3):
+                        return Paragraph(str(txt) if txt else "—",
+                                         ParagraphStyle("s",
+                                             fontName="Helvetica-Bold" if bold else "Helvetica",
+                                             fontSize=fs, textColor=color, alignment=align,
+                                             spaceAfter=sp, leading=fs+4))
+                    def _sec(title):
+                        return [_P(title, 11, True, AZUL, sp=4), HRFlowable(width="100%", thickness=1.5, color=AZUL2)]
+
+                    def _row(label, val, color_val=black):
+                        return [_P(label, 8, True), _P(str(val) if val else "—", 9, color=color_val)]
+
+                    story = []
+                    dr_n = st.session_state.get("sess_nombre","")
+                    dr_i = st.session_state.get("sess_institucion","")
+                    dr_c = st.session_state.get("sess_cedula","")
+
+                    # ── PORTADA ──
+                    story.append(Spacer(1,1.5*cm))
+                    story.append(_P(dr_i or "Programa de Trasplante Renal", 16, True, AZUL, TA_CENTER, 8))
+                    story.append(_P("EVALUACIÓN DE CANDIDATO A TRASPLANTE RENAL", 18, True, AZUL2, TA_CENTER, 10))
+                    story.append(_P("DOCUMENTO PARA COMITÉ DE TRASPLANTE", 13, False, GRIS, TA_CENTER, 6))
+                    story.append(Spacer(1, 0.5*cm))
+                    story.append(HRFlowable(width="100%", thickness=3, color=AZUL))
+                    story.append(Spacer(1, 0.5*cm))
+
+                    # Datos portada
+                    cand_rows = [
+                        [_P("CANDIDATO:", 10, True), _P(_ec("nombre"), 12, True, AZUL)],
+                        [_P("Expediente:", 9, True), _P(_ec("exp"), 10)],
+                        [_P("Causa de ERC:", 9, True), _P(_ec("dx"), 10)],
+                        [_P("Diálisis:", 9, True), _P(f"{_ec('dial')} — {_ec('t_dial')} meses", 10)],
+                        [_P("Fecha evaluación:", 9, True), _P(_ec("fecha_eval"), 10)],
+                        [_P("Médico responsable:", 9, True), _P(_ec("medico") or dr_n, 10)],
+                    ]
+                    tc = Table(cand_rows, colWidths=[5*cm, 12*cm])
+                    tc.setStyle(TableStyle([
+                        ("BACKGROUND",(0,0),(-1,-1), AZULC),
+                        ("TOPPADDING",(0,0),(-1,-1),5), ("BOTTOMPADDING",(0,0),(-1,-1),5),
+                        ("LEFTPADDING",(0,0),(-1,-1),8),
+                        ("BOX",(0,0),(-1,-1),1.5,AZUL),
+                        ("LINEABOVE",(0,0),(-1,0),3,AZUL2),
+                    ]))
+                    story.append(tc)
+                    story.append(Spacer(1,0.6*cm))
+
+                    # Resultado destacado
+                    res_str = _ec("resultado")
+                    res_color = VERDE if "✅" in res_str else (ROJO if "❌" in res_str else NARANJA)
+                    res_box = [[_P(f"RESULTADO: {res_str}", 13, True, res_color, TA_CENTER)]]
+                    tr = Table(res_box, colWidths=[17*cm])
+                    tr.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),AZULC),
+                                             ("BOX",(0,0),(-1,-1),2,res_color),
+                                             ("TOPPADDING",(0,0),(-1,-1),10),
+                                             ("BOTTOMPADDING",(0,0),(-1,-1),10)]))
+                    story.append(tr)
+                    story.append(PageBreak())
+
+                    # ── SECCIÓN 1: DATOS CLÍNICOS ──
+                    story.extend(_sec("1. DATOS DEL CANDIDATO"))
+                    story.append(Spacer(1,0.2*cm))
+                    datos_gen = Table([
+                        _row("Nombre completo", _ec("nombre")),
+                        _row("Edad / Sexo", f"{_ec('edad')} años / {_ec('sexo')}"),
+                        _row("Peso / Talla / IMC", f"{_ec('peso')} kg / {_ec('talla')} cm / {(float(_ec('peso') or 0)/((float(_ec('talla') or 170)/100)**2)):.1f} kg/m²"),
+                        _row("Causa de ERC", _ec("dx")),
+                        _row("Modalidad de diálisis", f"{_ec('dial')} — {_ec('t_dial')} meses"),
+                        _row("Retrasplante", "Sí" if st.session_state.get("ec_retx_inp") else "No"),
+                        _row("Comorbilidades", ", ".join([x for x,y in [("DM",st.session_state.get("ec_dm_inp")),("HTA",st.session_state.get("ec_hta_inp")),("Tabaquismo",st.session_state.get("ec_taba_inp"))] if y])),
+                    ], colWidths=[5*cm, 12*cm])
+                    datos_gen.setStyle(TableStyle([
+                        ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC, white]),
+                        ("BOX",(0,0),(-1,-1),0.5,HexColor("#BFDBFE")),
+                    ]))
+                    story.append(datos_gen)
+                    story.append(Spacer(1,0.4*cm))
+
+                    # ── SECCIÓN 2: CARDIOVASCULAR ──
+                    story.extend(_sec("2. EVALUACIÓN CARDIOVASCULAR (Cardiología)"))
+                    story.append(Spacer(1,0.2*cm))
+                    ec_fevi_v = _ec("fevi") or 0
+                    fevi_color = VERDE if int(ec_fevi_v) >= 55 else (NARANJA if int(ec_fevi_v) >= 35 else ROJO)
+                    cv_data = Table([
+                        _row("FEVI (%)", f"{ec_fevi_v}%", fevi_color),
+                        _row("Función diastólica", _ec("ecott_dd")),
+                        _row("TAP / PSAP (mmHg)", _ec("tap")),
+                        _row("Valvulopatías", _ec("valvulas") or "Sin lesiones significativas"),
+                        _row("Otros hallazgos ECOTT", _ec("ecott_otros") or "Sin alteraciones"),
+                        _row("Prueba de esfuerzo / SPECT", _ec("pe")),
+                        _row("Coronariografía / CT coronario", _ec("coro")),
+                        _row("ICP / CABG previo", _ec("icp") or "No"),
+                        _row("Factores de riesgo CV", _ec("frcv") or "—"),
+                        _row("Opinión del cardiólogo", _ec("cardio_op")),
+                        _row("Comentarios", _ec("cardio_notas") or "—"),
+                    ], colWidths=[5*cm, 12*cm])
+                    cv_data.setStyle(TableStyle([
+                        ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC, white]),
+                        ("BOX",(0,0),(-1,-1),0.5,HexColor("#BFDBFE")),
+                    ]))
+                    story.append(cv_data)
+                    story.append(Spacer(1,0.4*cm))
+
+                    # ── SECCIÓN 3: NEUMOLOGÍA ──
+                    story.extend(_sec("3. EVALUACIÓN NEUMOLÓGICA"))
+                    story.append(Spacer(1,0.2*cm))
+                    neum_data = Table([
+                        _row("Espirometría — FVC (%)", _ec("fvc")),
+                        _row("FEV1 (%)", _ec("fev1")),
+                        _row("FEV1/FVC (%)", _ec("fev1_fvc")),
+                        _row("Patrón espirométrico", _ec("espiro_patron") or "No realizada"),
+                        _row("Rx tórax", _ec("rx_torax")),
+                        _row("TC de tórax", _ec("tc_torax")),
+                        _row("SpO₂ basal (%)", _ec("spo2_basal")),
+                        _row("Opinión del neumólogo", _ec("neumo_op")),
+                        _row("Comentarios", _ec("neumo_notas") or "—"),
+                    ], colWidths=[5*cm, 12*cm])
+                    neum_data.setStyle(TableStyle([
+                        ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC, white]),
+                        ("BOX",(0,0),(-1,-1),0.5,HexColor("#BFDBFE")),
+                    ]))
+                    story.append(neum_data)
+                    story.append(Spacer(1,0.4*cm))
+
+                    story.append(PageBreak())
+
+                    # ── SECCIÓN 4: GASTROENTEROLOGÍA ──
+                    story.extend(_sec("4. GASTROENTEROLOGÍA / HEPATOLOGÍA"))
+                    story.append(Spacer(1,0.2*cm))
+                    gastro_data = Table([
+                        _row("Endoscopía superior (EDA)", _ec("eda")),
+                        _row("Colonoscopía", _ec("colon")),
+                        _row("H. pylori", _ec("h_pylori")),
+                        _row("Ultrasonido hepático", _ec("us_hep")),
+                        _row("ALT / AST / Bilirrubina", f"ALT {_ec('alt')} / AST {_ec('ast')} / Bili {_ec('bili')} mg/dL"),
+                        _row("Estado VHB hepático", _ec("vhb_hep")),
+                        _row("Estado VHC hepático", _ec("vhc_hep")),
+                        _row("Opinión gastroenterólogo", _ec("gastro_op")),
+                        _row("Comentarios", _ec("gastro_notas") or "—"),
+                    ], colWidths=[5*cm, 12*cm])
+                    gastro_data.setStyle(TableStyle([
+                        ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC, white]),
+                        ("BOX",(0,0),(-1,-1),0.5,HexColor("#BFDBFE")),
+                    ]))
+                    story.append(gastro_data)
+                    story.append(Spacer(1,0.4*cm))
+
+                    # ── SECCIÓN 5: ODONTO / NUTRI / PSICO ──
+                    story.extend(_sec("5. ODONTOLOGÍA · NUTRICIÓN · PSICOLOGÍA"))
+                    story.append(Spacer(1,0.2*cm))
+                    ops_data = Table([
+                        _row("Odontología", _ec("dental")),
+                        _row("Notas odontología", _ec("dental_notas") or "—"),
+                        _row("Estado nutricional", _ec("nutri_estado")),
+                        _row("Albúmina (g/dL)", _ec("albumina")),
+                        _row("Notas nutrición", _ec("nutri_notas") or "—"),
+                        _row("Evaluación psicosocial", _ec("psico_result")),
+                        _row("Adherencia", _ec("adherencia")),
+                        _row("Consumo de sustancias", _ec("sustancias")),
+                        _row("Notas psicología", _ec("psico_notas") or "—"),
+                    ], colWidths=[5*cm, 12*cm])
+                    ops_data.setStyle(TableStyle([
+                        ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC, white]),
+                        ("BOX",(0,0),(-1,-1),0.5,HexColor("#BFDBFE")),
+                    ]))
+                    story.append(ops_data)
+                    story.append(Spacer(1,0.4*cm))
+
+                    # ── SECCIÓN 6: UROLOGÍA / VASCULAR ──
+                    story.extend(_sec("6. UROLOGÍA Y CIRUGÍA VASCULAR"))
+                    story.append(Spacer(1,0.2*cm))
+                    uv_data = Table([
+                        _row("Cistouretrograma", _ec("orina_res")),
+                        _row("Capacidad vesical (mL)", _ec("cap_vesical") or "No evaluada"),
+                        _row("Diuresis residual (mL/24h)", _ec("diuresis_res")),
+                        _row("Próstata / obstrucción", _ec("prostate")),
+                        _row("Notas urología", _ec("uro_notas") or "—"),
+                        _row("Arteria ilíaca derecha", _ec("iliaco_d")),
+                        _row("Arteria ilíaca izquierda", _ec("iliaco_i")),
+                        _row("Acceso quirúrgico recomendado", _ec("acceso_qx")),
+                        _row("Notas vascular", _ec("vasc_notas") or "—"),
+                    ], colWidths=[5*cm, 12*cm])
+                    uv_data.setStyle(TableStyle([
+                        ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC, white]),
+                        ("BOX",(0,0),(-1,-1),0.5,HexColor("#BFDBFE")),
+                    ]))
+                    story.append(uv_data)
+                    story.append(PageBreak())
+
+                    # ── SECCIÓN 7: ESPECIALIDADES COND. ──
+                    story.extend(_sec("7. ESPECIALIDADES CONDICIONALES"))
+                    story.append(Spacer(1,0.2*cm))
+                    esp_cond = []
+                    if _ec("reuma_act"): esp_cond.append(_row("Reumatología", _ec("reuma_act") + " — " + _ec("reuma_notas")))
+                    if _ec("trombo"): esp_cond.append(_row("Hematología / Trombofilia", _ec("trombo") + " — " + _ec("hema_notas")))
+                    if _ec("tb_plan"): esp_cond.append(_row("Infectología / TB", _ec("tb_plan") + " — " + _ec("infecto_notas")))
+                    if _ec("hba1c_endo"): esp_cond.append(_row("Endocrinología / HbA1c", str(_ec("hba1c_endo")) + "% — " + _ec("endo_notas")))
+                    if _ec("cancer_tipo"): esp_cond.append(_row("Oncología", _ec("cancer_tipo") + f" — {_ec('t_libre_cancer')} años libre"))
+                    if _ec("neuro_notas"): esp_cond.append(_row("Neurología", _ec("neuro_notas")))
+                    if _ec("oftalmo_notas"): esp_cond.append(_row("Oftalmología", _ec("oftalmo_notas")))
+                    if esp_cond:
+                        ec_tbl = Table(esp_cond, colWidths=[5*cm, 12*cm])
+                        ec_tbl.setStyle(TableStyle([
+                            ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                            ("LEFTPADDING",(0,0),(-1,-1),6),
+                            ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC, white]),
+                            ("BOX",(0,0),(-1,-1),0.5,HexColor("#BFDBFE")),
+                        ]))
+                        story.append(ec_tbl)
+                    else:
+                        story.append(_P("No se realizaron evaluaciones por especialidades condicionales.", 9, color=GRIS))
+                    story.append(Spacer(1,0.4*cm))
+
+                    # ── SECCIÓN 8: INMUNOLOGÍA ──
+                    story.extend(_sec("8. INMUNOLOGÍA Y SEROLOGÍA"))
+                    story.append(Spacer(1,0.2*cm))
+                    cpra_v = int(_ec("cpra") or 0)
+                    cpra_color = ROJO if cpra_v >= 80 else (NARANJA if cpra_v >= 30 else VERDE)
+                    im_data = Table([
+                        _row("Grupo / Rh", f"{_ec('grupo')} {_ec('rh')}"),
+                        _row("Tipificación HLA", _ec("hla") or "Pendiente"),
+                        _row("cPRA (%)", f"{_ec('cpra')}%", cpra_color),
+                        _row("DSA preformados", _ec("dsa")),
+                        _row("QuantiFeron TB", _ec("quantiferon")),
+                        _row("HIV", _ec("ser_hiv")),
+                        _row("VHB (HBsAg / Anti-HBc / Anti-HBs)", f"{_ec('ser_vhb_sag')} / {_ec('ser_vhb_abc')} / {_ec('ser_vhb_abs')}"),
+                        _row("VHC", _ec("ser_vhc")),
+                        _row("CMV receptor", _ec("ser_cmv")),
+                        _row("EBV", _ec("ser_ebv")),
+                        _row("VZV (Varicela)", _ec("ser_vzv")),
+                        _row("Sífilis", _ec("ser_sifilis")),
+                        _row("Chagas", _ec("chagas")),
+                    ], colWidths=[5*cm, 12*cm])
+                    im_data.setStyle(TableStyle([
+                        ("TOPPADDING",(0,0),(-1,-1),4), ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),
+                        ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC, white]),
+                        ("BOX",(0,0),(-1,-1),0.5,HexColor("#BFDBFE")),
+                    ]))
+                    story.append(im_data)
+                    story.append(PageBreak())
+
+                    # ── SECCIÓN 9: COMITÉ ──
+                    story.extend(_sec("9. DECISIÓN DEL COMITÉ DE TRASPLANTE RENAL"))
+                    story.append(Spacer(1,0.3*cm))
+                    comite_color = VERDE if "✅ APROBADO" in _ec("comite_decision") else (ROJO if "❌" in _ec("comite_decision") else NARANJA)
+                    dec_box = [[_P(f"DECISIÓN: {_ec('comite_decision')}", 14, True, comite_color, TA_CENTER)]]
+                    td = Table(dec_box, colWidths=[17*cm])
+                    td.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),AZULC),
+                                             ("BOX",(0,0),(-1,-1),2.5,comite_color),
+                                             ("TOPPADDING",(0,0),(-1,-1),12),
+                                             ("BOTTOMPADDING",(0,0),(-1,-1),12)]))
+                    story.append(td)
+                    story.append(Spacer(1,0.4*cm))
+
+                    if _ec("resultado"):
+                        story.append(_P(f"Resultado de evaluación: {_ec('resultado')}", 10, True, AZUL))
+                    if _ec("condiciones"):
+                        story.append(Spacer(1,0.2*cm))
+                        story.append(_P("Condiciones para aprobación:", 10, True, NARANJA))
+                        for cond in _ec("condiciones").split("\n"):
+                            if cond.strip():
+                                story.append(Paragraph(f"• {cond}", ParagraphStyle("ci", fontName="Helvetica", fontSize=9, leading=13, leftIndent=12)))
+                    if _ec("comite_obs"):
+                        story.append(Spacer(1,0.2*cm))
+                        story.append(_P("Observaciones del Comité:", 10, True))
+                        story.append(Paragraph(_ec("comite_obs"), ParagraphStyle("co", fontName="Helvetica", fontSize=9, leading=13)))
+
+                    story.append(Spacer(1,0.4*cm))
+                    story.append(_P(f"Fecha de presentación en comité: {_ec('comite_fecha')}", 10, True, AZUL))
+                    story.append(Spacer(1,0.5*cm))
+
+                    # Firmas
+                    story.append(_P("Miembros del Comité:", 10, True))
+                    story.append(Spacer(1,0.3*cm))
+                    miembros = [m for m in [_ec("cm1"),_ec("cm2"),_ec("cm3"),_ec("cm4"),_ec("cm5"),_ec("cm6")] if m]
+                    if miembros:
+                        n = 3
+                        rows_firma = []
+                        for j in range(0, len(miembros), n):
+                            grupo = miembros[j:j+n]
+                            while len(grupo) < n: grupo.append("")
+                            rows_firma.append([
+                                Paragraph(f"_____________________<br/><font size='8'>{m}</font>", ParagraphStyle("f", fontName="Helvetica", fontSize=9, leading=14, alignment=TA_CENTER))
+                                for m in grupo
+                            ])
+                        tf_m = Table(rows_firma, colWidths=[5.5*cm, 5.5*cm, 5.5*cm])
+                        tf_m.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),10), ("BOTTOMPADDING",(0,0),(-1,-1),10)]))
+                        story.append(tf_m)
+
+                    story.append(Spacer(1,0.6*cm))
+                    story.append(HRFlowable(width="100%", thickness=1, color=AZULC))
+                    story.append(_P(f"RenalPro v3.1.0 · {dr_i} · Programa de Trasplante Renal · "
+                                    f"Documento generado el {_dt_ec.date.today()} · NOM-006-SSA3-2011",
+                                    7, color=GRIS, align=TA_CENTER))
+
+                    doc.build(story)
+                    buf.seek(0)
+                    safe = "".join(c for c in _ec("nombre") if c.isalnum() or c==" ")[:15].strip()
+                    st.download_button("⬇️ Descargar documento del Comité",
+                                       data=buf.read(),
+                                       file_name=f"Comite_TR_{safe}_{_ec('comite_fecha')}.pdf",
+                                       mime="application/pdf",
+                                       key="btn_dl_comite_pdf")
+                    st.success("✅ Documento generado. Descárgalo con el botón de arriba.")
+                except Exception as _e_cm:
+                    st.error(f"Error al generar PDF del comité: {_e_cm}")
 
 elif nav == "eval_donante_vivo":
     st.subheader("🫀 Evaluación del Donante Vivo")
