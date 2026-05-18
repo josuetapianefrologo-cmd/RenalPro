@@ -2085,6 +2085,7 @@ with st.sidebar:
     _navsec("GUARDIA")
     _navbtn("⚡ Hiperkalemia", "hiperkalemia")
     _navbtn("💧 Hiponatremia", "hiponatremia")
+    _navbtn("🦴 Hipocalcemia IV", "hipocalcemia_iv")
     _navbtn("💊 Diuréticos", "diureticos")
     _navbtn("🔬 AKI por Contraste", "contraste")
 
@@ -14883,9 +14884,11 @@ elif nav == "receta":
                         rec_datos_pre = _jrx.loads(rec_pre.get("datos_json","{}"))
                     except Exception:
                         pass
-                prev_rx_ind = (rec_pre.get("resumen","") or
-                               rec_datos_pre.get("receta","") or
-                               rec_datos_pre.get("is_inicial",""))
+                # Only use the "receta" field from datos_json — NOT the full SOAP resumen
+                prev_rx_ind = (rec_datos_pre.get("receta","") or
+                               rec_datos_pre.get("is_inicial","") or
+                               # fallback: only if the record TYPE is "Receta médica"
+                               (rec_pre.get("resumen","") if rec_pre.get("tipo") == "Receta médica" else ""))
 
                 st.markdown("#### 👤 Paso 1 — Paciente")
                 pac_mode = st.radio("", ["🔍 Cargar paciente existente",
@@ -16374,6 +16377,253 @@ Manejo oral:
 - Evitar nitroprusiato (acumulación de cianuro en ERC)
 - Diálisis urgente si anuria + edema pulmonar
             """)
+
+elif nav == "hipocalcemia_iv":
+    st.subheader("🦴 Hipocalcemia — Reposición IV de Calcio")
+    st.caption("Ref: Cooper MS & Gittoes NJL. BMJ 2008 | "
+               "Aguilera IM & Vaughan RS. Contin Educ Anaesth 2000 | "
+               "KDIGO CKD-MBD 2017 | Protocolo CMN Bajío IMSS")
+
+    # ── CLASIFICACIÓN ──────────────────────────────────────────────────────────
+    hipo1, hipo2 = st.columns(2)
+    with hipo1:
+        ca_actual = st.number_input("Calcio total actual (mg/dL)", 3.0, 10.5, 6.9, 0.1, key="hipo_ca")
+        alb_h     = st.number_input("Albúmina (g/dL)", 1.0, 6.0, 3.5, 0.1, key="hipo_alb")
+        ca_cor    = ca_actual + 0.8 * (4.0 - alb_h)
+        st.metric("Ca corregido por albúmina", f"{ca_cor:.1f} mg/dL")
+        peso_h    = st.number_input("Peso (kg)", 30.0, 200.0, 70.0, 1.0, key="hipo_peso")
+    with hipo2:
+        ica_h     = st.number_input("iCa ionizado (mmol/L) — si disponible",
+                                    0.0, 2.0, 0.0, 0.01, key="hipo_ica",
+                                    help="0 = no disponible. Normal: 1.12–1.32 mmol/L")
+        ctx_h     = st.selectbox("Contexto clínico", [
+            "Hospitalizado — hipocalcemia aguda",
+            "Paciente en HD — hipocalcemia durante sesión",
+            "Post-paratiroidectomía (Hungry Bone Syndrome)",
+            "TRRC con citrato — iCa sistémico bajo",
+            "Post-transfusión masiva",
+            "Hipomagnesemia coexistente",
+        ], key="hipo_ctx")
+        sintomas_h = st.multiselect("Síntomas presentes", [
+            "Tetania / calambres musculares",
+            "Signo de Trousseau positivo",
+            "Signo de Chvostek positivo",
+            "Parestesias (perioral, manos, pies)",
+            "Laringoespasmo",
+            "QT prolongado en ECG",
+            "Convulsiones",
+            "Asintomático",
+        ], key="hipo_sint")
+
+    # ── CLASIFICACIÓN DE SEVERIDAD ─────────────────────────────────────────────
+    ca_ref = ica_h * 4 if ica_h > 0 else ca_cor  # use iCa if available
+    sintomas_graves = any(s in sintomas_h for s in
+                          ["Tetania","Laringoespasmo","QT prolongado","Convulsiones"])
+
+    if ca_cor < 7.5 or (ica_h > 0 and ica_h < 0.9):
+        sev = "🔴 SEVERA"
+        sev_color = "error"
+    elif ca_cor < 8.4 or (ica_h > 0 and ica_h < 1.12):
+        sev = "🟡 MODERADA"
+        sev_color = "warning"
+    else:
+        sev = "🟢 LEVE / límite inferior"
+        sev_color = "info"
+
+    if sev_color == "error":
+        st.error(f"**{sev}** — Ca corr {ca_cor:.1f} mg/dL"
+                 + (f" · iCa {ica_h:.2f} mmol/L" if ica_h > 0 else "")
+                 + (" · **SINTOMÁTICA → IV URGENTE**" if sintomas_graves else " → Reposición IV"))
+    elif sev_color == "warning":
+        st.warning(f"**{sev}** — Ca corr {ca_cor:.1f} mg/dL"
+                   + (f" · iCa {ica_h:.2f} mmol/L" if ica_h > 0 else "")
+                   + (" · Síntomas → IV" if sintomas_h else " → IV o VO según tolerancia"))
+    else:
+        st.info(f"**{sev}** — Ca corr {ca_cor:.1f} mg/dL — considerar calcio oral si asintomático")
+
+    st.divider()
+
+    # ── GLUCONATO DE CALCIO — DATOS BASE ──────────────────────────────────────
+    # Gluconato Ca 10%: 1 ámpula = 10 mL = 1 g gluconato = 90 mg Ca elemental = 4.65 mEq
+    CA_POR_AMP_MG  = 90.0    # mg Ca elemental por ámpula
+    CA_POR_AMP_MEQ = 4.65    # mEq Ca por ámpula
+    VOL_AMP_ML     = 10.0    # mL por ámpula
+    CA_CLORURO_AMP = 136.0   # mg Ca elemental por ámpula de CaCl2 10% (10 mL)
+
+    # ── PROTOCOLO CMN BAJÍO ────────────────────────────────────────────────────
+    st.markdown("### 💉 Protocolo CMN Bajío — Gluconato de Calcio IV")
+
+    prot1, prot2 = st.columns(2)
+    with prot1:
+        n_amp  = st.number_input("N° de ámpulas de gluconato Ca 10%",
+                                 1, 20, 11, 1, key="hipo_namp",
+                                 help="Protocolo CMN Bajío: 11 ámpulas")
+        vol_sf = st.number_input("Volumen NaCl 0.9% (mL)",
+                                 50, 500, 250, 50, key="hipo_vol",
+                                 help="Aforadas en esta cantidad de NaCl 0.9%")
+    with prot2:
+        vel_h  = st.number_input("Tasa de infusión deseada (mL/h)",
+                                 10, 250, 50, 5, key="hipo_vel",
+                                 help="50–100 mL/h habitual. Más rápido si síntomas graves.")
+        via_h  = st.selectbox("Vía de acceso", [
+            "Vena central (preferida — menos irritante)",
+            "Vena periférica gruesa (antecubital)",
+            "Catéter de HD (si en sesión)",
+        ], key="hipo_via")
+
+    # Cálculos del protocolo
+    ca_total_mg  = n_amp * CA_POR_AMP_MG        # mg Ca elemental total
+    ca_total_meq = n_amp * CA_POR_AMP_MEQ        # mEq total
+    vol_total_ml = vol_sf                         # aforado = volumen final ≈ vol_sf
+    conc_mg_ml   = ca_total_mg / vol_total_ml    # mg Ca/mL
+    conc_meq_ml  = ca_total_meq / vol_total_ml   # mEq Ca/mL
+    duracion_h   = vol_total_ml / vel_h           # horas para pasar toda la bolsa
+    vel_ca_mg_h  = conc_mg_ml * vel_h            # mg Ca elemental por hora
+    vel_ca_meq_h = conc_meq_ml * vel_h           # mEq Ca por hora
+
+    # Mostrar resultados
+    r1, r2, r3, r4 = st.columns(4)
+    r1.metric("Ca elemental total", f"{ca_total_mg:.0f} mg")
+    r2.metric("Concentración", f"{conc_mg_ml:.1f} mg/mL")
+    r3.metric("Velocidad Ca", f"{vel_ca_mg_h:.0f} mg/h")
+    r4.metric("Duración de la bolsa", f"{duracion_h:.1f} h")
+
+    st.success(f"""
+**🏥 Preparación — Protocolo CMN Bajío IMSS:**
+- **{n_amp} ámpulas** de Gluconato de Ca 10% (10 mL c/u) → aforadas en **{vol_sf} mL** de NaCl 0.9%
+- **Ca elemental total:** {ca_total_mg:.0f} mg ({ca_total_meq:.1f} mEq)
+- **Concentración:** {conc_mg_ml:.2f} mg/mL ({conc_meq_ml:.3f} mEq/mL)
+- **Pasar a:** {vel_h} mL/h → aporta **{vel_ca_mg_h:.0f} mg/h** de Ca elemental
+- **Duración total de la bolsa:** {duracion_h:.1f} horas
+- **Vía:** {via_h}
+    """)
+
+    # Bolsas necesarias según dosis por kg
+    dosis_kg = ca_total_mg / peso_h
+    st.info(f"📊 Dosis por kg para esta bolsa: **{dosis_kg:.1f} mg/kg** "
+            f"({ca_total_meq/peso_h:.2f} mEq/kg) para {peso_h:.0f} kg")
+
+    st.divider()
+
+    # ── CALCULADORA POR OBJETIVO ───────────────────────────────────────────────
+    st.markdown("### 🧮 Calculadora de dosis por objetivo clínico")
+
+    obj1, obj2 = st.columns(2)
+    with obj1:
+        ca_meta   = st.number_input("Ca corregido meta (mg/dL)", 7.5, 10.5, 8.5, 0.1, key="hipo_meta")
+        deficit_ca = max(0, (ca_meta - ca_cor) * peso_h * 0.24 * 10)
+        # Formula: Ca deficit (mg) = (Ca meta - Ca actual) × peso × Vd (0.24 L/kg) × 10 (conversión)
+        # Simpler clinical estimate: ~1 mEq/kg raises Ca ~0.5 mEq/L
+        n_amp_necesarias = deficit_ca / CA_POR_AMP_MG
+        st.metric("Déficit estimado de Ca", f"{deficit_ca:.0f} mg Ca elemental")
+        st.metric("Ámpulas necesarias", f"{n_amp_necesarias:.1f}",
+                  help="Estimación — ajustar según respuesta clínica")
+    with obj2:
+        st.markdown(f"""
+**Estimación clínica del déficit:**
+- Δ Ca objetivo: {ca_meta:.1f} − {ca_cor:.1f} = **{ca_meta - ca_cor:.1f} mg/dL**
+- Déficit ≈ {deficit_ca:.0f} mg Ca elemental
+- Ámpulas estimadas: **{n_amp_necesarias:.1f}**
+- Con protocolo de {n_amp} ámpulas/{vol_sf} mL:
+  → Cubre **{(n_amp/n_amp_necesarias*100):.0f}%** del déficit estimado
+        """)
+
+    st.divider()
+
+    # ── SITUACIONES ESPECIALES ─────────────────────────────────────────────────
+    st.markdown("### ⚠️ Situaciones especiales y protocolo por contexto")
+
+    with st.expander("🔴 Ca <7.0 mg/dL o síntomas graves (tetania, laringoespasmo, convulsiones)"):
+        st.error("""
+**EMERGENCIA — Bolo IV lento primero, luego infusión:**
+
+1. **Gluconato Ca 10%: 2–3 ámpulas (20–30 mL) IV en 10 minutos** directa o diluidas
+   - Monitoreo cardíaco continuo durante el bolo
+   - Si hay paro cardíaco por hipocalcemia: 3 ámpulas en 3 minutos
+2. Inmediatamente seguir con la infusión del protocolo (11 amp / 250 mL NaCl)
+3. Calcitriol 0.5–1 mcg VO/IV para activar absorción
+4. Monitoreo Ca c/2h las primeras 6h
+
+**No usar CaCl₂ en vena periférica** — es más irritante (136 mg Ca/ámpula vs 90 mg gluconato)
+        """)
+
+    with st.expander("⚙️ Paciente en HD — hipocalcemia durante sesión"):
+        st.warning("""
+**Durante la sesión de HD:**
+- Gluconato Ca 2–4 ámpulas IV en la línea venosa del circuito de HD (lento, 15–20 min)
+- O a través del catéter si no está en HD en ese momento
+- Ajustar Ca en el dializado si Ca <7.0 recurrente: cambiar a dializado Ca 3.5 mEq/L
+
+**Post-HD:**
+- Si Ca persiste bajo: iniciar protocolo de infusión + calcitriol VO
+- Revisar causa: quelante con calcio insuficiente, VD activa, PTH muy alta
+        """)
+
+    with st.expander("🔪 Post-paratiroidectomía — Hungry Bone Syndrome"):
+        hb_peso = peso_h
+        st.error(f"""
+**Hungry Bone Syndrome — protocolo agresivo:**
+
+Las primeras 24–72h post-cirugía el hueso absorbe calcio ávidamente.
+
+| Período | Tratamiento |
+|---------|------------|
+| **Primeras 24h** | Gluconato Ca **{hb_peso*1.0:.0f}–{hb_peso*2.0:.0f} mg/h** (1–2 mg/kg/h) en infusión continua |
+| **Días 2–7** | Reducir gradualmente según Ca sérico c/4–6h |
+| **Paralelo** | Calcitriol **2–4 mcg/día** (dosis alta) + Ca oral 1–2 g c/8h |
+| **Meta** | Ca corregido ≥8.0 mg/dL sin síntomas |
+
+Protocolo infusión: Ajustar vel hasta lograr Ca >8.0 mg/dL:
+- Si Ca <7.5: {hb_peso*1.5:.0f} mg/h de Ca elemental → **{hb_peso*1.5/conc_mg_ml:.0f} mL/h** con tu bolsa
+- Si Ca 7.5–8.0: {hb_peso*1.0:.0f} mg/h → **{hb_peso*1.0/conc_mg_ml:.0f} mL/h**
+- Si Ca ≥8.0: mantener con oral + calcitriol
+        """)
+
+    with st.expander("💧 TRRC con citrato — iCa sistémico bajo"):
+        st.info("""
+**En TRRC con RCA:**
+- iCa sistémico <1.0 mmol/L = aumentar infusión de calcio (gluconato o CaCl₂)
+- Calcular: tasa infusión Ca (mL/h) = [Meta − iCa actual] × 0.5 × peso / conc_meq_ml
+- Monitorear iCa sistémico c/4–6h
+- Si iCa sistémico persistentemente bajo con citrato alto: sospechar acumulación de citrato
+  → Ratio Ca total / iCa >2.5 → suspender citrato → cambiar anticoagulación
+        """)
+
+    with st.expander("🧬 Hipomagnesemia coexistente"):
+        st.warning("""
+**Si Mg <1.5 mg/dL junto con hipocalcemia:**
+La hipocalcemia NO se corregirá hasta reponer el magnesio primero.
+El Mg es necesario para la liberación de PTH.
+
+Dosis Mg: Sulfato de Mg 2–4 g IV en 30–60 min → luego 1 g/h infusión
+Monitoreo: Mg, Ca, reflejos osteotendinosos (hiperreflexia = toxicidad Mg)
+        """)
+
+    st.divider()
+
+    # ── MONITOREO ──────────────────────────────────────────────────────────────
+    st.markdown("### 📊 Monitoreo durante la reposición")
+    st.markdown(f"""
+| Momento | Estudio | Meta |
+|---------|---------|------|
+| **Antes de iniciar** | Ca total + albúmina + Mg + ECG | Documentar baseline |
+| **1–2h post-inicio** | Ca total o iCa | Ca corr ≥8.0 mg/dL · iCa ≥1.0 mmol/L |
+| **c/4–6h** | Ca + Mg + K + P | — |
+| **c/12–24h (estable)** | Ca + función renal | Transición a VO cuando Ca >8.4 |
+| **Continuo** | Monitor cardíaco | QT — hipocalcemia lo prolonga |
+
+**Calcio total corregido actual de tu paciente: {ca_cor:.1f} mg/dL**
+**Velocidad para alcanzar meta {st.session_state.get('hipo_meta', 8.5):.1f} en ~{duracion_h:.1f}h:** {vel_h} mL/h ✅
+
+**Transición a calcio oral:**
+- Cuando Ca corr >8.4 mg/dL × 2 mediciones consecutivas
+- Carbonato de Ca 500–1,500 mg c/8h VO con comidas
+- Calcitriol 0.25–0.5 mcg c/12h VO para mantener absorción
+    """)
+
+    # ERC-MBD reference
+    st.info("🦴 Para el manejo crónico de ERC-MBD (quelantes, VD activa, cinacalcet, PTH) "
+            "→ ve a **🦴 ERC-MBD** en el sidebar de NEFROLOGÍA.")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
