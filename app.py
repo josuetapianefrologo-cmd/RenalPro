@@ -548,17 +548,18 @@ def _do_login(username: str, password: str):
                 "sess_rol": rol,
                 "sess_nombre": user_db.get("nombre", uname),
                 "sess_dias": _db.get_dias_restantes(user_db),
-                "sess_avatar": user_db.get("avatar", "👨‍⚕️"),
-                "sess_institucion": user_db.get("institucion", ""),
-                "sess_email": user_db.get("email", ""),
-                "sess_cedula": user_db.get("cedula_profesional", ""),
-                "sess_universidad": user_db.get("universidad", ""),
-                "sess_domicilio": user_db.get("domicilio_consultorio", ""),
-                "sess_telefono": user_db.get("telefono_consultorio", ""),
-                "sess_ced_general": user_db.get("cedula_general", ""),
-                "sess_univ_general": user_db.get("universidad_general", ""),
-                "sess_consejo_nombre": user_db.get("consejo_nombre", ""),
-                "sess_consejo_numero": user_db.get("consejo_numero", ""),
+                "sess_avatar":        user_db.get("avatar", "👨‍⚕️"),
+                "sess_institucion":   user_db.get("institucion", ""),
+                "sess_email":         user_db.get("email", ""),
+                "sess_especialidad":  user_db.get("especialidad", ""),
+                "sess_cedula":        user_db.get("cedula_especialidad", "") or user_db.get("cedula_profesional", ""),
+                "sess_universidad":   user_db.get("universidad_especialidad", "") or user_db.get("universidad", ""),
+                "sess_domicilio":     user_db.get("domicilio_consultorio", ""),
+                "sess_telefono":      user_db.get("telefono_consultorio", ""),
+                "sess_ced_general":   user_db.get("cedula_general", ""),
+                "sess_univ_general":  user_db.get("universidad_general", ""),
+                "sess_consejo_nombre":user_db.get("consejo_nombre", ""),
+                "sess_consejo_numero":user_db.get("consejo_numero", ""),
                 "using_db": True,
             })
             return True, rol
@@ -5085,23 +5086,32 @@ elif nav == "micuenta":
                     try:
                         ok = _db.update_user_profile(
                             uid_mc, nom_mc, email_mc, esp_mc, inst_mc, av_nuevo,
-                            ced_esp_mc, univ_esp_mc,
-                            dom_mc, tel_mc,
-                            ced_gen_mc, univ_gen_mc,
-                            ced_esp_mc, univ_esp_mc,
-                            consejo_mc, consejo_num_mc,
+                            cedula     = ced_esp_mc,
+                            universidad= univ_esp_mc,
+                            domicilio  = dom_mc,
+                            telefono   = tel_mc,
+                            cedula_general        = ced_gen_mc,
+                            universidad_general   = univ_gen_mc,
+                            cedula_especialidad   = ced_esp_mc,
+                            universidad_especialidad = univ_esp_mc,
+                            consejo_nombre = consejo_mc,
+                            consejo_numero = consejo_num_mc,
                         )
                     except TypeError:
                         ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
                                                      esp_mc, inst_mc, av_nuevo)
                     if ok:
                         st.session_state.update({
-                            "sess_nombre": nom_mc, "sess_email": email_mc,
-                            "sess_institucion": inst_mc, "sess_especialidad": esp_mc,
-                            "sess_cedula": ced_esp_mc, "sess_universidad": univ_esp_mc,
-                            "sess_domicilio": dom_mc, "sess_telefono": tel_mc,
-                            "sess_ced_general": ced_gen_mc,
-                            "sess_univ_general": univ_gen_mc,
+                            "sess_nombre":         nom_mc,
+                            "sess_email":          email_mc,
+                            "sess_institucion":    inst_mc,
+                            "sess_especialidad":   esp_mc,
+                            "sess_cedula":         ced_esp_mc,
+                            "sess_universidad":    univ_esp_mc,
+                            "sess_domicilio":      dom_mc,
+                            "sess_telefono":       tel_mc,
+                            "sess_ced_general":    ced_gen_mc,
+                            "sess_univ_general":   univ_gen_mc,
                             "sess_consejo_nombre": consejo_mc,
                             "sess_consejo_numero": consejo_num_mc,
                         })
@@ -5112,7 +5122,7 @@ elif nav == "micuenta":
                 else:
                     st.session_state.update({
                         "sess_nombre": nom_mc, "sess_email": email_mc,
-                        "sess_institucion": inst_mc,
+                        "sess_institucion": inst_mc, "sess_especialidad": esp_mc,
                     })
                     st.success("✅ Perfil actualizado (sesión actual).")
         st.divider()
@@ -7508,53 +7518,89 @@ elif nav == "trasplante":
     # ── TIMOGLOBULINA ──────────────────────────────────────────────────────────
     if "Timoglobulina" in tx_modo:
         st.markdown("### 🧪 Timoglobulina — Globulina Antitimocítica de Conejo (ATG-r)")
-        st.info("**Presentación:** Timoglobulina® (Sanofi) — viales de 25 mg. Reconstituir en SSF o SG5%.")
+        st.info("**Presentación:** Timoglobulina® (Sanofi) — viales de 25 mg. "
+                "No aprobada por FDA para inducción (uso off-label). "
+                "**FDA aprobada** para rechazo agudo: 1.5 mg/kg/día × 7–14 días.")
+        st.caption("Ref: Hardinger KL et al. J Transplant 2010;957549 | "
+                   "Brennan DC et al. Am J Transplant 2011;11(11):2279-2287 | "
+                   "KDIGO Transplant 2009")
 
         tg1, tg2 = st.columns(2)
         with tg1:
             tg_indicacion = st.selectbox("Indicación", [
-                "Inducción en trasplante de alto riesgo",
-                "Inducción estándar (protocolo institucional)",
-                "Rechazo celular agudo (Banff ≥IA)",
-                "Rechazo humoral (AMR)",
+                "Inducción — bajo riesgo inmunológico",
+                "Inducción — riesgo estándar",
+                "Inducción — alto riesgo (PRA >80%, retrasplante, DSA)",
+                "Rechazo celular agudo (Banff IA–IIB)",
+                "Rechazo refractario a esteroides",
             ], key="tg_ind")
             tg_peso = st.number_input("Peso (kg)", 30.0, 150.0, 70.0, 1.0, key="tg_peso")
-        with tg2:
-            if "Inducción" in tg_indicacion:
-                tg_dosis_ref = 1.0 if "alto riesgo" in tg_indicacion else 1.0
-                tg_dias_ref  = 5 if "alto riesgo" in tg_indicacion else 3
-            else:
-                tg_dosis_ref = 1.5
-                tg_dias_ref  = 7
-            tg_dosis = st.number_input("Dosis (mg/kg/día)", 0.5, 2.0, tg_dosis_ref, 0.25, key="tg_dosis")
-            tg_dias  = st.number_input("Número de dosis/días", 1, 14, tg_dias_ref, 1, key="tg_dias")
 
-        dosis_diaria_mg = tg_dosis * tg_peso
-        dosis_total_mg  = dosis_diaria_mg * tg_dias
-        viales_dia = dosis_diaria_mg / 25
-        viales_total = dosis_total_mg / 25
+        with tg2:
+            if "bajo riesgo" in tg_indicacion:
+                dosis_ref = 1.5; dias_ref = 2; meta = "3 mg/kg (bajo riesgo)"
+            elif "riesgo estándar" in tg_indicacion:
+                dosis_ref = 1.5; dias_ref = 3; meta = "4.5 mg/kg (estándar)"
+            elif "alto riesgo" in tg_indicacion:
+                dosis_ref = 1.5; dias_ref = 4; meta = "6 mg/kg (alto riesgo)"
+            else:
+                dosis_ref = 1.5; dias_ref = 7; meta = "1.5 mg/kg/día × 7–14 días (rechazo)"
+
+            tg_dosis = st.number_input("Dosis (mg/kg/día)", 1.0, 2.0, dosis_ref, 0.25, key="tg_dosis")
+            tg_dias  = st.number_input("Número de días", 1, 14, dias_ref, 1, key="tg_dias")
+
+        dosis_dia_mg = tg_dosis * tg_peso
+        dosis_acum   = tg_dosis * tg_dias
+        viales_dia   = dosis_dia_mg / 25
+        viales_tot   = (dosis_dia_mg * tg_dias) / 25
 
         dr1, dr2, dr3, dr4 = st.columns(4)
-        dr1.metric("Dosis diaria", f"{dosis_diaria_mg:.0f} mg")
+        dr1.metric("Dosis diaria", f"{dosis_dia_mg:.0f} mg ({tg_dosis} mg/kg)")
         dr2.metric("Viales/día (25 mg)", f"{viales_dia:.1f}")
-        dr3.metric("Dosis total del ciclo", f"{dosis_total_mg:.0f} mg")
-        dr4.metric("Viales totales", f"{viales_total:.1f}")
+        dr3.metric("Dosis acumulada", f"{dosis_acum:.1f} mg/kg", help=f"Meta: {meta}")
+        dr4.metric("Viales totales", f"{viales_tot:.1f}")
 
-        st.markdown(f"""
+        if dosis_acum < 3.0:
+            st.warning(f"⚠️ Acumulada {dosis_acum:.1f} mg/kg < 3 mg/kg — puede ser insuficiente.")
+        elif dosis_acum > 7.5:
+            st.warning(f"⚠️ Acumulada {dosis_acum:.1f} mg/kg > 7.5 mg/kg — mayor riesgo de infecciones y PTLD.")
+
+        st.markdown("""
 #### Protocolo de administración
-| Parámetro | Indicación |
-|-----------|-----------|
-| **Diluir en** | 500 mL SSF o SG5% (1 mg/mL máx) |
-| **Tiempo de infusión** | ≥4–6 horas (primera dosis más lenta, 6h) |
-| **Vía** | Vena central preferida |
-| **Pretratamiento** | Metilprednisolona 500 mg IV 30 min antes + Difenhidramina 25–50 mg IV + Paracetamol 1 g VO |
-| **Monitoreo CD3** | Meta: CD3 <50 cells/μL (ajustar dosis si <25 → pausar) |
-| **Plaquetas** | Si <50,000: reducir dosis 50% · Si <25,000: suspender |
-| **Leucocitos** | Si <2,000/μL: reducir o suspender |
+| Parámetro | Detalles |
+|-----------|---------|
+| **Dosis** | **1.5 mg/kg/día** IV (rango: 1–2 mg/kg) |
+| **Meta acumulada** | 3 mg/kg (bajo) · **4.5 mg/kg (estándar)** · 6 mg/kg (alto/rechazo) |
+| **Inicio** | **Día 0** (intraoperatorio, antes del clampeo) o Día 1 post-Tx |
+| **Dilución** | 500 mL SSF o SG5% — concentración máx 0.5 mg/mL |
+| **1ª infusión** | Mínimo **6 horas** · Dosis subsecuentes: ≥4 horas |
+| **Vía** | Vena central preferida (flebitis en periférica) |
+| **Pretratamiento** | MP 500 mg IV + Difenhidramina 25 mg IV + Paracetamol 1 g VO · 30 min antes |
         """)
-        st.warning("⚠️ Profilaxis obligatoria: Cotrimoxazol (PCP), Valganciclovir (CMV si D+/R- o R+), "
-                   "Nistatina o Fluconazol (candidiasis)")
-        st.caption("Ref: Brennan DC et al. Am J Transplant 2011;11(11):2279–2287 | Noel C et al. Transplantation 2009 | Ficha técnica Timoglobulina® (Sanofi)")
+
+        st.error("""
+#### 🛑 CRITERIOS DE PARO — verificar BH antes de CADA dosis
+| Parámetro | Reducir 50% | SUSPENDER DEFINITIVAMENTE |
+|-----------|------------|--------------------------|
+| **Plaquetas** | <80,000 /μL | **<50,000 /μL** |
+| **Leucocitos (WBC)** | <2,000 /μL | **<1,000 /μL** |
+| **Neutrófilos (ANC)** | — | **<500 /μL** |
+| **CD3** (si disponible) | <200 cel/μL | **<50 cel/μL** |
+
+Si se suspende antes de la meta acumulada: evaluar si la depleción linfocitaria es adecuada (CD3) antes de decidir retomar.
+        """)
+
+        st.info("""
+#### Profilaxis infecciosa obligatoria
+| Patógeno | Profilaxis | Duración |
+|---------|-----------|---------|
+| **CMV** | Valganciclovir 900 mg/día | D+/R-: 6 m · R+: 3 m |
+| **PCP** | TMP-SMX 1 tab simple c/24h | ≥6–12 meses |
+| **Hongos** | Fluconazol 100 mg/día o Nistatina | 1–3 meses |
+| **HSV** | Aciclovir 200 mg c/12h | Si seropositivo |
+
+> ⚠️ No iniciar sin profilaxis CMV asegurada.
+        """)
 
     # ── TACROLIMUS ─────────────────────────────────────────────────────────────
     elif "Tacrolimus" in tx_modo:
@@ -10274,6 +10320,8 @@ elif nav == "infecciones_tx":
         "🟣 EBV / PTLD — Post-Transplant Lymphoproliferative Disorder",
         "🔵 IVU — Infección del Tracto Urinario",
         "🟠 Infecciones Fúngicas (Candida / Aspergillus)",
+        "🩸 Parvovirus B19 — Aplasia Eritroide Pura",
+        "📉 Guía de reducción de IS durante infecciones",
     ], key="inf_sel")
 
     st.divider()
@@ -10583,6 +10631,122 @@ EBV DNAemia elevada (sin masa)
 - Descontinuar catéter urinario lo antes posible (factor de riesgo mayor)
         """)
 
+    elif "Parvovirus" in inf_sel:
+        st.markdown("### 🩸 Parvovirus B19 — Aplasia Eritroide Pura Post-Trasplante")
+        st.caption("Ref: Waldman M et al. Clin J Am Soc Nephrol 2007 | "
+                   "Mascaretti L et al. Transplant Proc 2010 | AST-IDCOP 2019")
+        st.info("""
+**Parvovirus B19** infecta y destruye los precursores eritroides en médula ósea.
+En inmunocompetentes causa eritema infeccioso autolimitado. En trasplantados (IS) → 
+**aplasia eritroide pura crónica**: anemia severa progresiva con reticulocitopenia.
+        """)
+        st.markdown("""
+#### Presentación clínica en trasplante renal
+| Hallazgo | Descripción |
+|---------|------------|
+| **Anemia severa** | Hb 5–8 g/dL, de instalación progresiva (semanas-meses) |
+| **Reticulocitopenia** | Reticulocitos <0.5% — clave diagnóstica (médula no produce) |
+| **Sin causa aparente** | Se descarta pérdida, hemólisis, déficit de hierro, B12, EPO |
+| **Leucocitos/plaquetas normales** | La afectación es exclusiva de la serie roja |
+| **Cronología** | Habitualmente 3–12 meses post-trasplante |
+
+#### Diagnóstico
+| Estudio | Hallazgo esperado | Umbral de significancia |
+|---------|-------------------|------------------------|
+| **PCR Parvovirus B19 en sangre** | Positivo — carga viral alta | >10⁴ copias/mL = significativo |
+| **Anticuerpos IgM anti-B19** | Pueden ser negativos en IS severa | No descartan si PCR + |
+| **Anticuerpos IgG anti-B19** | Pueden estar ausentes (sin seroconversión) | — |
+| **BH con reticulocitos** | Reticulocitopenia + anemia normocítica | Ret <0.5% orientativo |
+| **Biopsia de médula** (si PCR neg y anemia severa) | Ausencia de precursores eritroides, inclusiones intranucleares | Confirma aplasia |
+
+> 📌 En trasplantados IS, la respuesta serológica puede ser negativa aunque hay viremia alta.
+> **La PCR cuantitativa en plasma es el gold standard diagnóstico.**
+
+#### Tratamiento
+| Intervención | Dosis / Detalles | Evidencia |
+|-------------|-----------------|-----------|
+| **IVIG** (1ª línea) | **0.4 g/kg/día × 5 días** (total: 2 g/kg) IV | Series de casos — evidencia moderada |
+| **IVIG ciclo 2** | Si no responde: repetir en 4 semanas | Muchos responden al 2° ciclo |
+| **Reducción de IS** | Reducir MMF 25–50% · Mantener CNI si función renal estable | Esencial para responder a IVIG |
+| **Transfusión** | Si Hb <7 g/dL o sintomática | Soporte temporal |
+| **No existen antivirales efectivos** | Cidofovir y otros — sin evidencia clara | — |
+
+#### Protocolo de seguimiento post-IVIG
+```
+Semana 1–2: PCR B19 en sangre + reticulocitos
+✅ Respuesta: reticulocitos >1% + subida de Hb ≥1 g/dL/semana → continuar reducción IS gradual
+⚠️ No respuesta: segundo ciclo IVIG + considerar mayor reducción IS o conversión
+❌ Recurrencia: frecuente si IS se reintensifica → ciclos repetidos de IVIG
+```
+
+> ⚠️ **Riesgo de recurrencia:** el B19 puede persistir latente y reactivar si la IS aumenta
+> (rechazo tratado con timoglobulina, pulsos de esteroides). Monitorizar Hb tras episodios de IS intensa.
+        """)
+        st.caption("Ref: Waldman M et al. B19 in transplantation. Clin J Am Soc Nephrol 2007. "
+                   "Young NS et al. NEJM 2004.")
+
+    elif "reducción de IS" in inf_sel or "Guía" in inf_sel:
+        st.markdown("### 📉 Guía de reducción de IS durante infecciones post-trasplante")
+        st.caption("Ref: AST-IDCOP Guidelines 2019 | KDIGO Transplant 2009 | Fishman JA. NEJM 2007")
+        st.warning("""
+⚠️ **Principio fundamental:** Existe tensión permanente entre tratar la infección
+(reducir IS) y proteger el injerto (mantener IS). No hay reglas absolutas — la decisión
+debe individualizarse según gravedad de la infección, función del injerto, tiempo post-trasplante
+y nivel de IS actual.
+        """)
+        st.markdown("""
+#### Escala de reducción de IS según gravedad de la infección
+| Gravedad | Definición | Acción IS recomendada |
+|---------|-----------|----------------------|
+| **Leve** | Sin hospitalización, buen estado general | Continuar IS habitual · ajuste mínimo |
+| **Moderada** | Hospitalización, responde a ATB/antiviral | Reducir MMF 25–50% · Mantener CNI y esteroides |
+| **Grave** | UCI, fallo orgánico, infección diseminada | Suspender MMF · Reducir CNI 50% · Mantener esteroides (evitar insuficiencia adrenal) |
+| **Amenazante de vida** | Sepsis severa, encefalitis, neumonía grave | Suspender MMF y CNI · Mantener sólo hidrocortisona IV |
+
+#### Por tipo de inmunosupresor — jerarquía de reducción
+| Fármaco | Primero en reducir | Razón |
+|---------|-------------------|-------|
+| **MMF / Micofenolato** | ✅ Siempre primero | Acción anti-proliferativa — reduce respuesta anti-infecciosa |
+| **CNI (Tacrolimus / CsA)** | ✅ Segundo | Mantener si función renal lo permite |
+| **mTOR (Everolimus)** | ✅ Reducir pronto | Inhibe respuesta inmune celular anti-viral |
+| **Esteroides** | ❌ Último en reducir | Riesgo de insuficiencia adrenal aguda — bajar gradualmente |
+| **Azatioprina** | ✅ Suspender en infecciones graves | Menor uso hoy en día |
+
+#### Recomendaciones específicas por patógeno
+| Infección | IS recomendada durante tratamiento |
+|----------|----------------------------------|
+| **CMV activo** | Reducir MMF 25–50% · Mantener CNI en niveles bajos (C0 6–8) |
+| **BKV >1,000 c/mL** | Reducir MMF 25–50% primero → luego CNI si persiste |
+| **PCP grave** | Suspender MMF · Reducir CNI · Mantener esteroides + agregar prednisona para PCP |
+| **EBV / PTLD** | Reducir IS al mínimo · Rituximab según histología |
+| **Parvovirus B19** | Reducir MMF 25–50% para mejorar respuesta a IVIG |
+| **IVU grave (pielonefritis)** | Mantener IS · Solo ajustar si no responde a ATB en 72h |
+| **Aspergillus invasivo** | Reducir MMF · Mantener CNI (voriconazol ↑ niveles tacrolimus — monitorear) |
+| **Candida sistémica** | Reducir o suspender MMF · Mantener CNI con monitoreo |
+| **Sepsis bacteriana grave** | Suspender MMF · Reducir CNI · Solo hidrocortisona |
+
+#### Cuándo reintroducir IS tras control de la infección
+```
+Criterios para retomar IS a dosis objetivo:
+✅ Documentación microbiológica de resolución (cultivos negativos, carga viral indetectable)
+✅ Afebril ≥48–72h + normalización de parámetros inflamatorios
+✅ Función del injerto estable
+✅ Fin del tratamiento antimicrobiano activo
+
+Retomar en pasos graduales (no de golpe):
+• Semana 1 post-resolución: MMF al 50% de la dosis objetivo
+• Semana 2–3: MMF al 75%
+• Semana 4: dosis objetivo (con monitoreo de DSA y función)
+```
+
+> 📌 Si durante la reducción de IS aparecen signos de rechazo → biopsia antes de reinstaurar.
+> La prioridad en los primeros 3 meses post-Tx es la función del injerto;
+> después de 1 año, el riesgo de rechazo disminuye y la reducción de IS es más segura.
+        """)
+        st.caption("Ref: Fishman JA. Infection in Solid-Organ Transplant Recipients. NEJM 2007;357:2601. "
+                   "AST-IDCOP Guidelines. Transplantation 2019.")
+
+
     # ── FÚNGICAS ───────────────────────────────────────────────────────────────
     else:
         st.markdown("### 🟠 Infecciones Fúngicas Post-Trasplante")
@@ -10651,6 +10815,7 @@ EBV DNAemia elevada (sin masa)
             st.caption("Ref: Pappas PG et al. IDSA Candida Guidelines. Clin Infect Dis 2016. "
                        "Patterson TF et al. IDSA Aspergillus Guidelines. Clin Infect Dis 2016. "
                        "Tissot F et al. ESCMID/ECMM Aspergillus. Clin Microbiol Infect 2020.")
+
 
 elif nav == "inmuno_tx":
     st.subheader("🧬 Inmunología del Trasplante Renal")
