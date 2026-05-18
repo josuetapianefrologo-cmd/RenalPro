@@ -9750,6 +9750,7 @@ elif nav == "expediente":
             import json as _jrec
             last_datos = {}
             last_receta = ""
+            _PAC_KEY = f"_exp_pac_{sel_exp['id']}"  # patient-specific key
 
             # Find transplant initial note for background header
             nota_tx_rec = next((r for r in records
@@ -9763,15 +9764,24 @@ elif nav == "expediente":
                 except Exception:
                     tx_background = {}
 
-            if last_rec:
+            # Search all records for the most recent prescription/IS
+            # Prioritize: SOAP receta field → transplant IS → receta type resumen
+            for _r in records:
                 try:
-                    last_datos = _jrec.loads(last_rec.get("datos_json","{}"))
-                    if last_rec.get("tipo") == "Receta médica":
-                        last_receta = last_rec.get("resumen","")
-                    else:
-                        last_receta = last_datos.get("receta","") or last_datos.get("is_inicial","")
+                    _d = _jrec.loads(_r.get("datos_json","{}"))
+                    _candidate = (_d.get("receta","") or
+                                  _d.get("is_inicial","") or
+                                  (_r.get("resumen","") if _r.get("tipo") == "Receta médica" else ""))
+                    if _candidate and _candidate.strip():
+                        last_receta = _candidate
+                        break
                 except Exception:
-                    pass
+                    continue
+
+            # Force pre-load into session_state if not set for this patient yet
+            _nr_key = f"nr_receta_{sel_exp['id']}"
+            if _nr_key not in st.session_state and last_receta:
+                st.session_state[_nr_key] = last_receta
 
             # ── TRANSPLANT BACKGROUND BANNER ──────────────────────────────
             if tx_background:
@@ -9923,24 +9933,53 @@ Inducción: {induccion_bg}
                 # ── P — PLAN ────────────────────────────────────────────────────
                 st.markdown("**P — Plan**")
 
-                # Pre-load previous prescription
-                prev_receta = last_receta or (last_rec.get("resumen","") if last_rec and last_rec.get("tipo") == "Receta médica" else "")
-
-                nr_receta = st.text_area("💊 Indicaciones / Receta (pre-cargada de última consulta — modifica lo necesario)",
-                                         height=180, key="nr_receta",
-                                         value=prev_receta,
-                                         placeholder="1. Tacrolimus 2 mg c/12h VO\n2. MMF 500 mg c/12h VO\n3. Prednisona 5 mg c/24h VO")
-
-                if prev_receta:
-                    st.caption("✅ Receta pre-cargada de la última consulta. Modifica lo que cambió.")
+                # Pre-load: use patient-specific session_state key
+                if st.session_state.get(_nr_key):
+                    nr_receta = st.text_area(
+                        "💊 Indicaciones / Receta ✅ pre-cargada — modifica lo necesario",
+                        height=180, key=_nr_key,
+                        placeholder="1. Tacrolimus 2 mg c/12h VO\n2. MMF 500 mg c/12h VO")
+                    st.caption("✅ Pre-cargada de la consulta más reciente. Modifica lo que cambió.")
                 else:
-                    st.caption("ℹ️ Sin receta previa. Escribe las indicaciones para esta consulta.")
+                    nr_receta = st.text_area(
+                        "💊 Indicaciones / Receta",
+                        height=180, key=_nr_key,
+                        placeholder="1. Tacrolimus 2 mg c/12h VO\n2. MMF 500 mg c/12h VO")
+                    if last_receta:
+                        st.caption("ℹ️ Cargando receta previa...")
+                    else:
+                        st.caption("ℹ️ Sin receta previa. Escribe las indicaciones.")
 
                 p1, p2 = st.columns(2)
                 with p1:
-                    nr_labs_sol = st.text_area("🔬 Laboratorios solicitados",
-                                               height=80, key="nr_labs_sol",
-                                               placeholder="Ej: BH, QS, niveles de tacrolimus, orina de 24h")
+                    st.markdown("🔬 **Laboratorios solicitados**")
+                    # Common labs picker
+                    LABS_COMUNES = ['BH — Biometría hemática completa', 'QS — Glucosa, BUN, Creatinina', 'Electrolitos — Na, K, Cl, HCO₃', 'Ca, P, Mg séricos', 'PTHi', 'Ferritina + IST (saturación de transferrina)', 'Tacrolimus C0 (nivel valle)', 'Ciclosporina C0', 'EGO + urocultivo', 'Orina 24h (creatinina + proteínas totales)', 'Índice Alb/Cr (orina spot)', 'HbA1c', 'Perfil lipídico (CT, LDL, HDL, TG)', 'Perfil hepático (ALT, AST, FA, bilirrubinas)', 'PCR / Proteína C reactiva', 'PCR CMV cuantitativa (DNA)', 'PCR BKV cuantitativa (plasma)', 'DSA — Anticuerpos anti-HLA donante-específicos', 'Hemocultivos (2 pares)', 'Rx tórax', 'Eco Doppler renal']
+                    # User custom labs from session
+                    _labs_custom_key = f"labs_custom_{sel_exp['id']}"
+                    _labs_custom = st.session_state.get(_labs_custom_key, [])
+                    _todos_labs = LABS_COMUNES + _labs_custom
+                    
+                    nr_labs_sel = st.multiselect(
+                        "Seleccionar de lista", _todos_labs,
+                        key=f"nr_labs_sel_{sel_exp['id']}", placeholder="Buscar laboratorio...")
+                    
+                    # Add custom lab
+                    _lab_nuevo = st.text_input("Agregar laboratorio propio", key=f"nr_lab_new_{sel_exp['id']}",
+                                               placeholder="Ej: PCR Parvovirus B19")
+                    if _lab_nuevo and st.button("➕", key=f"btn_lab_add_{sel_exp['id']}"):
+                        if _lab_nuevo not in _labs_custom:
+                            _labs_custom.append(_lab_nuevo)
+                            st.session_state[_labs_custom_key] = _labs_custom
+                            st.rerun()
+                    
+                    # Combine selected + free text
+                    nr_labs_sol_txt = st.text_area("Agregar / editar",
+                                                    value="\n".join(nr_labs_sel) if nr_labs_sel else "",
+                                                    height=60, key=f"nr_labs_txt_{sel_exp['id']}",
+                                                    placeholder="o escribe aquí directamente")
+                    nr_labs_sol = ("\n".join(nr_labs_sel) + ("\n" + nr_labs_sol_txt if nr_labs_sol_txt else "")).strip()
+                    
                 with p2:
                     nr_notas = st.text_area("📋 Plan adicional / notas",
                                             height=80, key="nr_notas",
@@ -9974,7 +10013,7 @@ Inducción: {induccion_bg}
                             "exp_fisica": {"gen": nr_exp_gen, "card": nr_exp_card,
                                            "abd": nr_exp_abd, "ext": nr_exp_ext},
                             "analisis": nr_analisis,
-                            "receta": nr_receta,
+                            "receta": st.session_state.get(_nr_key, ""),
                             "labs_solicitados": nr_labs_sol,
                             "interconsulta": nr_interconsulta,
                             "prox_cita": str(nr_prox_cita) if nr_prox_cita else "",
@@ -10047,7 +10086,13 @@ Inducción: {induccion_bg}
                         st.markdown(f"**A:** {datos_r['analisis']}")
                     if datos_r.get("receta"):
                         with st.expander("💊 Ver receta / indicaciones"):
-                            st.text(datos_r["receta"])
+                            # Use markdown with white background box instead of st.text()
+                            rx_text = datos_r["receta"].replace("\n", "<br>")
+                            st.markdown(
+                                f'<div style="background:#F8FAFC;border:1px solid #BFDBFE;'
+                                f'border-radius:6px;padding:10px 14px;color:#1E293B;'
+                                f'font-size:0.9em;line-height:1.7;">{rx_text}</div>',
+                                unsafe_allow_html=True)
                     if rec.get("notas"):
                         st.caption(f"**Plan adicional:** {rec['notas']}")
                     if datos_r.get("prox_cita"):
@@ -10061,11 +10106,105 @@ Inducción: {induccion_bg}
                             st.session_state["nav_sel"]    = "receta"
                             st.rerun()
                     with rc2:
+                        if st.button("🖨️ Imprimir nota", key=f"print_rec_{rec['id']}", use_container_width=True):
+                            try:
+                                import io
+                                from reportlab.lib.pagesizes import letter
+                                from reportlab.lib.units import cm
+                                from reportlab.lib.colors import HexColor, black, white
+                                from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+                                from reportlab.lib.styles import ParagraphStyle
+                                from reportlab.lib.enums import TA_LEFT, TA_CENTER
+                                buf = io.BytesIO()
+                                doc = SimpleDocTemplate(buf, pagesize=letter,
+                                                        leftMargin=2*cm, rightMargin=2*cm,
+                                                        topMargin=2*cm, bottomMargin=2*cm)
+                                AZUL = HexColor("#1E3A8A"); AZULC = HexColor("#EFF6FF"); GRIS = HexColor("#6B7280")
+                                def _P(txt, fs=9, bold=False, color=black, align=TA_LEFT):
+                                    return Paragraph(str(txt) if txt else "",
+                                                     ParagraphStyle("s",
+                                                         fontName="Helvetica-Bold" if bold else "Helvetica",
+                                                         fontSize=fs, textColor=color, alignment=align,
+                                                         spaceAfter=2, leading=fs+3))
+                                story = []
+                                # Header
+                                dr_n = st.session_state.get("sess_nombre","")
+                                dr_c = st.session_state.get("sess_cedula","")
+                                dr_e = st.session_state.get("sess_especialidad","")
+                                dr_i = st.session_state.get("sess_institucion","")
+                                story.append(_P(dr_i or "RenalPro", 12, True, AZUL))
+                                story.append(_P(f"{dr_n} · {dr_e} · Cédula: {dr_c}", 9, color=GRIS))
+                                story.append(HRFlowable(width="100%", thickness=2, color=AZUL))
+                                story.append(Spacer(1, 0.3*cm))
+                                # Patient
+                                story.append(_P(f"NOTA CLÍNICA — {rec.get('tipo','—')}", 11, True, AZUL))
+                                story.append(_P(f"Paciente: {sel_exp.get('nombre','—')} · "
+                                               f"Exp: {sel_exp.get('expediente','—')} · "
+                                               f"Fecha: {str(rec.get('fecha_consulta',''))[:10]}", 10))
+                                story.append(_P(f"Dx: {sel_exp.get('diagnostico','—')}", 9, color=GRIS))
+                                story.append(Spacer(1, 0.3*cm))
+                                # Vitals
+                                sv_p = []
+                                for _k, _l in [("peso","Peso"),("ta","TA"),("fc","FC"),("temp","T°"),("spo2","SpO₂")]:
+                                    if datos_r.get(_k): sv_p.append(f"{_l}: {datos_r[_k]}")
+                                if sv_p:
+                                    story.append(_P("Signos vitales: " + " · ".join(sv_p), 9))
+                                    story.append(Spacer(1, 0.2*cm))
+                                # Labs
+                                labs_p = []
+                                for _k, _l, _u in [("cr","Cr","mg/dL"),("k","K","mEq/L"),
+                                                    ("hb","Hb","g/dL"),("tac","Tac C0","ng/mL"),
+                                                    ("pth","PTH","pg/mL"),("p","P","mg/dL"),
+                                                    ("ferr","Ferritina","ng/mL"),("pcr","PCR","mg/L")]:
+                                    if datos_r.get(_k): labs_p.append(f"{_l}: {datos_r[_k]} {_u}")
+                                if labs_p:
+                                    story.append(_P("Laboratorios: " + " · ".join(labs_p), 9))
+                                    story.append(Spacer(1, 0.2*cm))
+                                # SOAP
+                                for seccion, campo in [
+                                    ("S — Subjetivo / Motivo", "motivo"),
+                                    ("Evolución", "evolucion"),
+                                    ("O — Exploración física", "exp_gen"),
+                                    ("Abdomen / Injerto", "exp_abd"),
+                                    ("A — Análisis", "analisis"),
+                                ]:
+                                    val = datos_r.get(campo,"")
+                                    if val:
+                                        story.append(_P(seccion, 10, True, AZUL))
+                                        story.append(Paragraph(str(val), ParagraphStyle("body", fontName="Helvetica", fontSize=9, leading=13)))
+                                        story.append(Spacer(1, 0.2*cm))
+                                # Plan
+                                if datos_r.get("receta"):
+                                    story.append(_P("P — Indicaciones / Receta", 10, True, AZUL))
+                                    for linea in datos_r["receta"].split("\n"):
+                                        if linea.strip():
+                                            story.append(Paragraph(linea, ParagraphStyle("ind", fontName="Helvetica", fontSize=10, leading=15)))
+                                    story.append(Spacer(1, 0.2*cm))
+                                if rec.get("notas"):
+                                    story.append(_P("Plan adicional", 10, True, AZUL))
+                                    story.append(Paragraph(str(rec["notas"]), ParagraphStyle("n", fontName="Helvetica", fontSize=9, leading=13)))
+                                if datos_r.get("prox_cita"):
+                                    story.append(Spacer(1,0.3*cm))
+                                    story.append(_P(f"📅 Próxima cita: {datos_r['prox_cita']}", 10, True, HexColor("#2563EB")))
+                                story.append(Spacer(1, 1*cm))
+                                story.append(HRFlowable(width="100%", thickness=0.5, color=AZULC))
+                                story.append(_P("RenalPro v3.1.0 · NOM-004-SSA3-2012 · Nota generada automáticamente", 7, color=GRIS, align=TA_CENTER))
+                                doc.build(story)
+                                buf.seek(0)
+                                pdf_nota = buf.read()
+                                safe_nm = "".join(c for c in sel_exp.get("nombre","pac") if c.isalnum() or c==" ")[:12].strip()
+                                fecha_r2 = str(rec.get("fecha_consulta",""))[:10]
+                                st.download_button("⬇️ Descargar nota PDF",
+                                                   data=pdf_nota,
+                                                   file_name=f"Nota_{safe_nm}_{fecha_r2}.pdf",
+                                                   mime="application/pdf",
+                                                   key=f"dl_nota_{rec['id']}")
+                            except Exception as _e_pdf:
+                                st.error(f"Error al generar PDF: {_e_pdf}")
+                    with rc3:
                         if st.button("🗑️ Eliminar", key=f"del_rec_{rec['id']}", use_container_width=True):
                             _db.delete_clinical_record(rec["id"], uid)
                             _clear_cache(); st.rerun()
-                    with rc3:
-                        pass  # future: edit record
             if not records:
                 st.info("Sin registros aún. Usa '➕ Nueva consulta' arriba para agregar el primero.")
 
