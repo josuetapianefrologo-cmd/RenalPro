@@ -7505,12 +7505,15 @@ elif nav == "trasplante":
 
     tx_modo = st.radio("Módulo", [
         "🧪 Timoglobulina (ATG-r)",
+        "💉 Basiliximab",
         "💊 Tacrolimus",
         "🔵 Micofenolato (MMF/MFS)",
         "🟡 Ciclosporina A",
         "⚙️ Everolimus / Sirolimus",
         "💉 Esteroides",
         "🚨 Protocolo de Rechazo",
+        "🔴 Rechazo Humoral (AMR)",
+        "⚡ Interacciones Farmacológicas",
     ], horizontal=True, key="tx_modo")
 
     st.divider()
@@ -7602,8 +7605,327 @@ Si se suspende antes de la meta acumulada: evaluar si la depleción linfocitaria
 > ⚠️ No iniciar sin profilaxis CMV asegurada.
         """)
 
-    # ── TACROLIMUS ─────────────────────────────────────────────────────────────
-    elif "Tacrolimus" in tx_modo:
+    # ── BASILIXIMAB ────────────────────────────────────────────────────────────
+    elif "Basiliximab" in tx_modo:
+        st.markdown("### 💉 Basiliximab — Antagonista del Receptor de IL-2 (Anti-CD25)")
+        st.info("**Presentación:** Simulect® (Novartis) — viales de 20 mg. "
+                "Aprobado para profilaxis de rechazo agudo en trasplante renal. "
+                "Alternativa a timoglobulina en bajo-moderado riesgo inmunológico.")
+        st.caption("Ref: Nashan B et al. Lancet 1997;350:1193-1198 | "
+                   "Vincenti F et al. NEJM 1998;338:161-165 | KDIGO Transplant 2009")
+
+        bl1, bl2 = st.columns(2)
+        with bl1:
+            bl_peso = st.number_input("Peso del receptor (kg)", 20.0, 150.0, 70.0, 1.0, key="bl_peso")
+            bl_riesgo = st.selectbox("Nivel de riesgo inmunológico", [
+                "Bajo riesgo (primer Tx, PRA 0%, crossmatch neg)",
+                "Riesgo moderado (PRA <50%, 1er Tx)",
+                "Alto riesgo (PRA >80%, retrasplante, DSA)",
+            ], key="bl_riesgo")
+        with bl2:
+            st.markdown("**Esquema estándar (dosis fija, independiente del peso):**")
+            st.markdown("""
+| Dosis | Momento | Vía |
+|-------|---------|-----|
+| **20 mg** | Día 0 — 2h ANTES del clampeo | IV en 20–30 min |
+| **20 mg** | **Día 4** post-trasplante | IV en 20–30 min |
+| **Dosis total** | **40 mg** | 2 dosis únicamente |
+            """)
+            if bl_peso < 35:
+                st.warning(f"⚠️ Peso {bl_peso:.0f} kg < 35 kg → "
+                           "Usar **10 mg por dosis** (no 20 mg) en pacientes pediátricos.")
+
+        if "Alto riesgo" in bl_riesgo:
+            st.error("⚠️ **Riesgo alto — considerar timoglobulina en lugar de basiliximab.**\n\n"
+                     "Basiliximab no está recomendado en pacientes altamente sensibilizados "
+                     "(PRA >80%, retrasplante con rechazo previo, DSA preformados fuertes). "
+                     "La depleción linfocítica de timoglobulina ofrece mayor protección en estos casos.")
+        else:
+            st.success(f"✅ Basiliximab apropiado para este nivel de riesgo.")
+
+        st.markdown("""
+#### Mecanismo de acción
+Anticuerpo monoclonal quimérico que bloquea el receptor de IL-2 (CD25) en linfocitos T activados.
+Previene la proliferación de células T sin depleción linfocítica — por eso NO causa leucopenia ni trombocitopenia.
+
+#### Ventajas vs Timoglobulina
+| Parámetro | Basiliximab | Timoglobulina |
+|-----------|------------|--------------|
+| **Mecanismo** | Bloqueo IL-2R (no depleta) | Depleción linfocítica |
+| **Monitoreo BH** | No necesario | BH antes de cada dosis |
+| **Pretratamiento** | No necesario | MP + antihistamínico |
+| **Riesgo infeccioso** | Bajo | Moderado-alto |
+| **CMV profilaxis** | Solo si R+ o D+/R- | Siempre obligatoria |
+| **Costo** | Menor | Mayor |
+| **Indicación ideal** | Bajo-moderado riesgo | Alto riesgo / DGF esperado |
+
+#### Dilución y administración
+- Reconstituir con 5 mL agua estéril → disolver → diluir en 50 mL SSF 0.9% o SG5%
+- Administrar en bolus IV o infusión en 20–30 min
+- Compatible con SSF y SG5% — NO mezclar con otros fármacos en la misma línea
+- Refrigerar (2–8°C) — no congelar. Usar dentro de 24h tras reconstitución.
+
+#### Cuándo NO usar basiliximab
+- PRA >80% o crossmatch positivo
+- DSA preformados MFI >3,000
+- Retrasplante con pérdida por rechazo agudo
+- DCD + KDPI >85% (DGF probable — preferir timoglobulina)
+- Riesgo de rechazo hiperagudo
+        """)
+
+    # ── RECHAZO HUMORAL (AMR) ──────────────────────────────────────────────────
+    elif "Rechazo Humoral" in tx_modo or "AMR" in tx_modo:
+        st.markdown("### 🔴 Rechazo Humoral Agudo (AMR) — Protocolo de Tratamiento")
+        st.caption("Ref: Lefaucheur C et al. Am J Transplant 2018 | "
+                   "Banff 2022 Naesens M et al. Am J Transplant 2024 | "
+                   "KDIGO Transplant 2009 Ch.7")
+
+        st.info("""
+**AMR (Antibody-Mediated Rejection):** el más grave de los rechazos y el más difícil de tratar.
+Causado por DSA que activan el complemento y dañan el endotelio vascular del injerto.
+Diagnóstico: Banff 2022 requiere histología + C4d + DSA (no todos necesariamente juntos).
+        """)
+
+        amr1, amr2 = st.tabs(["🔬 Diagnóstico y clasificación", "💊 Tratamiento por protocolo"])
+
+        with amr1:
+            st.markdown("""
+#### Criterios diagnósticos Banff 2022 — AMR activo
+Se requieren los **3 componentes:**
+
+**1. Evidencia histológica de daño:**
+- Glomerulitis (g ≥1) y/o capilaritis peritubular (ptc ≥1)
+- Microangiopatía trombótica (TMA) sin otra causa
+- Infarto intimal agudo (rechazo vascular)
+
+**2. Evidencia de interacción Ac-endotelio:**
+- C4d ≥1 en tinción IF en capilares peritubulares **O**
+- ≥2 transcritos de endotelio en biopsia (molecular Banff)
+
+**3. Evidencia de DSA:**
+- DSA positivos (HLA clase I o II) en suero al momento de la biopsia
+
+> 📌 AMR puede ser C4d-negativo — el C4d negativo NO descarta AMR si hay histología + DSA.
+
+#### Clasificación y gravedad
+| Tipo | Características | Pronóstico |
+|------|----------------|-----------|
+| **AMR hiperagudo** | Minutos-horas post-Tx, crossmatch positivo | Muy malo — pérdida casi segura |
+| **AMR agudo** | Días-semanas, caída súbita de TFG + DSA | Malo sin tratamiento urgente |
+| **AMR crónico activo** | Meses-años, DSA de novo, proteinuria progresiva | Variable — responde menos al tto |
+| **Rechazo mixto** | Componente celular + humoral | Tratar ambos simultáneamente |
+
+#### Estudio ante sospecha de AMR
+```
+1. DSA cuantitativo (SAB Luminex) — urgente
+2. Biopsia renal con IF + MO + C4d (urgente, misma día si posible)
+3. Eco Doppler renal (perfusión, obstrucción)
+4. Complemento C3, C4 (bajo → activación de complemento)
+5. Hemograma (TMA: anemia hemolítica + trombocitopenia)
+6. Esquistocitos en frotis si TMA sospechada
+7. ADAMTS-13 si TTP posible
+```
+            """)
+
+        with amr2:
+            st.markdown("""
+#### Protocolo de tratamiento AMR agudo — escalonado
+
+**Paso 1 — Inmediato (iniciar en las primeras 24h):**
+""")
+            st.error("""
+⚠️ AMR es urgencia — NO esperar más de 24–48h para iniciar tratamiento una vez confirmado.
+            """)
+            st.markdown("""
+| Intervención | Dosis | Objetivo |
+|-------------|-------|---------|
+| **Pulsos de metilprednisolona** | 500 mg IV c/24h × 3 días | Suprimir componente celular |
+| **Plasmaféresis (PP)** | 1–1.5 volúmenes plasmáticos · Cada 2 días × 5–7 sesiones | Eliminar DSA circulantes |
+| **IVIG post-plasmaféresis** | 100–200 mg/kg IV después de cada sesión de PP | Neutralizar Ac residuales |
+
+**Paso 2 — Biológicos (días 5–14 según respuesta):**
+| Intervención | Dosis | Objetivo |
+|-------------|-------|---------|
+| **Rituximab** | 375 mg/m² IV × 1–4 dosis (cada 1–2 semanas) | Depletar células B productoras de DSA |
+| **IVIG dosis alta** | 2 g/kg total (dividido en 2 días) | Si DSA persisten o PP no disponible |
+
+**Paso 3 — AMR refractario (falla a PP + IVIG + Rituximab):**
+| Intervención | Dosis | Evidencia |
+|-------------|-------|----------|
+| **Eculizumab** | 900 mg IV semanal × 4 sem → 1,200 mg c/2 sem | 2D — bloqueo C5, TMA y AMR agudo |
+| **Bortezomib** | 1.3 mg/m² SC × 4 dosis (ciclo) | Series de casos — depleta células plasmáticas |
+| **Imlifidase (IdeS)** | 0.25 mg/kg IV × 1 dosis | Degrada IgG — úsense en centros especializados |
+
+**Ajuste de inmunosupresión de mantenimiento en AMR:**
+- Si en tacrolimus: optimizar niveles C0 a 10–12 ng/mL
+- Si en ciclosporina: considerar conversión a tacrolimus
+- Agregar o mantener MMF a dosis plena (2 g/día)
+- Monitoreo DSA c/2–4 semanas durante tratamiento
+
+**Respuesta al tratamiento — criterios de evaluación:**
+```
+Semana 2: DSA (reducción MFI >50% = respuesta parcial)
+Semana 4: Creatinina (estabilización o mejoría = respuesta)
+Semana 6: Biopsia de seguimiento (resolución de g + ptc)
+
+✅ Respuesta completa: DSA negativos + Cr estable + histología mejorada
+⚠️ Respuesta parcial: DSA reducidos pero persistentes → continuar PP + rituximab
+❌ Sin respuesta: considerar eculizumab + evaluación de retrasplante futuro
+```
+
+> 📌 AMR crónico activo: responde menos a tratamiento agresivo.
+> Priorizar manejo conservador (RASi, SGLT2i, control BP <130/80) y
+> enlistar para retrasplante si hay pérdida progresiva del injerto.
+            """)
+
+    # ── INTERACCIONES FARMACOLÓGICAS ───────────────────────────────────────────
+    elif "Interacciones" in tx_modo:
+        st.markdown("### ⚡ Interacciones Farmacológicas en Trasplante Renal")
+        st.caption("Ref: Vanhoof J et al. Transplant Rev 2019 | "
+                   "Pea F et al. Clin Pharmacokinet 2007 | "
+                   "van Gelder T et al. Transplantation 2018")
+
+        st.info("""
+En trasplante, los inhibidores de calcineurina (tacrolimus, ciclosporina) tienen margen terapéutico
+estrecho y son metabolizados por **CYP3A4** e transportados por **P-gp**. 
+Cualquier inductor o inhibidor de estas enzimas puede causar toxicidad por sobredosis
+o rechazo por niveles subterapéuticos.
+        """)
+
+        int_tab1, int_tab2, int_tab3 = st.tabs([
+            "🔺 Aumentan niveles CNI",
+            "🔻 Reducen niveles CNI",
+            "⚠️ Combinaciones peligrosas",
+        ])
+
+        with int_tab1:
+            st.markdown("""
+#### Fármacos que AUMENTAN niveles de tacrolimus/ciclosporina
+*(Inhiben CYP3A4 o P-gp → menos metabolismo → niveles más altos → toxicidad)*
+
+| Categoría | Fármaco | Magnitud | Acción |
+|-----------|---------|---------|--------|
+| **Antifúngicos azólicos** | **Voriconazol** | ⭐⭐⭐⭐ Muy alta (×3–5) | Reducir tacrolimus 50–75% antes de iniciar |
+| | **Fluconazol** | ⭐⭐⭐ Alta (×2–3) | Reducir tacrolimus 30–50% |
+| | Itraconazol | ⭐⭐⭐ Alta | Monitoreo estrecho |
+| | Isavuconazol | ⭐⭐ Moderada | Menor que voriconazol — preferible |
+| | Posaconazol | ⭐⭐⭐ Alta | Reducir CNI 30–50% |
+| **Antivíricos** | Cobicistat (HIV) | ⭐⭐⭐⭐ Muy alta | Evitar si posible |
+| | Ritonavir | ⭐⭐⭐⭐ Muy alta | Evitar |
+| **Calcioantagonistas** | **Diltiazem** | ⭐⭐⭐ Alta (×1.5–3) | Usado a veces intencionalmente para ahorrar CNI |
+| | Verapamilo | ⭐⭐⭐ Alta | Similar a diltiazem |
+| | Nicardipino | ⭐⭐ Moderada | |
+| | Amlodipino | ⭐ Leve | Seguro, preferible |
+| **Antibióticos** | Claritromicina | ⭐⭐⭐ Alta | Usar azitromicina como alternativa |
+| | Eritromicina | ⭐⭐⭐ Alta | Evitar |
+| **Antiarrítmicos** | Amiodarona | ⭐⭐ Moderada | Monitoreo estrecho |
+| **Otros** | Jugo de toronja (pomelo) | ⭐⭐ Moderada | Prohibir en dieta del trasplantado |
+| | Zumo de naranja amarga | ⭐ Leve | Evitar en exceso |
+
+> 📌 **Regla práctica Voriconazol + Tacrolimus:**
+> Al iniciar voriconazol → reducir tacrolimus 50–75% de la dosis actual.
+> Monitorear nivel C0 a las 24h y a las 72h.
+> Al suspender voriconazol → retomar dosis original gradualmente con monitoreo.
+            """)
+
+        with int_tab2:
+            st.markdown("""
+#### Fármacos que REDUCEN niveles de tacrolimus/ciclosporina
+*(Inducen CYP3A4 o P-gp → más metabolismo → niveles más bajos → riesgo de rechazo)*
+
+| Categoría | Fármaco | Magnitud | Acción |
+|-----------|---------|---------|--------|
+| **Antiepilépticos** | **Rifampicina** | ⭐⭐⭐⭐⭐ Extrema (hasta ×20 reducción) | Evitar absolutamente. Si imprescindible, triplicar CNI y monitorear c/24h |
+| | Carbamazepina | ⭐⭐⭐⭐ Muy alta | Usar alternativa (levetiracetam, gabapentina) |
+| | Fenitoína | ⭐⭐⭐⭐ Muy alta | Usar alternativa |
+| | Fenobarbital | ⭐⭐⭐⭐ Muy alta | Usar alternativa |
+| | Oxcarbazepina | ⭐⭐⭐ Alta | Evitar si posible |
+| **Antibióticos** | Rifampicina | ⭐⭐⭐⭐⭐ Extrema | Situación de emergencia — ver nota |
+| **Antivirales** | Efavirenz (HIV) | ⭐⭐⭐ Alta | Preferir INSTI (dolutegravir) en VIH |
+| | Nevirapina | ⭐⭐⭐ Alta | Evitar |
+| **Herbales** | **Hierba de San Juan** (St John's Wort) | ⭐⭐⭐⭐ Muy alta | **Prohibición absoluta** — causa rechazos documentados |
+| **Antifúngicos** | Caspofungina | ⭐⭐ Moderada | Monitoreo extra |
+
+> ⚠️ **Rifampicina + CNI:** Combinación peligrosa. Si es imprescindible (TBC activa):
+> - Aumentar dosis de tacrolimus hasta 3× la dosis habitual
+> - Monitoreo de niveles C0 cada 24–48h las primeras 2 semanas
+> - Considerar alternativa: bedaquilina, linezolid (con monitoreo)
+> - Al suspender rifampicina → reducir CNI de inmediato para evitar toxicidad
+
+> ⚠️ **Hierba de San Juan:** Suplemento herbal muy común. Preguntar SIEMPRE en la historia
+> farmacológica. Ha causado episodios documentados de rechazo agudo.
+            """)
+
+        with int_tab3:
+            st.markdown("""
+#### Combinaciones especialmente peligrosas en trasplante
+
+| Combinación | Riesgo | Manejo |
+|------------|--------|--------|
+| **CNI + AINEs** | Nefrotoxicidad sinérgica (vasoconstricción renal) | ❌ Prohibir AINEs. Usar paracetamol para dolor |
+| **CNI + Aminoglucósidos** | Nefrotoxicidad aditiva | Evitar. Si imprescindible: monitoreo Cr c/24h + nivel CNI |
+| **Tacrolimus + QT prolongers** | Arritmias (torsades) | Monitoreo ECG con azitromicina, haloperidol, ondansetrón |
+| **MMF + Azatioprina** | Mielosupresión severa | Nunca combinar |
+| **mTOR + CNI plena** | Nefrotoxicidad grave | Si combinar: reducir CNI 50% |
+| **mTOR + heridas** | Retraso de cicatrización | Evitar everolimus/sirolimus en primeros 3 meses post-Tx |
+| **Cotrimoxazol + MMF** | Leucopenia aditiva | Monitoreo BH mensual |
+| **Cotrimoxazol + CNI** | Aumento de creatinina (bloquea secreción tubular) | No es nefrotoxicidad real — Cr sube sin caída de TFG |
+
+#### Fármacos SEGUROS (sin interacción significativa con CNI)
+- Antihipertensivos: **amlodipino**, nifedipino, felodipino (los dihidropiridínicos son seguros)
+- Antibióticos: azitromicina (preferir sobre claritromicina), ampicilina, cefalosporinas, carbapenems
+- Analgésicos: **paracetamol** (de elección), tramadol (con precaución)
+- Antiácidos: **omeprazol** (preferido), pantoprazol
+- Hipoglucemiantes: insulina, metformina (reducir si TFG <45)
+- Antidepresivos: **sertralina** (preferida), escitalopram
+
+#### Calculadora de ajuste empírico de tacrolimus
+            """)
+            ia1, ia2, ia3 = st.columns(3)
+            with ia1:
+                tac_nivel_act = st.number_input("Nivel actual C0 tacrolimus (ng/mL)", 0.0, 30.0, 8.0, 0.5, key="ia_niv")
+                tac_dosis_act = st.number_input("Dosis actual (mg c/12h)", 0.0, 15.0, 2.0, 0.5, key="ia_dos")
+            with ia2:
+                tac_meta    = st.number_input("Nivel meta C0 (ng/mL)", 3.0, 20.0, 10.0, 0.5, key="ia_meta")
+                interaccion = st.selectbox("Fármaco a agregar/suspender", [
+                    "Ninguna interacción",
+                    "Agregar Voriconazol (-75% dosis empírica)",
+                    "Agregar Fluconazol (-50% dosis empírica)",
+                    "Agregar Diltiazem (-30% dosis empírica)",
+                    "Agregar Isavuconazol (-30% dosis empírica)",
+                    "Suspender Voriconazol (+200% dosis empírica)",
+                    "Suspender Fluconazol (+100% dosis empírica)",
+                    "Agregar Rifampicina (+200% dosis empírica)",
+                    "Suspender Rifampicina (-66% dosis empírica)",
+                ], key="ia_inter")
+            with ia3:
+                # Calculate adjusted dose
+                if tac_nivel_act > 0:
+                    factor_meta = tac_meta / tac_nivel_act
+                else:
+                    factor_meta = 1.0
+
+                ajustes = {
+                    "Ninguna interacción": 1.0,
+                    "Agregar Voriconazol (-75% dosis empírica)": 0.25,
+                    "Agregar Fluconazol (-50% dosis empírica)": 0.50,
+                    "Agregar Diltiazem (-30% dosis empírica)": 0.70,
+                    "Agregar Isavuconazol (-30% dosis empírica)": 0.70,
+                    "Suspender Voriconazol (+200% dosis empírica)": 3.00,
+                    "Suspender Fluconazol (+100% dosis empírica)": 2.00,
+                    "Agregar Rifampicina (+200% dosis empírica)": 3.00,
+                    "Suspender Rifampicina (-66% dosis empírica)": 0.34,
+                }
+                factor_interac = ajustes.get(interaccion, 1.0)
+                dosis_nueva = round(tac_dosis_act * factor_meta * factor_interac * 2) / 2
+
+                st.metric("Dosis sugerida (c/12h)", f"{dosis_nueva:.1f} mg")
+                st.caption("⚠️ Empírica — verificar C0 a las 24–48h")
+
+            st.caption("Ref: Vanhoof J et al. Drug interactions with tacrolimus. Transplant Rev 2019. "
+                       "Shuker N et al. Drug Metab Rev 2014.")
+
+
         st.markdown("### 💊 Tacrolimus — Inhibidor de Calcineurina")
         st.info("**Presentaciones:** Prograf® (IR c/12h) · Advagraf®/Envarsus® (LP c/24h). Metabolismo CYP3A4/P-gp.")
 
