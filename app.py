@@ -5113,6 +5113,29 @@ elif nav == "micuenta":
             st.info("Conecta Railway para cambiar tu contraseña.")
 
         st.divider()
+        st.markdown("### 🖼️ Logo / Sello del consultorio")
+        st.caption("Se incluirá en la receta médica. JPG o PNG · Máximo 2 MB · Recomendado: 300×300 px")
+        logo_file = st.file_uploader("Subir logo", type=["jpg","jpeg","png"],
+                                     key="mc_logo_upload")
+        if logo_file:
+            if logo_file.size > 2_097_152:
+                st.error("El archivo supera 2 MB. Sube una imagen más pequeña.")
+            else:
+                import base64
+                logo_b64 = base64.b64encode(logo_file.read()).decode()
+                st.session_state["sess_logo_b64"]  = logo_b64
+                st.session_state["sess_logo_mime"] = logo_file.type
+                st.success("✅ Logo cargado — aparecerá en las recetas.")
+        if st.session_state.get("sess_logo_b64"):
+            import base64
+            logo_data = base64.b64decode(st.session_state["sess_logo_b64"])
+            st.image(logo_data, width=120, caption="Logo actual")
+            if st.button("🗑️ Quitar logo", key="btn_rm_logo"):
+                st.session_state.pop("sess_logo_b64", None)
+                st.session_state.pop("sess_logo_mime", None)
+                st.rerun()
+
+        st.divider()
         st.markdown("### 📊 Información de cuenta")
         r1, r2, r3 = st.columns(3)
         r1.metric("Rol actual", rol_mc)
@@ -9446,8 +9469,27 @@ elif nav == "expediente":
                             "Hemodiálisis","Diálisis peritoneal","Agudo hospitalizado"
                         ], key="np_tipo")
                     with np3:
-                        np_dx     = st.text_area("Diagnóstico principal", height=80, key="np_dx")
-                        np_notas  = st.text_area("Notas adicionales", height=60, key="np_notas")
+                        # CIE-10 selector + texto libre
+                        CIE10_EXP = [
+                            "N18.5 — ERC Estadio 5","N18.4 — ERC Estadio 4",
+                            "N18.3 — ERC Estadio 3","N18.2 — ERC Estadio 2",
+                            "N18.1 — ERC Estadio 1","N17 — Lesión Renal Aguda",
+                            "Z94.0 — Trasplante renal","T86.1 — Rechazo trasplante",
+                            "N04 — Síndrome nefrótico","N05 — Síndrome nefrítico",
+                            "M32.1 — Nefritis lúpica","E11.21 — Nefropatía DM2",
+                            "I12 — HTA con ERC","N39.0 — IVU",
+                            "D59.3 — SHU","M31.1 — Vasculitis ANCA",
+                            "✏️ Escribir diagnóstico manualmente",
+                        ]
+                        dx_cie_sel = st.selectbox("Diagnóstico (CIE-10)", CIE10_EXP, key="np_cie_sel")
+                        if dx_cie_sel.startswith("✏️"):
+                            np_dx = st.text_area("Diagnóstico manual", height=60, key="np_dx",
+                                                 placeholder="Escribe el diagnóstico y código CIE-10")
+                        else:
+                            np_dx = dx_cie_sel
+                            st.text_area("Diagnóstico seleccionado", value=np_dx,
+                                         height=60, key="np_dx", disabled=True)
+                        np_notas = st.text_area("Notas adicionales", height=40, key="np_notas")
 
                     if st.button("💾 Registrar paciente", type="primary", key="btn_reg_pac"):
                         if not np_nombre:
@@ -9754,15 +9796,227 @@ elif nav == "receta":
                                             rx_ta, rx_fc, rx_temp, rx_spo2,
                                             rx_dx, rx_cie10, rx_fecha,
                                             rx_fecha_prox, rx_hora_prox,
-                                            rx_body, rx_notas):
-                    import io
+                                            rx_body, rx_notas,
+                                            logo_b64=None, logo_mime=None):
+                    import io, base64
                     from reportlab.lib.pagesizes import letter
                     from reportlab.lib.units import cm
                     from reportlab.lib.colors import HexColor, white, black
                     from reportlab.platypus import (SimpleDocTemplate, Paragraph,
-                                                    Spacer, Table, TableStyle, HRFlowable)
+                                                    Spacer, Table, TableStyle,
+                                                    HRFlowable, Image as RLImage)
                     from reportlab.lib.styles import ParagraphStyle
                     from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+                    from reportlab.lib.utils import ImageReader
+
+                    buf = io.BytesIO()
+                    doc = SimpleDocTemplate(buf, pagesize=letter,
+                                            leftMargin=1.8*cm, rightMargin=1.8*cm,
+                                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+
+                    AZUL   = HexColor("#1E3A8A")
+                    AZUL2  = HexColor("#2563EB")
+                    AZULC  = HexColor("#EFF6FF")
+                    AZULM  = HexColor("#BFDBFE")
+                    GRIS   = HexColor("#6B7280")
+                    GRISL  = HexColor("#F8FAFC")
+                    VERDE  = HexColor("#059669")
+
+                    def P(text, fn="Helvetica", fs=9, color=black,
+                          align=TA_LEFT, bold=False, space=2, leading=None):
+                        style = ParagraphStyle(
+                            "s", fontName="Helvetica-Bold" if bold else fn,
+                            fontSize=fs, textColor=color, alignment=align,
+                            spaceAfter=space, leading=leading or (fs + 3))
+                        return Paragraph(str(text) if text else "", style)
+
+                    story = []
+
+                    # ── ENCABEZADO CON LOGO ──────────────────────────────────
+                    logo_cell = ""
+                    if logo_b64:
+                        try:
+                            logo_bytes = base64.b64decode(logo_b64)
+                            logo_img_reader = ImageReader(io.BytesIO(logo_bytes))
+                            logo_cell = RLImage(io.BytesIO(logo_bytes),
+                                                width=1.8*cm, height=1.8*cm,
+                                                kind='proportional')
+                        except Exception:
+                            logo_cell = P("☤", fn="Helvetica-Bold", fs=28,
+                                          color=AZUL, align=TA_CENTER)
+                    else:
+                        logo_cell = P("☤", fn="Helvetica-Bold", fs=28,
+                                      color=AZUL, align=TA_CENTER)
+
+                    inst_blk = [
+                        P(dr_inst or "Consultorio Médico", fn="Helvetica-Bold",
+                          fs=12, color=AZUL, bold=True, space=1),
+                        P(dr_dom, fs=8, color=GRIS, space=1),
+                        P(f"Tel: {dr_tel}" if dr_tel else "", fs=8, color=GRIS),
+                    ]
+
+                    hdr = [[logo_cell, inst_blk]]
+                    th = Table(hdr, colWidths=[2.2*cm, 14.8*cm])
+                    th.setStyle(TableStyle([
+                        ("BACKGROUND",    (0,0), (-1,-1), AZULC),
+                        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+                        ("TOPPADDING",    (0,0), (-1,-1), 10),
+                        ("BOTTOMPADDING", (0,0), (-1,-1), 10),
+                        ("LEFTPADDING",   (0,0), (-1,-1), 10),
+                        ("RIGHTPADDING",  (0,0), (-1,-1), 10),
+                        ("BOX",           (0,0), (-1,-1), 2, AZUL),
+                        ("LINEABOVE",     (0,0), (-1,0),  4, AZUL2),
+                    ]))
+                    story.append(th)
+                    story.append(Spacer(1, 0.3*cm))
+
+                    # ── DATOS DEL MÉDICO ──────────────────────────────────────
+                    med = [[
+                        P(dr_nombre, fn="Helvetica-Bold", fs=12, color=AZUL, bold=True),
+                        P(f"Cédula Prof.: {dr_cedula}", fs=9, color=GRIS, align=TA_RIGHT),
+                    ],[
+                        P(dr_esp, fs=9, color=GRIS),
+                        P(dr_univ, fs=8, color=GRIS, align=TA_RIGHT),
+                    ]]
+                    tm = Table(med, colWidths=[10*cm, 7*cm])
+                    tm.setStyle(TableStyle([
+                        ("TOPPADDING",    (0,0), (-1,-1), 4),
+                        ("BOTTOMPADDING", (0,0), (-1,-1), 4),
+                        ("LEFTPADDING",   (0,0), (-1,-1), 4),
+                    ]))
+                    story.append(tm)
+                    story.append(HRFlowable(width="100%", thickness=1.5, color=AZUL2))
+                    story.append(Spacer(1, 0.3*cm))
+
+                    # ── DATOS DEL PACIENTE ────────────────────────────────────
+                    fecha_str = str(rx_fecha)
+                    sv_parts = []
+                    if rx_peso > 0:  sv_parts.append(f"Peso: {rx_peso:.1f} kg")
+                    if rx_talla > 0: sv_parts.append(f"Talla: {rx_talla:.0f} cm")
+                    if rx_imc > 0:   sv_parts.append(f"IMC: {rx_imc:.1f}")
+                    if rx_ta:        sv_parts.append(f"TA: {rx_ta} mmHg")
+                    if rx_fc:        sv_parts.append(f"FC: {rx_fc} lpm")
+                    if rx_temp:      sv_parts.append(f"T°: {rx_temp}°C")
+                    if rx_spo2:      sv_parts.append(f"SpO₂: {rx_spo2}%")
+
+                    sv_style = ParagraphStyle("sv", fontName="Helvetica",
+                                              fontSize=8, leading=11, textColor=black)
+
+                    pac_rows = [
+                        [P("Paciente:", bold=True, fs=8), P(rx_nombre, fs=10, bold=True),
+                         P("Expediente:", bold=True, fs=8), P(rx_exp, fs=9),
+                         P("Fecha:", bold=True, fs=8), P(fecha_str, fs=9)],
+                        [P("Edad:", bold=True, fs=8), P(f"{rx_edad} años" if rx_edad else "—", fs=9),
+                         P("Sexo:", bold=True, fs=8), P(rx_sexo, fs=9),
+                         P("CIE-10:", bold=True, fs=8), P(rx_cie10, fs=9, color=AZUL2, bold=True)],
+                        [P("Dx:", bold=True, fs=8),
+                         Paragraph(rx_dx or "—",
+                                   ParagraphStyle("dx2", fontName="Helvetica-Oblique",
+                                                  fontSize=9, leading=12)),
+                         P(""), P(""), P(""), P("")],
+                    ]
+                    if sv_parts:
+                        pac_rows.append([
+                            P("Signos:", bold=True, fs=8),
+                            Paragraph("  ·  ".join(sv_parts), sv_style),
+                            P(""), P(""), P(""), P(""),
+                        ])
+
+                    tp = Table(pac_rows, colWidths=[2*cm, 5.5*cm, 2*cm, 2.5*cm, 1.5*cm, 3.5*cm])
+                    tp.setStyle(TableStyle([
+                        ("BACKGROUND",    (0,0),  (-1,-1), GRISL),
+                        ("ROWBACKGROUNDS",(0,0),  (-1,-1), [AZULC, GRISL, white, white]),
+                        ("TOPPADDING",    (0,0),  (-1,-1), 4),
+                        ("BOTTOMPADDING", (0,0),  (-1,-1), 4),
+                        ("LEFTPADDING",   (0,0),  (-1,-1), 6),
+                        ("BOX",           (0,0),  (-1,-1), 1, AZULM),
+                        ("LINEBELOW",     (0,0),  (-1,0),  0.5, AZULM),
+                        ("SPAN",          (1,2),  (-1,2)),
+                        ("SPAN",          (1,3),  (-1,3)) if sv_parts else ("SPAN",(0,0),(0,0)),
+                    ]))
+                    story.append(tp)
+                    story.append(Spacer(1, 0.5*cm))
+
+                    # ── SÍMBOLO Rx + INDICACIONES ─────────────────────────────
+                    rx_sym_style = ParagraphStyle("rxs", fontName="Helvetica-Bold",
+                                                  fontSize=28, textColor=AZUL2, spaceAfter=6)
+                    story.append(Paragraph("&#x211E;", rx_sym_style))
+
+                    ind_style = ParagraphStyle("ind", fontName="Helvetica",
+                                               fontSize=11, leading=18, spaceAfter=4)
+                    ind_bold  = ParagraphStyle("indb", fontName="Helvetica-Bold",
+                                               fontSize=11, leading=18, spaceAfter=4)
+                    for linea in (rx_body or "").strip().split("\n"):
+                        linea = linea.strip()
+                        if not linea:
+                            story.append(Spacer(1, 0.1*cm))
+                            continue
+                        # Bold the first token if it's a number+dot (1., 2., etc.)
+                        import re as _re
+                        if _re.match(r'^\d+[\.\-]', linea):
+                            story.append(Paragraph(linea, ind_style))
+                        else:
+                            story.append(Paragraph(linea, ind_style))
+
+                    if rx_notas:
+                        story.append(Spacer(1, 0.15*cm))
+                        story.append(HRFlowable(width="100%", thickness=0.5, color=AZULM))
+                        story.append(Spacer(1, 0.1*cm))
+                        nota_s = ParagraphStyle("nota", fontName="Helvetica-Oblique",
+                                                fontSize=9, textColor=GRIS, spaceAfter=2)
+                        story.append(Paragraph(f"Instrucciones: {rx_notas}", nota_s))
+
+                    # ── PRÓXIMA CITA ──────────────────────────────────────────
+                    if rx_fecha_prox:
+                        story.append(Spacer(1, 0.2*cm))
+                        hora_txt = f" a las {rx_hora_prox}" if rx_hora_prox else ""
+                        cita_box = [[
+                            P(f"📅  Próxima cita: {rx_fecha_prox}{hora_txt}",
+                              fn="Helvetica-Bold", fs=10, color=AZUL2, bold=True)
+                        ]]
+                        tc = Table(cita_box, colWidths=[17*cm])
+                        tc.setStyle(TableStyle([
+                            ("BACKGROUND", (0,0), (-1,-1), AZULC),
+                            ("TOPPADDING", (0,0), (-1,-1), 6),
+                            ("BOTTOMPADDING",(0,0),(-1,-1),6),
+                            ("LEFTPADDING", (0,0), (-1,-1), 10),
+                            ("BOX",        (0,0), (-1,-1), 1, AZUL2),
+                        ]))
+                        story.append(tc)
+
+                    story.append(Spacer(1, 1.0*cm))
+
+                    # ── FIRMA ─────────────────────────────────────────────────
+                    firma_c = ParagraphStyle("fc", fontName="Helvetica",     fontSize=9,  alignment=TA_CENTER)
+                    firma_b = ParagraphStyle("fb", fontName="Helvetica-Bold", fontSize=10, alignment=TA_CENTER)
+                    firma_g = ParagraphStyle("fg", fontName="Helvetica",     fontSize=8,  textColor=GRIS, alignment=TA_CENTER)
+
+                    firma_data = [[
+                        "",
+                        [Paragraph("_" * 40, firma_c),
+                         Spacer(1, 0.1*cm),
+                         Paragraph(dr_nombre, firma_b),
+                         Paragraph(f"Cédula Profesional: {dr_cedula}", firma_g),
+                         Paragraph(dr_esp, firma_g)],
+                    ]]
+                    tf = Table(firma_data, colWidths=[6*cm, 11*cm])
+                    tf.setStyle(TableStyle([("VALIGN", (0,0), (-1,-1), "BOTTOM")]))
+                    story.append(tf)
+                    story.append(Spacer(1, 0.4*cm))
+
+                    # ── PIE NOM ───────────────────────────────────────────────
+                    story.append(HRFlowable(width="100%", thickness=1, color=AZULM))
+                    story.append(Spacer(1, 0.15*cm))
+                    pie_s = ParagraphStyle("pie", fontName="Helvetica", fontSize=7,
+                                           textColor=GRIS, alignment=TA_CENTER)
+                    pie_txt = (f"Receta médica general · NOM-004-SSA3-2012 · COFEPRIS · "
+                               f"{dr_inst} · {dr_dom} · Tel: {dr_tel} · "
+                               "Generado por RenalPro v3.1.0")
+                    story.append(Paragraph(pie_txt, pie_s))
+
+                    doc.build(story)
+                    buf.seek(0)
+                    return buf.read()
 
                     buf = io.BytesIO()
                     doc = SimpleDocTemplate(buf, pagesize=letter,
@@ -9922,6 +10176,23 @@ elif nav == "receta":
                     buf.seek(0)
                     return buf.read()
 
+
+                # Logo del consultorio
+                with st.expander("🖼️ Logo del consultorio (opcional)"):
+                    st.caption("JPG o PNG · Máximo 2 MB. También configurable en 👤 Mi Cuenta.")
+                    logo_up = st.file_uploader("Subir logo", type=["jpg","jpeg","png"], key="rx_logo_up")
+                    if logo_up:
+                        if logo_up.size > 2_097_152:
+                            st.error("Supera 2 MB.")
+                        else:
+                            import base64 as _b64r
+                            st.session_state["sess_logo_b64"]  = _b64r.b64encode(logo_up.read()).decode()
+                            st.session_state["sess_logo_mime"] = logo_up.type
+                            st.success("✅ Logo cargado.")
+                    if st.session_state.get("sess_logo_b64"):
+                        import base64 as _b64r
+                        st.image(_b64r.b64decode(st.session_state["sess_logo_b64"]), width=80)
+
                 # ── BOTÓN GENERAR ──────────────────────────────────────────────
                 st.divider()
                 bg1, bg2 = st.columns(2)
@@ -9940,7 +10211,9 @@ elif nav == "receta":
                                     rx_ta, rx_fc, rx_temp, rx_spo2,
                                     rx_dx, rx_cie10, rx_fecha,
                                     rx_fecha_prox, rx_hora_prox,
-                                    rx_body, rx_notas
+                                    rx_body, rx_notas,
+                                    logo_b64=st.session_state.get("sess_logo_b64"),
+                                    logo_mime=st.session_state.get("sess_logo_mime"),
                                 )
                                 nombre_safe = "".join(c for c in rx_nombre
                                                       if c.isalnum() or c in " _")[:20].strip()
