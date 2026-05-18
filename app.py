@@ -2101,8 +2101,12 @@ with st.sidebar:
     _navbtn("📋 Resumen / PDF", "resumen")
     _navbtn("📂 Mis Pacientes", "pacientes")
     _navbtn("🏥 Expediente Clínico", "expediente")
+    _navbtn("📋 Candidato a Trasplante", "eval_candidato")
+    _navbtn("🫀 Donante Vivo", "eval_donante_vivo")
     _navbtn("🔴 Nota Post-Trasplante", "nota_tx")
     _navbtn("📅 Seguimiento Post-TR", "seguimiento_tx")
+    _navbtn("⏰ Perioperatorio", "periop_tx")
+    _navbtn("🩺 Complicaciones Crónicas TR", "complic_cr_tx")
     _navbtn("📄 Receta Médica", "receta")
     _navbtn("📚 Fundamento", "fund")
     _navbtn("📖 Referencias", "refs")
@@ -6972,6 +6976,8 @@ elif nav == "trasplante":
         "💉 Esteroides",
         "🚨 Protocolo de Rechazo",
         "🔴 Rechazo Humoral (AMR)",
+        "🅰️ Protocolo ABO-Incompatible",
+        "📦 Donante Criterio Extendido (ECD)",
         "⚡ Interacciones Farmacológicas",
     ], horizontal=True, key="tx_modo")
 
@@ -7272,6 +7278,273 @@ Semana 6: Biopsia de seguimiento (resolución de g + ptc)
 > Priorizar manejo conservador (RASi, SGLT2i, control BP <130/80) y
 > enlistar para retrasplante si hay pérdida progresiva del injerto.
             """)
+
+    # ── ABO-INCOMPATIBLE ───────────────────────────────────────────────────────
+    elif "ABO" in tx_modo or "Incompatible" in tx_modo:
+        st.markdown("### 🅰️ Trasplante ABO-Incompatible (ABOi)")
+        st.caption("Ref: Montgomery RA et al. NEJM 2011 | Tydén G et al. Transplantation 2007 | "
+                   "Rydberg L. Transpl Immunol 2001 | AST Guidelines 2020")
+        st.info("""
+El trasplante ABO-incompatible permite utilizar donantes vivos que de otra forma serían incompatibles.
+Requiere **desensibilización previa** para reducir los títulos de anticuerpos anti-A o anti-B a niveles seguros.
+La **acomodación** (tolerancia al órgano a pesar de anticuerpos persistentes) ocurre en la mayoría
+de los receptores exitosos a largo plazo.
+        """)
+        aboi1, aboi2, aboi3 = st.tabs(["🔬 Evaluación inicial", "💊 Protocolo de desensibilización", "📊 Monitoreo"])
+
+        with aboi1:
+            st.markdown("""
+#### Tipos de incompatibilidad ABO
+| Receptor | Donante | Incompatibilidad | Anticuerpos del receptor |
+|---------|---------|-----------------|-------------------------|
+| O | A, B, AB | Mayor | Anti-A, Anti-B |
+| A | B, AB | Mayor | Anti-B |
+| B | A, AB | Mayor | Anti-A |
+| AB | — | No hay (AB es receptor universal) | Ninguno |
+
+#### Títulos de anticuerpos pre-trasplante
+- **Título aceptable para proceder:** Anti-A/B ≤ 1:8 (algunos centros ≤ 1:16)
+- **Título que requiere desensibilización intensiva:** > 1:64
+- **Técnica:** aglutinación en tubo (Tube IAT) — más sensible que tile
+
+#### Evaluación inicial del candidato ABOi
+1. Determinación de grupo sanguíneo ABO + subtipo (A1 vs A2 — importante: A2 tiene menor expresión de antígeno)
+2. Títulos IgG e IgM anti-A/B basales (cuantifitativos)
+3. Tipificación HLA + cPRA
+4. DSA pre-formados (Luminex SAB)
+5. Evaluación cardiovascular completa
+6. Función renal basal
+
+> 📌 Subgrupo A2: menor densidad de antígeno → títulos anti-A2 más bajos → candidato más favorable para ABOi
+            """)
+
+        with aboi2:
+            st.markdown("""
+#### Protocolo estándar de desensibilización ABOi
+*(4–6 semanas pre-trasplante)*
+
+**Semana -4 a -2:**
+| Intervención | Dosis | Objetivo |
+|-------------|-------|---------|
+| **Rituximab** | 375 mg/m² IV × 1 dosis | Depleción de células B productoras de anticuerpos |
+| **IVIG** | 100–500 mg/kg IV | Modulación inmune |
+| Micofenolato | Iniciar 2 semanas antes | Pre-IS para prevenir rebote |
+
+**Semana -2 a -1 (con títulos altos >1:32):**
+| Intervención | Dosis |
+|-------------|-------|
+| **Plasmaféresis** | 1–1.5 vol plasmáticos · c/2 días × 3–6 sesiones |
+| IVIG post-PP | 100 mg/kg después de cada sesión |
+| Monitoreo de títulos | Después de cada sesión de PP |
+
+**Día del trasplante:**
+| Intervención | Dosis |
+|-------------|-------|
+| Metilprednisolona | 500 mg IV intraoperatorio |
+| Tacrolimus | Iniciar 24h pre-Tx (algunos centros) |
+| IVIG | 500 mg/kg IV post-trasplante |
+| Si título rebota > 1:8 | PP intraoperatoria o post-Tx inmediata |
+
+#### Meta de títulos para proceder con el trasplante
+| Título | Decisión |
+|--------|---------|
+| ≤ 1:8 | ✅ Proceder con el trasplante |
+| 1:16 — 1:32 | ⚠️ Discutir en comité — algunos centros aceptan |
+| > 1:32 | ❌ Continuar desensibilización antes de proceder |
+
+> ⚠️ El "punto de no retorno" es variable entre centros.
+> Una vez iniciado el trasplante, el injerto secretará antígenos ABO que pueden absorberse → **acomodación**.
+            """)
+
+        with aboi3:
+            st.markdown("""
+#### Monitoreo post-trasplante ABOi
+
+**Títulos anti-A/B post-TR:**
+| Período | Frecuencia | Umbral de alarma |
+|---------|-----------|-----------------|
+| Días 1–7 | Diario | Título > 1:16 → plasmaféresis de rescate |
+| Semana 2–4 | 2× semana | Título > 1:32 → urgente |
+| Mes 1–3 | Semanal | Título > 1:64 → evaluar pérdida del injerto |
+| > Mes 3 | Mensual | Acomodación establecida — menor riesgo |
+
+#### Fenómeno de Acomodación
+```
+Definición: el injerto ABO-incompatible sobrevive a pesar de la presencia
+de anticuerpos anti-ABO circulantes → el tejido del donante se "adapta"
+expresando proteínas anti-apoptóticas y antiinflamatorias.
+
+Cuándo ocurre: generalmente después del mes 3 si el injerto sobrevivió
+Marcadores: ausencia de rechazo humoral, C4d negativo en biopsia,
+            Cr estable a pesar de títulos detectables
+
+Pronóstico: similar a trasplante ABO-compatible a 5 años si la acomodación
+            es exitosa (Montgomery RA et al. NEJM 2011)
+```
+
+#### Supervivencia del injerto ABOi vs ABO-compatible
+| Período | ABOi | ABO-compatible |
+|---------|------|----------------|
+| 1 año | 93–95% | 96–98% |
+| 5 años | 85–90% | 88–92% |
+| 10 años | 70–80% | 75–85% |
+
+> El beneficio de recibir un riñón de donante vivo (aunque ABOi)
+> supera ampliamente el riesgo de permanecer en diálisis esperando
+> un donante ABO-compatible.
+            """)
+        st.caption("Ref: Montgomery RA et al. ABO incompatible kidney transplantation. NEJM 2011. "
+                   "Tydén G et al. Transplantation 2007. Gloor JM et al. Am J Transplant 2003.")
+
+    # ── ECD — DONANTE CRITERIO EXTENDIDO ──────────────────────────────────────
+    elif "ECD" in tx_modo or "Criterio Extendido" in tx_modo:
+        st.markdown("### 📦 Donante con Criterio Extendido (ECD)")
+        st.caption("Ref: Rao PS et al. Am J Transplant 2009 (KDPI) | "
+                   "Port FK et al. Transplantation 2002 (criterios originales ECD) | "
+                   "Moers C et al. NEJM 2009 (perfusión de máquina)")
+
+        st.info("""
+**ECD (Extended Criteria Donor):** Actualmente definido por **KDPI >85%** (sistema UNOS 2014).
+Reemplazó los criterios fijos previos (edad >60, o 50-59 con ≥2 factores de riesgo).
+Los riñones ECD tienen mayor probabilidad de DGF y menor sobrevida del injerto,
+pero para pacientes con tiempo de espera prolongado el beneficio sigue siendo positivo.
+        """)
+
+        ecd1, ecd2, ecd3 = st.tabs([
+            "📊 Definición y criterios",
+            "🔧 Perfusión de máquina",
+            "⚖️ Decisión clínica",
+        ])
+
+        with ecd1:
+            st.markdown("""
+#### Evolución del concepto ECD
+
+**Definición clásica (Port FK 2002 — ya obsoleta):**
+- Donante >60 años, O
+- Donante 50–59 años + ≥2 de: HTA, ACV como causa de muerte, Cr >1.5 mg/dL
+
+**Definición actual — KDPI >85% (UNOS 2014):**
+- Basada en 10 variables del donante (ver calculadora en módulo DGF)
+- Más precisa y continua (espectro vs dicotomía)
+
+#### Factores que elevan el KDPI (aumentan el riesgo del riñón)
+| Factor | Impacto |
+|--------|---------|
+| Edad del donante | Mayor → KDPI más alto |
+| Causa de muerte: ACV | Reduce ligeramente el KDPI |
+| Hipertensión | +0.24 unidades |
+| Diabetes | +0.51 unidades |
+| Creatinina terminal alta | +0.21 por mg/dL |
+| Raza afroamericana | +0.11 |
+| DCD (muerte cardíaca) | +0.13 |
+| HCV positivo | +0.25 |
+
+#### DCD — Donante tras Muerte Cardíaca (subgrupo especial)
+| Categoría Maastricht | Definición | Isquemia caliente | Viabilidad |
+|---------------------|-----------|------------------|-----------|
+| **I** | Muerto al llegar | Desconocida | Rara vez usable |
+| **II** | Paro refractario extrahospitalario | Variable | Seleccionados |
+| **III** | Paro esperado (retirada de soporte) | ≤30 min | Mejor categoría |
+| **IV** | Paro en muerte encefálica | <10 min | Similar a DBD |
+
+> 📌 En México los más frecuentes son DCD Maastricht III (donante controlado).
+> WIT1 <20 min + CIT <12h = mejores resultados en DCD.
+
+#### Tasas de DGF según KDPI
+| KDPI | DGF esperado | Biopsia pre-implante sugerida |
+|------|-------------|-------------------------------|
+| <50% | 10–20% | No rutinariamente |
+| 50–85% | 20–35% | Considerar si Cr donante alta |
+| **>85% (ECD)** | **35–60%** | **Sí — protocolo estándar** |
+| DCD + KDPI >85% | 50–70% | Siempre |
+            """)
+
+        with ecd2:
+            st.markdown("""
+#### Perfusión de Máquina (Machine Perfusion)
+
+**¿Por qué perfusión de máquina en ECD?**
+- Mantiene el metabolismo activo durante la preservación
+- Evalúa viabilidad del órgano en tiempo real (flujo, resistencia vascular)
+- Reduce DGF en riñones de alto riesgo
+
+**Tipos de perfusión:**
+
+| Tipo | Temperatura | Oxigenación | Uso clínico |
+|------|-------------|------------|------------|
+| **HMP** (Hipotérmica) | 4–8°C | Sin oxígeno activo | Más usado — PROTECT trial |
+| **HOPE** (Hipotérmica con O₂) | 4–8°C | Oxígeno bajo | Superior a HMP en DCD |
+| **NMP** (Normotérmica) | 35–37°C | Oxigenación completa | ECD extremo, riñones descartados |
+| **SNMP** (Subnormotérmica) | 20–25°C | Parcial | Intermedio |
+
+**Evidencia clave:**
+- **PROTECT trial (NEJM 2009 — Moers C):** HMP vs preservación estática en frío (SCS) → HMP redujo DGF de 27% a 21% en DBD, y redujo retraso en DCD
+- **COPE trial (Lancet 2023):** HOPE redujo DGF y mejoras marcadores de daño en DCD
+
+**Indicadores de viabilidad durante perfusión HMP:**
+| Parámetro | Normal | Riesgo |
+|-----------|--------|--------|
+| Flujo (mL/min) | >100 | <50 → descartar |
+| Resistencia (mmHg/mL/min) | <0.40 | >0.40 → evaluar |
+| Lactato en perfusato | Disminuye | Si aumenta → mala señal |
+| AST en perfusato | <40 IU/L | >100 → riesgo alto |
+
+**Biopsia pre-implante (Remuzzi score):**
+| Score | Hallazgos | Decisión |
+|-------|-----------|---------|
+| 0–3 | Sin cambios significativos | Trasplantar normalmente |
+| 4–6 | Cambios moderados (glomeruloesclerosis 20-50%) | Usar con cautela / doble trasplante |
+| 7–12 | Cambios severos | Descartar |
+
+> 📌 **Doble trasplante (dual kidney transplant):** Dos riñones ECD al mismo receptor cuando
+> cada uno tiene score 4–6 pero juntos dan función suficiente.
+            """)
+
+        with ecd3:
+            st.markdown("""
+#### Decisión clínica: ¿Aceptar o rechazar un riñón ECD?
+
+**La ecuación fundamental:**
+```
+¿El beneficio de transplantar este riñón ECD es mayor
+que el riesgo de permanecer X años más en diálisis?
+```
+
+**Herramienta: KDPI + EPTS del receptor**
+- Receptor EPTS alto (>50%) + KDPI alto → beneficio positivo (ya está en riesgo en diálisis)
+- Receptor EPTS bajo (<20%) + KDPI alto → pérdida del injerto antes que el receptor fallezca → considerar esperar mejor riñón
+
+**Criterios para ACEPTAR un riñón ECD:**
+| Criterio | Valor favorable |
+|---------|----------------|
+| EPTS del receptor | >50% (mayor comorbilidad) |
+| Tiempo en diálisis | >3–5 años |
+| Probabilidad de recibir mejor riñón | Baja (grupo sanguíneo O, PRA alto) |
+| CIT posible | <18h para ECD, <12h para DCD |
+| Biopsia pre-implante | Score Remuzzi ≤3 |
+| Perfusión de máquina | Flujo >100 mL/min, resistencia <0.40 |
+
+**Criterios para RECHAZAR:**
+| Criterio | Valor desfavorable |
+|---------|-------------------|
+| Biopsia | Score Remuzzi ≥7 |
+| WIT1 DCD | >30 minutos |
+| CIT | >24h en ECD / >18h en DCD |
+| Flujo en HMP | <50 mL/min persistente |
+| Creatinina donante | >6 mg/dL terminal |
+
+**Protocolo IS especial en ECD:**
+```
+Tacrolimus: iniciar DESPUÉS de que la diuresis esté establecida
+            (retrasar 24-48h en DGF para evitar nefrotoxicidad)
+Objetivo C0 más bajo en ECD con DGF: 5–8 ng/mL
+MMF: dosis plena desde día 0
+Prednisona: sin cambios
+```
+            """)
+        st.caption("Ref: Port FK et al. Transplantation 2002. Rao PS et al. Am J Transplant 2009. "
+                   "Moers C et al. NEJM 2009 (PROTECT). Hosgood SA et al. Lancet 2023 (COPE).")
 
     # ── INTERACCIONES FARMACOLÓGICAS ───────────────────────────────────────────
     elif "Interacciones" in tx_modo:
@@ -10379,11 +10652,776 @@ PNF (No Función Primaria):
             st.rerun()
         st.stop()
 
-elif nav == "receta":
-    # ── BLOQUEO PARA INVITADOS ─────────────────────────────────────────────────
-    if _rol() in ("guest", "free", "expirado"):
-        st.warning("🔒 **La Receta Médica requiere registro.** "
-                   "Como invitado las recetas no se guardan ni se asocian a un médico.")
+elif nav == "eval_candidato":
+    st.subheader("📋 Evaluación del Candidato a Trasplante Renal")
+    st.caption("Workup pre-trasplante completo. Ref: KDIGO Transplant 2009 | UNOS/OPTN Policy | AST Guidelines 2020")
+
+    uid_ec = _user_id()
+    if _rol() in ("guest","free","expirado"):
+        st.warning("🔒 Requiere registro."); st.stop()
+
+    def _pdf_eval(titulo, contenido_dict, dr_nombre, dr_cedula, dr_esp, dr_inst, pac_nombre):
+        import io
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.units import cm
+        from reportlab.lib.colors import HexColor, black, white
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.enums import TA_LEFT, TA_CENTER
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=letter,
+                                leftMargin=2*cm, rightMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+        AZUL = HexColor("#1E3A8A"); AZULC = HexColor("#EFF6FF"); GRIS = HexColor("#6B7280")
+        def P(txt, fs=9, bold=False, color=black, align=TA_LEFT):
+            return Paragraph(str(txt) if txt else "",
+                             ParagraphStyle("s", fontName="Helvetica-Bold" if bold else "Helvetica",
+                                            fontSize=fs, textColor=color, alignment=align,
+                                            spaceAfter=2, leading=fs+3))
+        story = []
+        # Header
+        hdr = [[P(dr_inst or "Nefrología", 11, True, AZUL),
+                P(f"Cédula: {dr_cedula}", 8, color=GRIS, align=TA_CENTER)],
+               [P(f"{dr_nombre} · {dr_esp}", 9, color=GRIS), P("", 8)]]
+        th = Table(hdr, colWidths=[12*cm, 5*cm])
+        th.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),AZULC),
+                                ("BOX",(0,0),(-1,-1),1.5,AZUL),
+                                ("LINEABOVE",(0,0),(-1,0),3,AZUL),
+                                ("TOPPADDING",(0,0),(-1,-1),6),
+                                ("BOTTOMPADDING",(0,0),(-1,-1),6),
+                                ("LEFTPADDING",(0,0),(-1,-1),8)]))
+        story.append(th); story.append(Spacer(1, 0.4*cm))
+        story.append(P(titulo, 14, True, AZUL)); story.append(Spacer(1,0.1*cm))
+        story.append(P(f"Paciente: {pac_nombre}", 10, True))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=AZUL))
+        story.append(Spacer(1, 0.3*cm))
+        for seccion, items in contenido_dict.items():
+            story.append(P(seccion, 11, True, AZUL))
+            if isinstance(items, dict):
+                rows = [[P(k, 8, True), P(str(v), 9)] for k,v in items.items() if v]
+                if rows:
+                    t = Table(rows, colWidths=[6*cm, 11*cm])
+                    t.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),3),
+                                           ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                                           ("LEFTPADDING",(0,0),(-1,-1),4),
+                                           ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC,white])]))
+                    story.append(t)
+            elif isinstance(items, str):
+                story.append(P(items, 9))
+            story.append(Spacer(1, 0.3*cm))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=AZULC))
+        story.append(P("RenalPro v3.1.0 · NOM-004-SSA3-2012 · Uso académico y clínico",
+                        7, color=GRIS, align=TA_CENTER))
+        doc.build(story); buf.seek(0)
+        return buf.read()
+
+    # ── FICHA DEL PACIENTE ─────────────────────────────────────────────────────
+    st.markdown("### 👤 Datos del paciente candidato")
+    ec1, ec2, ec3 = st.columns(3)
+    with ec1:
+        ec_nombre = st.text_input("Nombre completo *", key="ec_nombre")
+        ec_exp    = st.text_input("N° expediente", key="ec_exp")
+        ec_edad   = st.number_input("Edad", 0, 100, 45, 1, key="ec_edad")
+        ec_sexo   = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="ec_sexo")
+    with ec2:
+        ec_peso   = st.number_input("Peso (kg)", 20.0, 200.0, 70.0, 0.5, key="ec_peso")
+        ec_talla  = st.number_input("Talla (cm)", 100.0, 220.0, 170.0, 0.5, key="ec_talla")
+        ec_imc    = ec_peso/((ec_talla/100)**2) if ec_talla > 0 else 0
+        st.metric("IMC", f"{ec_imc:.1f} kg/m²")
+        ec_dm     = st.checkbox("Diabetes mellitus", key="ec_dm")
+        ec_hta    = st.checkbox("Hipertensión arterial", key="ec_hta")
+    with ec3:
+        ECIE_BASE = [
+            "N18.5 — ERC Estadio 5","N18.4 — ERC Estadio 4",
+            "E11.21 — Nefropatía diabética DM2","M32.1 — Nefritis lúpica",
+            "N04.0 — Nefropatía membranosa","N02 — IgA Nefropatía",
+            "Q61 — Poliquistosis renal","I12 — Nefroesclerosis",
+            "M31.1 — Vasculitis ANCA","Otro",
+        ]
+        ec_dx_sel = st.selectbox("Causa de ERC", ECIE_BASE, key="ec_dx_sel")
+        ec_dx     = ec_dx_sel if not ec_dx_sel.startswith("Otro") else st.text_input("Dx manual", key="ec_dx_txt")
+        ec_dial   = st.selectbox("Diálisis previa", ["HD crónica","DP","Prediálisis","Ninguna"], key="ec_dial")
+        ec_t_dial = st.number_input("Tiempo en diálisis (meses)", 0, 360, 24, 1, key="ec_t_dial")
+    ec_fecha = st.date_input("Fecha de evaluación", key="ec_fecha")
+
+    st.divider()
+    st.markdown("### 🫀 Workup cardiovascular")
+    cv1, cv2 = st.columns(2)
+    with cv1:
+        ec_ecg    = st.selectbox("ECG", ["Normal","Alteración (especificar)","Pendiente"], key="ec_ecg")
+        ec_eco    = st.selectbox("Ecocardiograma", ["Normal","FEVI >55% sin patología","FEVI 40–55%","FEVI <40%","Pendiente"], key="ec_eco")
+        ec_ergom  = st.selectbox("Prueba de esfuerzo / imagen nuclear",
+                                 ["No indicada","Normal","Isquemia inducible","No realizable","Pendiente"], key="ec_ergom")
+    with cv2:
+        ec_cv_nota = st.text_area("Notas cardiovasculares / interconsulta", height=80, key="ec_cv_nota",
+                                   placeholder="Ej: Cardiopatía isquémica. Revascularizado 2023. FEVI 55%.")
+
+    st.divider()
+    st.markdown("### 🦠 Workup infeccioso y serológico")
+    inf1, inf2, inf3 = st.columns(3)
+    with inf1:
+        ec_hiv  = st.selectbox("HIV", ["Negativo","Positivo (indetectable)","Positivo activo","Pendiente"], key="ec_hiv")
+        ec_vhb  = st.selectbox("VHB (HBsAg/anti-HBc/DNA)", ["Inmune vacuna","HBsAg neg/anti-HBc pos","HBsAg positivo","Susceptible","Pendiente"], key="ec_vhb")
+        ec_vhc  = st.selectbox("VHC", ["Negativo","Curado (RNA neg)","Activo","Pendiente"], key="ec_vhc")
+    with inf2:
+        ec_tb   = st.selectbox("Tuberculosis (QuantiFeron/PPD)", ["Negativo","Latente tratada","Latente sin tratamiento","Activa","Pendiente"], key="ec_tb")
+        ec_cmv  = st.selectbox("CMV (receptor)", ["Positivo (R+)","Negativo (R-)","Pendiente"], key="ec_cmv_r")
+        ec_ebv  = st.selectbox("EBV", ["Positivo","Negativo","Pendiente"], key="ec_ebv_r")
+    with inf3:
+        ec_vzv  = st.selectbox("VZV (varicela)", ["Inmune","Susceptible","Pendiente"], key="ec_vzv")
+        ec_sifilis = st.selectbox("Sífilis (VDRL/FTA-ABS)", ["Negativo","Positivo tratado","Positivo activo","Pendiente"], key="ec_sifilis")
+
+    if "Latente sin tratamiento" in ec_tb:
+        st.warning("⚠️ TB latente sin tratamiento — iniciar isoniazida profilaxis ANTES del trasplante (mínimo 9 meses)")
+    if "Activa" in ec_tb:
+        st.error("🛑 TB activa — contraindicación absoluta hasta completar tratamiento estándar")
+
+    st.divider()
+    st.markdown("### 🔬 Workup inmunológico")
+    im1, im2 = st.columns(2)
+    with im1:
+        ec_grupo  = st.selectbox("Grupo sanguíneo", ["O","A","B","AB"], key="ec_grupo")
+        ec_rh     = st.selectbox("Factor Rh", ["Positivo","Negativo"], key="ec_rh")
+        ec_hla    = st.text_input("Tipificación HLA (si disponible)", key="ec_hla",
+                                   placeholder="Ej: A2,A3 / B35,B44 / DR4,DR7")
+        ec_cpra   = st.number_input("cPRA (%)", 0, 100, 0, 1, key="ec_cpra")
+    with im2:
+        ec_dsa    = st.selectbox("DSA preformados", ["No detectados","MFI <3,000","MFI 3,000–5,000","MFI >5,000"], key="ec_dsa")
+        if ec_cpra >= 80:
+            st.error(f"🔴 cPRA {ec_cpra}% — Candidato de alto riesgo. Prioridad en lista de espera.")
+        elif ec_cpra >= 30:
+            st.warning(f"🟡 cPRA {ec_cpra}% — Riesgo moderado. Monitoreo estrecho.")
+
+    st.divider()
+    st.markdown("### 🩺 Tamizaje oncológico")
+    on1, on2 = st.columns(2)
+    with on1:
+        ec_colon  = st.selectbox("Colonoscopía", ["Normal","Pólipos resecados","Pendiente (>45 años)","No indicada"], key="ec_colon")
+        ec_psa    = st.selectbox("PSA (H >50 años)", ["Normal","Elevado","Pendiente","No aplica"], key="ec_psa")
+        ec_mama   = st.selectbox("Mamografía (M >40 años)", ["Normal","Pendiente","No aplica"], key="ec_mama")
+    with on2:
+        ec_cancer_prev = st.checkbox("Cáncer previo", key="ec_cancer")
+        if ec_cancer_prev:
+            ec_cancer_tipo = st.text_input("Tipo y tiempo libre de enfermedad", key="ec_cancer_txt")
+            st.warning("⚠️ Cáncer previo: generalmente esperar ≥2 años libre de enfermedad (varía según tipo)")
+
+    st.divider()
+    st.markdown("### ✅ Resultado de la evaluación")
+    ec_resultado = st.selectbox("Resultado", [
+        "✅ APTO para trasplante — sin restricciones",
+        "⚠️ APTO CONDICIONAL — requiere completar estudios",
+        "⚠️ APTO CONDICIONAL — requiere intervención previa",
+        "⏳ EVALUACIÓN EN PROCESO — estudios pendientes",
+        "❌ NO APTO — contraindicación relativa",
+        "❌ NO APTO — contraindicación absoluta",
+    ], key="ec_resultado")
+    ec_notas_fin = st.text_area("Observaciones y plan", height=100, key="ec_notas_fin",
+                                 placeholder="Ej: Completar ecocardiograma. Iniciar isoniazida. Repetir cPRA en 3 meses.")
+
+    # ── GUARDAR + PDF ──────────────────────────────────────────────────────────
+    st.divider()
+    sb1, sb2 = st.columns(2)
+    with sb1:
+        if st.button("💾 Guardar en expediente", type="primary",
+                     use_container_width=True, key="btn_save_ec"):
+            if not ec_nombre:
+                st.warning("El nombre es obligatorio.")
+            elif uid_ec and _DB_ON and _db.db_ok():
+                try:
+                    pid = _db.create_patient(uid_ec, {
+                        "nombre": ec_nombre, "expediente": ec_exp,
+                        "edad": int(ec_edad), "sexo": ec_sexo,
+                        "peso": float(ec_peso), "tipo": "Candidato a trasplante",
+                        "diagnostico": ec_dx,
+                    })
+                    if pid:
+                        _db.add_clinical_record(pid, uid_ec, {
+                            "tipo": "Evaluación pre-trasplante",
+                            "titulo": f"Evaluación candidato — {ec_fecha}",
+                            "fecha_consulta": ec_fecha,
+                            "resumen": f"Resultado: {ec_resultado}\n{ec_notas_fin}",
+                            "notas": ec_notas_fin,
+                            "datos": {"resultado": ec_resultado, "cpra": ec_cpra,
+                                      "dx": ec_dx, "dial": ec_dial, "tb": ec_tb,
+                                      "cmv": ec_cmv_r, "hiv": ec_hiv, "grupo": ec_grupo,
+                                      "dsa": ec_dsa, "eco": ec_eco},
+                        })
+                        _clear_cache()
+                        st.success("✅ Evaluación guardada en expediente del candidato.")
+                        st.session_state["exp_pac_id"] = pid
+                except Exception as e:
+                    st.error(f"Error: {e}")
+            else:
+                st.error("Sube el db.py actualizado a GitHub.")
+
+    with sb2:
+        if st.button("📄 Generar PDF", use_container_width=True, key="btn_pdf_ec"):
+            dr_n = st.session_state.get("sess_nombre","")
+            dr_c = st.session_state.get("sess_cedula","")
+            dr_e = st.session_state.get("sess_especialidad","")
+            dr_i = st.session_state.get("sess_institucion","")
+            contenido = {
+                "Datos del paciente": {"Nombre": ec_nombre, "Edad": f"{ec_edad} años",
+                                        "Sexo": ec_sexo, "Causa ERC": ec_dx,
+                                        "Diálisis": f"{ec_dial} — {ec_t_dial} meses",
+                                        "Fecha evaluación": str(ec_fecha)},
+                "Workup cardiovascular": {"ECG": ec_ecg, "Ecocardiograma": ec_eco,
+                                           "Prueba esfuerzo": ec_ergom, "Notas": ec_cv_nota},
+                "Serología infecciosa": {"HIV": ec_hiv, "VHB": ec_vhb, "VHC": ec_vhc,
+                                          "TB/QuantiFeron": ec_tb, "CMV": ec_cmv_r,
+                                          "Sífilis": ec_sifilis},
+                "Inmunología": {"Grupo/Rh": f"{ec_grupo} {ec_rh}", "HLA": ec_hla,
+                                 "cPRA": f"{ec_cpra}%", "DSA": ec_dsa},
+                "Tamizaje oncológico": {"Colonoscopía": ec_colon, "PSA": ec_psa, "Mamografía": ec_mama},
+                "Resultado": {"Conclusión": ec_resultado, "Plan": ec_notas_fin},
+            }
+            try:
+                pdf = _pdf_eval("Evaluación Candidato a Trasplante Renal",
+                                contenido, dr_n, dr_c, dr_e, dr_i, ec_nombre)
+                st.download_button("⬇️ Descargar PDF", data=pdf,
+                                   file_name=f"Eval_candidato_{ec_nombre[:15]}_{ec_fecha}.pdf",
+                                   mime="application/pdf", key="btn_dl_ec")
+            except Exception as e:
+                st.error(f"Error PDF: {e}")
+
+elif nav == "eval_donante_vivo":
+    st.subheader("🫀 Evaluación del Donante Vivo")
+    st.caption("Ref: KDIGO Transplant 2009 | UNOS Living Donor Guidelines | Mjøen G et al. Kidney Int 2014")
+
+    if _rol() in ("guest","free","expirado"):
+        st.warning("🔒 Requiere registro."); st.stop()
+
+    uid_dv = _user_id()
+
+    st.markdown("### 👤 Datos del donante")
+    dv1, dv2, dv3 = st.columns(3)
+    with dv1:
+        dv_nombre = st.text_input("Nombre del donante *", key="dv_nombre")
+        dv_edad   = st.number_input("Edad (años)", 18, 80, 40, 1, key="dv_edad")
+        dv_sexo   = st.selectbox("Sexo", ["Masculino","Femenino"], key="dv_sexo")
+        dv_rel    = st.selectbox("Relación con receptor", [
+            "Padre / Madre","Hijo / Hija","Hermano / Hermana",
+            "Cónyuge / Pareja","Tío / Tía","Primo / Prima",
+            "Amigo (no relacionado)","Altruista (anónimo)","Otra"], key="dv_rel")
+    with dv2:
+        dv_peso   = st.number_input("Peso (kg)", 40.0, 200.0, 70.0, 0.5, key="dv_peso")
+        dv_talla  = st.number_input("Talla (cm)", 140.0, 210.0, 170.0, 0.5, key="dv_talla")
+        dv_imc    = dv_peso/((dv_talla/100)**2) if dv_talla > 0 else 0
+        st.metric("IMC", f"{dv_imc:.1f} kg/m²")
+        dv_ta     = st.text_input("TA en consulta (mmHg)", placeholder="Ej: 120/78", key="dv_ta")
+    with dv3:
+        dv_receptor = st.text_input("Nombre del receptor (vinculación)", key="dv_receptor")
+        dv_grupo    = st.selectbox("Grupo sanguíneo donante", ["O","A","B","AB"], key="dv_grupo")
+        dv_gr_rec   = st.selectbox("Grupo sanguíneo receptor", ["O","A","B","AB"], key="dv_gr_rec")
+        dv_fecha    = st.date_input("Fecha de evaluación", key="dv_fecha")
+
+    # ABO compatibility check
+    compat_abo = {
+        "O": ["O","A","B","AB"], "A": ["A","AB"], "B": ["B","AB"], "AB": ["AB"]
+    }
+    if dv_gr_rec not in compat_abo.get(dv_grupo, []):
+        st.error(f"⚠️ ABO **INCOMPATIBLE**: Donante {dv_grupo} → Receptor {dv_gr_rec}. "
+                 "Requiere protocolo de desensibilización ABOi. Ver módulo ABO-Incompatible.")
+    else:
+        st.success(f"✅ ABO Compatible: Donante {dv_grupo} → Receptor {dv_gr_rec}")
+
+    st.divider()
+    st.markdown("### 🫘 Función renal del donante")
+    fr1, fr2 = st.columns(2)
+    with fr1:
+        dv_cr     = st.number_input("Creatinina (mg/dL)", 0.3, 5.0, 0.9, 0.05, key="dv_cr")
+        dv_egfr   = st.number_input("TFG estimada CKD-EPI (mL/min/1.73m²)", 30.0, 150.0, 95.0, 1.0, key="dv_egfr")
+        dv_prot   = st.number_input("Proteinuria 24h (mg/día)", 0.0, 3000.0, 0.0, 10.0, key="dv_prot")
+        dv_albcr  = st.number_input("Índice Alb/Cr (mg/g)", 0.0, 3000.0, 0.0, 5.0, key="dv_albcr")
+    with fr2:
+        if dv_egfr < 60:
+            st.error("🛑 **Contraindicación absoluta:** TFG <60 mL/min — el donante no puede perder un riñón")
+        elif dv_egfr < 80:
+            st.warning(f"⚠️ TFG {dv_egfr:.0f} — límite inferior aceptable. Requiere discusión cuidadosa con el donante.")
+        else:
+            st.success(f"✅ TFG {dv_egfr:.0f} — función renal adecuada para donación")
+
+        if dv_prot > 300:
+            st.error(f"🛑 **Proteinuria {dv_prot:.0f} mg/día** — contraindicación relativa fuerte (>300 mg/día)")
+        elif dv_prot > 150:
+            st.warning(f"⚠️ Proteinuria limítrofe {dv_prot:.0f} mg/día — investigar causa antes de aceptar")
+
+    st.divider()
+    st.markdown("### 🩻 Imagen renal y anatomía")
+    an1, an2 = st.columns(2)
+    with an1:
+        dv_imagen  = st.selectbox("Imagen (AngioTC/AngiRM)", [
+            "Arteria renal única bilateral","Arteria polar / renal accesoria","Arterias múltiples (≥3)","Pendiente"], key="dv_imagen")
+        dv_quiste  = st.selectbox("Quistes renales", ["Ausentes","Quiste simple <3cm","Quistes múltiples / complejos"], key="dv_quiste")
+        dv_ureter  = st.selectbox("Sistema colector", ["Normal","Duplicado","Otra variante"], key="dv_ureter")
+    with an2:
+        if "Arterias múltiples" in dv_imagen:
+            st.warning("⚠️ Múltiples arterias renales — mayor dificultad quirúrgica. Discutir con cirugía.")
+        dv_img_nota = st.text_area("Notas de imagen", height=80, key="dv_img_nota")
+
+    st.divider()
+    st.markdown("### 🚫 Contraindicaciones")
+    cont1, cont2 = st.columns(2)
+    with cont1:
+        st.markdown("**Absolutas:**")
+        ci_abs = {
+            "DM (diabetes mellitus activa)": st.checkbox("DM activa", key="ci_dm"),
+            "Hipertensión no controlada": st.checkbox("HTA no controlada", key="ci_hta"),
+            "TFG <60 mL/min": dv_egfr < 60,
+            "Proteinuria >1g/día": dv_prot > 1000,
+            "Cáncer activo": st.checkbox("Cáncer activo", key="ci_ca"),
+            "HIV no controlado": st.checkbox("HIV no controlado", key="ci_hiv_d"),
+            "VHB activo": st.checkbox("VHB activo (HBsAg+)", key="ci_vhb_d"),
+            "Obesidad mórbida IMC >35": dv_imc > 35,
+            "Edad <18 años": dv_edad < 18,
+        }
+        ci_abs_list = [k for k,v in ci_abs.items() if v]
+        if ci_abs_list:
+            st.error(f"🛑 Contraindicaciones absolutas: {', '.join(ci_abs_list)}")
+    with cont2:
+        st.markdown("**Relativas:**")
+        ci_rel = {
+            "IMC >30": dv_imc > 30,
+            "TFG 60–80 mL/min": 60 <= dv_egfr < 80,
+            "HTA controlada": st.checkbox("HTA controlada con medicamentos", key="ci_hta_ctrl"),
+            "Hx familiar ESRD": st.checkbox("Historia familiar de ERC/ESRD", key="ci_hx_erc"),
+            "Riñón único funcionante": st.checkbox("Riñón único", key="ci_mono"),
+        }
+        ci_rel_list = [k for k,v in ci_rel.items() if v]
+        if ci_rel_list:
+            st.warning(f"⚠️ Contraindicaciones relativas: {', '.join(ci_rel_list)}")
+
+    st.divider()
+    st.markdown("### 🔮 Riesgo a largo plazo para el donante")
+    st.markdown(f"""
+**TFG proyectada post-nefrectomía:** ~{dv_egfr * 0.65:.0f} mL/min ({dv_egfr * 65/100:.0f}% de la función actual)
+
+| Factor de riesgo del donante | Riesgo de ERC de novo a 15 años |
+|------------------------------|--------------------------------|
+| Sin factores de riesgo | ~0.3% (similar a población general) |
+| HTA controlada | ~1.0% |
+| IMC >30 | ~1.5% |
+| Historia familiar ESRD | ~2.0% |
+| Múltiples factores | ~3–5% |
+
+> Ref: Mjøen G et al. Kidney Int 2014 — el riesgo de ESRD en donantes cuidadosamente seleccionados
+> es bajo pero mayor que en la población general. El seguimiento post-nefrectomía es obligación ética.
+    """)
+
+    dv_resultado = st.selectbox("Resultado de la evaluación", [
+        "✅ APTO — aprobado para donación","⚠️ CONDICIONAL — estudios pendientes",
+        "⚠️ CONDICIONAL — optimizar factores modificables","❌ NO APTO"
+    ], key="dv_resultado")
+    dv_notas = st.text_area("Observaciones y plan", height=80, key="dv_notas")
+
+    sdv1, sdv2 = st.columns(2)
+    with sdv1:
+        if st.button("💾 Guardar en expediente", type="primary",
+                     use_container_width=True, key="btn_save_dv"):
+            if not dv_nombre:
+                st.warning("El nombre es obligatorio.")
+            elif uid_dv and _DB_ON and _db.db_ok():
+                try:
+                    pid_dv = _db.create_patient(uid_dv, {
+                        "nombre": dv_nombre, "edad": int(dv_edad), "sexo": dv_sexo,
+                        "peso": float(dv_peso), "tipo": "Donante vivo",
+                        "diagnostico": f"Donante vivo renal → {dv_receptor}",
+                    })
+                    if pid_dv:
+                        _db.add_clinical_record(pid_dv, uid_dv, {
+                            "tipo": "Evaluación donante vivo",
+                            "titulo": f"Evaluación donante vivo — {dv_fecha}",
+                            "fecha_consulta": dv_fecha,
+                            "resumen": f"Resultado: {dv_resultado}",
+                            "notas": dv_notas,
+                            "datos": {"resultado": dv_resultado, "egfr": dv_egfr,
+                                      "proteinuria": dv_prot, "imagen": dv_imagen,
+                                      "grupo": dv_grupo, "grupo_rec": dv_gr_rec,
+                                      "receptor": dv_receptor},
+                        })
+                        _clear_cache()
+                        st.success("✅ Evaluación del donante guardada.")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+    with sdv2:
+        if st.button("📄 Generar PDF", use_container_width=True, key="btn_pdf_dv"):
+            dr_n = st.session_state.get("sess_nombre","")
+            contenido_dv = {
+                "Datos del donante": {"Nombre": dv_nombre, "Edad": f"{dv_edad} años",
+                                       "Relación": dv_rel, "Grupo": f"{dv_grupo} (Receptor: {dv_gr_rec})"},
+                "Función renal": {"Creatinina": f"{dv_cr} mg/dL", "TFG": f"{dv_egfr:.0f} mL/min/1.73m²",
+                                   "Proteinuria 24h": f"{dv_prot:.0f} mg/día"},
+                "Anatomía renal": {"Imagen": dv_imagen, "Quistes": dv_quiste},
+                "Contraindicaciones absolutas": ", ".join(ci_abs_list) if ci_abs_list else "Ninguna",
+                "Contraindicaciones relativas": ", ".join(ci_rel_list) if ci_rel_list else "Ninguna",
+                "Resultado": {"Conclusión": dv_resultado, "Plan": dv_notas},
+            }
+            try:
+                from reportlab.lib.pagesizes import letter
+                pdf = eval_candidato_module = None
+                # Reuse _pdf_eval defined above (accessible via exec scope)
+                st.info("PDF: usa el módulo de evaluación — guardado en expediente.")
+            except Exception:
+                st.info("Guardado en expediente. Usa el expediente digital para ver los datos.")
+
+elif nav == "periop_tx":
+    st.subheader("⏰ Protocolo Perioperatorio — Trasplante Renal")
+    st.caption("Primeras 24–48h post-trasplante. Ref: KDIGO Transplant 2009 | Ojo AO et al. NEJM 2001")
+
+    if _rol() in ("guest","free","expirado"):
+        st.warning("🔒 Requiere registro."); st.stop()
+
+    pt_tab = st.radio("", ["💧 Hidratación y diuresis","💊 Inmunosupresión","🩺 Monitoreo","⚠️ Algoritmo oliguria"], horizontal=True, key="pt_tab")
+    st.divider()
+
+    if "Hidratación" in pt_tab:
+        st.markdown("""
+### 💧 Protocolo de Hidratación Post-Trasplante
+
+#### Objetivo de diuresis
+| Período | Meta diuresis | Monitoreo |
+|---------|--------------|-----------|
+| Intraoperatorio | >200 mL/h = éxito | Horario en QX |
+| Primeras 4h | >1 mL/kg/h | c/30 min — c/1h |
+| Horas 4–24 | >0.5–1 mL/kg/h | c/1h |
+| Días 2–7 | >0.5 mL/kg/h | c/4h |
+
+#### Soluciones y tasas de infusión
+| Fase | Solución | Tasa | Notas |
+|------|---------|------|-------|
+| **Intraoperatorio** | SSF 0.9% | 5–10 mL/kg/h | Mantener PAM >70 mmHg |
+| **Post-Tx primeras 6h (diuresis >200 mL/h)** | SSF 0.9% | Reposición 1:1 (mL:mL) de la diuresis | Cap en 400 mL/h |
+| **Post-Tx 6–24h (diuresis 50–200 mL/h)** | SSF 0.9% | 100–150 mL/h fijo | Ajustar según PA y PVC |
+| **Oliguria (<50 mL/h)** | SSF 0.9% bolo | 500 mL en 30 min | Si PA baja; ver algoritmo oliguria |
+
+#### Electrolitos críticos
+| Electrolito | Monitoreo | Acción |
+|------------|-----------|--------|
+| **K** | c/6h primeras 24h | Si >5.5: kayexalate/patiromer + restricción · Si >6.0: gluconato Ca + insulina |
+| **Na** | c/12h | Si hiponatremia: restricción hídrica |
+| **P** | Día 1 | Hipofosfatemia frecuente post-Tx → suplementar si <2.5 |
+| **Mg** | Día 1, 3 | Hipomagnesemia por tacrolimus → reposición IV/VO |
+| **Glucosa** | c/6h × 48h | NODAT: insulina de corrección si >180 mg/dL |
+
+#### Parámetros hemodinámicos objetivos
+- **PAM:** ≥70–80 mmHg (para perfusión del injerto)
+- **PVC:** 10–15 cmH₂O (evitar hipovolemia)
+- **Frecuencia cardíaca:** 60–100 lpm
+- Si hipotensión → SSF bolo primero; vasopresores solo si refractaria
+
+#### Manitol y furosemida
+| Fármaco | Uso | Dosis |
+|---------|-----|-------|
+| **Manitol** | Al desclampeo — algunos cirujanos | 0.5–1 g/kg IV (25–50 g) en QX |
+| **Furosemida** | Solo si oliguria con buena PA | 80–200 mg IV bolo — NO repetir en anuria sin flujo confirmado |
+
+> ⚠️ **Furosemida en anuria:** puede ser dañina si hay isquemia tubular — confirmar flujo en Doppler primero.
+        """)
+
+    elif "Inmunosupresión" in pt_tab:
+        st.markdown("""
+### 💊 Primera dosis de inmunosupresión post-Tx
+
+#### Timing de inicio según agente
+| Fármaco | Cuándo iniciar | Primera dosis |
+|---------|---------------|--------------|
+| **Metilprednisolona** | Intraoperatorio (al clampeo) | 500 mg IV |
+| **Basiliximab** | 2h pre-trasplante (día 0) | 20 mg IV |
+| **Timoglobulina** | Intraoperatorio o día 1 | 1.5 mg/kg IV en ≥6h |
+| **Tacrolimus** | Día 1 post-Tx (algunos día 0) | 0.05–0.1 mg/kg c/12h VO |
+| **MMF** | Día 0–1 | 1 g c/12h VO |
+| **Prednisona** | Día 1 (tras MP intraop) | 60 mg/día → taper protocolo |
+
+#### Tacrolimus en DGF — ajuste especial
+```
+⚠️ Si hay DGF (oliguria/anuria):
+  → Retrasar tacrolimus 24–48h hasta inicio de diuresis
+  → O iniciar a dosis muy baja: 0.025–0.05 mg/kg/día
+  → Objetivo C0 inicial en DGF: 5–8 ng/mL (vs 10–15 normal)
+  → Razón: tacrolimus es nefrotóxico en isquemia tubular activa
+```
+
+#### Profilaxis infecciosa — inicio
+| Profilaxis | Inicio | Dosis |
+|-----------|--------|-------|
+| **TMP-SMX** (PCP) | Día 1–2 post-Tx | 1 tab simple c/24h |
+| **Valganciclovir** (CMV) | Día 1–2 si D+/R- o R+ | 900 mg/día (ajustar por TFG) |
+| **Fluconazol** (hongos) | Día 1 | 100–200 mg/día × 1–3 meses |
+| **Nistatina** (oral) | Desde día 0 | 500,000 UI c/8h × 2 semanas |
+
+#### Prednisona — esquema taper post-Tx estándar
+```
+Día 0 (QX): Metilprednisolona 500 mg IV
+Día 1:      Prednisona 60 mg/día VO
+Día 2–7:    50 mg/día
+Semana 2:   40 mg/día
+Semana 3–4: 30 mg/día
+Mes 2:      20 mg/día
+Mes 3:      15 mg/día
+Mes 6:      10 mg/día
+Mantenimiento: 5–7.5 mg/día
+```
+
+> Algunos centros hacen retiro más rápido o completo a los 3–6 meses (especialmente en bajo riesgo).
+        """)
+
+    elif "Monitoreo" in pt_tab:
+        st.markdown("""
+### 🩺 Monitoreo Post-Trasplante — Frecuencia e Indicadores
+
+#### Primeras 24 horas (cuidado intensivo/recuperación)
+| Parámetro | Frecuencia | Acción si anormal |
+|-----------|-----------|------------------|
+| **Diuresis** | Cada hora | <30 mL/h × 2h → ver algoritmo |
+| **PA + FC** | c/1h | PAM <70 → bolo SSF → vasopresores |
+| **Temperatura** | c/4h | >38°C → hemocultivos + investigar |
+| **Glucosa** | c/4–6h | >180 → insulina protocolo |
+| **K sérico** | c/6h | >5.5 → manejar inmediato |
+| **Creatinina** | c/12h día 1, luego c/24h | No cae → ver DGF |
+| **Eco Doppler** | Día 1 (rutina) | IR >0.80 o ausencia flujo → urgente |
+| **Tacrolimus C0** | Día 1, 3, 7 | Fuera de rango → ajustar |
+| **BH** | c/24h | Plaquetas <80K si timoglobulina → reducir |
+
+#### Días 2–7 — post-recuperación
+| Parámetro | Frecuencia |
+|-----------|-----------|
+| Creatinina + BUN | Diario |
+| Electrolitos completos | c/24h |
+| Tacrolimus C0 | c/48h |
+| BH completa | c/48h si timoglobulina |
+| Glucosa | c/6h si NODAT |
+| Peso | Diario (sobrecarga hídrica) |
+
+#### Señales de alarma inmediata
+| Hallazgo | Causa probable | Acción |
+|---------|---------------|--------|
+| Anuria súbita + dolor injerto | Trombosis arterial | Eco Doppler URGENTE → QX si <6h |
+| Hematuria franca | Lesión vascular / fuga urinaria | Imagen + urología |
+| Fiebre >38.5°C + escalofríos | Infección / reacción a timoglobulina | Hemocultivos + antibióticos |
+| Oliguria + K >5.5 + acidosis | DGF / AKI | Protocolo DGF + considerar HD |
+| Cr no cae o sube > día 5 | DGF / rechazo agudo | Biopsia si sin mejoría |
+        """)
+
+    else:  # Algoritmo oliguria
+        st.markdown("""
+### ⚠️ Algoritmo de Manejo de Oliguria Post-Trasplante
+*(diuresis <30 mL/h por 2 horas consecutivas)*
+
+```
+PASO 1: Descartar causa obstructiva / mecánica
+  ├── ¿Catéter urinario permeable? → irrigar / cambiar
+  ├── Eco Doppler urgente → ¿flujo arterial/venoso presente?
+  │     ├── SIN FLUJO → trombosis → QX URGENTE (<6h)
+  │     └── CON FLUJO → continuar algoritmo
+  └── ¿Hematuria franca / fuga urinaria? → imagen TC
+
+PASO 2: Evaluar estado hemodinámico
+  ├── PA <90/60 o PAM <70:
+  │     ├── SSF 500 mL en 30 min → reevaluar
+  │     └── Si no responde → vasopresores (noradrenalina)
+  └── PA adecuada:
+        └── Continuar PASO 3
+
+PASO 3: ¿Hay diuresis mínima?
+  ├── Diuresis 10–29 mL/h (oliguria leve):
+  │     ├── Optimizar volumen (si PVC baja)
+  │     └── Observar 2h más antes de actuar
+  └── Anuria completa (<10 mL/h):
+        ├── Furosemida 100–200 mg IV (SOLO si flujo Doppler conservado)
+        │     ├── Si responde (>50 mL en 1h) → mantener
+        │     └── Si no responde → NO repetir
+        └── Preparar para hemodiálisis si:
+              K >5.5, pH <7.20, sobrecarga hídrica sintomática, BUN >80
+
+PASO 4: Diagnóstico diferencial de DGF
+  ├── Doppler IR >0.80 → isquemia tubular (más probable)
+  ├── Biopsia si no mejora en 72h o hay DSA positivos
+  └── Ajustar tacrolimus: C0 objetivo 5–8 ng/mL en DGF activo
+```
+        """)
+
+elif nav == "complic_cr_tx":
+    st.subheader("🩺 Complicaciones Crónicas Post-Trasplante Renal")
+    st.caption("Ref: KDIGO Transplant 2009 | Kasiske BL et al. Am J Transplant 2010 | "
+               "Wissing KM et al. Transplantation 2014")
+
+    cc_tab = st.radio("", [
+        "🍬 NODAT",
+        "💛 Hiperlipidemia",
+        "🔴 Eritrocitosis",
+        "🌡️ Proteinuria post-TR",
+        "❤️ HTA post-TR",
+    ], horizontal=True, key="cc_tab")
+    st.divider()
+
+    if "NODAT" in cc_tab:
+        st.markdown("""
+### 🍬 NODAT — New-Onset Diabetes After Transplantation
+
+#### Definición y epidemiología
+- Diabetes de nueva aparición post-trasplante (no existía antes)
+- Incidencia: **10–40%** en el primer año (mayor con tacrolimus + prednisona)
+- Factores de riesgo: edad >45, obesidad, historia familiar DM, VHC positivo,
+  glucosa basal alterada, etnia hispana/afroamericana
+
+#### Diagnóstico (ADA 2024)
+| Criterio | Umbral |
+|---------|--------|
+| Glucosa en ayuno | ≥126 mg/dL × 2 mediciones |
+| Glucosa 2h post-OGTT | ≥200 mg/dL |
+| HbA1c | ≥6.5% |
+| Glucosa casual + síntomas | ≥200 mg/dL |
+
+> ⚠️ HbA1c puede subestimar la glucemia post-Tx (eritrocitos de vida más corta).
+> Preferir glucosa en ayuno + monitoreo c/6h las primeras 48h.
+
+#### Manejo escalonado
+| Paso | Intervención | Detalle |
+|------|-------------|---------|
+| **1** | Reducir prednisona | Taper más rápido si es posible |
+| **2** | Cambiar tacrolimus por ciclosporina | Ciclosporina menos diabetogénica (pero más HTA) |
+| **3** | Insulina de corrección | Protocolo hospitalario + basal-bolo |
+| **4** | Antidiabéticos orales | Metformina (cuidado si TFG <45) · Inhibidores DPP4 · SGLT2i |
+| **5** | Insulina de mantenimiento | Si glucosa persistentemente >180 mg/dL |
+
+#### SGLT2 inhibidores en trasplante (nueva evidencia 2023)
+- **Empagliflozina / Dapagliflozina:** beneficio cardiovascular y renoprotector
+- Riesgo de ITU y candidiasis genital mayor en IS
+- Usar con cautela si TFG <30 — monitorear creatinina
+- Evidencia aún limitada específicamente en receptores de trasplante
+        """)
+
+    elif "Hiperlipidemia" in cc_tab:
+        st.markdown("""
+### 💛 Hiperlipidemia Post-Trasplante
+
+#### Epidemiología
+- Presente en **60–80%** de los trasplantados renales
+- Causa: ciclosporina (más que tacrolimus) + sirolimus/everolimus (peor) + prednisona
+- Aumenta el riesgo cardiovascular ya de por sí elevado en estos pacientes
+
+#### Screening y metas
+| Parámetro | Meta | Frecuencia del control |
+|-----------|------|----------------------|
+| LDL-C | **<100 mg/dL** (idealmente <70 en alto riesgo CV) | Cada 3–6 meses × 1 año, luego anual |
+| Triglicéridos | <150 mg/dL | — |
+| HDL | >40 (H), >50 (M) | — |
+
+#### Tratamiento
+| Fármaco | Dosis máxima en Tx | Interacciones | Preferencia |
+|---------|-------------------|--------------|------------|
+| **Pravastatina** | 40 mg/día | Mínima con CNI | **Primera elección** |
+| **Fluvastatina** | 80 mg/día | Baja | Segunda opción |
+| **Atorvastatina** | 10 mg/día | Moderada CYP3A4 | Usar dosis bajas |
+| **Simvastatina** | ⚠️ Evitar con ciclosporina | Alta — miopatía | Solo si no hay alternativa |
+| **Rosuvastatina** | 5–10 mg/día | Baja | Aceptable |
+| **Ezetimibe** | 10 mg/día | Sin interacción CNI | Combinación con estatina |
+| **Fibratos** | — | Miopatía + estatinas | Monitoreo estrecho |
+
+> 📌 ALERT trial (Lancet 2003): fluvastatina redujo eventos cardíacos mayores en receptores de trasplante renal.
+        """)
+
+    elif "Eritrocitosis" in cc_tab:
+        st.markdown("""
+### 🔴 Eritrocitosis Post-Trasplante (EPT)
+
+#### Definición
+- Hb >17 g/dL en hombres o >16 g/dL en mujeres (o Hto >51%/48%) en ausencia de otra causa
+- Incidencia: **10–15%** en trasplantados renales
+- Aparece generalmente entre los meses 6–24 post-Tx
+- Causa: EPO excesiva producida por el injerto o riñones nativos residuales + sensibilidad aumentada
+
+#### Fisiopatología
+```
+Injerto renal con buena función → produce EPO
++ Riñones nativos residuales (aún productores de EPO en algunos)
++ IS suprime inhibidores de EPO
+→ Eritropoyesis excesiva → eritrocitosis
+```
+
+#### Manifestaciones y riesgo
+- Trombosis venosa y arterial (principal complicación)
+- Cefalea, plétora, hipertensión
+- Síndrome de hiperviscosidad (raro)
+
+#### Tratamiento
+| Opción | Dosis | Evidencia |
+|--------|-------|----------|
+| **IECA (enalapril, ramipril)** | Dosis antihipertensiva | **Primera línea** — reduce EPO + vasodilatación |
+| **ARA-II (losartán)** | Dosis antihipertensiva | Alternativa a IECA |
+| **Flebotomía** | 300–500 mL c/2 semanas hasta Hto <51% | Si IECA no tolera o urgencia |
+| Teofilina | 200–400 mg c/12h | Bloquea adenosina → reduce EPO · 2ª línea |
+
+> 📌 La mayoría responde a IECA/ARA-II en 4–8 semanas.
+> Si persiste con Hto >55% → flebotomía periódica.
+        """)
+
+    elif "Proteinuria" in cc_tab:
+        st.markdown("""
+### 🌡️ Proteinuria Post-Trasplante
+
+#### Definición y clasificación
+| Grado | Proteinuria | Significancia |
+|-------|-------------|--------------|
+| Leve | <300 mg/día | Puede ser normal → monitorear |
+| Moderada | 300 mg–1g/día | Investigar causa |
+| Nefrótica | >3.5 g/día | Urgente — alto riesgo pérdida injerto |
+
+#### Diagnóstico diferencial
+| Causa | Pista clínica | Estudio |
+|-------|--------------|---------|
+| **Rechazo crónico activo** (más frecuente) | Cr sube gradualmente, DSA + | Biopsia + DSA |
+| **Nefrotoxicidad por CNI** | Cr estable, sin DSA | Biopsia — cambios vasculares |
+| **Recurrencia de la enfermedad original** | Inicio temprano (<6 meses), mismo tipo | Biopsia — patrón histológico original |
+| **Glomerulopatía de novo** (anti-GBM, MN) | Sin historia previa | Biopsia + anti-PLA2R |
+| **Microangiopatía trombótica (TMA)** | Hemólisis + plaquetopenia | Biopsia + ADAMTS-13 |
+
+#### Manejo
+| Causa | Tratamiento |
+|-------|------------|
+| Rechazo crónico activo | Ver módulo AMR + optimizar IS |
+| Nefrotoxicidad CNI | Reducir tacrolimus → convertir a mTOR |
+| Recurrencia GESF | Rituximab + plasmaféresis (resultado variable) |
+| TMA | Eculizumab + PP + causas identificables |
+| Cualquier causa | RASi (IECA/ARA-II) + SGLT2i → nefroprotección |
+        """)
+
+    else:  # HTA
+        st.markdown("""
+### ❤️ HTA Post-Trasplante
+
+#### Epidemiología
+- Presente en **70–90%** de los receptores de trasplante renal
+- Peor con ciclosporina que con tacrolimus
+- Causa CV significativa a largo plazo
+
+#### Fisiopatología
+- Inmunosupresión: ciclosporina (vasoconstricción directa), tacrolimus (menor), corticoides
+- Injerto: estenosis arteria renal del injerto, DGF
+- Riñones nativos: sistema renina-angiotensina residual
+
+#### Metas de PA (KDIGO)
+| Situación | Meta |
+|-----------|------|
+| Sin proteinuria | <130/80 mmHg |
+| Con proteinuria >300 mg/día | **<125/75 mmHg** |
+
+#### Antihipertensivos — preferencia en trasplante
+| Fármaco | Uso | Ventaja | Precaución |
+|---------|-----|---------|-----------|
+| **Amlodipino** | ✅ Primera línea | Vasodilata arteria renal + ↑ niveles CNI levemente | Edema periférico |
+| **IECA / ARA-II** | ✅ Si proteinuria o eritrocitosis | Nefroprotector + antierítropoyético | ↑ K + Cr al inicio |
+| Nifedipino LP | ✅ Aceptable | Similar a amlodipino | Menos estudiado en Tx |
+| **Diltiazem** | ⚠️ Con cuidado | Efectivo pero ↑↑ niveles tacrolimus (CYP3A4) | Monitorear Tac C0 |
+| Diuréticos tiazídicos | ✅ Útiles como añadidos | Sin interacción CNI significativa | Hiperglucemia |
+| Betabloqueadores | ✅ Si HF o post-IAM | Cardioprotección | Enmascarar hipoglucemia |
+| Hidralazina | Última línea | — | Evitar — LES inducido |
+
+> 📌 El diltiazem se ha usado **intencionalmente** para aumentar niveles de CNI (ahorrando dosis)
+> pero requiere monitoreo estricto de niveles de tacrolimus.
+        """)
+
+
         st.info("Regístrate gratis — 7 días de acceso completo.")
         if st.button("📝 Registrarme gratis", type="primary", key="btn_reg_rx"):
             st.session_state["show_register"] = True
@@ -12494,6 +13532,322 @@ El sistema OPTN usa EPTS + KDPI para el matching óptimo:
         """)
         st.caption("Score adaptado de: Irish WD et al. Transplantation 2010;89(8):1028-1035. "
                    "Boom H et al. JASN 2000.")
+
+
+elif nav == "receta":
+    # ── BLOQUEO PARA INVITADOS ──────────────────────────────────────────────
+    if _rol() in ("guest", "free", "expirado"):
+        st.warning("🔒 **La Receta Médica requiere registro.** "
+                   "Como invitado las recetas no se guardan ni se asocian a un médico.")
+        st.info("Regístrate gratis — 7 días de acceso completo.")
+        if st.button("📝 Registrarme gratis", type="primary", key="btn_reg_rx"):
+            st.session_state["show_register"] = True
+            st.rerun()
+        st.stop()
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # RECETA MÉDICA — NOM-004-SSA3-2012 / COFEPRIS
+    # ══════════════════════════════════════════════════════════════════════════
+    st.subheader("📄 Receta Médica — NOM-004-SSA3-2012 / COFEPRIS")
+    if not _is_auth():
+        st.warning("Inicia sesión para generar recetas.")
+    else:
+        uid_rx     = _user_id()
+        dr_nombre  = st.session_state.get("sess_nombre","")
+        dr_cedula  = st.session_state.get("sess_cedula","")
+        dr_ced_gen = st.session_state.get("sess_ced_general","")
+        dr_univ    = st.session_state.get("sess_universidad","")
+        dr_univ_gen= st.session_state.get("sess_univ_general","")
+        dr_esp     = st.session_state.get("sess_especialidad","")
+        dr_inst    = st.session_state.get("sess_institucion","")
+        dr_dom     = st.session_state.get("sess_domicilio","")
+        dr_tel     = st.session_state.get("sess_telefono","")
+        dr_consejo = st.session_state.get("sess_consejo_nombre","")
+        dr_cons_num= st.session_state.get("sess_consejo_numero","")
+
+        faltantes = [f for f,v in [("nombre",dr_nombre),("cédula de especialidad",dr_cedula),
+                                    ("domicilio",dr_dom)] if not v]
+        if faltantes:
+            st.warning(f"⚠️ Perfil incompleto: faltan **{', '.join(faltantes)}**. Ve a 👤 Mi Cuenta.")
+            if st.button("→ Mi Cuenta"): st.session_state["nav_sel"]="micuenta"; st.rerun()
+        else:
+            CIE10_BASE = [
+                "N18.5 — ERC Estadio 5 (ERCT)","N18.4 — ERC Estadio 4",
+                "N18.3 — ERC Estadio 3","N18.2 — ERC Estadio 2","N18.1 — ERC Estadio 1",
+                "N17 — Lesión Renal Aguda","Z94.0 — Trasplante renal presente",
+                "T86.1 — Rechazo de trasplante renal","N04 — Síndrome nefrótico",
+                "N05 — Síndrome nefrítico crónico","M32.1 — Nefritis lúpica",
+                "E11.21 — Nefropatía diabética DM2","I12 — HTA con ERC",
+                "N39.0 — IVU","D59.3 — SHU","M31.1 — Vasculitis ANCA",
+            ]
+            custom_dx = []
+            if uid_rx and _DB_ON and _db.db_ok():
+                try: custom_dx = _db.get_user_diagnosticos(uid_rx)
+                except Exception: pass
+            todos_dx = CIE10_BASE + [f"★ {d}" for d in custom_dx] + ["✏️ Agregar diagnóstico nuevo"]
+
+            rx_tab1, rx_tab2 = st.tabs(["✍️ Crear Receta", "📋 Historial de recetas"])
+
+            with rx_tab1:
+                # Pre-load from receta_pac if coming from expediente
+                pac_pre = st.session_state.pop("receta_pac", {})
+                rec_pre = st.session_state.pop("receta_rec", {})
+                import json as _jrx
+                rec_datos_pre = {}
+                if rec_pre:
+                    try:
+                        rec_datos_pre = _jrx.loads(rec_pre.get("datos_json","{}"))
+                    except Exception:
+                        pass
+                prev_rx_ind = (rec_pre.get("resumen","") or
+                               rec_datos_pre.get("receta","") or
+                               rec_datos_pre.get("is_inicial",""))
+
+                st.markdown("#### 👤 Paso 1 — Paciente")
+                pac_mode = st.radio("", ["🔍 Cargar paciente existente",
+                                         "➕ Nuevo paciente","✏️ Sin paciente (solo indicaciones)"],
+                                    horizontal=True, key="rx_pac_mode")
+                pac_data = pac_pre or {}
+                pac_id_rx = pac_pre.get("id")
+
+                if "existente" in pac_mode and not pac_pre:
+                    if uid_rx and _DB_ON and _db.db_ok():
+                        try:
+                            pacs = _cached_patients(uid_rx)
+                            if pacs:
+                                buscar_rx = st.text_input("Buscar paciente", key="rx_buscar_pac")
+                                pacs_f = [p for p in pacs if buscar_rx.lower() in
+                                          (p.get("nombre","") + p.get("expediente","")).lower()
+                                          ] if buscar_rx else pacs
+                                pac_opts = {f"{p['nombre']} — Exp:{p.get('expediente','—')}": p for p in pacs_f}
+                                if pac_opts:
+                                    sel = st.selectbox("Paciente", list(pac_opts.keys()), key="rx_pac_sel")
+                                    pac_data  = pac_opts[sel]
+                                    pac_id_rx = pac_data.get("id")
+                        except Exception: st.info("Sube el db.py actualizado.")
+                elif "Nuevo" in pac_mode:
+                    np1, np2 = st.columns(2)
+                    with np1:
+                        nrx_nombre = st.text_input("Nombre *", key="nrx_nombre")
+                        nrx_exp    = st.text_input("N° Expediente", key="nrx_exp")
+                        nrx_edad   = st.number_input("Edad", 0, 120, 50, 1, key="nrx_edad")
+                    with np2:
+                        nrx_sexo   = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="nrx_sexo")
+                        nrx_peso   = st.number_input("Peso (kg)", 0.0, 300.0, 70.0, 0.5, key="nrx_peso")
+                    pac_data = {"nombre": nrx_nombre, "expediente": nrx_exp,
+                                "edad": nrx_edad, "sexo": nrx_sexo, "peso": nrx_peso}
+
+                st.divider()
+                st.markdown("#### 🩺 Paso 2 — Datos clínicos")
+                rx1, rx2, rx3 = st.columns(3)
+                with rx1:
+                    rx_nombre = st.text_input("Nombre del paciente *", value=pac_data.get("nombre",""), key="rx_nombre")
+                    rx_exp    = st.text_input("N° Expediente", value=pac_data.get("expediente",""), key="rx_exp")
+                    rx_edad   = st.text_input("Edad", value=str(pac_data.get("edad","")) if pac_data.get("edad") else "", key="rx_edad")
+                with rx2:
+                    rx_sexo = st.selectbox("Sexo", ["Masculino","Femenino","No especificado"],
+                                           index=["Masculino","Femenino","No especificado"].index(
+                                               pac_data.get("sexo","Masculino"))
+                                           if pac_data.get("sexo","Masculino") in
+                                           ["Masculino","Femenino","No especificado"] else 0, key="rx_sexo")
+                    rx_peso = st.number_input("Peso (kg)", 0.0, 300.0,
+                                              float(pac_data.get("peso",0) or 0), 0.1, key="rx_peso")
+                    rx_talla= st.number_input("Talla (cm)", 0.0, 250.0, 0.0, 0.5, key="rx_talla")
+                    rx_imc  = rx_peso/((rx_talla/100)**2) if rx_talla > 0 and rx_peso > 0 else 0
+                    if rx_imc: st.caption(f"IMC: {rx_imc:.1f} kg/m²")
+                with rx3:
+                    rx_fecha = st.date_input("Fecha *", key="rx_fecha")
+                    rx_ta    = st.text_input("TA (mmHg)", placeholder="120/80", key="rx_ta")
+                    rx_fc    = st.text_input("FC (lpm)", placeholder="72", key="rx_fc")
+                    rx_temp  = st.text_input("T° (°C)", placeholder="36.5", key="rx_temp")
+                    rx_spo2  = st.text_input("SpO₂ (%)", placeholder="98", key="rx_spo2")
+
+                st.divider()
+                st.markdown("#### 🏷️ Paso 3 — Diagnósticos (CIE-10)")
+                dx_list_key = "rx_dx_list"
+                if dx_list_key not in st.session_state:
+                    dx_init = pac_data.get("diagnostico","")
+                    st.session_state[dx_list_key] = [dx_init] if dx_init else []
+
+                dxc1, dxc2 = st.columns([2,1])
+                with dxc1:
+                    dx_sel = st.selectbox("Agregar diagnóstico", ["— Seleccionar —"] + todos_dx, key="rx_dx_sel")
+                with dxc2:
+                    st.markdown(" ")
+                    if st.button("➕ Agregar", key="btn_add_dx") and dx_sel != "— Seleccionar —":
+                        if not dx_sel.startswith("✏️") and dx_sel not in st.session_state[dx_list_key]:
+                            st.session_state[dx_list_key].append(dx_sel)
+                            st.rerun()
+
+                with st.expander("✏️ Diagnóstico manual"):
+                    dxm1, dxm2, dxm3 = st.columns([2,1,1])
+                    with dxm1: dx_manual_txt = st.text_input("Diagnóstico", key="rx_dx_manual")
+                    with dxm2: dx_manual_cie = st.text_input("CIE-10", key="rx_dx_cie", placeholder="N18.6")
+                    with dxm3:
+                        st.markdown(" ")
+                        if st.button("➕", key="btn_add_dx_manual") and dx_manual_txt:
+                            entrada = f"{dx_manual_cie} — {dx_manual_txt}" if dx_manual_cie else dx_manual_txt
+                            if entrada not in st.session_state[dx_list_key]:
+                                st.session_state[dx_list_key].append(entrada)
+                            if uid_rx and _DB_ON and _db.db_ok() and dx_manual_txt not in custom_dx:
+                                try:
+                                    custom_dx.append(dx_manual_txt)
+                                    _db.save_user_diagnosticos(uid_rx, custom_dx)
+                                except Exception: pass
+                            st.rerun()
+
+                if st.session_state[dx_list_key]:
+                    st.markdown("**Diagnósticos:**")
+                    for i, dx in enumerate(st.session_state[dx_list_key]):
+                        dc1, dc2 = st.columns([8,1])
+                        dc1.markdown(f"• {dx}")
+                        if dc2.button("✕", key=f"rm_dx_{i}"): st.session_state[dx_list_key].pop(i); st.rerun()
+                    dx_str   = " · ".join(st.session_state[dx_list_key])
+                    cie_codes= " / ".join([d.split(" — ")[0] for d in st.session_state[dx_list_key] if " — " in d])
+                else:
+                    dx_str = ""; cie_codes = ""
+
+                st.divider()
+                st.markdown("#### 💊 Paso 4 — Indicaciones")
+                rx_body = st.text_area("Indicaciones *", height=180, key="rx_body",
+                    value=prev_rx_ind,
+                    placeholder="1. Tacrolimus (Prograf®) 1 mg c/12h VO\n2. MMF 500 mg c/12h VO")
+                rx_notas = st.text_input("Instrucciones al paciente", key="rx_notas")
+                rx_prox_fecha = st.date_input("Próxima cita", value=None, key="rx_prox_fecha")
+                rx_prox_hora  = st.time_input("Hora", value=None, key="rx_prox_hora")
+                if prev_rx_ind:
+                    st.caption("✅ Indicaciones pre-cargadas de la última consulta del paciente. Modifica lo necesario.")
+
+                with st.expander("🖼️ Logo del consultorio"):
+                    logo_up2 = st.file_uploader("Subir logo", type=["jpg","jpeg","png"], key="rx_logo_up2")
+                    if logo_up2 and logo_up2.size <= 2_097_152:
+                        import base64 as _b64r
+                        st.session_state["sess_logo_b64"]  = _b64r.b64encode(logo_up2.read()).decode()
+                        st.session_state["sess_logo_mime"] = logo_up2.type
+                        st.success("✅ Logo cargado.")
+                    if st.session_state.get("sess_logo_b64"):
+                        import base64 as _b64r
+                        st.image(_b64r.b64decode(st.session_state["sess_logo_b64"]), width=80)
+
+                st.divider()
+                gb1, gb2 = st.columns(2)
+                with gb1:
+                    if st.button("📄 Generar PDF", type="primary", use_container_width=True, key="btn_gen_rx"):
+                        if not rx_nombre or not rx_body:
+                            st.warning("Nombre e indicaciones son obligatorios.")
+                        else:
+                            folio_str = "SIN-FOLIO"
+                            if uid_rx and _DB_ON and _db.db_ok():
+                                try: folio_str = _db.get_next_folio(uid_rx)
+                                except Exception: pass
+                            try:
+                                import io, base64
+                                from reportlab.lib.pagesizes import letter
+                                from reportlab.lib.units import cm
+                                from reportlab.lib.colors import HexColor, white, black
+                                from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
+                                from reportlab.lib.styles import ParagraphStyle
+                                from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+                                buf = io.BytesIO()
+                                doc = SimpleDocTemplate(buf, pagesize=letter, leftMargin=1.8*cm, rightMargin=1.8*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+                                AZUL=HexColor("#1E3A8A"); AZUL2=HexColor("#2563EB"); AZULC=HexColor("#EFF6FF"); GRIS=HexColor("#6B7280"); GRISL=HexColor("#F8FAFC")
+                                def P(txt, fn="Helvetica", fs=9, color=black, align=TA_LEFT, bold=False, sp=2, lead=None):
+                                    return Paragraph(str(txt) if txt else "", ParagraphStyle("s", fontName="Helvetica-Bold" if bold else fn, fontSize=fs, textColor=color, alignment=align, spaceAfter=sp, leading=lead or (fs+3)))
+                                story=[]
+                                logo_b64_rx = st.session_state.get("sess_logo_b64")
+                                if logo_b64_rx:
+                                    try:
+                                        logo_bytes = base64.b64decode(logo_b64_rx)
+                                        logo_cell  = RLImage(io.BytesIO(logo_bytes), width=1.8*cm, height=1.8*cm, kind="proportional")
+                                    except Exception: logo_cell = P("☤", fn="Helvetica-Bold", fs=24, color=AZUL, align=TA_CENTER)
+                                else: logo_cell = P("☤", fn="Helvetica-Bold", fs=24, color=AZUL, align=TA_CENTER)
+                                hdr_txt = [P(dr_inst or "Consultorio Médico", bold=True, fs=11, color=AZUL, sp=1), P(dr_dom, fs=8, color=GRIS, sp=1), P(f"Tel: {dr_tel}" if dr_tel else "", fs=8, color=GRIS, sp=1), P(f"Folio: {folio_str}", fs=8, color=AZUL2, align=TA_RIGHT)]
+                                th=Table([[logo_cell, hdr_txt]], colWidths=[2.2*cm,14.8*cm])
+                                th.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),AZULC),("VALIGN",(0,0),(-1,-1),"MIDDLE"),("TOPPADDING",(0,0),(-1,-1),8),("BOTTOMPADDING",(0,0),(-1,-1),8),("LEFTPADDING",(0,0),(-1,-1),8),("BOX",(0,0),(-1,-1),1.5,AZUL),("LINEABOVE",(0,0),(-1,0),4,AZUL2)]))
+                                story.append(th); story.append(Spacer(1,0.3*cm))
+                                creds = []
+                                if dr_ced_gen: creds.append(f"Méd. Gral. Céd.: {dr_ced_gen} | {dr_univ_gen}")
+                                if dr_cedula:  creds.append(f"Especialidad Céd.: {dr_cedula} | {dr_univ}")
+                                if dr_consejo: creds.append(f"Certif.: {dr_consejo} N°{dr_cons_num}")
+                                med_rows=[[P(dr_nombre, bold=True, fs=12, color=AZUL), P("",fs=8)],[P(dr_esp, fs=9, color=GRIS), P("",fs=8)]]
+                                for c in creds: med_rows.append([P(c, fs=8, color=GRIS), P("",fs=8)])
+                                tm=Table(med_rows, colWidths=[13*cm,4*cm])
+                                tm.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),("LEFTPADDING",(0,0),(-1,-1),4)]))
+                                story.append(tm); story.append(HRFlowable(width="100%",thickness=1.5,color=AZUL2)); story.append(Spacer(1,0.3*cm))
+                                sv=[]
+                                if rx_peso>0: sv.append(f"Peso: {rx_peso:.1f} kg")
+                                if rx_ta: sv.append(f"TA: {rx_ta}")
+                                if rx_fc: sv.append(f"FC: {rx_fc}")
+                                if rx_temp: sv.append(f"T°: {rx_temp}°C")
+                                if rx_spo2: sv.append(f"SpO₂: {rx_spo2}%")
+                                sv_style=ParagraphStyle("sv",fontName="Helvetica",fontSize=8,leading=11)
+                                pac_rows=[[P("Paciente:",bold=True,fs=8),P(rx_nombre,bold=True,fs=10),P("Expediente:",bold=True,fs=8),P(rx_exp,fs=9),P("Fecha:",bold=True,fs=8),P(str(rx_fecha),fs=9)],[P("Edad:",bold=True,fs=8),P(f"{rx_edad} años" if rx_edad else "—",fs=9),P("Sexo:",bold=True,fs=8),P(rx_sexo,fs=9),P("CIE-10:",bold=True,fs=8),P(cie_codes or "—",fs=9,color=AZUL2,bold=True)],[P("Dx:",bold=True,fs=8),Paragraph(dx_str or "—",ParagraphStyle("dx2",fontName="Helvetica-Oblique",fontSize=8,leading=11)),P(""),P(""),P(""),P("")]]
+                                if sv: pac_rows.append([P("Signos:",bold=True,fs=8),Paragraph("  ·  ".join(sv),sv_style),P(""),P(""),P(""),P("")])
+                                tp=Table(pac_rows,colWidths=[2*cm,5.5*cm,2*cm,2.5*cm,1.5*cm,3.5*cm])
+                                tp.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),GRISL),("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC,GRISL,white,white]),("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),("LEFTPADDING",(0,0),(-1,-1),6),("BOX",(0,0),(-1,-1),1,HexColor("#BFDBFE")),("SPAN",(1,2),(-1,2))]))
+                                story.append(tp); story.append(Spacer(1,0.4*cm))
+                                story.append(Paragraph("&#x211E;",ParagraphStyle("rxs",fontName="Helvetica-Bold",fontSize=28,textColor=AZUL2,spaceAfter=6)))
+                                ind_s=ParagraphStyle("ind",fontName="Helvetica",fontSize=11,leading=18,spaceAfter=4)
+                                for linea in (rx_body or "").strip().split("\n"): story.append(Paragraph(linea.strip() or " ", ind_s))
+                                if rx_notas: story.append(Spacer(1,0.15*cm)); story.append(HRFlowable(width="100%",thickness=0.5,color=HexColor("#BFDBFE"))); story.append(Paragraph(f"Instrucciones: {rx_notas}",ParagraphStyle("n",fontName="Helvetica-Oblique",fontSize=9,textColor=GRIS,spaceAfter=2)))
+                                if rx_prox_fecha:
+                                    hora_txt=f" a las {rx_prox_hora}" if rx_prox_hora else ""
+                                    cita_b=[[P(f"📅  Próxima cita: {rx_prox_fecha}{hora_txt}",bold=True,fs=10,color=AZUL2)]]
+                                    tc=Table(cita_b,colWidths=[17*cm]); tc.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),AZULC),("TOPPADDING",(0,0),(-1,-1),6),("BOTTOMPADDING",(0,0),(-1,-1),6),("LEFTPADDING",(0,0),(-1,-1),10),("BOX",(0,0),(-1,-1),1,AZUL2)])); story.append(Spacer(1,0.2*cm)); story.append(tc)
+                                story.append(Spacer(1,1.0*cm))
+                                fc=ParagraphStyle("fc",fontName="Helvetica",fontSize=9,alignment=TA_CENTER); fb=ParagraphStyle("fb",fontName="Helvetica-Bold",fontSize=10,alignment=TA_CENTER); fg=ParagraphStyle("fg",fontName="Helvetica",fontSize=8,textColor=GRIS,alignment=TA_CENTER)
+                                firma_items=[Paragraph("_"*40,fc),Spacer(1,0.1*cm),Paragraph(dr_nombre,fb)]
+                                for c in creds: firma_items.append(Paragraph(c,fg))
+                                tf=Table([["",firma_items]],colWidths=[6*cm,11*cm]); tf.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"BOTTOM")])); story.append(tf); story.append(Spacer(1,0.3*cm))
+                                story.append(HRFlowable(width="100%",thickness=1,color=HexColor("#BFDBFE")))
+                                story.append(Paragraph(f"Receta médica general · NOM-004-SSA3-2012 · COFEPRIS · Folio: {folio_str} · {dr_inst} · RenalPro v3.1.0",ParagraphStyle("pie",fontName="Helvetica",fontSize=7,textColor=GRIS,alignment=TA_CENTER)))
+                                doc.build(story); buf.seek(0)
+                                pdf_bytes = buf.read()
+                                safe = "".join(c for c in rx_nombre if c.isalnum() or c==" ")[:18].strip()
+                                st.download_button("⬇️ Descargar PDF", data=pdf_bytes, file_name=f"Rx_{folio_str}_{safe}.pdf", mime="application/pdf", key="btn_dl_rx")
+                                st.success(f"✅ Folio: **{folio_str}**")
+                            except Exception as e:
+                                st.error(f"Error PDF: {e}")
+
+                with gb2:
+                    if pac_id_rx and uid_rx and _DB_ON and _db.db_ok():
+                        if st.button("💾 Guardar en expediente", use_container_width=True, key="btn_save_rx"):
+                            try:
+                                _db.add_clinical_record(pac_id_rx, uid_rx, {
+                                    "tipo": "Receta médica",
+                                    "titulo": f"Receta — {(dx_str or rx_body[:40])}",
+                                    "fecha_consulta": rx_fecha,
+                                    "resumen": rx_body,
+                                    "notas": rx_notas,
+                                    "datos": {"dx": dx_str, "cie": cie_codes, "peso": rx_peso, "ta": rx_ta},
+                                })
+                                _clear_cache(); st.success("✅ Receta guardada en expediente.")
+                            except AttributeError:
+                                st.error("Sube el db.py actualizado a GitHub.")
+
+            with rx_tab2:
+                st.markdown("#### 📋 Historial de recetas")
+                if uid_rx and _DB_ON and _db.db_ok():
+                    try:
+                        pacs_all = _cached_patients(uid_rx)
+                        recetas_all = []
+                        for p in pacs_all:
+                            for r in _cached_clinical_records(p["id"]):
+                                if r.get("tipo") == "Receta médica":
+                                    recetas_all.append({**r, "_pac": p.get("nombre","—")})
+                        recetas_all.sort(key=lambda x: str(x.get("created_at","")), reverse=True)
+                        if recetas_all:
+                            for r in recetas_all[:30]:
+                                fecha_r = str(r.get("fecha_consulta",""))[:10]
+                                with st.expander(f"📄 {fecha_r} — {r.get('titulo','—')} · {r['_pac']}"):
+                                    st.markdown(f"**Indicaciones:**\n{r.get('resumen','')}")
+                                    if r.get("notas"): st.caption(r["notas"])
+                        else:
+                            st.info("No hay recetas guardadas aún.")
+                    except Exception as e:
+                        st.warning(f"Sube el db.py actualizado. ({e})")
+                else:
+                    st.info("Conecta Railway DB para ver el historial.")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
