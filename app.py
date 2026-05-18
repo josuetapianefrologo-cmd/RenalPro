@@ -2101,6 +2101,8 @@ with st.sidebar:
     _navbtn("📋 Resumen / PDF", "resumen")
     _navbtn("📂 Mis Pacientes", "pacientes")
     _navbtn("🏥 Expediente Clínico", "expediente")
+    _navbtn("🔁 Recurrencia Glomerulopatías TR", "recurrencia_tx")
+    _navbtn("💉 Vacunas Post-Trasplante", "vacunas_tx")
     _navbtn("📋 Candidato a Trasplante", "eval_candidato")
     _navbtn("🫀 Donante Vivo", "eval_donante_vivo")
     _navbtn("🔴 Nota Post-Trasplante", "nota_tx")
@@ -6978,6 +6980,9 @@ elif nav == "trasplante":
         "🔴 Rechazo Humoral (AMR)",
         "🅰️ Protocolo ABO-Incompatible",
         "📦 Donante Criterio Extendido (ECD)",
+        "🔬 Biopsia Renal en Trasplante",
+        "🔄 Conversión de Inmunosupresión",
+        "🦠 COVID-19 en Trasplante",
         "⚡ Interacciones Farmacológicas",
     ], horizontal=True, key="tx_modo")
 
@@ -7545,6 +7550,442 @@ Prednisona: sin cambios
             """)
         st.caption("Ref: Port FK et al. Transplantation 2002. Rao PS et al. Am J Transplant 2009. "
                    "Moers C et al. NEJM 2009 (PROTECT). Hosgood SA et al. Lancet 2023 (COPE).")
+
+    # ── BIOPSIA RENAL EN TRASPLANTE ────────────────────────────────────────────
+    elif "Biopsia Renal" in tx_modo:
+        st.markdown("### 🔬 Biopsia Renal en Trasplante")
+        st.caption("Ref: Loupy A et al. Am J Transplant 2022 (Banff 2022) | "
+                   "Haas M et al. Am J Transplant 2014 | KDIGO Transplant 2009 Ch.8")
+        bx_tab = st.radio("", ["📋 Indicaciones","🔬 Clasificación Banff 2022","📅 Biopsias de protocolo"], horizontal=True, key="bx_tab")
+        st.divider()
+        if "Indicaciones" in bx_tab:
+            st.markdown("""
+#### Indicaciones de biopsia renal post-trasplante
+
+**Indicaciones de URGENCIA (24–48h):**
+| Situación | Sospecha |
+|-----------|---------|
+| Cr sube >25% sobre basal sin causa clara | Rechazo agudo |
+| Anuria persistente >48–72h con Doppler normal | DGF vs rechazo |
+| Proteinuria >2 g/día de nueva aparición | Recurrencia / Rechazo crónico |
+| DSA de novo positivos + Cr sube | AMR |
+| Fiebre + Cr sube sin foco infeccioso | Rechazo T-celular |
+
+**Indicaciones PROGRAMADAS:**
+| Indicación | Cuándo |
+|-----------|--------|
+| DGF sin recuperación en >3 semanas | Para descartar rechazo sobreañadido |
+| Sospecha nefrotoxicidad por CNI | Cr crónica sin proteinuria |
+| Proteinuria persistente >500 mg/día | Dx diferencial |
+| Sospecha recurrencia de la enfermedad original | Inicio temprano + patrón clínico |
+| BKV viremia >10,000 copias/mL | Descartar nefropatía BK |
+
+**Biopsias de PROTOCOLO (sin indicación clínica):**
+- Mes 1, Mes 3, Mes 12 — algunos centros las hacen rutinariamente
+- Evidencia: detectan rechazo subclínico (5–15%) que al tratarse mejora pronóstico
+- KDIGO: no las recomienda universalmente, pero considera razonables en centros especializados
+
+#### Contraindicaciones
+| Contraindicación | Alternativa |
+|-----------------|-------------|
+| Riñón único (trasplante = único riñón) | Riesgo aceptable con ultrasonido guía — proceder igual |
+| Anticoagulación (INR >1.5) | Corregir antes: vitamina K / PFC |
+| Plaquetas <80,000 | Transfusión + corregir |
+| Infección activa no tratada | Tratar primero si no es urgente |
+| Hidroneffrosis (obstrucción) | Resolver obstrucción primero |
+            """)
+        elif "Banff" in bx_tab:
+            st.markdown("""
+#### Clasificación de Banff 2022 — Simplificada
+
+**¿Qué evalúa Banff?** Lesiones histológicas en glomérulos, túbulos, intersticio, vasos y endotelio.
+
+#### Categorías diagnósticas principales
+
+| Categoría | Hallazgo principal | Interpretación |
+|-----------|-------------------|----------------|
+| **1 — Normal / cambios inespecíficos** | Sin lesión significativa | Normal o DGF pura |
+| **2 — Cambios mediados por Ac (AMR)** | Microcirculación + C4d ± DSA | Rechazo humoral |
+| **3 — Cambios limítrofes** | Tubulitis + inflamación intersticial leve | Sospecha rechazo, no cumple Banff IA |
+| **4 — Rechazo mediado por células T (TCMR)** | Tubulitis + inflamación intersticial | Rechazo celular activo |
+| **5 — Fibrosis intersticial / Atrofia tubular (IFTA)** | Cicatriz + atrofia | Daño crónico — múltiples causas |
+| **6 — Otras causas** | Nefrotoxicidad CNI, recurrencia, infección BK | Diagnóstico diferencial |
+
+#### Scores de lesión más importantes
+| Score | Qué mide | Rango |
+|-------|---------|-------|
+| **g** (glomerulitis) | Inflamación en capilares glomerulares | 0–3 |
+| **ptc** (capilaritis peritubular) | Inflamación en capilares peritubulares | 0–3 |
+| **t** (tubulitis) | Linfocitos en túbulos | 0–3 |
+| **i** (inflamación intersticial) | % corteza inflamada | 0–3 |
+| **v** (vasculitis intimal) | Arteritis intimal | 0–3 |
+| **C4d** | Depósito en capilares peritubulares | 0–3 |
+| **ci** (fibrosis intersticial crónica) | % corteza fibrosada | 0–3 |
+| **ct** (atrofia tubular crónica) | % túbulos atróficos | 0–3 |
+| **cg** (glomerulopatía del trasplante) | Duplicación MBG | 0–3 |
+
+#### TCMR — Rechazo Celular Agudo — Grados
+| Grado Banff | Criterios | Tratamiento |
+|------------|---------|------------|
+| **IA** | t2 + i2 (tubulitis moderada) | Pulsos MP × 3 días |
+| **IB** | t3 + i2 (tubulitis severa) | Pulsos MP × 3 días |
+| **IIA** | v1 (arteritis intimal leve-moderada) | MP + ¿timoglobulina? |
+| **IIB** | v2 (arteritis intimal severa) | Timoglobulina |
+| **III** | v3 (arteritis transmural) | Timoglobulina + PP |
+
+#### Cambios crónicos — IFTA
+| Grado | Fibrosis (ci) | Pronóstico |
+|-------|-------------|-----------|
+| Leve | ci1 + ct1 (<25%) | Monitoreo |
+| Moderada | ci2 + ct2 (26–50%) | Optimizar IS + RASi |
+| Severa | ci3 + ct3 (>50%) | Mal pronóstico — preparar retrasplante |
+
+> 📌 La **glomerulopatía del trasplante (cg)** es la lesión crónica más específica de AMR crónico.
+> Una vez establecida, el pronóstico es desfavorable: 50% de pérdida a 5 años.
+            """)
+        else:
+            st.markdown("""
+#### Biopsias de protocolo — ¿Qué busco en cada una?
+
+| Tiempo | Biopsia protocolo | Hallazgos esperados | Alarmas |
+|--------|-----------------|--------------------|----|
+| **Mes 1** | Sí en centros especializados | NTA residual si DGF, IS adecuada | Rechazo subclínico (t2+i2) → pulsos MP |
+| **Mes 3** | Sí | Resolución de NTA, IS a dosis mantenimiento | Nefropatía BK si viral+ · Rechazo límite |
+| **Mes 6** | Opcional | Estabilización | cg1 temprana → DSA de novo |
+| **Mes 12** | Sí en la mayoría | IFTA grado 1 es esperado | cg ≥2 → AMR crónico activo |
+| **Año 3–5** | Centros con protocolo estricto | IFTA estable vs progresiva | Recurrencia glomerular |
+
+#### Nefropatía por BKV en biopsia
+```
+Hallazgos: inclusiones intranucleares en células tubulares 
+           (Owl's eye) + tinción SV40 positiva + necrosis tubular
+
+Estadios:
+  Clase 1 (BKVN A): cambios citopáticos focales, sin inflamación intersticial
+  Clase 2 (BKVN B): inflamación intersticial + atrofia
+  Clase 3 (BKVN C): fibrosis extensa (>50%)
+
+Manejo:
+  Reducir MMF primero → luego reducir CNI si persiste
+  NO usar leflunomide o cidofovir de rutina
+  Monitoreo mensual de PCR BKV plasma
+```
+
+#### Nefrotoxicidad por CNI — hallazgos típicos
+- Arteriolopatía hialina en arteriolas
+- Vacuolización isométrica de células tubulares
+- Fibrosis en "rayas" (striped fibrosis)
+- Sin inflamación significativa
+- **Diferencia con TCMR:** sin tubulitis, sin infiltrado denso
+            """)
+
+    # ── CONVERSIÓN DE INMUNOSUPRESIÓN ──────────────────────────────────────────
+    elif "Conversión" in tx_modo:
+        st.markdown("### 🔄 Conversión de Inmunosupresión en Trasplante Renal")
+        st.caption("Ref: Webster AC et al. Cochrane 2005 | Budde K et al. Am J Transplant 2012 | "
+                   "Cravedi P et al. Clin J Am Soc Nephrol 2019")
+        conv_tab = st.radio("", [
+            "💊 TAC IR → TAC LP",
+            "🔄 Tacrolimus → Ciclosporina",
+            "⚙️ CNI → Inhibidor mTOR",
+            "🔵 MMF → MFS / Azatioprina",
+        ], horizontal=True, key="conv_tab")
+        st.divider()
+        if "TAC IR → TAC LP" in conv_tab:
+            st.markdown("""
+### Tacrolimus IR (Prograf®) → Tacrolimus LP (Advagraf® / Envarsus®)
+**Indicaciones:** Mejora adherencia (dosis única diaria), menor variabilidad de niveles,
+toxicidad neurológica con TAC IR (temblor, insomnio).
+
+#### Conversión de dosis
+| Formulación origen | Formulación destino | Ratio | Ejemplo |
+|-------------------|--------------------|----|-------|
+| Prograf® (IR) c/12h | Advagraf® (LP) c/24h | **1:1** (misma dosis total diaria) | 2 mg c/12h → 4 mg c/24h |
+| Prograf® (IR) c/12h | Envarsus® (LP) c/24h | **0.7–0.8:1** (Envarsus más biodisponible) | 4 mg/día → 3 mg/día Envarsus |
+
+#### Protocolo de conversión
+```
+Día 1: ÚLTIMA dosis de TAC IR por la noche
+Día 2: PRIMERA dosis de TAC LP por la mañana
+       → sin período de transición, conversión directa overnight
+
+Monitoreo después de conversión:
+  → Nivel C0 a las 24h (día 1)
+  → Nivel C0 a las 72h (día 3)
+  → Nivel C0 a las 2 semanas
+  → Ajustar si está fuera de rango
+```
+
+> 📌 La mayoría de pacientes mantiene niveles similares.
+> En la práctica: algunos necesitan +10–20% con LP para mantener mismo C0.
+            """)
+        elif "Ciclosporina" in conv_tab:
+            st.markdown("""
+### Tacrolimus → Ciclosporina A (CsA)
+**Cuándo convertir:**
+| Indicación | Detalle |
+|-----------|---------|
+| Temblor severo | Efecto neurotóxico del tacrolimus |
+| Alopecia significativa | Frecuente, molesta para el paciente |
+| NODAT refractario | CsA menos diabetogénica |
+| Nefrotoxicidad CNI severa | Considerar mTOR en su lugar |
+| Epilepsia de difícil control | Tacrolimus reduce umbral convulsivo |
+
+**Ratio de conversión (equipotente):**
+| Tacrolimus (mg/día) | Ciclosporina aproximada (mg/día) |
+|--------------------|---------------------------------|
+| 1 mg/día | 25–50 mg/día |
+| 2 mg/día | 50–100 mg/día |
+| 4 mg/día | 100–150 mg/día |
+| Regla general | × 40–50 (pero ajustar por nivel) |
+
+**Meta C0 Ciclosporina:**
+- Meses 1–3: 200–300 ng/mL
+- Meses 3–12: 150–250 ng/mL
+- >12 meses: 100–150 ng/mL
+
+**Protocolo de conversión:**
+```
+Semana 1: Reducir TAC 50% + iniciar CsA a dosis reducida
+Semana 2: Suspender TAC + CsA a dosis plena
+Monitoreo: C0 de ambos durante la transición
+```
+
+**⚠️ Desventajas de CsA vs Tacrolimus:**
+- Mayor HTA (vasoconstricción directa)
+- Mayor hiperlipidemia
+- Hiperplasia gingival
+- Hirsutismo
+- Menor eficacia inmunosupresora en algunos estudios
+            """)
+        elif "mTOR" in conv_tab:
+            st.markdown("""
+### CNI (Tacrolimus / CsA) → Inhibidor mTOR (Everolimus / Sirolimus)
+**Indicaciones para conversión a mTOR:**
+| Indicación | Evidencia |
+|-----------|----------|
+| Nefrotoxicidad crónica por CNI confirmada en biopsia | Alta |
+| PTLD (linfoma post-trasplante) | mTOR tiene efecto antitumoral |
+| Sarcoma de Kaposi | Alta — mTOR de elección |
+| Cáncer de piel recurrente | Moderada |
+| Neoplasia sólida post-Tx | Moderada |
+| Poliquistosis renal (PKD) en el injerto | Experimental |
+
+**Contraindicaciones para mTOR:**
+| Contraindicación | Razón |
+|-----------------|-------|
+| Proteinuria >800 mg/día | mTOR empeora proteinuria |
+| TFG <30 mL/min | Mayor toxicidad |
+| <3 meses post-trasplante | Cicatrización retardada, dehiscencia |
+| Linfedema severo | mTOR lo empeora |
+| Hiperlipidemia no controlada | mTOR la aumenta |
+
+**Protocolo de conversión CNI → Everolimus:**
+```
+PASO 1: Iniciar everolimus 0.75 mg c/12h (1.5 mg/día)
+        Mantener CNI a dosis plena × 4 semanas
+
+PASO 2: Reducir CNI 50% mientras ajustas everolimus
+        Objetivo everolimus C0: 3–8 ng/mL
+        Objetivo tacrolimus C0 reducido: 4–6 ng/mL
+
+PASO 3: Suspender CNI completamente si:
+        - Everolimus en rango (3–8 ng/mL) ×2 mediciones
+        - Cr estable
+        - Sin proteinuria nueva
+        - Función del injerto conservada (TFG >30)
+
+Monitoreo post-conversión:
+  → C0 everolimus semanal × 1 mes
+  → Cr + orina spot c/2 semanas
+  → Perfil lipídico al mes
+```
+
+**Efectos adversos frecuentes de mTOR:**
+- Hiperlipidemia (70%) — estatinas
+- Úlceras orales (aftosis) — gel de lidocaína, vitamina B12
+- Edema periférico
+- Neumonitis intersticial (1–4%) — rara pero grave
+- Acné / erupciones cutáneas
+- Anemia, leucopenia
+            """)
+        else:
+            st.markdown("""
+### MMF → MFS (Micofenolato Sódico) / Azatioprina
+**MMF → MFS (Myfortic®):**
+- Indicación: intolerancia gastrointestinal a MMF (diarrea, náusea, cólico)
+- MFS tiene cubierta entérica → menos síntomas GI
+- Ratio: **MMF 720 mg = MFS 540 mg** (no es 1:1)
+- Conversión práctica: MMF 500 mg c/12h → MFS 360 mg c/12h
+
+| MMF (Cellcept®) | MFS (Myfortic®) |
+|----------------|----------------|
+| 250 mg | 180 mg |
+| 500 mg | 360 mg |
+| 1,000 mg | 720 mg |
+| 1,500 mg | 1,080 mg |
+
+**MMF → Azatioprina:**
+- Indicación: intolerancia GI severa a ambas formulaciones de MMF
+- Dosificación azatioprina: 1–2 mg/kg/día
+- Monitoreo: BH (leucopenia por azatioprina — genotipo TPMT puede guiar la dosis)
+- Interacción CRÍTICA: alopurinol + azatioprina → toxicidad severa (reducir azatioprina 75%)
+
+**Suspensión de MMF — cuándo y cómo:**
+| Situación | Acción |
+|-----------|--------|
+| Infección grave (CMV, BKV, sepsis) | Reducir 50% o suspender |
+| Leucocitos <1,500 | Reducir 50% |
+| Leucocitos <1,000 | Suspender |
+| Rechazo agudo — ¿suspender? | NO — mantener o aumentar |
+| Embarazo | Suspender (teratogénico) — cambiar a azatioprina |
+            """)
+
+    # ── COVID-19 EN TRASPLANTE ─────────────────────────────────────────────────
+    elif "COVID" in tx_modo:
+        st.markdown("### 🦠 COVID-19 en el Receptor de Trasplante Renal")
+        st.caption("Ref: Cravedi P et al. Am J Transplant 2020 | "
+                   "Thaunat O et al. Kidney Int 2021 | "
+                   "CDC Immunocompromised Guidelines 2023")
+        st.warning("""
+⚠️ Los trasplantados tienen **mayor riesgo de COVID-19 grave** (hospitalización, muerte)
+comparado con la población general. La IS blunts la respuesta inmune y reduce la efectividad
+de la vacuna. El manejo de IS durante COVID activo es crítico.
+        """)
+        cov_tab = st.radio("", ["🛡️ Prevención y vacunas","💊 Manejo IS en COVID activo","💊 Antivirales","🏥 Hospitalización"], horizontal=True, key="cov_tab")
+        st.divider()
+        if "Prevención" in cov_tab:
+            st.markdown("""
+#### Vacunación COVID-19 en trasplantados
+**Esquema recomendado (CDC / AST 2023):**
+| Dosis | Tipo | Cuándo |
+|-------|------|--------|
+| Primaria 1 | mRNA (Pfizer/Moderna) | Desde semana 1–3 post-Tx si no vacunado |
+| Primaria 2 | mRNA | 3–4 semanas después |
+| Primaria 3 | mRNA | 4 semanas después (3ª dosis como parte de la serie primaria en inmunosuprimidos) |
+| Booster adicional | mRNA actualizado | Cada 6–12 meses o tras nueva variante |
+
+**Respuesta serológica en trasplantados:**
+- Solo **~30–50%** desarrollan anticuerpos tras 2 dosis (vs >95% en sanos)
+- Tras 3ª dosis: ~60–70% seroconvierten
+- Anti-spike IgG: medir 4 semanas post-última dosis
+- Si respuesta <4 U/mL: considerar dosis adicional
+
+**Pre-exposición pasiva (tixagevimab + cilgavimab — AstraZeneca):**
+- En México: disponibilidad limitada
+- Indicado en trasplantados con respuesta serológica muy baja
+
+**Otras medidas preventivas:**
+- Mascarilla N95 en lugares cerrados / alta densidad
+- Evitar aglomeraciones en períodos de alta transmisión comunitaria
+- Familiares y contactos cercanos: vacunación completa
+            """)
+        elif "Manejo IS" in cov_tab:
+            st.markdown("""
+#### Manejo de IS durante COVID-19 activo
+
+**Principio general:**
+```
+Gravedad leve → ajuste mínimo de IS
+Gravedad moderada → reducir o suspender MMF
+Gravedad severa/UCI → suspender MMF + reducir CNI + mantener esteroides
+```
+
+**Por fármaco:**
+| Fármaco | COVID Leve | COVID Moderado | COVID Grave / UCI |
+|---------|-----------|---------------|------------------|
+| **MMF / Micofenolato** | Mantener o ↓25% | Reducir 50% o suspender | **Suspender** |
+| **Tacrolimus** | Mantener | Mantener (monitorear C0) | Reducir 30–50% |
+| **Prednisona** | Mantener | Mantener o ↑ (dexametasona si grave) | **NO suspender** — insuficiencia adrenal |
+| **mTOR** | Reducir | Suspender | Suspender |
+
+**Dexametasona en COVID grave en trasplantados:**
+- SÍ usar: 6 mg/día × 10 días si requiere O₂ o ventilación
+- Ya están en esteroides → calcular dosis equivalente
+- Dexametasona 6 mg = Prednisona 40 mg
+
+**Cuándo reintroducir IS suspendida:**
+```
+Criterios:
+  ✅ PCR SARS-CoV-2 negativa (o >10 días de síntomas + afebril 72h)
+  ✅ SpO₂ basal sin apoyo
+  ✅ PCR / dímero D en descenso
+  ✅ Sin linfopenia severa
+Reintroducción gradual: empezar MMF al 50% → titular en 2 semanas
+```
+
+> ⚠️ La suspensión de IS aumenta el riesgo de rechazo agudo post-COVID.
+> Monitorear Cr y DSA las semanas siguientes.
+            """)
+        elif "Antivirales" in cov_tab:
+            st.markdown("""
+#### Antivirales COVID-19 en trasplantados
+
+**IMPORTANTE — Nirmatrelvir/Ritonavir (Paxlovid®):**
+""")
+            st.error("""
+🛑 INTERACCIÓN SEVERA: Ritonavir es inhibidor potente de CYP3A4
+
+**Ritonavir + Tacrolimus = INCREMENTO DE NIVELES >10 veces**
+
+Protocolo OBLIGATORIO si se usa Paxlovid en trasplantados:
+1. Medir nivel C0 de Tacrolimus ANTES de iniciar
+2. Suspender Tacrolimus durante el tratamiento (5 días)
+3. Reiniciar Tacrolimus 48–72h DESPUÉS del último comprimido de Paxlovid
+4. Medir C0 a las 24h, 48h y 72h tras reinicio
+5. Esperar niveles normales antes de dar dosis completa
+
+📌 Algunos centros usan dosis única de tacrolimus de 0.5–1 mg al día 3 de Paxlovid
+   para evitar depleción completa → REQUIERE monitoreo estrecho
+            """)
+            st.markdown("""
+| Antiviral | Uso en trasplante | Interacción CNI | Consideración |
+|-----------|------------------|----------------|--------------|
+| **Nirmatrelvir/Ritonavir (Paxlovid)** | ⚠️ Con protocolo estricto | ⭐⭐⭐⭐ SEVERA | Suspender TAC durante tx |
+| **Remdesivir** | ✅ Seguro — IV hospitalario | Mínima | Preferido si hospitalizado |
+| **Molnupiravir** | ✅ Aceptable | Mínima | Alternativa a Paxlovid |
+| **Anticuerpos monoclonales** | ✅ Si disponibles | Ninguna | Bebtelovimab (si sensible variante) |
+
+**Indicaciones para antiviral en trasplantados:**
+- COVID confirmado (test +)
+- Inicio de síntomas <5 días
+- Cualquier gravedad (incluidos asintomáticos en alto riesgo)
+- Trasplante = inmunocompromiso grave = indicación fuerte
+            """)
+        else:
+            st.markdown("""
+#### Criterios de hospitalización en trasplantado con COVID
+
+**HOSPITALIZAR si:**
+| Criterio | Urgencia |
+|---------|---------|
+| SpO₂ <94% en reposo o <90% con actividad | 🔴 Urgente |
+| FR >20 rpm en reposo | 🔴 Urgente |
+| Cr sube >20% sobre basal | 🟠 En 24h |
+| Linfopenia severa <200 cel/μL | 🟠 En 24h |
+| Fiebre >39°C refractaria | 🟠 En 24h |
+| Dímero D elevado >2× normal | 🟡 Valorar |
+| Sin red de apoyo para monitoreo ambulatorio | 🟡 Considerar |
+
+**Manejo hospitalario:**
+```
+1. Suplemento O₂: mascarilla → ONAF → VNI → VMI (en ese orden)
+2. Anticoagulación: heparina profiláctica (TODOS hospitalizados)
+   Si grave: dosis terapéutica
+3. Dexametasona 6 mg c/24h × 10 días (si O₂ o VM)
+4. Remdesivir IV: 200 mg día 1 → 100 mg/día × 4 días (si TFG >30)
+5. Suspender MMF + reducir TAC
+6. Monitoreo Cr + electrolitos c/24h
+7. Eco Doppler renal si Cr sube >30%
+8. Hemocultivos + cultivos si fiebre (descartar sobreinfección bacteriana)
+```
+
+**Complicaciones específicas del trasplantado con COVID grave:**
+- AKI sobre la función del injerto → diálisis de soporte
+- Rechazo agudo post-COVID (inflamación sistémica + DSA)
+- Coagulopatía → trombosis del injerto (rara pero grave)
+- Reactivación CMV / BKV post-IS reducida
+            """)
 
     # ── INTERACCIONES FARMACOLÓGICAS ───────────────────────────────────────────
     elif "Interacciones" in tx_modo:
@@ -14665,6 +15106,454 @@ elif nav == "receta":
                         st.warning(f"Sube el db.py actualizado. ({e})")
                 else:
                     st.info("Conecta Railway DB para ver el historial.")
+
+elif nav == "recurrencia_tx":
+    st.subheader("🔁 Recurrencia de Glomerulopatías en Trasplante Renal")
+    st.caption("Ref: KDIGO Glomerulonephritis 2021 | Ponticelli C et al. Am J Transplant 2014 | "
+               "Tomas NM et al. NEJM 2016 (anti-PLA2R) | Goodship TH et al. Kidney Int 2017 (aHUS)")
+
+    rg_sel = st.radio("Enfermedad", [
+        "🔁 GESF / FSGS Primaria",
+        "🟣 IgA Nefropatía",
+        "🔵 Nefropatía Membranosa (anti-PLA2R)",
+        "⚡ SHU Atípico (aHUS)",
+        "🌑 MPGN / C3 Glomerulopatía",
+        "🌸 Nefritis Lúpica",
+        "🟠 Vasculitis ANCA",
+        "💎 Oxalosis Primaria tipo 1",
+    ], horizontal=True, key="rg_sel")
+    st.divider()
+
+    if "GESF" in rg_sel or "FSGS" in rg_sel:
+        st.markdown("""
+### 🔁 GESF / FSGS Primaria — Glomeruloesclerosis Focal y Segmentaria
+
+#### Epidemiología de la recurrencia
+| Parámetro | Dato |
+|-----------|------|
+| Recurrencia en 1er trasplante | **20–40%** |
+| Recurrencia en 2° trasplante (con pérdida por GESF previa) | **50–80%** |
+| Tiempo de aparición | Horas a semanas post-Tx (recurrencia temprana = peor pronóstico) |
+| Impacto en el injerto | 50% de pérdida a 5 años si recurrencia no responde |
+
+#### Factores de ALTO riesgo de recurrencia
+- Progresión rápida a ERCT (<3 años) en nativo
+- Inicio en infancia / adolescencia
+- Mutaciones en genes podocitarios ausentes (NPHS1, NPHS2 negativo = GESF idiopática)
+- Pérdida de injerto previo por GESF recurrente
+
+#### Diagnóstico de recurrencia
+```
+Sospecha: proteinuria >1 g/día en los primeros 7 días post-Tx
+          (proteinuria tan temprana es casi patognomónica de recurrencia)
+Confirmación: biopsia → GESF en el injerto (puede ser solo MO + podocituria)
+              Técnica: inmunofluorescencia + microscopía electrónica
+```
+
+#### Tratamiento
+| Línea | Intervención | Dosis / Detalles |
+|-------|-------------|-----------------|
+| **Plasmaféresis** | ⭐ Primera línea urgente | 1–1.5 vol/día × 5–10 sesiones → luego c/2 días × 4–8 sem |
+| **Rituximab** | Primera línea biológica | 375 mg/m² × 1–4 dosis (c/semana o c/2 semanas) |
+| **Ciclosporina** (si estaba en tacrolimus) | Alternativa CNI | Niveles C0 150–200 ng/mL |
+| **IVIG** | Complemento | 1–2 g/kg × 1–2 dosis |
+| **Abatacept** | En recurrencia refractaria | Experimental — bloqueo CD80 podocitario |
+| **Galactosa IV** | Experimental | 0.2 g/kg IV antes y durante PP |
+
+#### Profilaxis pre-trasplante (controversial)
+- Rituximab 1–2 semanas pre-Tx en pacientes con alto riesgo
+- Plasmaféresis intraoperatoria
+- Evidencia limitada — decisión individualizada en comité
+
+> ⚠️ En retrasplante con GESF previa: discutir riesgo de recurrencia con el paciente.
+> Algunos centros contraindican el retrasplante si pérdida por GESF recurrente resistente.
+        """)
+
+    elif "IgA" in rg_sel:
+        st.markdown("""
+### 🟣 IgA Nefropatía — Recurrencia Post-Trasplante
+
+#### Epidemiología
+| Parámetro | Dato |
+|-----------|------|
+| Recurrencia histológica | **50–60%** en biopsia protocolo |
+| Recurrencia clínica (hematuria + proteinuria) | ~30% |
+| Tiempo de aparición | Meses a años (promedio 2–3 años) |
+| Pérdida del injerto por recurrencia IgAN | 5–15% a 10 años |
+
+#### Diagnóstico
+- Biopsia: depósitos de IgA en mesangio en IF (mismo patrón que nativo)
+- Clínica: hematuria microscópica + proteinuria progresiva
+- Galactosa-deficient IgA1 elevada en plasma (no disponible en la mayoría de centros)
+
+#### Tratamiento
+| Intervención | Indicación | Evidencia |
+|-------------|-----------|----------|
+| **IECA / ARA-II** | Proteinuria >500 mg/día | Alta — nefroprotección |
+| **SGLT2 inhibidores** | Proteinuria + TFG >20 | Creciente (EMPA-KIDNEY, DAPA-CKD) |
+| **Omega-3 (aceite de pescado)** | Proteinuria leve | Moderada (controversial) |
+| **Esteroides** | Proteinuria >1 g + histología activa | STOP-IgAN (limitada en Tx) |
+| **Sparsentan** | IgAN activa con proteinuria | PROTECT trial — endotelina + ARB dual |
+| **Budesonida (Nefecon®)** | Proteinuria 0.5–3.5 g + TFG >45 | NEFIGARD trial — nueva evidencia |
+
+> 📌 La recurrencia histológica NO requiere cambio de IS de rutina.
+> El tratamiento se enfoca en la progresión clínica (proteinuria, caída de TFG).
+        """)
+
+    elif "Membranosa" in rg_sel or "PLA2R" in rg_sel:
+        st.markdown("""
+### 🔵 Nefropatía Membranosa Post-Trasplante
+
+#### Tipos en el contexto del trasplante
+| Tipo | Descripción | Cuándo |
+|------|-----------|--------|
+| **Recurrencia de MN primaria** | Anti-PLA2R recurrente en el injerto | Meses a años post-Tx |
+| **MN de novo** | Aparece en injerto sin MN previa | Frecuente — anticuerpos anti-donante en la MBG |
+| **MN por VHB / VHC** | Reactivación viral en IS | Primeros meses |
+| **MN secundaria a drogas** | CNI, AINE, oro | Variable |
+
+#### Monitoreo anti-PLA2R
+```
+Pre-Tx:     Medir título basal de anti-PLA2R IgG4
+Post-Tx mes 3, 6, 12: Medir anti-PLA2R
+  → Título cae: buen pronóstico, probablemente sin recurrencia
+  → Título persiste o sube: riesgo de recurrencia clínica
+  → Proteinuria nueva + PLA2R+: recurrencia confirmada
+```
+
+#### Tratamiento de la recurrencia
+| Intervención | Dosis | Detalle |
+|-------------|-------|---------|
+| **Rituximab** | 375 mg/m² × 2–4 dosis | Igual que MN nativa — respuesta esperada 6–18 meses |
+| **Ciclofosfamida + esteroides** | Protocolo Ponticelli | Si Rituximab falla o título muy alto |
+| **IECA / ARA-II** | Dosis plena | Reducción de proteinuria |
+
+> 📌 Anti-PLA2R IgG4 negativo pre-Tx + sin proteinuria = bajo riesgo de recurrencia.
+> Si título anti-PLA2R >150 U/mL pre-Tx: considerar tratamiento pre-Tx con rituximab.
+        """)
+
+    elif "SHU" in rg_sel or "aHUS" in rg_sel:
+        st.markdown("""
+### ⚡ SHU Atípico (aHUS) — La recurrencia más grave
+
+#### Epidemiología de recurrencia
+| Mutación | Riesgo de recurrencia post-TR |
+|---------|------------------------------|
+| Factor H | **75–90%** — más alta |
+| MCP (CD46) | **15–20%** — más baja |
+| Factor I | **45–80%** |
+| C3 | **40–70%** |
+| Factor B | ~50% |
+| Sin mutación identificada | ~30% |
+| Anti-CFH anticuerpos | ~30% (tratar antes del Tx) |
+
+#### Eculizumab — el cambio de paradigma
+Antes de eculizumab: trasplante renal en aHUS = muy alto riesgo de pérdida del injerto.
+Con eculizumab profiláctico: tasas de recurrencia dramáticamente menores.
+
+#### Protocolo de eculizumab en trasplante aHUS
+| Momento | Dosis | Esquema |
+|---------|-------|---------|
+| Pre-Tx (vacunación meningocócica) | — | Obligatoria 2 semanas antes |
+| Día del Tx (intraoperatorio) | **900 mg IV** | Primera dosis en QX |
+| Semana 1–4 | 900 mg c/semana | × 4 dosis |
+| Mes 2 en adelante | **1,200 mg c/2 semanas** | Mantenimiento indefinido* |
+
+*¿Cuánto tiempo? Controversial — algunos centros intentan suspender a los 3 años.
+Si se suspende: vigilancia estrecha por posible recurrencia tardía.
+
+#### Criterios diagnósticos de recurrencia post-Tx
+```
+✅ Anemia hemolítica microangiopática (LDH alto, Hb baja, esquistocitos)
+✅ Trombocitopenia (<150,000)
+✅ Caída de Cr >25% sobre basal
+✅ C3 bajo / C4 normal (activación vía alterna)
+✅ ADAMTS-13 >10% (para descartar TTP)
+→ Si cumple: eculizumab URGENTE (no esperar confirmación genética)
+```
+
+> ⚠️ En México la disponibilidad de eculizumab puede ser limitada.
+> Si no hay acceso: plasmaféresis intensiva como puente mientras se gestiona.
+        """)
+
+    elif "MPGN" in rg_sel or "C3" in rg_sel:
+        st.markdown("""
+### 🌑 MPGN / C3 Glomerulopatía — Recurrencia Post-Trasplante
+
+#### Epidemiología
+| Tipo | Recurrencia post-Tx | Pérdida injerto |
+|------|-------------------|-----------------|
+| **MPGN tipo I (inmune complejo)** | 20–30% | 10–15% |
+| **C3 Glomerulopatía (C3G)** | **50–70%** | 30–50% |
+| **Enfermedad por Depósitos Densos (DDD / tipo II)** | **>80%** | 50% |
+
+#### Fisiopatología relevante
+- C3G y DDD: desregulación de la vía alterna del complemento
+- Mutaciones o autoanticuerpos: factor H, factor I, C3, C5, factor B
+- C3 nephritic factor (C3Nef): estabiliza C3bBb → consumo continuo de C3
+
+#### Evaluación pre-trasplante
+```
+Obligatorio antes del Tx en C3G/DDD:
+✅ Panel de complemento completo (C3, C4, CH50, AH50)
+✅ Mutaciones en genes del complemento (CFH, CFI, C3, CFB, CFHR1-5)
+✅ C3Nef (anticuerpo anti-C3 convertasa)
+✅ Anti-factor H anticuerpos
+✅ Panel de anticuerpos anti-complemento
+```
+
+#### Tratamiento de la recurrencia
+| Intervención | Evidencia | Detalle |
+|-------------|----------|---------|
+| **Eculizumab** | Moderada (casos y series) | 900–1200 mg según protocolo aHUS |
+| **Rituximab** | Solo si C3Nef o anti-FH+ | Depleta células B productoras |
+| **Plasmaféresis** | Puente/urgencia | Reemplaza factor H deficiente |
+| **MMF + esteroides** | Limitada en DDD | Reducir inflamación complemento-independiente |
+
+> 📌 No existe tratamiento definitivo aprobado para C3G/DDD en trasplante.
+> El pronóstico de injerto es peor que en otras glomerulopatías por la alta recurrencia.
+        """)
+
+    elif "Lúpica" in rg_sel or "Lúpus" in rg_sel:
+        st.markdown("""
+### 🌸 Nefritis Lúpica — Recurrencia Post-Trasplante
+
+#### Epidemiología
+| Parámetro | Dato |
+|-----------|------|
+| Recurrencia histológica | **10–30%** |
+| Recurrencia clínica significativa | ~10% |
+| Impacto en supervivencia del injerto | Generalmente favorable si se controla |
+
+#### Requisitos para trasplante en LES
+- Remisión clínica ≥6–12 meses pre-Tx
+- Anti-dsDNA idealmente negativo o en descenso
+- Complemento C3/C4 normal
+- Sin crisis lúpica activa
+
+#### Monitoreo post-trasplante
+```
+Cada 3–6 meses:
+  → Anti-dsDNA
+  → Complemento C3, C4
+  → Proteinuria
+  → Hemograma (citopenias)
+  → Función del injerto
+
+Señales de alarma:
+  → Anti-dsDNA sube + proteinuria nueva → sospecha recurrencia
+  → Biopsia indicada si Cr sube >20% o proteinuria >1 g/día
+```
+
+#### Manejo
+- **Hidroxicloroquina** (Plaquenil®): continuar indefinidamente — reduce actividad lúpica y eventos CV
+- **Belimumab**: si actividad lúpica extrarrenal — evidencia limitada en Tx
+- **Voclosporina**: nuevo CNI con mayor selectividad — estudios en LES activo
+- Ajustar IS si recurrencia confirmada en biopsia
+        """)
+
+    elif "ANCA" in rg_sel:
+        st.markdown("""
+### 🟠 Vasculitis ANCA — Recurrencia Post-Trasplante
+
+#### Epidemiología
+| Parámetro | Dato |
+|-----------|------|
+| Recurrencia renal en el injerto | **~10–17%** a 5 años |
+| Recurrencia extrarrenal | ~20% (sistémica) |
+| Peor pronóstico: PR3-ANCA vs MPO-ANCA | PR3 mayor riesgo |
+
+#### Monitoreo
+```
+Títulos ANCA c/3–6 meses
+  → Sube ANCA en 2+ mediciones consecutivas = alarma
+  → Sube ANCA + síntomas (hematuria, hemoptisis, sinusitis) → biopsia urgente
+  → Sube ANCA sin síntomas = observar + biopsia si hay cambio en función
+```
+
+#### Tratamiento de recurrencia
+- **Rituximab 375 mg/m² × 4** — igual que en vasculitis nativa (RAVE trial)
+- **Pulsos de ciclofosfamida** si Rituximab no disponible
+- **Avacopan (Tavneos®)** — nuevo, complemento C5a bloqueador, evita esteroides en inducción
+- Ajustar IS de base: algunos centros aumentan dosis de mantenimiento tras recurrencia
+        """)
+
+    else:  # Oxalosis
+        st.markdown("""
+### 💎 Oxalosis Primaria Tipo 1 — Caso especial
+
+#### Fisiopatología
+- Déficit de alanina glioxilato aminotransferasa (AGT) en hígado → acumulación de oxalato
+- El oxalato se deposita en riñones → nefrocalcinosis → ERCT
+- **El problema es hepático, no renal** → trasplante renal aislado falla por recurrencia inmediata
+
+#### Protocolo de trasplante
+| Opción | Indicación | Resultado |
+|--------|-----------|---------|
+| **Trasplante hepático + renal simultáneo (SLKT)** | OP1 con ERCT y función hepática OK | Cura la enfermedad de base → no recurrencia |
+| Trasplante hepático PRIMERO → luego renal | Si riñones nativos aún funcionan | Corregir primero el defecto enzimático |
+| Trasplante renal aislado | ❌ Generalmente contraindicado | Recurrencia en semanas — pérdida segura |
+
+#### Preparación pre-trasplante
+```
+✅ Agentes reductores de oxalato:
+   - Lumasiran (Oxlumo®): ARNi hepático — FDA aprobado 2020
+     Reduce síntesis hepática de oxalato hasta 80%
+     0.3 mg/kg SC mensual × 3 → luego 0.3 mg/kg c/3 meses
+   - Oxalato dietético: restricción <100 mg/día
+   - Piridoxina: 2–20 mg/kg/día (respondedores — 30%)
+   - Citrato potásico: inhibe cristalización
+
+✅ Hiper-hidratación pre/post-Tx:
+   - Diuresis objetivo: >3 mL/kg/h las primeras 48h post-Tx
+   - Para movilizar depósitos de oxalato del injerto
+
+✅ Diálisis pre-Tx: considerar HHD o PD diario para reducir pool de oxalato
+```
+
+> 📌 Lumasiran ha cambiado el pronóstico radicalmente:
+> Permite el trasplante renal aislado si los niveles de oxalato urinario se normalizan.
+        """)
+
+elif nav == "vacunas_tx":
+    st.subheader("💉 Vacunas Post-Trasplante Renal")
+    st.caption("Ref: AST Infectious Diseases Community of Practice 2019 | "
+               "CDC Immunocompromised Vaccination 2023 | KDIGO Transplant 2009")
+    st.warning("""
+⚠️ **Regla de oro:** Las vacunas de **virus vivos atenuados están contraindicadas** en 
+receptores de trasplante bajo inmunosupresión. Solo vacunas de organismos inactivados.
+    """)
+    vac_tab = st.radio("", [
+        "📋 Esquema completo",
+        "⏱️ Timing pre/post-Tx",
+        "🔴 Contraindicadas",
+        "📊 Respuesta inmune",
+    ], horizontal=True, key="vac_tab")
+    st.divider()
+
+    if "Esquema" in vac_tab:
+        st.markdown("""
+### Esquema de vacunación recomendado en trasplante renal
+
+#### Vacunas RECOMENDADAS (inactivadas — seguras con IS)
+| Vacuna | Dosis | Frecuencia | Cuándo post-Tx |
+|--------|-------|-----------|----------------|
+| **Influenza** | 1 dosis IM | **Anual** | Desde mes 1 post-Tx (antes si epidemia) |
+| **Neumococo PCV20** | 1 dosis | Única + refuerzo a 5 años | Desde mes 3–6 post-Tx |
+| **Neumococo PPSV23** | 1 dosis | c/5 años | Mes 3–6 post-Tx |
+| **COVID-19 mRNA** | Serie + booster | c/6–12 meses | Desde semana 1–3 post-Tx |
+| **VHB (recombinante)** | 3 dosis (0, 1, 6 meses) | Titular anti-HBs c/año | Si susceptible — desde mes 1 |
+| **VHA** | 2 dosis (0, 6 meses) | Una vez | Si susceptible — desde mes 3 |
+| **Tdap** | 1 dosis | c/10 años | Desde mes 3 |
+| **Meningococo ACWY** | 1 dosis + refuerzo | c/5 años | Desde mes 3 (obligatorio si eculizumab) |
+| **Meningococo B** | 2 dosis (0, 1 mes) | — | Pre-Tx o desde mes 3 |
+| **HPV (si <26 años)** | 3 dosis | Serie completa | Desde mes 3–6 |
+| **Zóster recombinante (Shingrix®)** | 2 dosis (0, 2–6 meses) | Una vez | Desde mes 6–12 post-Tx |
+
+> 📌 Shingrix (zóster recombinante) = vacuna de subunidades → **SEGURA** en IS
+> (diferente al Zostavax® que es virus vivo — ese SÍ está contraindicado)
+        """)
+
+    elif "Timing" in vac_tab:
+        st.markdown("""
+### ⏱️ Timing — ¿Cuándo vacunar?
+
+#### PRE-TRASPLANTE (idealmente completar antes del Tx):
+```
+≥2–4 semanas antes del Tx:
+  ✅ Vacunas inactivadas: pueden darse en cualquier momento
+     → Influenza, Neumococo, VHB, VHA, Tdap, COVID-19, Meningococo
+
+≥4 semanas antes del Tx (vacunas vivas — última oportunidad):
+  ⚠️ MMR (sarampión, rubéola, parotiditis): última dosis pre-Tx si falta
+  ⚠️ Varicela (si susceptible): 2 dosis, última ≥4 semanas pre-Tx
+  ⚠️ Fiebre amarilla: solo si viaje obligatorio, ≥4 semanas pre-Tx
+  ⚠️ Zóster vivo (Zostavax): ≥4 semanas pre-Tx si >50 años
+
+POST-TRASPLANTE — Mínimo IS para vacunar:
+  Mes 1: Influenza, COVID (urgencia)
+  Mes 3–6: La mayoría de inactivadas
+  Mes 6–12: Zóster recombinante (Shingrix)
+  NUNCA: Vacunas vivas (ver pestaña contraindicadas)
+```
+
+#### Respuesta óptima — cuándo mejor respuesta:
+- Vacunar a IS de mantenimiento (no en inducción ni en tratamiento de rechazo)
+- Idealmente: >6 meses post-Tx (IS en descenso, mejor respuesta)
+- Evitar vacunar durante tratamiento con timoglobulina o rituximab
+        """)
+
+    elif "Contrain" in vac_tab:
+        st.markdown("""
+### 🔴 Vacunas CONTRAINDICADAS en trasplante renal
+
+**Todas las vacunas de virus o bacterias VIVOS ATENUADOS:**
+
+| Vacuna | Tipo | Contraindicación |
+|--------|------|-----------------|
+| **MMR** (sarampión, rubéola, parotiditis) | Virus vivo | ❌ Contraindicada post-Tx |
+| **Varicela** (Varivax®) | Virus vivo | ❌ Contraindicada post-Tx |
+| **Zóster vivo** (Zostavax®) | Virus vivo | ❌ Contraindicada post-Tx |
+| **Fiebre amarilla** | Virus vivo | ❌ Contraindicada — casos de encefalitis fatal |
+| **BCG** | Bacteria viva | ❌ Contraindicada |
+| **Rotavirus** | Virus vivo | ❌ No aplicable adultos |
+| **Influenza intranasal** (FluMist®) | Virus vivo atenuado | ❌ Solo usar forma inyectable |
+| **Cólera oral** (CVD 103) | Bacteria viva | ❌ Contraindicada |
+| **Fiebre tifoidea oral** (Vivotif®) | Bacteria viva | ❌ Solo usar forma inyectable |
+| **Polio oral** (OPV — Sabin) | Virus vivo | ❌ Usar solo IPV inyectable |
+
+#### ¿Qué hacer si hay exposición accidental?
+```
+Exposición a varicela (contacto con caso):
+  → Si vacuna varicela pre-Tx: probable protección parcial
+  → URGENTE: VZIG (inmunoglobulina varicela-zóster) dentro de 96h
+  → O aciclovir IV profiláctico si no hay VZIG disponible
+
+Exposición a sarampión (contacto con caso):
+  → IVIG 0.5 mL/kg IM (dosis alta) dentro de 6 días
+```
+        """)
+
+    else:  # Respuesta inmune
+        st.markdown("""
+### 📊 Respuesta Inmune a Vacunas en Trasplante
+
+#### ¿Por qué responden menos?
+- IS blunts la respuesta de células B y T
+- MMF especialmente reduce la formación de anticuerpos
+- Tacrolimus inhibe activación de células T
+- Respuesta reducida pero NO nula → vacunar igualmente
+
+#### Tasas de seroconversión
+| Vacuna | Población general | Trasplantados |
+|--------|-----------------|--------------|
+| Influenza | >90% | **40–70%** |
+| VHB | >95% | **30–65%** |
+| COVID-19 (2 dosis) | >95% | **30–50%** |
+| COVID-19 (3 dosis) | >97% | **60–70%** |
+| Neumococo | >90% | **50–75%** |
+
+#### Estrategias para mejorar la respuesta
+| Estrategia | Detalle |
+|-----------|---------|
+| **Timing óptimo** | Vacunar >6 meses post-Tx cuando IS es menor |
+| **Dosis doble VHB** | 40 μg (doble dosis Engerix) en lugar de 20 μg estándar |
+| **Reducción temporal de MMF** | -50% de MMF 1–2 semanas antes/después de vacuna COVID |
+| **Titular respuesta** | Anti-spike (COVID), anti-HBs (VHB), hemaglutinación (influenza) |
+| **Refuerzos más frecuentes** | Anual para influenza y COVID (no c/5 años) |
+
+#### Monitoreo post-vacunación
+```
+VHB: Anti-HBs a los 30 días post-serie
+  → <10 mUI/mL: serie adicional (doble dosis)
+  → 10–100 mUI/mL: refuerzo anual
+  → >100 mUI/mL: protección — refuerzo c/5 años
+
+COVID-19: Anti-spike IgG a las 4–8 semanas
+  → <4 U/mL: considerar dosis adicional
+  → Niveles correlacionan con protección pero no la definen exactamente
+```
+        """)
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
