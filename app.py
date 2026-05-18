@@ -2811,10 +2811,31 @@ elif nav == "presc":
                 "Dosis objetivo citrato (mmol/L sangre)",
                 1.0, 6.0, float(st.session_state.get("cit_dose", 3.0)), 0.1,
                 key="presc_cit_dose",
-                help="Inicio habitual: 3 mmol/L. Rango: 2–4 mmol/L.")
+                help="Esto es la DOSIS que configuras — no es lo que mides. "
+                     "Inicio habitual: 3 mmol/L. Rango seguro: 2.5–4 mmol/L. "
+                     "Ajustar según iCa post-filtro medido.")
         with rca_c3:
             st.metric("QB utilizado (mL/min)", qb,
                       help="Tomado de la barra lateral. Ajusta QB ahí si es necesario.")
+
+        # Explanation box
+        st.info(f"""
+**¿Qué significa {cit_dose_presc:.1f} mmol/L?**  
+Es la **dosis de citrato en sangre** — cuántos mmol de citrato por litro de sangre entran al circuito.
+Esta es la variable que **configuras** en la máquina ajustando el flujo de la bomba de citrato.
+
+| Parámetro | Tipo | Rango | Cómo se obtiene |
+|-----------|------|-------|----------------|
+| **Dosis de citrato** ← esta | Configuración | **2.5–4 mmol/L** | Ajuste de bomba citrato |
+| **iCa post-filtro** | Monitoreo | **0.25–0.35 mmol/L** | Gas del puerto post-filtro |
+| **iCa sistémico** | Monitoreo | **1.0–1.2 mmol/L** | Gas arterial/venoso periférico |
+
+📌 **Regla de ajuste:**
+- iCa post-filtro **>0.35** → ↑ citrato (anticoagulación insuficiente)
+- iCa post-filtro **<0.25** → ↓ citrato (exceso → riesgo acumulación)
+- iCa sistémico **<1.0** → ↑ infusión de calcio al paciente
+- iCa sistémico **>1.2** → ↓ infusión de calcio
+        """)
 
         # Cálculos de citrato
         cit_inf_presc = cit_dose_presc * qb * 60 / cit_conc_presc if cit_conc_presc > 0 else 0
