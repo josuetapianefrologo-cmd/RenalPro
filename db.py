@@ -153,6 +153,7 @@ def init_tables() -> bool:
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS consejo_numero VARCHAR(50)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS receta_folio_counter INTEGER DEFAULT 0",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS diagnosticos_custom TEXT DEFAULT '[]'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS logo_b64 TEXT DEFAULT ''",
         ]:
             try:
                 cur.execute(alter)
@@ -654,7 +655,23 @@ def update_user_profile(user_id: int, nombre: str, email: str,
             pass
         return False
 
-def get_next_folio(user_id: int) -> str:
+def save_user_logo(user_id: int, logo_b64: str) -> bool:
+    """Guarda el logo del consultorio en la DB del usuario."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET logo_b64=%s WHERE id=%s", (logo_b64, user_id))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
     """Genera el siguiente folio de receta para el usuario."""
     conn = get_conn()
     if not conn:
