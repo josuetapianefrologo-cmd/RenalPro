@@ -37,6 +37,27 @@ try:
 except ImportError:
     _DB_ON = False
 
+# ── Módulos RenalPro v3.1.0 ────────────────────────────────────────────────
+try:
+    from renalpro_patient import (render_patient_form_extended,
+        update_patient_extended_fields, get_patient_extended,
+        calcular_edad_exacta, edad_display)
+    _PATIENT_MODULE = True
+except ImportError:
+    _PATIENT_MODULE = False
+
+try:
+    from renalpro_historia import render_historia_clinica_tab
+    _HISTORIA_MODULE = True
+except ImportError:
+    _HISTORIA_MODULE = False
+
+try:
+    from renalpro_consulta import render_consultation_complete
+    _CONSULTA_MODULE = True
+except ImportError:
+    _CONSULTA_MODULE = False
+
 # ── Caché de consultas DB (evita ir a Railway en cada clic) ───────────────────
 @st.cache_data(ttl=15)
 def _cached_prescriptions(uid: int):
@@ -2065,6 +2086,11 @@ with st.sidebar:
             letter-spacing:.08em;padding:8px 4px 2px;opacity:0.85;">── {title} ──</div>""",
             unsafe_allow_html=True)
 
+    _navsec("PACIENTES")
+    _navbtn("📂 Mis Pacientes", "pacientes")
+    _navbtn("🏥 Expediente Clínico", "expediente")
+    _navbtn("📄 Receta Médica", "receta")
+
     _navsec("TRRC / CRRT")
     _navbtn("🩺 Prescripción", "presc")
     _navbtn("🧪 Citrato RCA", "cit")
@@ -2115,9 +2141,6 @@ with st.sidebar:
 
     _navsec("DOCUMENTACIÓN")
     _navbtn("📋 Resumen / PDF", "resumen")
-    _navbtn("📂 Mis Pacientes", "pacientes")
-    _navbtn("🏥 Expediente Clínico", "expediente")
-    _navbtn("📄 Receta Médica", "receta")
     _navbtn("📚 Fundamento", "fund")
     _navbtn("📖 Referencias", "refs")
 
@@ -10104,20 +10127,14 @@ elif nav == "expediente":
 
             if st.session_state.get("exp_modo") == "nuevo":
                 with st.expander("➕ Registrar nuevo paciente", expanded=True):
-                    np1, np2, np3 = st.columns(3)
-                    with np1:
-                        np_nombre = st.text_input("Nombre completo *", key="np_nombre")
-                        np_exp    = st.text_input("N° expediente", key="np_exp")
-                        np_edad   = st.number_input("Edad", 0, 120, 50, 1, key="np_edad")
-                    with np2:
-                        np_sexo   = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="np_sexo")
-                        np_peso   = st.number_input("Peso (kg)", 0.0, 300.0, 70.0, 0.5, key="np_peso")
-                        np_tipo   = st.selectbox("Tipo de paciente", [
+                    # Tipo y diagnóstico (no están en el formulario ampliado)
+                    _npt1, _npt2 = st.columns(2)
+                    with _npt1:
+                        np_tipo = st.selectbox("Tipo de paciente", [
                             "General","TRRC / UCI","Trasplante renal","ERC crónica",
                             "Hemodiálisis","Diálisis peritoneal","Agudo hospitalizado"
                         ], key="np_tipo")
-                    with np3:
-                        # CIE-10 selector + texto libre
+                    with _npt2:
                         CIE10_EXP = [
                             "N18.5 — ERC Estadio 5","N18.4 — ERC Estadio 4",
                             "N18.3 — ERC Estadio 3","N18.2 — ERC Estadio 2",
@@ -10130,29 +10147,59 @@ elif nav == "expediente":
                             "✏️ Escribir diagnóstico manualmente",
                         ]
                         dx_cie_sel = st.selectbox("Diagnóstico (CIE-10)", CIE10_EXP, key="np_cie_sel")
-                        # Always editable - pre-fill with selected value but allow editing
                         dx_prefill = "" if dx_cie_sel.startswith("✏️") else dx_cie_sel
                         np_dx = st.text_area("Diagnóstico (editable)", height=60, key="np_dx",
                                              value=dx_prefill,
-                                             placeholder="Selecciona arriba o escribe aquí tu propio diagnóstico")
-                        np_notas = st.text_area("Notas adicionales", height=40, key="np_notas")
+                                             placeholder="Selecciona arriba o escribe aquí")
+                    np_notas = st.text_input("Notas adicionales", key="np_notas")
+                    st.divider()
+
+                    # Formulario ampliado — incluye fecha_nacimiento, domicilio, contacto
+                    if _PATIENT_MODULE:
+                        _np_form = render_patient_form_extended("nuevo_pac")
+                    else:
+                        _np_form = {}
+                        st.text_input("Nombre completo *", key="np_nombre_fb")
+                        st.text_input("N° expediente", key="np_exp_fb")
 
                     if st.button("💾 Registrar paciente", type="primary", key="btn_reg_pac"):
-                        if not np_nombre:
-                            st.warning("El nombre es obligatorio.")
+                        if _PATIENT_MODULE and _np_form:
+                            _np_nombre = _np_form.get("nombre_completo", "").strip()
+                            _np_exp    = _np_form.get("id_externo", "")
+                            _np_edad   = int(_np_form.get("edad_años", 0))
+                            _np_sexo   = _np_form.get("sexo", "") or "—"
+                        else:
+                            _np_nombre = st.session_state.get("np_nombre_fb", "")
+                            _np_exp    = st.session_state.get("np_exp_fb", "")
+                            _np_edad   = 0
+                            _np_sexo   = "—"
+
+                        if not _np_nombre:
+                            st.warning("El nombre es obligatorio (Apellido Paterno, Materno, Nombre).")
                         else:
                             try:
                                 new_id = _db.create_patient(uid, {
-                                    "nombre": np_nombre, "expediente": np_exp,
-                                    "edad": int(np_edad), "sexo": np_sexo,
-                                    "peso": float(np_peso), "tipo": np_tipo,
-                                    "diagnostico": np_dx, "notas": np_notas,
+                                    "nombre": _np_nombre,
+                                    "expediente": _np_exp,
+                                    "edad": _np_edad,
+                                    "sexo": _np_sexo,
+                                    "peso": 0.0,
+                                    "tipo": np_tipo,
+                                    "diagnostico": np_dx,
+                                    "notas": np_notas,
                                 })
+                                if new_id and _PATIENT_MODULE and _np_form:
+                                    try:
+                                        _conn_ep = _db.get_conn()
+                                        if _conn_ep:
+                                            update_patient_extended_fields(_conn_ep, new_id, _np_form)
+                                    except Exception:
+                                        pass  # campos ampliados son opcionales
                                 if new_id:
                                     _clear_cache()
                                     st.session_state["exp_pac_id"] = new_id
                                     st.session_state.pop("exp_modo", None)
-                                    st.success(f"✅ Paciente '{np_nombre}' registrado.")
+                                    st.success(f"✅ Paciente '{_np_nombre}' registrado.")
                                     st.rerun()
                                 else:
                                     st.error("Error al registrar paciente.")
@@ -10685,6 +10732,40 @@ Inducción: {induccion_bg}
                             _clear_cache(); st.rerun()
             if not records:
                 st.info("Sin registros aún. Usa '➕ Nueva consulta' arriba para agregar el primero.")
+
+            # ── Historia Clínica ─────────────────────────────────────────────
+            st.divider()
+            with st.expander("📖 Historia Clínica Completa", expanded=False):
+                if _HISTORIA_MODULE and db_activa:
+                    try:
+                        _conn_hc = _db.get_conn()
+                        render_historia_clinica_tab(_conn_hc, sel_exp["id"], sel_exp, {
+                            "nombre": st.session_state.get("sess_nombre", ""),
+                            "cedula_especialidad": st.session_state.get("sess_cedula", ""),
+                            "cedula_general": st.session_state.get("sess_ced_general", ""),
+                            "firma_b64": st.session_state.get("sess_firma_b64", ""),
+                        })
+                    except Exception as _e_hc:
+                        st.error(f"Historia clínica: {_e_hc}")
+                else:
+                    st.info("Módulo de historia clínica no disponible. "
+                            "Verifica que renalpro_historia.py esté en el repo.")
+
+            with st.expander("💊 Consulta Nefrológica Completa", expanded=False):
+                if _CONSULTA_MODULE and db_activa:
+                    try:
+                        _conn_cons = _db.get_conn()
+                        render_consultation_complete(_conn_cons, sel_exp["id"], sel_exp, {
+                            "nombre": st.session_state.get("sess_nombre", ""),
+                            "cedula_especialidad": st.session_state.get("sess_cedula", ""),
+                            "cedula_general": st.session_state.get("sess_ced_general", ""),
+                            "firma_b64": st.session_state.get("sess_firma_b64", ""),
+                        })
+                    except Exception as _e_cons:
+                        st.error(f"Consulta nefrológica: {_e_cons}")
+                else:
+                    st.info("Módulo de consulta no disponible. "
+                            "Verifica que renalpro_consulta.py esté en el repo.")
 
 elif nav == "nota_tx":
     # ══════════════════════════════════════════════════════════════════════════
@@ -15255,7 +15336,8 @@ elif nav == "receta":
                             }
                             rx_items.append(new_item)
                             st.session_state[_PAC_RX_KEY] = rx_items
-                            st.session_state["rx_busq_med"] = ""
+                            if "rx_busq_med" in st.session_state:
+                                del st.session_state["rx_busq_med"]
                             st.rerun()
                     else:
                         st.info(f"Sin resultados para '{busqueda_med}'. Agrega manualmente abajo.")
