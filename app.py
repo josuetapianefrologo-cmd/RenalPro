@@ -2096,6 +2096,7 @@ with st.sidebar:
     _navbtn("🦴 ERC-MBD", "erc_mbd")
     _navbtn("🩸 HTA en ERC", "hta_erc")
     _navbtn("🔵 Glomerulopatías", "glomerulopatias")
+    _navbtn("🤰 Glomerulopatías en Embarazo", "glom_embarazo")
     _navbtn("🔁 Recurrencia Glomerulopatías TR", "recurrencia_tx")
 
     _navsec("TRASPLANTE")
@@ -16664,6 +16665,750 @@ Monitoreo: Mg, Ca, reflejos osteotendinosos (hiperreflexia = toxicidad Mg)
     # ERC-MBD reference
     st.info("🦴 Para el manejo crónico de ERC-MBD (quelantes, VD activa, cinacalcet, PTH) "
             "→ ve a **🦴 ERC-MBD** en el sidebar de NEFROLOGÍA.")
+
+elif nav == "glom_embarazo":
+    st.subheader("🤰 Glomerulopatías en el Embarazo")
+    st.caption("Ref: KDIGO Glomerulonephritis 2021 | ESC/ESH HTA en Embarazo 2018 | "
+               "Buyon JP et al. Arthritis Rheumatol 2017 (LN) | "
+               "Bramham K et al. CJASN 2017 | Nevis IF et al. Kidney Int 2011")
+
+    st.warning("""
+⚠️ **Principio fundamental:** El embarazo en pacientes con glomerulopatía activa conlleva 
+riesgo materno-fetal elevado. El manejo requiere coordinación estrecha entre 
+**nefrología + obstetricia de alto riesgo**. Las decisiones terapéuticas se rigen por
+**lo que es seguro para el binomio madre-feto**, no por el protocolo habitual.
+    """)
+
+    ge_tab = st.radio("", [
+        "⚖️ Preeclampsia vs Glomerulopatía",
+        "🔬 ¿Cuándo biopsiar?",
+        "💊 Medicamentos seguros / contraindicados",
+        "🧮 Calculadora de dosis",
+        "🩺 Por enfermedad específica",
+        "🩸 TMA en el embarazo",
+        "🛡️ Tromboprofilaxis · Lactancia · Consejería",
+        "🩺 Antihipertensivos seguros",
+    ], horizontal=True, key="ge_tab")
+    st.divider()
+
+    if "Preeclampsia" in ge_tab:
+        st.markdown("""
+### ⚖️ El Dilema Central — Preeclampsia vs Glomerulopatía activa
+
+#### ¿Por qué es difícil distinguirlas?
+Ambas presentan la misma tríada: **HTA + proteinuria + edema**.
+En una paciente con glomerulopatía conocida, determinar si la descompensación es 
+**actividad de la enfermedad** o **preeclampsia sobreañadida** define el tratamiento completo.
+
+#### Herramientas diagnósticas diferenciales
+
+| Característica | Preeclampsia | Glomerulopatía activa |
+|---------------|-------------|----------------------|
+| **Semana de inicio** | **>20 semanas** | Cualquier trimestre |
+| **Antecedente** | Sin nefropatía previa (o nueva) | Historia de glomerulopatía |
+| **Cr sérica** | Puede subir (AKI) | Según actividad basal |
+| **Uricemia** | **↑ >5.5 mg/dL** — sensible | Normal o leve |
+| **Hiperuricemia + HTA >20 sem** | Muy sugestivo preeclampsia | — |
+| **Hematuria** | Mínima o ausente | Frecuente (IgAN, LN, ANCA) |
+| **Cilindros** | Raros | Frecuentes |
+| **Complemento C3/C4** | Normal | ↓ en LN activa |
+| **Anti-dsDNA** | Negativo | ↑ en flare de LN |
+| **PIGF/PlGF** | **↓ marcado (<100 pg/mL)** | Normal |
+| **sFlt-1/PlGF ratio** | **>38 (diagnóstico)** | Normal |
+| **Respuesta al parto** | **RESUELVE** con el parto | Persiste post-parto |
+| **Afectación sistémica** | Hígado (HELLP), SNC | Según enfermedad base |
+
+#### Los biomarcadores angiogénicos son clave
+```
+PlGF (factor de crecimiento placentario):
+  → <100 pg/mL en 34–37 semanas: alta probabilidad de preeclampsia
+  → Normal: orienta a glomerulopatía activa
+
+sFlt-1/PlGF ratio:
+  → <38: descarta preeclampsia con VPN >99%
+  → >85: confirma preeclampsia en >34 semanas
+  → 38–85: zona gris — manejo conjunto nefro + OB alto riesgo
+
+📌 En México: disponibles en centros de alta especialidad (IMSS CMN, INNSZ)
+```
+
+#### Preeclampsia sobreañadida a glomerulopatía crónica
+- La más difícil: paciente con ERC/glomerulopatía que ADEMÁS desarrolla preeclampsia
+- Signos de alarma: ↑ agudo de PA (>30/15 mmHg sobre basal), plaquetas <100,000, 
+  alteración hepática, cefalea/escotomas
+- Manejo: tratar AMBAS simultáneamente
+- El parto es el único tratamiento definitivo de la preeclampsia
+        """)
+
+    elif "biopsiar" in ge_tab:
+        st.markdown("""
+### 🔬 Biopsia Renal en el Embarazo — Casi Nunca
+
+#### ¿Por qué evitarla?
+```
+El embarazo genera:
+  → ↑ flujo sanguíneo renal hasta 80%
+  → ↑ vascularización del parénquima
+  → ↓ capacidad de vasoconstricción reflexa
+  → ↓ plaquetas (dilucional)
+  → Dificultad técnica: posición lateral requerida
+
+Consecuencia: riesgo de hemorragia retroperitoneal 2–3x mayor que fuera del embarazo
+```
+
+#### ¿Cuándo SÍ está justificada la biopsia?
+
+| Condición | Semanas | Justificación |
+|-----------|---------|--------------|
+| Síndrome nefrótico severo de **nueva aparición antes de semana 32** | <32 | El diagnóstico cambia el IS que se usará |
+| Sospecha de **nefritis lúpica clase III/IV** sin diagnóstico previo | <32 | Cambia inducción (azatioprina vs ciclofosfamida post-parto) |
+| **AKI severa** de etiología desconocida sin respuesta | <32 | Si el resultado modifica el manejo urgente |
+| **Vasculitis ANCA** sospechada sin confirmación | <32 | El tratamiento agresivo está justificado con diagnóstico |
+
+#### ¿Cuándo NO biopsiar?
+- ≥32–34 semanas → el parto es más seguro que la biopsia
+- Hipertensión no controlada (PA >160/110 al momento del procedimiento)
+- Plaquetas <80,000
+- Si el resultado no cambiará el manejo inmediato
+- Si la paciente puede diferir hasta el post-parto
+
+#### Post-parto — el momento óptimo
+```
+✅ Biopsia post-parto (idealmente 4–6 semanas):
+  → Vascularización ya normalizada
+  → Riesgo hemorrágico comparable al estándar
+  → Permite diagnóstico definitivo para el siguiente embarazo
+  → Puede guiar IS en período de lactancia
+```
+
+> 📌 **Regla práctica:** Si el diagnóstico presunto es suficientemente claro para iniciar IS
+> empírica y la decisión no cambia, diferir la biopsia al post-parto. El tratamiento 
+> empírico basado en la presentación clínica + inmunológicos suele ser suficiente.
+        """)
+
+    elif "Medicamentos" in ge_tab:
+        st.markdown("### 💊 Medicamentos en Glomerulopatía + Embarazo")
+
+        col_si, col_no = st.columns(2)
+        with col_si:
+            st.success("""
+#### ✅ SEGUROS — Pueden usarse en embarazo
+
+| Fármaco | Categoría FDA | Notas |
+|---------|--------------|-------|
+| **Prednisolona** | C | Preferir sobre prednisona — mejor perfil fetal |
+| **Azatioprina** | D | Segura en uso clínico — trasplante, LN |
+| **Ciclosporina** | C | Usada en trasplante — monitorear PA y Cr |
+| **Tacrolimus** | C | Experiencia en trasplante — niveles cambian en 3er trim |
+| **Hidroxicloroquina** | C | **CONTINUAR siempre en LES** — reduce flares |
+| **IVIG** | — | Segura — útil en LN, SHU atípico |
+| **Heparina BPPM** | B | Anticoagulación de elección |
+| **Heparina no fraccionada** | C | Si insuficiencia renal severa |
+| **Labetalol** | C | Antihipertensivo 1ª línea |
+| **Alfa-metildopa** | B | Clásico y muy seguro |
+| **Nifedipino LP** | C | Muy utilizado |
+| **Prednisona** | C | Cruza placenta <10% → segura a dosis <20 mg/día |
+            """)
+
+        with col_no:
+            st.error("""
+#### ❌ CONTRAINDICADOS — Suspender antes o durante embarazo
+
+| Fármaco | Razón | Alternativa |
+|---------|-------|------------|
+| **Micofenolato (MMF)** | Teratogénico (malformaciones faciales, cardíacas) | **Azatioprina** |
+| **IECA / ARA-II** | Agenesia renal fetal, oligohidramnios | **Labetalol / Nifedipino** |
+| **Ciclofosfamida** | Teratogénico, aborto espontáneo | Diferir post-parto |
+| **Metotrexato** | Fetopatía, aborto | **Azatioprina** |
+| **Rituximab** | B-cell depletion neonatal (2°/3er trim) | Prednisolona + azatioprina |
+| **Avacopan** | Sin datos, contraindicado | Prednisolona |
+| **Voclosporina** | Sin datos, evitar | Ciclosporina / Tacrolimus |
+| **Bosentan** | Teratogénico | — |
+| **Diuréticos agresivos** | Reducen perfusión placentaria | Solo en edema pulmonar |
+| **AINEs >32 sem** | Cierre prematuro ductus | Paracetamol |
+
+> ⚠️ **MMF:** Suspender ≥6 semanas ANTES de la concepción.
+> Rituximab: En 1er trimestre con riesgo vital documentado hay reportes de uso.
+            """)
+
+        st.info("""
+#### Cambio de IS al planear el embarazo (consejería preconcepcional)
+```
+Si está en MMF:
+  → Cambiar a Azatioprina 1.5–2 mg/kg/día
+  → Esperar ≥6 semanas post-cambio antes de concebir
+  → Confirmar remisión de la glomerulopatía antes
+
+Si está en IECA/ARA-II:
+  → Cambiar a Labetalol o Alfa-metildopa desde el plan
+  → No esperar la confirmación del embarazo (riesgo en sem 5–12)
+
+Si está en ciclofosfamida:
+  → Completar el ciclo, esperar 3–6 meses, confirmar remisión
+  → Considerar efecto gonadotóxico (preservar fertilidad antes)
+```
+        """)
+
+    elif "Calculadora" in ge_tab:
+        st.markdown("### 🧮 Calculadora de Dosis — Embarazo + Glomerulopatía")
+
+        c_peso = st.number_input("Peso de la paciente (kg)", 30.0, 150.0, 65.0, 0.5, key="ge_peso")
+        c_alb  = st.number_input("Albúmina sérica (g/dL)", 1.0, 5.0, 3.0, 0.1, key="ge_alb")
+        c_trim = st.selectbox("Trimestre", ["1er trimestre (sem 1–12)", "2do trimestre (sem 13–27)", "3er trimestre (sem 28–40)"], key="ge_trim")
+        st.divider()
+
+        # ── INMUNOSUPRESORES ────────────────────────────────────────────────
+        st.markdown("#### 💊 Inmunosupresores")
+        id1, id2, id3 = st.columns(3)
+
+        with id1:
+            st.markdown("**Prednisolona**")
+            pred_dosis_sel = st.selectbox("Indicación",
+                ["Actividad leve (0.5 mg/kg/día)",
+                 "Actividad moderada-severa (1 mg/kg/día)",
+                 "Pulsos IV (500 mg/día × 3 días)"],
+                key="ge_pred_ind")
+            if "0.5" in pred_dosis_sel:
+                pred_mg = round(c_peso * 0.5)
+                pred_label = "0.5 mg/kg/día"
+            elif "1 mg" in pred_dosis_sel:
+                pred_mg = round(c_peso * 1.0)
+                pred_label = "1 mg/kg/día"
+                pred_mg = min(pred_mg, 60)  # cap 60 mg
+            else:
+                pred_mg = 500
+                pred_label = "Pulso IV"
+            st.metric("Dosis diaria", f"{pred_mg} mg/día")
+            st.caption(f"({pred_label}{'  · máx 60 mg' if '1 mg' in pred_dosis_sel else ''})")
+            st.markdown(f"""
+- **Presentación:** comp 5 mg
+- **Número de comprimidos:** {pred_mg//5} comp/día
+- **Horario:** por la mañana con alimentos
+- **Taper:** reducir 10 mg c/2 semanas hasta 20 mg, luego 5 mg c/2 sem
+            """)
+
+        with id2:
+            st.markdown("**Azatioprina**")
+            aza_dosis_sel = st.selectbox("Dosis",
+                ["Mantenimiento (1.5 mg/kg/día)", "Inducción (2 mg/kg/día)"],
+                key="ge_aza_ind")
+            aza_fac = 1.5 if "1.5" in aza_dosis_sel else 2.0
+            aza_mg  = round(c_peso * aza_fac)
+            aza_mg  = min(aza_mg, 150)  # cap práctico
+            st.metric("Dosis diaria", f"{aza_mg} mg/día")
+            st.caption(f"({aza_fac} mg/kg/día · máx 150 mg)")
+            st.markdown(f"""
+- **Presentación:** comp 50 mg
+- **Número de comprimidos:** {aza_mg//50 + (1 if aza_mg % 50 >= 25 else 0)} comp/día
+- **Horario:** dividida c/12h o dosis única
+- **Ajuste renal:** reducir si Cr >2.0 — toxicidad hematológica
+- **Monitoreo:** BH c/2 semanas al inicio
+            """)
+
+        with id3:
+            st.markdown("**Ciclosporina**")
+            csa_dosis_sel = st.selectbox("Indicación",
+                ["SN refractario (3 mg/kg/día)", "Membranosa (5 mg/kg/día)"],
+                key="ge_csa_ind")
+            csa_fac = 3.0 if "3 mg" in csa_dosis_sel else 5.0
+            csa_mg  = round(c_peso * csa_fac)
+            csa_c12 = round(csa_mg / 2)
+            st.metric("Dosis total diaria", f"{csa_mg} mg/día")
+            st.metric("Dosis c/12h", f"{csa_c12} mg")
+            st.markdown(f"""
+- **Presentación:** caps 25/100 mg o sol oral
+- **Horario:** c/12h en ayunas o con comida ligera (constante)
+- **Meta C0:** 75–125 ng/mL
+- **Monitoreo:** PA + Cr semanal → mensual
+- **En 3er trimestre:** niveles tienden a caer → ajustar
+            """)
+
+        st.divider()
+
+        # ── TROMBOPROFILAXIS ────────────────────────────────────────────────
+        st.markdown("#### 🩸 Tromboprofilaxis — Enoxaparina (HBPM)")
+        st.caption("Dosis basada en albúmina y riesgo trombótico — Protocolo ISTH")
+
+        if c_alb >= 3.0:
+            hbpm_ind = "Sin indicación de profilaxis por albúmina sola"
+            hbpm_dosis = "0 — evaluar otros factores de riesgo"
+            hbpm_color = "info"
+        elif c_alb >= 2.5:
+            hbpm_dosis_mg = 40
+            hbpm_ind = "Profilaxis estándar"
+            hbpm_dosis = f"Enoxaparina **{hbpm_dosis_mg} mg SC c/24h**"
+            hbpm_color = "warning"
+        else:
+            hbpm_dosis_mg = 40
+            hbpm_ind = "Profilaxis intensificada (Alb <2.5)"
+            hbpm_dosis = f"Enoxaparina **{hbpm_dosis_mg} mg SC c/12h**"
+            hbpm_color = "error"
+
+        if hbpm_color == "error":
+            st.error(f"🔴 **{hbpm_ind}** — Alb {c_alb} g/dL\n\n{hbpm_dosis}")
+        elif hbpm_color == "warning":
+            st.warning(f"🟡 **{hbpm_ind}** — Alb {c_alb} g/dL\n\n{hbpm_dosis}")
+        else:
+            st.info(f"ℹ️ {hbpm_ind} — Alb {c_alb} g/dL. Evaluar otros factores (SAF, inmovilización, TEV previo).")
+
+        st.markdown(f"""
+| Indicación | Dosis Enoxaparina | Cuándo suspender |
+|-----------|-----------------|-----------------|
+| **Profilaxis** (Alb 2.5–3.0) | **40 mg SC c/24h** | 24h antes del parto |
+| **Profilaxis intensificada** (Alb <2.5) | **40 mg SC c/12h** | 24h antes |
+| **Terapéutica** (TEV activo) | **1 mg/kg SC c/12h** = **{round(c_peso)} mg c/12h** | 24h antes |
+| **SAF de alto riesgo** | HBPM terapéutica + AAS 100 mg | 24h antes |
+        """)
+
+        st.divider()
+
+        # ── ANTIHIPERTENSIVOS ────────────────────────────────────────────────
+        st.markdown("#### 🩺 Antihipertensivos — dosis para esta paciente")
+        ah1, ah2, ah3 = st.columns(3)
+
+        with ah1:
+            st.markdown("**Labetalol VO**")
+            lab_dosis = 100  # mg inicio
+            st.metric("Dosis inicial", "100 mg c/8h")
+            st.markdown("""
+- Titular hasta 400 mg c/8h (2,400 mg/día máx)
+- Si no controla: agregar nifedipino LP
+- No discontinuar abruptamente
+            """)
+
+        with ah2:
+            st.markdown("**Nifedipino LP VO**")
+            st.metric("Dosis inicial", "30 mg c/24h")
+            st.markdown("""
+- Aumentar a 60 mg/día si necesario
+- Tomar con alimentos
+- NO usar cápsulas de liberación inmediata de rutina
+            """)
+
+        with ah3:
+            st.markdown("**Alfa-metildopa VO**")
+            st.metric("Dosis inicial", "250 mg c/8h")
+            st.markdown("""
+- Aumentar a 500 mg c/6h (3 g/día máx)
+- Sedación los primeros días (avisar a la paciente)
+- Seguridad a largo plazo bien documentada
+            """)
+
+        st.divider()
+
+        # ── MgSO4 EN PREECLAMPSIA ───────────────────────────────────────────
+        st.markdown("#### ⚡ Sulfato de Magnesio — Preeclampsia severa")
+        st.info("Indicado en preeclampsia severa para prevenir convulsiones y neuroprotección fetal")
+
+        mg_peso_infusion = c_peso
+        mgso4_carga_g = 4.0
+        mgso4_mant_gh = 1.0
+
+        mg1, mg2 = st.columns(2)
+        with mg1:
+            st.markdown(f"""
+**Dosis de carga:**
+- MgSO4 al 50%: **8 mL IV** (= 4 g) en 15–20 min
+- Diluir en 100 mL SSF → pasar en 15 min
+- O: MgSO4 al 10%: 40 mL IV en 15 min
+
+**Mantenimiento:**
+- MgSO4 al 50%: **2 mL/h** (= 1 g/h) en infusión continua
+- Preparación: 40 mL MgSO4 50% + 460 mL SSF → 2 g/100 mL → pasar a 50 mL/h = 1 g/h
+            """)
+        with mg2:
+            st.error("""
+**Toxicidad de MgSO4 — monitorear:**
+| Mg sérico | Hallazgo | Acción |
+|-----------|---------|--------|
+| 4–7 mEq/L | Nivel terapéutico | Continuar |
+| >7 mEq/L | Pérdida de reflejo patelar | **DETENER** |
+| >10 mEq/L | Paro respiratorio | **GLUCONATO Ca 1g IV** |
+
+Monitoreo c/1h: diuresis (>25 mL/h), reflejos, FR (>12/min)
+Antídoto: Gluconato Ca 10% 10 mL (1 ámpula) IV lento
+            """)
+
+    elif "enfermedad" in ge_tab:
+        st.markdown("### 🩺 Manejo por Enfermedad Específica")
+        enf_sel = st.selectbox("Selecciona la glomerulopatía", [
+            "🌸 Nefritis Lúpica (LN)",
+            "🔁 GESF / FSGS Primaria",
+            "🔵 Nefropatía Membranosa",
+            "🟣 IgA Nefropatía",
+            "🟠 Vasculitis ANCA",
+            "🍬 Nefropatía Diabética",
+            "🔹 Nefritis intersticial / otras",
+        ], key="ge_enf")
+
+        if "Lúpica" in enf_sel:
+            st.markdown("""
+#### 🌸 Nefritis Lúpica en el Embarazo — La más compleja
+
+**Riesgo:** El embarazo puede inducir flare de LN. Los flares aumentan el riesgo de 
+pérdida fetal, preeclampsia, parto prematuro y daño renal permanente.
+
+**Antes del embarazo:**
+- Remisión completa ≥6 meses (Cr estable, proteinuria <500 mg/día, C3/C4 normales, anti-dsDNA negativo o bajo)
+- Suspender MMF → Azatioprina
+- Continuar Hidroxicloroquina (NUNCA suspender)
+- Solicitar: anti-fosfolípidos (SAF), anti-Ro/La (lupus neonatal), anti-dsDNA basal
+
+**Durante el embarazo — monitoreo mensual:**
+```
+  Anti-dsDNA + C3 + C4 + orina (proteinuria + sedimento) + Cr
+  Si anti-dsDNA sube + C3/C4 bajan + proteinuria aumenta → flare de LN
+  Diferencial con preeclampsia: PlGF/sFlt-1 + C3/C4 + uricemia
+```
+
+**Tratamiento del flare durante el embarazo:**
+| Severidad | Tratamiento |
+|-----------|------------|
+| **Leve** (proteinuria sin AKI) | ↑ Prednisona 20–40 mg/día + Azatioprina dosis plena |
+| **Moderada** (AKI o SN) | Metilprednisolona 500 mg IV × 3 días → Prednisona 1 mg/kg |
+| **Severa clase III/IV** | Pulsos MP + Azatioprina + evaluar parto si >34 sem |
+| **Catastrófica** | Igual + IVIG + evaluar parto urgente |
+
+> ❌ NO ciclofosfamida durante el embarazo — diferir al post-parto.
+> ❌ NO MMF. El "gold standard" intraembarazo es Azatioprina.
+
+**Anti-Ro/La positivos — riesgo de lupus neonatal:**
+- Monitoreo fetal con ecocardiografía fetal c/2 semanas (semana 16–26)
+- Bloqueo cardíaco congénito: <3% si anti-Ro+, pero grave
+- Hidroxicloroquina reduce el riesgo de bloqueo cardíaco
+            """)
+
+        elif "GESF" in enf_sel:
+            st.markdown("""
+#### 🔁 GESF / FSGS en el Embarazo
+
+**Riesgo:** Alta tasa de preeclampsia (40–60%), parto prematuro, RCIU.
+Si Cr >1.5 mg/dL al inicio: riesgo de pérdida del injerto/progresión acelerada.
+
+**El problema:** La GESF puede empeorar por la hiperfiltración del embarazo.
+
+**Manejo:**
+```
+Síndrome nefrótico severo (proteinuria >8–10 g/día):
+  → Prednisolona 1 mg/kg/día
+  → Si no responde en 4 semanas: ciclosporina 3–5 mg/kg/día
+  → Tromboprofilaxis obligatoria (HBPM) — riesgo trombótico muy alto
+  → Albumina IV si Alb <2.5 g/dL + edema severo
+
+Control de PA:
+  → Labetalol + Nifedipino LP
+  → Meta <140/90 mmHg (no tan estricta como en no embarazada)
+
+Seguimiento fetal:
+  → Doppler de arteria uterina c/2–4 semanas
+  → Biometría fetal mensual (RCIU frecuente)
+```
+
+> ⚠️ Si Cr >2.5 mg/dL o proteinuria masiva: plantear riesgos/beneficios del embarazo desde la consejería.
+            """)
+
+        elif "Membranosa" in enf_sel:
+            st.markdown("""
+#### 🔵 Nefropatía Membranosa en el Embarazo
+
+**Riesgo:** Moderado-alto. Proteinuria tiende a aumentar (hiperfiltración).
+Alto riesgo trombótico: trombosis de vena renal documentada.
+
+**Monitoreo anti-PLA2R:**
+```
+Pre-embarazo: titular anti-PLA2R IgG4
+  → Si negativo: riesgo de flare bajo
+  → Si positivo y alto: aumenta riesgo durante embarazo
+
+Durante embarazo: medir c/trimestre
+  → Sube en el embarazo → mayor proteinuria esperada
+  → No cambia el tratamiento per se, pero orienta el pronóstico
+```
+
+**Tratamiento:**
+```
+Proteinuria <4 g/día + Cr estable:
+  → Observación + labetalol para PA
+  → Tromboprofilaxis si Alb <2.8 g/dL
+
+Proteinuria >4 g/día o Cr sube:
+  → Prednisolona 0.5–1 mg/kg/día
+  → ± Ciclosporina 3–5 mg/kg/día si no responde
+  → Rituximab: datos limitados, reservar para fallo a lo anterior
+
+Trombosis:
+  → HBPM dosis plena (enoxaparina 1 mg/kg c/12h) si TEV activo
+  → Profiláctica si Alb <2.5 g/dL
+```
+            """)
+
+        elif "IgA" in enf_sel:
+            st.markdown("""
+#### 🟣 IgA Nefropatía en el Embarazo — La más frecuente
+
+**Pronóstico generalmente favorable** si:
+- Cr <1.4 mg/dL al inicio
+- Proteinuria <1 g/día
+- PA controlada
+
+**Riesgo aumenta con:** Cr >1.4, proteinuria >1 g/día, HTA previo.
+
+**Manejo:**
+```
+Sin HTA + Cr normal + proteinuria <1 g/día:
+  → Vigilancia estricta mensual
+  → Sin IS requerida habitualmente
+
+Proteinuria 1–3 g/día:
+  → Labetalol para PA <140/90
+  → Prednisolona 0.5 mg/kg si hematuria + proteinuria creciente
+
+Proteinuria >3 g/día o AKI:
+  → Prednisolona 1 mg/kg + ciclosporina
+  → Tromboprofilaxis si Alb <3.0 g/dL
+```
+
+**Lo que NO se puede usar:**
+- IECA/ARA-II (pilar habitual de IgAN) → contraindicados
+- Sparsentan, budesonida — sin datos en embarazo
+- SGLT2i — contraindicados
+
+**Post-parto:** reiniciar IECA/ARA-II + evaluar biopsia si no se tiene diagnóstico tisular.
+            """)
+
+        elif "ANCA" in enf_sel:
+            st.markdown("""
+#### 🟠 Vasculitis ANCA en el Embarazo — Alto riesgo
+
+**El embarazo puede precipitar flare de vasculitis.**
+Mortalidad perinatal hasta 25–30% en series históricas (mejora con manejo moderno).
+
+**Antes del embarazo:**
+- Remisión completa ≥12 meses (ANCA negativo o estable y bajo)
+- Si fue inducida con ciclofosfamida: esperar ≥3–6 meses post-ciclo
+- Pasar a mantenimiento con azatioprina antes de concebir
+
+**Flare durante el embarazo:**
+```
+Leve (hematuria + proteinuria sin AKI ni pulmonar):
+  → Prednisolona 1 mg/kg/día
+  → Azatioprina 1.5–2 mg/kg/día
+
+Moderado-severo (AKI, afección pulmonar, hemorragia):
+  → Pulsos de metilprednisolona IV
+  → IVIG como coadyuvante
+  → Plasmaféresis si hemorragia pulmonar o AKI rápida
+
+Severo refractario:
+  → Rituximab: usado en casos graves con riesgo vital documentado
+    (depleción de células B en neonato — monitoreo)
+  → Evaluar parto urgente si viable
+```
+
+> ❌ Ciclofosfamida: contraindicada. Reservar para post-parto.
+> ❌ Avacopan: contraindicado en embarazo.
+            """)
+
+        elif "Diabética" in enf_sel:
+            st.markdown("""
+#### 🍬 Nefropatía Diabética en el Embarazo
+
+**Contexto:** DM1 o DM2 con ERC + embarazo. La proteinuria puede aumentar dramáticamente.
+
+**Puntos clave:**
+```
+Cr <1.4 mg/dL + proteinuria <1 g/día: pronóstico razonablemente bueno
+Cr >1.4 mg/dL o proteinuria >3 g/día: riesgo de aceleración de ERC post-parto
+
+La nefropatía diabética NO es IS-tratable durante el embarazo:
+  → El tratamiento es CONTROL DE PA + GLUCOSA
+  → Los IECA/ARA-II (pilares de la ND) están contraindicados
+  → Reemplazar por: Labetalol + Nifedipino LP
+```
+
+**Control glucémico:**
+- Meta HbA1c <6.5% en 1er trimestre (hipoglucemia más riesgo)
+- Meta glucosa preprandial: 70–100 mg/dL
+- Meta postprandial 1h: <140 mg/dL
+- Insulina es el tratamiento de elección (metformina en algunas guías, evitar en ERC avanzada)
+
+**Monitoreo estrecho:**
+- Proteinuria + Cr mensual
+- Fondo de ojo (retinopatía puede empeorar)
+- Doppler fetal c/3–4 semanas (insuficiencia uteroplacentaria)
+            """)
+
+        else:
+            st.markdown("""
+#### 🔹 Otras glomerulopatías / nefritis intersticial
+
+**Principios generales aplicables a cualquier glomerulopatía:**
+
+1. **Evaluar Cr basal + proteinuria basal** → punto de referencia para detectar cambios
+2. **Suspender IECA/ARA-II** antes o inmediatamente al confirmar embarazo
+3. **Iniciar/continuar** labetalol + nifedipino LP para PA <140/90
+4. **Prednisolona** si hay actividad inflamatoria activa
+5. **Tromboprofilaxis** si proteinuria >3 g/día o Alb <3.0 g/dL
+6. **Diferir biopsia** al post-parto si la situación clínica lo permite
+7. **Seguimiento conjunto** con obstetricia de alto riesgo desde semana 8–10
+            """)
+
+    elif "TMA" in ge_tab:
+        st.markdown("""
+### 🩸 TMA en el Embarazo — Diagnóstico Diferencial Urgente
+
+La microangiopatía trombótica (TMA) en el embarazo es una emergencia.
+**La distinción entre las causas define el tratamiento.**
+
+#### Las 4 causas de TMA en el embarazo
+| Característica | **Preeclampsia / HELLP** | **TTP (PTT)** | **aHUS** | **LES / SAF** |
+|---------------|------------------------|--------------|---------|--------------|
+| **Semana** | >20 sem | Cualquiera (>2T) | Post-parto predomina | Cualquiera |
+| **HTA severa** | ✅ Siempre | Variable | ✅ | ✅ |
+| **Plaquetas** | ↓↓ | ↓↓↓ severa | ↓ moderada | ↓ |
+| **Hemólisis (LDH)** | Moderada | Severa | Moderada | Variable |
+| **AKI** | Leve-moderada | Leve | **Severa** | Variable |
+| **Neurológico** | SNC (PRES) | **Predominante** | Leve | Variable |
+| **ADAMTS-13** | **>10%** | **<10%** | >10% | >10% |
+| **C3** | Normal | Normal | ↓ | ↓ |
+| **Respuesta al parto** | ✅ **Resuelve** | No | No | No |
+| **Tratamiento clave** | **PARTO** | **PP + PFC** | **Eculizumab** | IS + anticoag |
+
+#### ADAMTS-13 — clave diagnóstica
+```
+ADAMTS-13 <10% = TTP/PTT → Plasmaféresis + PFC URGENTE
+ADAMTS-13 >10% + post-parto + AKI severa = aHUS → Eculizumab
+
+No esperar resultado de ADAMTS-13 si:
+  → Clínica de TTP (neurológico + plaquetas <30,000 + hemólisis severa)
+  → Iniciar plasmaféresis empírica mientras llega el resultado
+```
+
+#### Manejo por diagnóstico
+| Diagnóstico | Tratamiento inmediato |
+|------------|----------------------|
+| **HELLP** | Parto urgente (si >34 sem o inestable) + MgSO4 + corticoides fetales |
+| **TTP** | Plasmaféresis con PFC (30–40 mL/kg) c/24h + corticoides |
+| **aHUS** | Eculizumab 900 mg IV urgente (vacuna meningocócica o penicilina profiláctica) |
+| **LES/SAF** | Anticoagulación + IVIG + prednisolona según manifestación |
+
+> ⚠️ En México: eculizumab por IMSS / Seguro Popular puede requerir gestión urgente.
+> No retrasar el tratamiento — la TMA puede causar pérdida renal permanente en días.
+        """)
+
+    elif "Trombo" in ge_tab:
+        st.markdown("""
+### 🛡️ Tromboprofilaxis · Lactancia · Consejería Preconcepcional
+
+#### Tromboprofilaxis en Síndrome Nefrótico + Embarazo
+El síndrome nefrótico por sí solo triplica el riesgo de TEV.
+El embarazo lo triplica adicionalmente. **Juntos: riesgo de TEV hasta 9x mayor.**
+
+| Situación | Profilaxis |
+|-----------|-----------|
+| **SN + embarazo** (Alb <3.0 g/dL) | HBPM profiláctica (enoxaparina 40 mg/día) |
+| **SN + embarazo + Alb <2.5 g/dL** | HBPM dosis intermedia (enoxaparina 40 mg c/12h) |
+| **TEV activo en embarazo** | HBPM terapéutica (1 mg/kg c/12h) |
+| **SAF + embarazo** | HBPM + AAS 100 mg/día desde 1er trimestre |
+| **Membranosa + Alb <2.5 g/dL** | HBPM terapéutica o profiláctica según riesgo |
+
+```
+⚠️ Suspender HBPM 24h antes del parto programado
+⚠️ Reiniciar 6–12h post-parto vaginal, 24h post-cesárea
+⚠️ NO usar warfarina en el embarazo (1er trimestre: embriopatía; 3er trimestre: hemorragia)
+⚠️ NO usar anticoagulantes orales directos (ACOD) en embarazo
+```
+
+---
+
+#### Lactancia y Medicamentos IS
+| Fármaco | Lactancia | Recomendación |
+|---------|----------|--------------|
+| **Prednisolona** | ✅ Segura | Esperar 4h post-dosis si >20 mg/día |
+| **Azatioprina** | ✅ Compatible | Niveles muy bajos en leche |
+| **Hidroxicloroquina** | ✅ Segura | Continuar — protege del flare post-parto |
+| **Ciclosporina** | ⚠️ Con cautela | Monitorear niveles en leche — algunos centros la usan |
+| **Tacrolimus** | ⚠️ Con cautela | Niveles bajos en leche — puede usarse |
+| **MMF** | ❌ Contraindicado | Suspender o no lactar |
+| **Ciclofosfamida** | ❌ Contraindicado | Suspender o no lactar |
+| **Rituximab** | ❌ Contraindicado | Presencia en leche documentada |
+| **IECA / ARA-II** | ⚠️ Evitar en prematuros | Seguro en lactantes a término |
+
+---
+
+#### Consejería Preconcepcional — ¿Cuándo es seguro embarazarse?
+
+| Glomerulopatía | Condiciones óptimas para concebir |
+|---------------|----------------------------------|
+| **Nefritis lúpica** | Remisión ≥6 meses · C3/C4 normales · anti-dsDNA bajo · MMF → Aza |
+| **GESF** | Remisión completa (proteinuria <300 mg/día) ≥6–12 meses · Cr <1.5 |
+| **NM primaria** | Anti-PLA2R negativo o muy bajo · Proteinuria <1 g/día |
+| **IgAN** | Cr <1.4 · Proteinuria <1 g/día · PA controlada |
+| **Vasculitis ANCA** | Remisión ≥12 meses · ANCA estable · Aza de mantenimiento |
+| **Cualquiera** | **Cr <2.0 mg/dL** (Cr >2.5: riesgo de no retorno a basal post-parto) |
+
+**Factores de mal pronóstico materno-fetal:**
+- Cr >1.4 mg/dL basal → riesgo de pérdida de función renal post-parto
+- Cr >2.5 mg/dL → discutir riesgo-beneficio del embarazo abiertamente
+- Proteinuria >3 g/día → preeclampsia, RCIU, parto prematuro
+- HTA no controlada → contraindicación relativa hasta control
+- ANCA activo o LN activa → diferir el embarazo
+
+> 📌 **Fertilidad en ERC:** TFG <30 reduce significativamente la fertilidad.
+> En diálisis: ovulación infrecuente (~10%), pero el embarazo es posible.
+> Si TFG <15: el trasplante antes de embarazarse mejora radicalmente el pronóstico.
+        """)
+
+    else:  # Antihipertensivos
+        st.markdown("""
+### 🩺 Antihipertensivos Seguros en el Embarazo con ERC
+
+#### Metas de PA en embarazo con ERC/glomerulopatía
+| Situación | Meta |
+|-----------|------|
+| **Sin proteinuria** | <140/90 mmHg |
+| **Con proteinuria >300 mg/día** | <140/90 (sin bajar de 110/70 — riesgo de hipoperfusión placentaria) |
+| **Preeclampsia severa** | <160/110 urgente (con fármacos IV) |
+
+> ⚠️ No ser demasiado agresivo: PA <110/70 puede causar hipoperfusión placentaria → RCIU.
+
+#### Fármacos antihipertensivos — primera y segunda línea
+
+| Fármaco | Vía | Inicio | Dosis | Uso |
+|---------|-----|--------|-------|-----|
+| **Labetalol** | VO | 30–120 min | 100–400 mg c/8–12h | **1ª línea** — cualquier trimestre |
+| **Alfa-metildopa** | VO | 4–6h | 250–500 mg c/8h | Clásico — muy seguro |
+| **Nifedipino LP** | VO | 30–60 min | 30–60 mg/día | **1ª línea** — vasodilatador |
+| **Labetalol IV** | IV | 5–10 min | 20–80 mg c/10 min | **Crisis** |
+| **Hidralazina IV** | IV | 10–20 min | 5–10 mg c/20 min | Crisis — 2ª línea |
+| **Nifedipino (caps)** | SL/VO | 10–20 min | 10 mg | Crisis — precaución |
+| **Nicardipino IV** | IV | 1–5 min | 5–15 mg/h infusión | Crisis severa |
+
+#### Fármacos PROHIBIDOS en embarazo
+| Fármaco | Razón | Alternativa |
+|---------|-------|------------|
+| **IECA** | Agenesia renal fetal, oligohidramnios, hipotensión neonatal | Labetalol |
+| **ARA-II** | Misma que IECA | Nifedipino LP |
+| **Atenolol** | RCIU, hipoglucemia neonatal | Labetalol |
+| **Nitroprusiato** | Toxicidad por cianuro fetal | Nicardipino IV |
+| **Espironolactona** | Anti-androgénico fetal | — |
+
+#### Algoritmo de crisis hipertensiva en embarazo
+```
+PAS >160 o PAD >110 por ≥15 minutos:
+  → Labetalol IV 20 mg IV en 2 min
+     Si no responde en 10 min: 40 mg IV → 80 mg IV
+  → O Hidralazina IV 5 mg en 2 min → repetir c/20 min hasta 20 mg
+  → O Nifedipino VO 10 mg → repetir a los 30 min si no responde
+
+Meta: PA <160/110 en 30–60 min
+     NO bajar más de 25% en la primera hora
+     
+Si hay signos de preeclampsia severa:
+  → MgSO4 4 g IV en 15 min → 1 g/h infusión (neuroprotección fetal + anticonvulsivante)
+  → Preparar parto si viable (>34 sem o inestable)
+```
+        """)
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
 st.divider()
