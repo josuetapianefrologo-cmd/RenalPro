@@ -15341,6 +15341,68 @@ elif nav == "receta":
                             st.rerun()
                     else:
                         st.info(f"Sin resultados para '{busqueda_med}'. Agrega manualmente abajo.")
+                else:
+                    # ── VISTA POR CATEGORÍAS CLÍNICAS (cuando no hay búsqueda) ──
+                    st.caption("💡 O explora por categoría clínica:")
+
+                    _MEGA_CATS = {
+                        "🩸 Antihipertensivos": ["IECA","ARA-II","Calcioantagonista",
+                            "Betabloqueador","Alfa-Betabloqueador","Alfa-bloqueador",
+                            "Antihipertensivo","Vasodilatador"],
+                        "💧 Diuréticos": ["Diurético de asa","Tiazídico",
+                            "Antialdosterónico","ARM no esteroideo"],
+                        "🦴 ERC-MBD (Ca/P/PTH)": ["Quelante de fósforo",
+                            "Vitamina D activa","Vitamina D nativa","Calcimimético",
+                            "Calcio IV","Alcalinizante"],
+                        "💉 Anemia en ERC": ["AEE","Hierro IV","Hierro oral"],
+                        "🍬 Diabetes / Cardiometabólico": ["SGLT2i","Antidiabético","Insulina"],
+                        "❤️ Lípidos / CV": ["Estatina"],
+                        "🛡️ Inmunosupresores Trasplante": ["CNI","mTOR inhibidor",
+                            "Anti-proliferativo","Esteroide","Esteroide IV","Antimalárico"],
+                        "🦠 Antiinfecciosos": ["Antiviral","Antibiótico",
+                            "Antibiótico/Profilaxis","Antifúngico"],
+                        "⚡ Manejo de K+ / Electrolitos": ["Ligante de K"],
+                        "💊 Otros frecuentes": ["IBP","Anticonvulsivo",
+                            "Antiepiléptico/Neuropatía","Antigotoso","Analgésico","HBPM"],
+                    }
+
+                    for _mega_label, _cats_in_mega in _MEGA_CATS.items():
+                        _meds_cat = [m for m in _MEDS_DB if m.get("cat","") in _cats_in_mega]
+                        if not _meds_cat:
+                            continue
+                        with st.expander(f"{_mega_label}  ({len(_meds_cat)})"):
+                            for _m in _meds_cat:
+                                _gen = _m["g"]
+                                _pres_list = _m.get("p", [])
+                                _pres_default = _pres_list[0] if _pres_list else ""
+                                _dosis_def = _m.get("d", "")
+                                _nota = _m.get("nota", "")
+
+                                _ci, _cb = st.columns([5, 1])
+                                with _ci:
+                                    _label = f"**{_gen}**"
+                                    if _pres_default:
+                                        _label += f" — _{_pres_default}_"
+                                    st.markdown(_label)
+                                    st.caption(f"💊 {_dosis_def}")
+                                    if _nota:
+                                        st.caption(f"⚠️ {_nota}")
+                                with _cb:
+                                    _btn_key = f"cat_add_{_mega_label}_{_gen}".replace(" ","_")
+                                    if st.button("➕", key=_btn_key,
+                                                 help=f"Agregar {_gen} a la receta"):
+                                        _nombre_completo = f"{_gen} {_pres_default}".strip()
+                                        rx_items.append({
+                                            "nombre_completo": _nombre_completo,
+                                            "nombre_generico": _gen,
+                                            "cat": _m.get("cat",""),
+                                            "instrucciones": _dosis_def,
+                                            "inter_lista": _m.get("inter",[]),
+                                            "nota": _nota,
+                                        })
+                                        st.session_state[_PAC_RX_KEY] = rx_items
+                                        st.rerun()
+                                st.divider()
 
                 # Manual medication entry
                 with st.expander("✏️ Medicamento manual (no está en la lista)"):
