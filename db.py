@@ -229,6 +229,7 @@ def init_tables() -> bool:
             "ALTER TABLE patients ADD COLUMN IF NOT EXISTS contacto_nombre VARCHAR(150)",
             "ALTER TABLE patients ADD COLUMN IF NOT EXISTS contacto_parentesco VARCHAR(50)",
             "ALTER TABLE patients ADD COLUMN IF NOT EXISTS contacto_telefono VARCHAR(30)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS talla FLOAT",
         ]:
             try:
                 cur.execute(alter_pac)
@@ -485,13 +486,14 @@ def create_patient(user_id: int, data: Dict) -> Optional[int]:
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO patients (user_id, nombre, expediente, edad, sexo,
-                peso, diagnostico, tipo, notas)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                peso, talla, diagnostico, tipo, notas)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
         """, (
             user_id, data.get("nombre","Paciente"),
             data.get("expediente"), data.get("edad"),
             data.get("sexo"), data.get("peso"),
+            data.get("talla"),
             data.get("diagnostico"), data.get("tipo","general"),
             data.get("notas",""),
         ))
@@ -544,11 +546,12 @@ def update_patient(patient_id: int, user_id: int, data: Dict) -> bool:
         cur = conn.cursor()
         cur.execute("""
             UPDATE patients SET nombre=%s, expediente=%s, edad=%s, sexo=%s,
-                peso=%s, diagnostico=%s, tipo=%s, notas=%s
+                peso=%s, talla=%s, diagnostico=%s, tipo=%s, notas=%s
             WHERE id=%s AND user_id=%s
         """, (
             data.get("nombre"), data.get("expediente"), data.get("edad"),
-            data.get("sexo"), data.get("peso"), data.get("diagnostico"),
+            data.get("sexo"), data.get("peso"), data.get("talla"),
+            data.get("diagnostico"),
             data.get("tipo","general"), data.get("notas",""),
             patient_id, user_id
         ))
