@@ -15214,6 +15214,28 @@ elif nav == "receta":
 
                 st.divider()
 
+                # ── SINCRONIZAR datos clínicos con paciente seleccionado ────
+                # Streamlit ignora 'value=' cuando un widget tiene 'key=' tras el primer
+                # render. Aquí actualizamos session_state ANTES del render si el paciente
+                # cambió (modo distinto, otro paciente, o se completó el formulario nuevo).
+                _pac_sig = f"{pac_mode}|{pac_data.get('nombre','')}|{pac_data.get('expediente','')}"
+                if st.session_state.get("_rx_pac_sig_prev") != _pac_sig:
+                    st.session_state["rx_nombre"] = pac_data.get("nombre", "")
+                    st.session_state["rx_exp"]    = pac_data.get("expediente", "")
+                    _edad_val = pac_data.get("edad", "")
+                    st.session_state["rx_edad"]   = str(_edad_val) if _edad_val else ""
+                    _peso_val = pac_data.get("peso", 0)
+                    try:
+                        st.session_state["rx_peso"] = float(_peso_val) if _peso_val else 0.0
+                    except (ValueError, TypeError):
+                        st.session_state["rx_peso"] = 0.0
+                    _sexo_val = pac_data.get("sexo", "")
+                    if _sexo_val in ("Masculino", "Femenino", "No especificado"):
+                        st.session_state["rx_sexo"] = _sexo_val
+                    elif _sexo_val:  # ej. "Otro" → mapear a "No especificado"
+                        st.session_state["rx_sexo"] = "No especificado"
+                    st.session_state["_rx_pac_sig_prev"] = _pac_sig
+
                 # ── DATOS CLÍNICOS ────────────────────────────────────────────
                 st.markdown("#### 🩺 Datos clínicos")
                 rx1, rx2, rx3 = st.columns(3)
