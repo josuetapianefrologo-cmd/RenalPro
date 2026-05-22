@@ -10870,7 +10870,7 @@ Inducción: {induccion_bg}
                 if _CONSULTA_MODULE and db_activa:
                     try:
                         _conn_cons = _db.get_conn()
-                        render_consultation_complete(_conn_cons, sel_exp["id"], sel_exp, {
+                        render_consultation_complete(_conn_cons, uid, sel_exp["id"], sel_exp, {
                             "nombre": st.session_state.get("sess_nombre", ""),
                             "cedula_especialidad": st.session_state.get("sess_cedula", ""),
                             "cedula_general": st.session_state.get("sess_ced_general", ""),
@@ -15360,6 +15360,43 @@ elif nav == "receta":
                         st.session_state["rx_sexo"] = "No especificado"
                     st.session_state["_rx_pac_sig_prev"] = _pac_sig
 
+                    # ── PRE-CARGAR ÚLTIMA RECETA del paciente ────────────────
+                    # Solo si paciente existente Y rx_items está vacío (no pisar trabajo en curso)
+                    st.session_state["_rx_prefilled_msg"] = ""
+                    if pac_id_rx and _DB_ON and _db.db_ok() and not st.session_state.get(_PAC_RX_KEY):
+                        try:
+                            _recs_prev = _db.get_clinical_records(pac_id_rx) or []
+                            _last_rx = next((r for r in _recs_prev
+                                             if r.get("tipo") == "Receta médica"), None)
+                            if _last_rx:
+                                import json as _jrx_pre
+                                _datos = _last_rx.get("datos_json") or _last_rx.get("datos") or {}
+                                if isinstance(_datos, str):
+                                    try: _datos = _jrx_pre.loads(_datos)
+                                    except Exception: _datos = {}
+                                _items_prev = _datos.get("items", []) if isinstance(_datos, dict) else []
+                                _rx_items_restore = []
+                                for _it in _items_prev:
+                                    if isinstance(_it, dict):
+                                        _rx_items_restore.append({
+                                            "nombre_completo": _it.get("n", _it.get("nombre_completo","")),
+                                            "nombre_generico": _it.get("nombre_generico",""),
+                                            "cat": _it.get("cat",""),
+                                            "instrucciones": _it.get("i", _it.get("instrucciones","")),
+                                            "inter_lista": _it.get("inter_lista",[]),
+                                            "nota": _it.get("nota",""),
+                                        })
+                                if _rx_items_restore:
+                                    st.session_state[_PAC_RX_KEY] = _rx_items_restore
+                                    _fecha_prev = _last_rx.get("fecha_consulta") or _last_rx.get("created_at","")
+                                    st.session_state["_rx_prefilled_msg"] = (
+                                        f"✅ Pre-cargada última receta del paciente "
+                                        f"({_fecha_prev}, {len(_rx_items_restore)} medicamento(s)). "
+                                        f"Modifica lo necesario o usa 🗑️ Limpiar receta."
+                                    )
+                        except Exception:
+                            pass  # falla silenciosa — el usuario simplemente no ve pre-carga
+
                 # ── DATOS CLÍNICOS ────────────────────────────────────────────
                 st.markdown("#### 🩺 Datos clínicos")
                 rx1, rx2, rx3 = st.columns(3)
@@ -15566,6 +15603,10 @@ elif nav == "receta":
 
                 # ── LISTA DE MEDICAMENTOS ─────────────────────────────────────
                 if rx_items:
+                    # Mensaje de pre-carga si vino del paciente
+                    _pre_msg = st.session_state.get("_rx_prefilled_msg", "")
+                    if _pre_msg:
+                        st.success(_pre_msg)
                     st.markdown("---")
                     st.markdown("**Medicamentos en esta receta:**")
                     # Run interactions on full list
