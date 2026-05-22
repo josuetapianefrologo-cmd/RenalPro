@@ -230,6 +230,8 @@ def init_tables() -> bool:
             "ALTER TABLE patients ADD COLUMN IF NOT EXISTS contacto_parentesco VARCHAR(50)",
             "ALTER TABLE patients ADD COLUMN IF NOT EXISTS contacto_telefono VARCHAR(30)",
             "ALTER TABLE patients ADD COLUMN IF NOT EXISTS talla FLOAT",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS historia_clinica JSONB",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS historia_clinica_fecha TIMESTAMP",
         ]:
             try:
                 cur.execute(alter_pac)
