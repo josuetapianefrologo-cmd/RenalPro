@@ -15490,17 +15490,20 @@ elif nav == "receta":
                             from reportlab.lib.colors import HexColor, white, black
                             from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer,
                                                              Table, TableStyle, HRFlowable,
-                                                             Image as RLImage)
+                                                             Image as RLImage, PageBreak)
                             from reportlab.lib.styles import ParagraphStyle
                             from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+                            from reportlab.pdfgen import canvas as _rlcanvas
 
                             buf = io.BytesIO()
                             doc = SimpleDocTemplate(buf, pagesize=letter,
                                                     leftMargin=1.8*cm, rightMargin=1.8*cm,
-                                                    topMargin=1.5*cm, bottomMargin=1.5*cm)
+                                                    topMargin=1.5*cm, bottomMargin=2.0*cm)
                             AZUL=HexColor("#1E3A8A"); AZUL2=HexColor("#2563EB")
                             AZULC=HexColor("#EFF6FF"); GRIS=HexColor("#6B7280")
                             GRISL=HexColor("#F8FAFC"); AZULM=HexColor("#BFDBFE")
+
+                            MAX_MEDS_POR_PAGINA = 6
 
                             def P(txt, fn="Helvetica", fs=9, color=black,
                                   align=TA_LEFT, bold=False, sp=2, lead=None):
@@ -15510,172 +15513,277 @@ elif nav == "receta":
                                                      fontSize=fs, textColor=color,
                                                      alignment=align, spaceAfter=sp,
                                                      leading=lead or (fs+3)))
-                            story = []
 
-                            # Header
-                            logo_b64_rx = st.session_state.get("sess_logo_b64")
-                            if logo_b64_rx:
-                                try:
-                                    logo_bytes = base64.b64decode(logo_b64_rx)
-                                    logo_cell  = RLImage(io.BytesIO(logo_bytes),
-                                                         width=1.8*cm, height=1.8*cm,
-                                                         kind="proportional")
-                                except Exception:
-                                    logo_cell = P("☤", fn="Helvetica-Bold", fs=24, color=AZUL, align=TA_CENTER)
-                            else:
-                                logo_cell = P("☤", fn="Helvetica-Bold", fs=24, color=AZUL, align=TA_CENTER)
-
-                            hdr_txt = [
-                                P(dr_inst or "Consultorio Médico", bold=True, fs=11, color=AZUL, sp=1),
-                                P(dr_dom, fs=8, color=GRIS, sp=1),
-                                P(f"Tel: {dr_tel}" if dr_tel else "", fs=8, color=GRIS, sp=1),
-                                P(f"Folio: {folio_str}", fs=8, color=AZUL2, align=TA_RIGHT),
-                            ]
-                            th = Table([[logo_cell, hdr_txt]], colWidths=[2.2*cm, 14.8*cm])
-                            th.setStyle(TableStyle([
-                                ("BACKGROUND",(0,0),(-1,-1),AZULC),
-                                ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-                                ("TOPPADDING",(0,0),(-1,-1),8),
-                                ("BOTTOMPADDING",(0,0),(-1,-1),8),
-                                ("LEFTPADDING",(0,0),(-1,-1),8),
-                                ("BOX",(0,0),(-1,-1),1.5,AZUL),
-                                ("LINEABOVE",(0,0),(-1,0),4,AZUL2),
-                            ]))
-                            story.append(th); story.append(Spacer(1, 0.3*cm))
-
-                            # Doctor credentials
+                            # ── Credenciales del médico (se reusan) ───────────
                             creds = []
                             if dr_ced_gen:  creds.append(f"Méd. Gral. Céd.: {dr_ced_gen} | {dr_univ_gen}")
                             if dr_cedula:   creds.append(f"Especialidad Céd.: {dr_cedula} | {dr_univ}")
                             if dr_consejo:  creds.append(f"Certif.: {dr_consejo} N°{dr_cons_num}")
-                            med_rows = [[P(dr_nombre, bold=True, fs=12, color=AZUL), P("",fs=8)],
-                                        [P(dr_esp, fs=9, color=GRIS), P("",fs=8)]]
-                            for c in creds:
-                                med_rows.append([P(c, fs=8, color=GRIS), P("",fs=8)])
-                            tm = Table(med_rows, colWidths=[13*cm, 4*cm])
-                            tm.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),3),
-                                                    ("BOTTOMPADDING",(0,0),(-1,-1),3),
-                                                    ("LEFTPADDING",(0,0),(-1,-1),4)]))
-                            story.append(tm)
-                            story.append(HRFlowable(width="100%", thickness=1.5, color=AZUL2))
-                            story.append(Spacer(1, 0.3*cm))
 
-                            # Patient data
-                            rx_imc = rx_peso/((rx_talla/100)**2) if rx_talla > 0 and rx_peso > 0 else 0
-                            sv = []
-                            if rx_peso > 0: sv.append(f"Peso: {rx_peso:.1f} kg")
-                            if rx_talla > 0: sv.append(f"Talla: {rx_talla:.0f} cm")
-                            if rx_imc > 0: sv.append(f"IMC: {rx_imc:.1f}")
-                            if rx_ta:   sv.append(f"TA: {rx_ta} mmHg")
-                            if rx_fc:   sv.append(f"FC: {rx_fc} lpm")
-                            if rx_temp: sv.append(f"T°: {rx_temp}°C")
-                            if rx_spo2: sv.append(f"SpO₂: {rx_spo2}%")
-                            sv_style = ParagraphStyle("sv", fontName="Helvetica", fontSize=8, leading=11)
-                            pac_rows = [
-                                [P("Paciente:", bold=True, fs=8), P(rx_nombre, bold=True, fs=10),
-                                 P("Expediente:", bold=True, fs=8), P(rx_exp, fs=9),
-                                 P("Fecha:", bold=True, fs=8), P(str(rx_fecha), fs=9)],
-                                [P("Edad:", bold=True, fs=8), P(f"{rx_edad} años" if rx_edad else "—", fs=9),
-                                 P("Sexo:", bold=True, fs=8), P(rx_sexo, fs=9),
-                                 P("CIE-10:", bold=True, fs=8), P(cie_codes or "—", fs=9, color=AZUL2, bold=True)],
-                                [P("Dx:", bold=True, fs=8),
-                                 Paragraph(dx_str or "—", ParagraphStyle("dx2", fontName="Helvetica-Oblique", fontSize=8, leading=11)),
-                                 P(""), P(""), P(""), P("")],
-                            ]
-                            if sv:
-                                pac_rows.append([P("Signos:", bold=True, fs=8),
-                                                 Paragraph("  ·  ".join(sv), sv_style),
-                                                 P(""), P(""), P(""), P("")])
-                            tp = Table(pac_rows, colWidths=[2*cm, 5.5*cm, 2*cm, 2.5*cm, 1.5*cm, 3.5*cm])
-                            tp.setStyle(TableStyle([
-                                ("BACKGROUND",(0,0),(-1,-1),GRISL),
-                                ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC,GRISL,white,white]),
-                                ("TOPPADDING",(0,0),(-1,-1),4),
-                                ("BOTTOMPADDING",(0,0),(-1,-1),4),
-                                ("LEFTPADDING",(0,0),(-1,-1),6),
-                                ("BOX",(0,0),(-1,-1),1,AZULM),
-                                ("SPAN",(1,2),(-1,2)),
-                            ]))
-                            story.append(tp); story.append(Spacer(1, 0.4*cm))
+                            # ── Logo cell (se reusa) ──────────────────────────
+                            logo_b64_rx = st.session_state.get("sess_logo_b64")
+                            def _logo_cell():
+                                if logo_b64_rx:
+                                    try:
+                                        return RLImage(io.BytesIO(base64.b64decode(logo_b64_rx)),
+                                                       width=1.8*cm, height=1.8*cm,
+                                                       kind="proportional")
+                                    except Exception:
+                                        pass
+                                return P("☤", fn="Helvetica-Bold", fs=24, color=AZUL, align=TA_CENTER)
 
-                            # Rx symbol
-                            story.append(Paragraph("&#x211E;", ParagraphStyle("rxs",
-                                fontName="Helvetica-Bold", fontSize=28, textColor=AZUL2, spaceAfter=6)))
+                            # ── HEADER COMPLETO (página 1) ────────────────────
+                            def _header_full():
+                                items = []
+                                hdr_txt = [
+                                    P(dr_inst or "Consultorio Médico", bold=True, fs=11, color=AZUL, sp=1),
+                                    P(dr_dom, fs=8, color=GRIS, sp=1),
+                                    P(f"Tel: {dr_tel}" if dr_tel else "", fs=8, color=GRIS, sp=1),
+                                    P(f"Folio: {folio_str}", fs=8, color=AZUL2, align=TA_RIGHT),
+                                ]
+                                th = Table([[_logo_cell(), hdr_txt]], colWidths=[2.2*cm, 14.8*cm])
+                                th.setStyle(TableStyle([
+                                    ("BACKGROUND",(0,0),(-1,-1),AZULC),
+                                    ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                                    ("TOPPADDING",(0,0),(-1,-1),8),
+                                    ("BOTTOMPADDING",(0,0),(-1,-1),8),
+                                    ("LEFTPADDING",(0,0),(-1,-1),8),
+                                    ("BOX",(0,0),(-1,-1),1.5,AZUL),
+                                    ("LINEABOVE",(0,0),(-1,0),4,AZUL2),
+                                ]))
+                                items.append(th); items.append(Spacer(1, 0.3*cm))
+                                # Doctor credentials
+                                med_rows = [[P(dr_nombre, bold=True, fs=12, color=AZUL), P("",fs=8)],
+                                            [P(dr_esp, fs=9, color=GRIS), P("",fs=8)]]
+                                for c in creds:
+                                    med_rows.append([P(c, fs=8, color=GRIS), P("",fs=8)])
+                                tm = Table(med_rows, colWidths=[13*cm, 4*cm])
+                                tm.setStyle(TableStyle([("TOPPADDING",(0,0),(-1,-1),3),
+                                                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                                                        ("LEFTPADDING",(0,0),(-1,-1),4)]))
+                                items.append(tm)
+                                items.append(HRFlowable(width="100%", thickness=1.5, color=AZUL2))
+                                items.append(Spacer(1, 0.3*cm))
+                                return items
 
-                            # MEDICATIONS — drug name BOLD + instructions normal
-                            for idx, item in enumerate(rx_items):
+                            # ── HEADER COMPACTO (páginas 2+) ──────────────────
+                            def _header_compact():
+                                items = []
+                                # Línea 1: nombre + folio
+                                row1 = [P(dr_nombre, bold=True, fs=11, color=AZUL),
+                                        P(f"Folio: {folio_str}", fs=8, color=AZUL2, align=TA_RIGHT)]
+                                # Línea 2: especialidad + cédulas (1 sola línea, compacta)
+                                creds_inline = " · ".join(creds) if creds else ""
+                                cred_para = Paragraph(creds_inline,
+                                    ParagraphStyle("ci", fontName="Helvetica", fontSize=7,
+                                                   textColor=GRIS, leading=9))
+                                th = Table([row1, [cred_para, P(dr_esp, fs=8, color=GRIS, align=TA_RIGHT)]],
+                                           colWidths=[13*cm, 4*cm])
+                                th.setStyle(TableStyle([
+                                    ("BACKGROUND",(0,0),(-1,-1),AZULC),
+                                    ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                                    ("TOPPADDING",(0,0),(-1,-1),4),
+                                    ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                                    ("LEFTPADDING",(0,0),(-1,-1),8),
+                                    ("BOX",(0,0),(-1,-1),1,AZUL),
+                                    ("LINEABOVE",(0,0),(-1,0),3,AZUL2),
+                                    ("SPAN",(0,1),(0,1)),
+                                ]))
+                                items.append(th); items.append(Spacer(1, 0.2*cm))
+                                return items
+
+                            # ── TABLA DE PACIENTE COMPLETA (página 1) ─────────
+                            def _patient_full():
+                                items = []
+                                rx_imc = rx_peso/((rx_talla/100)**2) if rx_talla > 0 and rx_peso > 0 else 0
+                                sv = []
+                                if rx_peso > 0: sv.append(f"Peso: {rx_peso:.1f} kg")
+                                if rx_talla > 0: sv.append(f"Talla: {rx_talla:.0f} cm")
+                                if rx_imc > 0: sv.append(f"IMC: {rx_imc:.1f}")
+                                if rx_ta:   sv.append(f"TA: {rx_ta} mmHg")
+                                if rx_fc:   sv.append(f"FC: {rx_fc} lpm")
+                                if rx_temp: sv.append(f"T°: {rx_temp}°C")
+                                if rx_spo2: sv.append(f"SpO₂: {rx_spo2}%")
+                                sv_style = ParagraphStyle("sv", fontName="Helvetica", fontSize=8, leading=11)
+                                pac_rows = [
+                                    [P("Paciente:", bold=True, fs=8), P(rx_nombre, bold=True, fs=10),
+                                     P("Expediente:", bold=True, fs=8), P(rx_exp, fs=9),
+                                     P("Fecha:", bold=True, fs=8), P(str(rx_fecha), fs=9)],
+                                    [P("Edad:", bold=True, fs=8), P(f"{rx_edad} años" if rx_edad else "—", fs=9),
+                                     P("Sexo:", bold=True, fs=8), P(rx_sexo, fs=9),
+                                     P("CIE-10:", bold=True, fs=8), P(cie_codes or "—", fs=9, color=AZUL2, bold=True)],
+                                    [P("Dx:", bold=True, fs=8),
+                                     Paragraph(dx_str or "—", ParagraphStyle("dx2", fontName="Helvetica-Oblique", fontSize=8, leading=11)),
+                                     P(""), P(""), P(""), P("")],
+                                ]
+                                if sv:
+                                    pac_rows.append([P("Signos:", bold=True, fs=8),
+                                                     Paragraph("  ·  ".join(sv), sv_style),
+                                                     P(""), P(""), P(""), P("")])
+                                tp = Table(pac_rows, colWidths=[2*cm, 5.5*cm, 2*cm, 2.5*cm, 1.5*cm, 3.5*cm])
+                                tp.setStyle(TableStyle([
+                                    ("BACKGROUND",(0,0),(-1,-1),GRISL),
+                                    ("ROWBACKGROUNDS",(0,0),(-1,-1),[AZULC,GRISL,white,white]),
+                                    ("TOPPADDING",(0,0),(-1,-1),4),
+                                    ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                                    ("LEFTPADDING",(0,0),(-1,-1),6),
+                                    ("BOX",(0,0),(-1,-1),1,AZULM),
+                                    ("SPAN",(1,2),(-1,2)),
+                                ]))
+                                items.append(tp); items.append(Spacer(1, 0.4*cm))
+                                return items
+
+                            # ── MINI PACIENTE (páginas 2+) ────────────────────
+                            def _patient_mini():
+                                items = []
+                                mini_rows = [[
+                                    P("Paciente:", bold=True, fs=8), P(rx_nombre, bold=True, fs=9),
+                                    P("Exp:", bold=True, fs=8), P(rx_exp or "—", fs=9),
+                                    P("Fecha:", bold=True, fs=8), P(str(rx_fecha), fs=9),
+                                ]]
+                                tm = Table(mini_rows, colWidths=[1.5*cm, 5*cm, 1.2*cm, 3*cm, 1.3*cm, 5*cm])
+                                tm.setStyle(TableStyle([
+                                    ("BACKGROUND",(0,0),(-1,-1),GRISL),
+                                    ("TOPPADDING",(0,0),(-1,-1),3),
+                                    ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                                    ("LEFTPADDING",(0,0),(-1,-1),5),
+                                    ("BOX",(0,0),(-1,-1),0.5,AZULM),
+                                ]))
+                                items.append(tm); items.append(Spacer(1, 0.3*cm))
+                                return items
+
+                            # ── BLOQUE DE FIRMA (última página) ──────────────
+                            def _signature_block():
+                                items = []
+                                items.append(Spacer(1, 1.0*cm))
+                                fc = ParagraphStyle("fc", fontName="Helvetica", fontSize=9, alignment=TA_CENTER)
+                                fb = ParagraphStyle("fb", fontName="Helvetica-Bold", fontSize=10, alignment=TA_CENTER)
+                                fg = ParagraphStyle("fg", fontName="Helvetica", fontSize=8, textColor=GRIS, alignment=TA_CENTER)
+                                firma_items = [Paragraph("_"*40, fc), Spacer(1, 0.1*cm), Paragraph(dr_nombre, fb)]
+                                for c in creds: firma_items.append(Paragraph(c, fg))
+                                tf = Table([["", firma_items]], colWidths=[6*cm, 11*cm])
+                                tf.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"BOTTOM")]))
+                                items.append(tf); items.append(Spacer(1, 0.3*cm))
+                                items.append(HRFlowable(width="100%", thickness=1, color=AZULM))
+                                items.append(Paragraph(
+                                    f"Receta médica general · NOM-004-SSA3-2012 · COFEPRIS · "
+                                    f"Folio: {folio_str} · {dr_inst} · {dr_dom} · Tel: {dr_tel} · RenalPro v3.1.0",
+                                    ParagraphStyle("pie", fontName="Helvetica", fontSize=7,
+                                                   textColor=GRIS, alignment=TA_CENTER)))
+                                return items
+
+                            # ── RENDERIZAR UN MEDICAMENTO ─────────────────────
+                            def _render_med(idx, item):
+                                its = []
                                 nombre_pdf = item["nombre_completo"]
                                 inst_pdf   = item.get("instrucciones","")
-
-                                # Drug name in bold (larger)
-                                story.append(Paragraph(
+                                its.append(Paragraph(
                                     f"{idx+1}. <b>{nombre_pdf}</b>",
                                     ParagraphStyle("drug_name",
                                         fontName="Helvetica-Bold", fontSize=11,
                                         leading=15, spaceAfter=1, leftIndent=0,
                                         textColor=black)
                                 ))
-                                # Instructions in normal weight, indented
                                 if inst_pdf:
-                                    story.append(Paragraph(
-                                        inst_pdf,
+                                    its.append(Paragraph(inst_pdf,
                                         ParagraphStyle("drug_inst",
                                             fontName="Helvetica", fontSize=10,
                                             leading=14, spaceAfter=6,
                                             leftIndent=14, textColor=HexColor("#374151"))
                                     ))
-                                story.append(Spacer(1, 0.05*cm))
+                                its.append(Spacer(1, 0.05*cm))
+                                return its
 
-                            # Notes
-                            if rx_notas:
-                                story.append(Spacer(1, 0.15*cm))
-                                story.append(HRFlowable(width="100%", thickness=0.5, color=AZULM))
-                                story.append(Paragraph(f"— {rx_notas}",
-                                    ParagraphStyle("n", fontName="Helvetica-Oblique",
-                                                   fontSize=9, textColor=GRIS, spaceAfter=2)))
+                            # ── BLOQUE Rx + NOTAS + PRÓX CITA (última pág) ────
+                            def _rx_symbol():
+                                return Paragraph("&#x211E;", ParagraphStyle("rxs",
+                                    fontName="Helvetica-Bold", fontSize=28,
+                                    textColor=AZUL2, spaceAfter=6))
 
-                            # Next appointment
-                            if rx_prox_fecha:
-                                hora_txt = f" a las {rx_prox_hora}" if rx_prox_hora else ""
-                                story.append(Spacer(1, 0.2*cm))
-                                cita_b = [[P(f"📅  Próxima cita: {rx_prox_fecha}{hora_txt}",
-                                             bold=True, fs=10, color=AZUL2)]]
-                                tc = Table(cita_b, colWidths=[17*cm])
-                                tc.setStyle(TableStyle([
-                                    ("BACKGROUND",(0,0),(-1,-1),AZULC),
-                                    ("TOPPADDING",(0,0),(-1,-1),6),
-                                    ("BOTTOMPADDING",(0,0),(-1,-1),6),
-                                    ("LEFTPADDING",(0,0),(-1,-1),10),
-                                    ("BOX",(0,0),(-1,-1),1,AZUL2),
-                                ]))
-                                story.append(tc)
+                            def _tail_block():
+                                items = []
+                                if rx_notas:
+                                    items.append(Spacer(1, 0.15*cm))
+                                    items.append(HRFlowable(width="100%", thickness=0.5, color=AZULM))
+                                    items.append(Paragraph(f"— {rx_notas}",
+                                        ParagraphStyle("n", fontName="Helvetica-Oblique",
+                                                       fontSize=9, textColor=GRIS, spaceAfter=2)))
+                                if rx_prox_fecha:
+                                    hora_txt = f" a las {rx_prox_hora}" if rx_prox_hora else ""
+                                    items.append(Spacer(1, 0.2*cm))
+                                    cita_b = [[P(f"📅  Próxima cita: {rx_prox_fecha}{hora_txt}",
+                                                 bold=True, fs=10, color=AZUL2)]]
+                                    tc = Table(cita_b, colWidths=[17*cm])
+                                    tc.setStyle(TableStyle([
+                                        ("BACKGROUND",(0,0),(-1,-1),AZULC),
+                                        ("TOPPADDING",(0,0),(-1,-1),6),
+                                        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+                                        ("LEFTPADDING",(0,0),(-1,-1),10),
+                                        ("BOX",(0,0),(-1,-1),1,AZUL2),
+                                    ]))
+                                    items.append(tc)
+                                return items
 
-                            story.append(Spacer(1, 1.0*cm))
+                            # ── PAGINADO PRINCIPAL ─────────────────────────────
+                            story = []
+                            chunks = [rx_items[i:i+MAX_MEDS_POR_PAGINA]
+                                      for i in range(0, len(rx_items), MAX_MEDS_POR_PAGINA)] or [[]]
+                            n_pages = len(chunks)
 
-                            # Signature
-                            fc = ParagraphStyle("fc", fontName="Helvetica", fontSize=9, alignment=TA_CENTER)
-                            fb = ParagraphStyle("fb", fontName="Helvetica-Bold", fontSize=10, alignment=TA_CENTER)
-                            fg = ParagraphStyle("fg", fontName="Helvetica", fontSize=8, textColor=GRIS, alignment=TA_CENTER)
-                            firma_items = [Paragraph("_"*40, fc), Spacer(1, 0.1*cm), Paragraph(dr_nombre, fb)]
-                            for c in creds: firma_items.append(Paragraph(c, fg))
-                            tf = Table([["", firma_items]], colWidths=[6*cm, 11*cm])
-                            tf.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"BOTTOM")]))
-                            story.append(tf); story.append(Spacer(1, 0.3*cm))
+                            for pg_idx, chunk in enumerate(chunks):
+                                is_first = (pg_idx == 0)
+                                is_last  = (pg_idx == n_pages - 1)
+                                if not is_first:
+                                    story.append(PageBreak())
+                                # Header
+                                story.extend(_header_full() if is_first else _header_compact())
+                                # Paciente
+                                story.extend(_patient_full() if is_first else _patient_mini())
+                                # Rx symbol solo en la primera
+                                if is_first:
+                                    story.append(_rx_symbol())
+                                else:
+                                    # Pequeño Rx en páginas posteriores con "(continuación)"
+                                    story.append(Paragraph(
+                                        "&#x211E; <font size=9 color='#6B7280'>(continuación)</font>",
+                                        ParagraphStyle("rxc", fontName="Helvetica-Bold",
+                                                       fontSize=18, textColor=AZUL2, spaceAfter=4)))
+                                # Medicamentos del chunk
+                                for j, item in enumerate(chunk):
+                                    idx_global = pg_idx * MAX_MEDS_POR_PAGINA + j
+                                    story.extend(_render_med(idx_global, item))
+                                # En la última página: notas + próxima cita + firma + footer
+                                if is_last:
+                                    story.extend(_tail_block())
+                                    story.extend(_signature_block())
 
-                            # Footer
-                            story.append(HRFlowable(width="100%", thickness=1, color=AZULM))
-                            story.append(Paragraph(
-                                f"Receta médica general · NOM-004-SSA3-2012 · COFEPRIS · "
-                                f"Folio: {folio_str} · {dr_inst} · {dr_dom} · Tel: {dr_tel} · RenalPro v3.1.0",
-                                ParagraphStyle("pie", fontName="Helvetica", fontSize=7,
-                                               textColor=GRIS, alignment=TA_CENTER)))
-                            doc.build(story); buf.seek(0)
+                            # ── Footer "Página X de Y" ────────────────────────
+                            class _NumberedCanvas(_rlcanvas.Canvas):
+                                def __init__(self, *args, **kwargs):
+                                    super().__init__(*args, **kwargs)
+                                    self._saved_states = []
+                                def showPage(self):
+                                    self._saved_states.append(dict(self.__dict__))
+                                    self._startPage()
+                                def save(self):
+                                    total = len(self._saved_states)
+                                    for state in self._saved_states:
+                                        self.__dict__.update(state)
+                                        self.setFont("Helvetica", 7)
+                                        self.setFillColor(GRIS)
+                                        self.drawRightString(letter[0] - 1.8*cm, 1.0*cm,
+                                            f"Página {self._pageNumber} de {total}")
+                                        super().showPage()
+                                    super().save()
+
+                            doc.build(story, canvasmaker=_NumberedCanvas)
+                            buf.seek(0)
                             pdf_bytes = buf.read()
                             safe = "".join(c for c in rx_nombre if c.isalnum() or c==" ")[:18].strip()
                             st.download_button("⬇️ Descargar PDF", data=pdf_bytes,
                                                file_name=f"Rx_{folio_str}_{safe}.pdf",
                                                mime="application/pdf", key="btn_dl_rx")
-                            st.success(f"✅ Folio: **{folio_str}**")
+                            st.success(f"✅ Folio: **{folio_str}** · {n_pages} página(s) · {len(rx_items)} medicamento(s)")
                         except Exception as e:
                             st.error(f"Error PDF: {e}")
 
