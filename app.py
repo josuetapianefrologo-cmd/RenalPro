@@ -15694,6 +15694,2241 @@ elif nav == "receta":
                     st.info("Conecta Railway DB para ver el historial.")
 
 # ─── FOOTER ───────────────────────────────────────────────────────────────────
+elif nav == "hipocalcemia_iv":
+    st.subheader("🦴 Hipocalcemia — Reposición IV de Calcio")
+    st.caption("Ref: Cooper MS & Gittoes NJL. BMJ 2008 | "
+               "Aguilera IM & Vaughan RS. Contin Educ Anaesth 2000 | "
+               "KDIGO CKD-MBD 2017 | Protocolo CMN Bajío IMSS")
+
+    # ── CLASIFICACIÓN ──────────────────────────────────────────────────────────
+    hipo1, hipo2 = st.columns(2)
+    with hipo1:
+        ca_actual = st.number_input("Calcio total actual (mg/dL)", 3.0, 10.5, 6.9, 0.1, key="hipo_ca")
+        alb_h     = st.number_input("Albúmina (g/dL)", 1.0, 6.0, 3.5, 0.1, key="hipo_alb")
+        ca_cor    = ca_actual + 0.8 * (4.0 - alb_h)
+        st.metric("Ca corregido por albúmina", f"{ca_cor:.1f} mg/dL")
+        peso_h    = st.number_input("Peso (kg)", 30.0, 200.0, 70.0, 1.0, key="hipo_peso")
+    with hipo2:
+        ica_h     = st.number_input("iCa ionizado (mmol/L) — si disponible",
+                                    0.0, 2.0, 0.0, 0.01, key="hipo_ica",
+                                    help="0 = no disponible. Normal: 1.12–1.32 mmol/L")
+        ctx_h     = st.selectbox("Contexto clínico", [
+            "Hospitalizado — hipocalcemia aguda",
+            "Paciente en HD — hipocalcemia durante sesión",
+            "Post-paratiroidectomía (Hungry Bone Syndrome)",
+            "TRRC con citrato — iCa sistémico bajo",
+            "Post-transfusión masiva",
+            "Hipomagnesemia coexistente",
+        ], key="hipo_ctx")
+        sintomas_h = st.multiselect("Síntomas presentes", [
+            "Tetania / calambres musculares",
+            "Signo de Trousseau positivo",
+            "Signo de Chvostek positivo",
+            "Parestesias (perioral, manos, pies)",
+            "Laringoespasmo",
+            "QT prolongado en ECG",
+            "Convulsiones",
+            "Asintomático",
+        ], key="hipo_sint")
+
+    # ── CLASIFICACIÓN DE SEVERIDAD ─────────────────────────────────────────────
+    ca_ref = ica_h * 4 if ica_h > 0 else ca_cor  # use iCa if available
+    sintomas_graves = any(s in sintomas_h for s in
+                          ["Tetania","Laringoespasmo","QT prolongado","Convulsiones"])
+
+    if ca_cor < 7.5 or (ica_h > 0 and ica_h < 0.9):
+        sev = "🔴 SEVERA"
+        sev_color = "error"
+    elif ca_cor < 8.4 or (ica_h > 0 and ica_h < 1.12):
+        sev = "🟡 MODERADA"
+        sev_color = "warning"
+    else:
+        sev = "🟢 LEVE / límite inferior"
+        sev_color = "info"
+
+    if sev_color == "error":
+        st.error(f"**{sev}** — Ca corr {ca_cor:.1f} mg/dL"
+                 + (f" · iCa {ica_h:.2f} mmol/L" if ica_h > 0 else "")
+                 + (" · **SINTOMÁTICA → IV URGENTE**" if sintomas_graves else " → Reposición IV"))
+    elif sev_color == "warning":
+        st.warning(f"**{sev}** — Ca corr {ca_cor:.1f} mg/dL"
+                   + (f" · iCa {ica_h:.2f} mmol/L" if ica_h > 0 else "")
+                   + (" · Síntomas → IV" if sintomas_h else " → IV o VO según tolerancia"))
+    else:
+        st.info(f"**{sev}** — Ca corr {ca_cor:.1f} mg/dL — considerar calcio oral si asintomático")
+
+    st.divider()
+
+    # ── GLUCONATO DE CALCIO — DATOS BASE ──────────────────────────────────────
+    # Gluconato Ca 10%: 1 ámpula = 10 mL = 1 g gluconato = 90 mg Ca elemental = 4.65 mEq
+    CA_POR_AMP_MG  = 90.0    # mg Ca elemental por ámpula
+    CA_POR_AMP_MEQ = 4.65    # mEq Ca por ámpula
+    VOL_AMP_ML     = 10.0    # mL por ámpula
+    CA_CLORURO_AMP = 136.0   # mg Ca elemental por ámpula de CaCl2 10% (10 mL)
+
+    # ── PROTOCOLO CMN BAJÍO ────────────────────────────────────────────────────
+    st.markdown("### 💉 Protocolo CMN Bajío — Gluconato de Calcio IV")
+
+    prot1, prot2 = st.columns(2)
+    with prot1:
+        n_amp  = st.number_input("N° de ámpulas de gluconato Ca 10%",
+                                 1, 20, 11, 1, key="hipo_namp",
+                                 help="Protocolo CMN Bajío: 11 ámpulas")
+        vol_sf = st.number_input("Volumen NaCl 0.9% (mL)",
+                                 50, 500, 250, 50, key="hipo_vol",
+                                 help="Aforadas en esta cantidad de NaCl 0.9%")
+    with prot2:
+        vel_h  = st.number_input("Tasa de infusión deseada (mL/h)",
+                                 10, 250, 50, 5, key="hipo_vel",
+                                 help="50–100 mL/h habitual. Más rápido si síntomas graves.")
+        via_h  = st.selectbox("Vía de acceso", [
+            "Vena central (preferida — menos irritante)",
+            "Vena periférica gruesa (antecubital)",
+            "Catéter de HD (si en sesión)",
+        ], key="hipo_via")
+
+    # Cálculos del protocolo
+    ca_total_mg  = n_amp * CA_POR_AMP_MG        # mg Ca elemental total
+    ca_total_meq = n_amp * CA_POR_AMP_MEQ        # mEq total
+    vol_total_ml = vol_sf                         # aforado = volumen final ≈ vol_sf
+    conc_mg_ml   = ca_total_mg / vol_total_ml    # mg Ca/mL
+    conc_meq_ml  = ca_total_meq / vol_total_ml   # mEq Ca/mL
+    duracion_h   = vol_total_ml / vel_h           # horas para pasar toda la bolsa
+    vel_ca_mg_h  = conc_mg_ml * vel_h            # mg Ca elemental por hora
+    vel_ca_meq_h = conc_meq_ml * vel_h           # mEq Ca por hora
+
+    # Mostrar resultados
+    r1, r2, r3, r4 = st.columns(4)
+    r1.metric("Ca elemental total", f"{ca_total_mg:.0f} mg")
+    r2.metric("Concentración", f"{conc_mg_ml:.1f} mg/mL")
+    r3.metric("Velocidad Ca", f"{vel_ca_mg_h:.0f} mg/h")
+    r4.metric("Duración de la bolsa", f"{duracion_h:.1f} h")
+
+    st.success(f"""
+**🏥 Preparación — Protocolo CMN Bajío IMSS:**
+- **{n_amp} ámpulas** de Gluconato de Ca 10% (10 mL c/u) → aforadas en **{vol_sf} mL** de NaCl 0.9%
+- **Ca elemental total:** {ca_total_mg:.0f} mg ({ca_total_meq:.1f} mEq)
+- **Concentración:** {conc_mg_ml:.2f} mg/mL ({conc_meq_ml:.3f} mEq/mL)
+- **Pasar a:** {vel_h} mL/h → aporta **{vel_ca_mg_h:.0f} mg/h** de Ca elemental
+- **Duración total de la bolsa:** {duracion_h:.1f} horas
+- **Vía:** {via_h}
+    """)
+
+    # Bolsas necesarias según dosis por kg
+    dosis_kg = ca_total_mg / peso_h
+    st.info(f"📊 Dosis por kg para esta bolsa: **{dosis_kg:.1f} mg/kg** "
+            f"({ca_total_meq/peso_h:.2f} mEq/kg) para {peso_h:.0f} kg")
+
+    st.divider()
+
+    # ── CALCULADORA POR OBJETIVO ───────────────────────────────────────────────
+    st.markdown("### 🧮 Calculadora de dosis por objetivo clínico")
+
+    obj1, obj2 = st.columns(2)
+    with obj1:
+        ca_meta   = st.number_input("Ca corregido meta (mg/dL)", 7.5, 10.5, 8.5, 0.1, key="hipo_meta")
+        deficit_ca = max(0, (ca_meta - ca_cor) * peso_h * 0.24 * 10)
+        # Formula: Ca deficit (mg) = (Ca meta - Ca actual) x peso x Vd (0.24 L/kg) x 10 (conversión)
+        # Simpler clinical estimate: ~1 mEq/kg raises Ca ~0.5 mEq/L
+        n_amp_necesarias = deficit_ca / CA_POR_AMP_MG
+        st.metric("Déficit estimado de Ca", f"{deficit_ca:.0f} mg Ca elemental")
+        st.metric("Ámpulas necesarias", f"{n_amp_necesarias:.1f}",
+                  help="Estimación — ajustar según respuesta clínica")
+    with obj2:
+        st.markdown(f"""
+**Estimación clínica del déficit:**
+- Δ Ca objetivo: {ca_meta:.1f} − {ca_cor:.1f} = **{ca_meta - ca_cor:.1f} mg/dL**
+- Déficit ≈ {deficit_ca:.0f} mg Ca elemental
+- Ámpulas estimadas: **{n_amp_necesarias:.1f}**
+- Con protocolo de {n_amp} ámpulas/{vol_sf} mL:
+  → Cubre **{(n_amp/n_amp_necesarias*100):.0f}%** del déficit estimado
+        """)
+
+    st.divider()
+
+    # ── SITUACIONES ESPECIALES ─────────────────────────────────────────────────
+    st.markdown("### ⚠️ Situaciones especiales y protocolo por contexto")
+
+    with st.expander("🔴 Ca <7.0 mg/dL o síntomas graves (tetania, laringoespasmo, convulsiones)"):
+        st.error("""
+**EMERGENCIA — Bolo IV lento primero, luego infusión:**
+
+1. **Gluconato Ca 10%: 2–3 ámpulas (20–30 mL) IV en 10 minutos** directa o diluidas
+   - Monitoreo cardíaco continuo durante el bolo
+   - Si hay paro cardíaco por hipocalcemia: 3 ámpulas en 3 minutos
+2. Inmediatamente seguir con la infusión del protocolo (11 amp / 250 mL NaCl)
+3. Calcitriol 0.5–1 mcg VO/IV para activar absorción
+4. Monitoreo Ca c/2h las primeras 6h
+
+**No usar CaCl₂ en vena periférica** — es más irritante (136 mg Ca/ámpula vs 90 mg gluconato)
+        """)
+
+    with st.expander("⚙️ Paciente en HD — hipocalcemia durante sesión"):
+        st.warning("""
+**Durante la sesión de HD:**
+- Gluconato Ca 2–4 ámpulas IV en la línea venosa del circuito de HD (lento, 15–20 min)
+- O a través del catéter si no está en HD en ese momento
+- Ajustar Ca en el dializado si Ca <7.0 recurrente: cambiar a dializado Ca 3.5 mEq/L
+
+**Post-HD:**
+- Si Ca persiste bajo: iniciar protocolo de infusión + calcitriol VO
+- Revisar causa: quelante con calcio insuficiente, VD activa, PTH muy alta
+        """)
+
+    with st.expander("🔪 Post-paratiroidectomía — Hungry Bone Syndrome"):
+        hb_peso = peso_h
+        st.error(f"""
+**Hungry Bone Syndrome — protocolo agresivo:**
+
+Las primeras 24–72h post-cirugía el hueso absorbe calcio ávidamente.
+
+| Período | Tratamiento |
+|---------|------------|
+| **Primeras 24h** | Gluconato Ca **{hb_peso*1.0:.0f}–{hb_peso*2.0:.0f} mg/h** (1–2 mg/kg/h) en infusión continua |
+| **Días 2–7** | Reducir gradualmente según Ca sérico c/4–6h |
+| **Paralelo** | Calcitriol **2–4 mcg/día** (dosis alta) + Ca oral 1–2 g c/8h |
+| **Meta** | Ca corregido ≥8.0 mg/dL sin síntomas |
+
+Protocolo infusión: Ajustar vel hasta lograr Ca >8.0 mg/dL:
+- Si Ca <7.5: {hb_peso*1.5:.0f} mg/h de Ca elemental → **{hb_peso*1.5/conc_mg_ml:.0f} mL/h** con tu bolsa
+- Si Ca 7.5–8.0: {hb_peso*1.0:.0f} mg/h → **{hb_peso*1.0/conc_mg_ml:.0f} mL/h**
+- Si Ca ≥8.0: mantener con oral + calcitriol
+        """)
+
+    with st.expander("💧 TRRC con citrato — iCa sistémico bajo"):
+        st.info("""
+**En TRRC con RCA:**
+- iCa sistémico <1.0 mmol/L = aumentar infusión de calcio (gluconato o CaCl₂)
+- Calcular: tasa infusión Ca (mL/h) = [Meta − iCa actual] x 0.5 x peso / conc_meq_ml
+- Monitorear iCa sistémico c/4–6h
+- Si iCa sistémico persistentemente bajo con citrato alto: sospechar acumulación de citrato
+  → Ratio Ca total / iCa >2.5 → suspender citrato → cambiar anticoagulación
+        """)
+
+    with st.expander("🧬 Hipomagnesemia coexistente"):
+        st.warning("""
+**Si Mg <1.5 mg/dL junto con hipocalcemia:**
+La hipocalcemia NO se corregirá hasta reponer el magnesio primero.
+El Mg es necesario para la liberación de PTH.
+
+Dosis Mg: Sulfato de Mg 2–4 g IV en 30–60 min → luego 1 g/h infusión
+Monitoreo: Mg, Ca, reflejos osteotendinosos (hiperreflexia = toxicidad Mg)
+        """)
+
+    st.divider()
+
+    # ── MONITOREO ──────────────────────────────────────────────────────────────
+    st.markdown("### 📊 Monitoreo durante la reposición")
+    st.markdown(f"""
+| Momento | Estudio | Meta |
+|---------|---------|------|
+| **Antes de iniciar** | Ca total + albúmina + Mg + ECG | Documentar baseline |
+| **1–2h post-inicio** | Ca total o iCa | Ca corr ≥8.0 mg/dL · iCa ≥1.0 mmol/L |
+| **c/4–6h** | Ca + Mg + K + P | — |
+| **c/12–24h (estable)** | Ca + función renal | Transición a VO cuando Ca >8.4 |
+| **Continuo** | Monitor cardíaco | QT — hipocalcemia lo prolonga |
+
+**Calcio total corregido actual de tu paciente: {ca_cor:.1f} mg/dL**
+**Velocidad para alcanzar meta {st.session_state.get('hipo_meta', 8.5):.1f} en ~{duracion_h:.1f}h:** {vel_h} mL/h ✅
+
+**Transición a calcio oral:**
+- Cuando Ca corr >8.4 mg/dL x 2 mediciones consecutivas
+- Carbonato de Ca 500–1,500 mg c/8h VO con comidas
+- Calcitriol 0.25–0.5 mcg c/12h VO para mantener absorción
+    """)
+
+    # ERC-MBD reference
+    st.info("🦴 Para el manejo crónico de ERC-MBD (quelantes, VD activa, cinacalcet, PTH) "
+            "→ ve a **🦴 ERC-MBD** en el sidebar de NEFROLOGÍA.")
+
+elif nav == "scr":
+    st.subheader("🫀 Síndrome Cardiorrenal (SCR)")
+    st.caption("Ref: Ronco C et al. JACC 2008 | Rangaswami J et al. Circulation 2019 | "
+               "KDIGO AKI 2012 | ESC Heart Failure Guidelines 2021")
+
+    scr_tab = st.radio("", [
+        "📋 Clasificación y diagnóstico",
+        "💊 SCR Tipo 1 — Manejo agudo",
+        "🔬 SCR Tipo 4 — ERC y cardiopatía",
+        "⚖️ Tolvaptán / Ultrafiltración / Diálisis",
+    ], horizontal=True, key="scr_tab")
+    st.divider()
+
+    if "Clasificación" in scr_tab:
+        st.markdown("""
+### Clasificación del Síndrome Cardiorrenal
+
+| Tipo | Nombre | Mecanismo primario | Ejemplo clínico |
+|------|--------|-------------------|----------------|
+| **SCR 1** | Cardiorrenal agudo | ICA → AKI aguda | Edema agudo pulmonar + Cr sube 0.3 mg/dL |
+| **SCR 2** | Cardiorrenal crónico | ICC crónica → ERC progresiva | Paciente con FE 25% + ERC 3b |
+| **SCR 3** | Renocardíaco agudo | AKI → disfunción cardíaca aguda | SHU + arritmias + edema pulmonar |
+| **SCR 4** | Renocardíaco crónico | ERC → cardiopatía crónica | ERC 5 + HVI + calcificaciones vasculares |
+| **SCR 5** | Sistémico | Enfermedad sistémica → ambos | Sepsis, amiloidosis, LES, DM |
+
+#### Fisiopatología SCR 1 — el más frecuente en guardia
+```
+ICA (aumento PVC / presión venosa renal)
+        ↓
+Congestión venosa renal → ↑ presión intersticial renal
+        ↓
+↓ GFR + activación RAAS + SNS
+        ↓
+Retención de Na/agua → más congestión → círculo vicioso
+
+Simultáneamente:
+↓ Gasto cardíaco → ↓ presión de perfusión renal
+→ vasoconstricción renal refleja
+→ AKI isquémica + cardiogénica
+```
+
+#### Herramientas diagnósticas
+| Estudio | Hallazgo | Interpretación |
+|---------|---------|---------------|
+| **Eco renal Doppler** | IR >0.70 | Congestión venosa renal → SCR |
+| | IR <0.70 | Daño renal intrínseco o isquemia |
+| **BNP / NT-proBNP** | >400 pg/mL | Disfunción cardíaca activa |
+| **FEVI en ecocardiograma** | <40% | Disfunción sistólica — SCR 1 o 2 |
+| | >50% | HFpEF — SCR por congestión |
+| **PVC / PAP (si Swan-Ganz)** | PVC >12 | Congestión → agravar SCR |
+| **ENA, BUN/Cr ratio** | BUN/Cr >20 | Prerrenal — responderá a diuresis |
+| | BUN/Cr <10 | Daño tubular intrínseco |
+| **EF sodio (FENa)** | <1% | Prerrenal (cuidado: diuréticos invalidan) |
+| **EF urea** | <35% | Prerrenal incluso con diuréticos |
+        """)
+
+    elif "SCR Tipo 1" in scr_tab:
+        st.markdown("### 💊 SCR Tipo 1 — Manejo Agudo")
+        st.info("**Meta principal:** descongestión venosa renal → mejora de la perfusión → recuperación del GFR. "
+                "Paradójicamente: diureticar agresivamente MEJORA la función renal en SCR, no la empeora.")
+
+        # Calculator
+        scr1, scr2 = st.columns(2)
+        with scr1:
+            scr_peso   = st.number_input("Peso actual (kg)", 30.0,200.0,80.0,0.5,key="scr_peso")
+            scr_peso_s = st.number_input("Peso seco estimado (kg)", 30.0,200.0,75.0,0.5,key="scr_pesos")
+            scr_sobrecarga = scr_peso - scr_peso_s
+            st.metric("Sobrecarga hídrica estimada", f"{scr_sobrecarga:.1f} kg = {scr_sobrecarga*1000:.0f} mL")
+            scr_cr  = st.number_input("Creatinina actual (mg/dL)", 0.3,20.0,2.5,0.1,key="scr_cr")
+            scr_cr0 = st.number_input("Creatinina basal (mg/dL)", 0.3,20.0,1.2,0.1,key="scr_cr0")
+            delta_cr = scr_cr - scr_cr0
+            if delta_cr >= 0.3:
+                st.error(f"Δ Cr: +{delta_cr:.1f} mg/dL → **AKI confirmada** (criterio KDIGO)")
+            else:
+                st.info(f"Δ Cr: {delta_cr:+.1f} mg/dL")
+        with scr2:
+            scr_k   = st.number_input("K sérico (mEq/L)", 2.0,8.0,4.5,0.1,key="scr_k")
+            scr_fevi= st.number_input("FEVI (%)", 5,80,35,1,key="scr_fevi")
+            scr_pas = st.number_input("PAS (mmHg)", 60,220,110,1,key="scr_pas")
+            scr_diur= st.number_input("Diuresis (mL/h última hora)", 0,500,20,5,key="scr_diur")
+
+        st.divider()
+        st.markdown("#### Algoritmo de manejo — SCR tipo 1 / ICA + AKI")
+
+        # Hemodynamics assessment
+        if scr_pas < 90:
+            st.error("🛑 **HIPOTENSIÓN** (PAS <90) — NO diureticar. "
+                     "Estabilizar hemodinámica primero: noradrenalina / dobutamina. "
+                     "Considerar balón de contrapulsación. Nefrólogo + intensivista urgente.")
+        elif scr_pas < 100:
+            st.warning("⚠️ PAS limítrofe — diuresis muy cautelosa. "
+                       "Inotrópicos primero si FEVI <30%.")
+        else:
+            if scr_sobrecarga > 3:
+                st.error(f"🔴 Sobrecarga {scr_sobrecarga:.1f} kg — Descongestión URGENTE")
+            else:
+                st.warning(f"🟡 Sobrecarga {scr_sobrecarga:.1f} kg — Descongestión activa")
+
+        # Furosemide strategy
+        st.markdown(f"""
+#### Estrategia diurética (DOSE trial + KDIGO)
+
+**Meta de diuresis:** {scr_sobrecarga*1000/48:.0f} mL/h
+*(descongestión gradual: pérdida total estimada en 48h)*
+
+| Escenario | Furosemida | Vía | Monitoreo |
+|-----------|-----------|-----|----------|
+| Naive (sin diurético previo) | **40–80 mg IV** bolo → titular | IV | Diuresis c/1h |
+| Ya en furosemida oral ≤40 mg/día | Misma dosis IV (= x2.5 oral) | IV | — |
+| Ya en furosemida ≥80 mg/día | **Infusión continua 10–20 mg/h** | IV drip | Diuresis c/2h |
+| Sin respuesta en 2h | **Bloqueo secuencial de nefrona:** furosemida + metolazona 2.5–5 mg VO | — | K y Mg c/6h |
+
+**Meta de respuesta:** diuresis >100–150 mL/h x 6h → reevaluar
+
+**ATENCIÓN — paradoja del SCR:**
+> Si Cr sube levemente (0.1–0.3 mg/dL) mientras el paciente se descongestiona:
+> **CONTINUAR la descongestión.** La Cr subirá transitoriamente → bajará cuando la congestión ceda.
+> Solo detener si: Cr sube >0.5 en 24h SIN mejoría clínica + diuresis nula.
+        """)
+
+        # Potassium management
+        if scr_k > 5.5:
+            st.error(f"⚡ **K {scr_k} mEq/L — Hiperkalemia grave.** Ver módulo Hiperkalemia.")
+        elif scr_k < 3.5:
+            st.warning(f"⬇️ K {scr_k} mEq/L — Reponer KCl antes de continuar diuréticos.")
+
+        st.markdown("""
+#### Vasopresores e inotrópicos en SCR 1
+| Fármaco | Indicación | Dosis | Efecto renal |
+|---------|-----------|-------|-------------|
+| **Dobutamina** | FEVI <30% + hipoperfusión | 2–10 mcg/kg/min | Mejora GC → mejora GFR |
+| **Noradrenalina** | Hipotensión + vasoplejía | 0.01–0.5 mcg/kg/min | Aumenta PAM → perfusión |
+| **Levosimendan** | ICA aguda + baja FEVI | 0.1 mcg/kg/min x 24h | Vasodilatador renal directo |
+| **Nesiritida (BNP)** | Vasodilatación + diuresis | No disponible en MX | — |
+| ~~Dopamina dosis renal~~ | ❌ NO usar | — | Sin beneficio — ROSE trial |
+        """)
+
+    elif "SCR Tipo 4" in scr_tab:
+        st.markdown("""
+### 🔬 SCR Tipo 4 — ERC y Cardiopatía Crónica
+
+#### Epidemiología
+- 50–75% de los pacientes con ERC estadio 3–5 tienen cardiopatía
+- Principal causa de muerte en ERC: **cardiovascular (50%)**
+- La HVI está presente en >70% de los pacientes en diálisis
+
+#### Mecanismos de daño cardíaco en ERC
+```
+ERC → Retención de fosfato → ↑ FGF-23 → HVI directa
+ERC → ↑ PTH → calcificaciones vasculares + miocárdicas
+ERC → Anemia → ↑ GC → HVI excéntrica
+ERC → Acumulación toxinas urémicas → cardiomiopatía urémica
+ERC → HTA + sobrecarga de volumen → HVI concéntrica
+ERC → Dislipidemia → aterosclerosis acelerada
+```
+
+#### Factores de riesgo cardiovascular específicos de ERC
+| Factor | Intervención |
+|--------|-------------|
+| **HTA (90% en ERC 5)** | Meta <130/80 — KDIGO 2021 |
+| **HVI** | IECA/ARA-II + control de sobrehidratación en HD |
+| **Calcificaciones vasculares** | Control de P/Ca/PTH + sevelamer |
+| **Anemia** | Hb 10–11.5 g/dL — AEE + hierro IV |
+| **Sobrecarga de volumen** | Peso seco en HD, restricción Na/agua |
+| **Inflamación crónica** | Optimizar nutrición + diálisis adecuada |
+| **Diabetes** | HbA1c 7–8% (menos estricto en ERC avanzada) |
+
+#### Tamizaje cardíaco en ERC avanzada
+| Estudio | Frecuencia | Qué buscar |
+|---------|-----------|-----------|
+| ECG | Anual | Arritmias, HVI voltaje, QT |
+| Ecocardiograma | Cada 1–2 años | FEVI, HVI (IMVI), función diastólica |
+| BNP / NT-proBNP | Si síntomas | Descompensación cardíaca |
+| Rx tórax | Según clínica | Cardiomegalia, congestión |
+| Score de calcio coronario (Agatston) | 1 vez | Calcificación vascular |
+
+#### Medicamentos cardioprotectores — ajuste en ERC
+| Fármaco | ERC 3 | ERC 4 | ERC 5 / HD |
+|---------|-------|-------|-----------|
+| IECA / ARA-II | ✅ Plena dosis | ✅ Reducir 25–50% | ⚠️ Cautela (K, hipotensión) |
+| Betabloqueadores | ✅ | ✅ | ✅ Carvedilol preferido |
+| Estatinas | ✅ | ✅ | ⚠️ Beneficio limitado en HD (SHARP) |
+| SGLT2 inhibidores | ✅ si TFG>20 | ⚠️ TFG 20–45 | ❌ TFG <20 — no eficacia |
+| Espironolactona | ✅ | ⚠️ K>5.0 | ❌ HD — riesgo K |
+| Anticoagulantes (FA) | Dosis reducida | Dosis reducida | ⚠️ Riesgo/beneficio |
+        """)
+
+    else:  # Tolvaptán / UF / Diálisis
+        st.markdown("### ⚖️ Tolvaptán / Ultrafiltración / Diálisis en SCR")
+
+        t1, t2, t3 = st.columns(3)
+        with t1:
+            st.markdown("""
+**🔵 Tolvaptán (Samsca®)**
+Antagonista del receptor V2 de vasopresina → acuaresis sin pérdida de electrolitos
+
+*Indicaciones en SCR:*
+- Hiponatremia dilucional + ICA
+- Congestión refractaria a diuréticos de asa
+- Ascitis en cirrosis + ICA (SCR5)
+
+*Dosis:*
+- 15 mg c/24h VO — en hospital
+- Aumentar a 30–60 mg si no responde
+- NO usar >30 días consecutivos
+
+*Contraindicaciones:*
+- Hipernatremia
+- Incapacidad para acceder a agua
+- Falla hepática grave
+- Con CYP3A4 inhibidores (↑ niveles)
+
+*Monitoreo:*
+- Na c/4–6h las primeras 24h
+- No subir Na >10–12 mEq/L en 24h (mielinólisis)
+            """)
+        with t2:
+            st.markdown("""
+**🔧 Ultrafiltración (UF) aislada**
+Extracción de líquido sin diálisis — UNLOAD trial
+
+*Indicaciones:*
+- Sobrecarga hídrica >3 kg refractaria a diuréticos
+- Cr subiendo CON congestión persistente
+- ICA descompensada en HD crónica
+
+*Parámetros:*
+- Tasa: 100–200 mL/h (no más)
+- Total a extraer: calcular según sobrecarga
+- Acceso: catéter doble lumen temporal
+
+*¿UF vs diuréticos IV?*
+CARESS-HF trial (NEJM 2012):
+→ UF NO fue superior a diuréticos escalonados
+→ Diuréticos IV siguen siendo primera línea
+→ UF: si fracaso diurético documentado
+
+*No confundir con HD:*
+UF = solo extrae agua sin clearance de solutos
+HD = clearance de urea + solutos + agua
+            """)
+        with t3:
+            st.markdown("""
+**🏥 Cuándo iniciar Diálisis en SCR**
+
+*Indicaciones urgentes (AEIOU):*
+- **A**cidosis: pH <7.10 refractaria
+- **E**lectrolitos: K >6.5 con cambios ECG
+- **I**ntoxicación: tóxicos dializables
+- **O**verload: edema pulmonar refractario a diuréticos
+- **U**remia: encefalopatía, pericarditis, sangrado
+
+*Elección de modalidad en SCR:*
+| Modalidad | Ventaja en SCR |
+|-----------|---------------|
+| **TRRC (CVVHDF)** | Inestabilidad hemodinámica — más lenta y segura |
+| **HD intermitente** | HD crónico con SCR descompensado |
+| **UF aislada** | Solo congestión sin indicación de diálisis |
+
+*Patrón de TRRC en SCR:*
+- Dosis mínima: 20 mL/kg/h (RENAL trial)
+- Ultrafiltración neta: 100–200 mL/h según tolerancia
+- Evitar hipotensión → empeora perfusión renal + cardíaca
+            """)
+
+elif nav == "erc_mbd":
+    st.subheader("🦴 ERC-MBD — Enfermedad Mineral y Ósea en ERC")
+    st.caption("Ref: KDIGO CKD-MBD 2017 Update | Evenepoel P et al. NDT 2021 | "
+               "Floege J et al. Kidney Int 2021")
+
+    mbd_tab = st.radio("", [
+        "🎯 Metas por estadio",
+        "💊 Quelantes de fósforo",
+        "🌡️ Vitamina D y análogos",
+        "🧮 Cinacalcet / Etelcalcetide",
+        "🔪 Paratiroidectomía",
+    ], horizontal=True, key="mbd_tab")
+    st.divider()
+
+    if "Metas" in mbd_tab:
+        st.markdown("""
+### 🎯 Metas KDIGO CKD-MBD 2017 por estadio
+
+#### Fósforo sérico
+| Estadio ERC | Meta P | Acción |
+|------------|--------|--------|
+| ERC 3–5 (prediálisis) | **Mantener en rango normal** (2.5–4.5 mg/dL) | Restricción dietética + quelante si necesario |
+| ERC 5D (HD) | **3.5–5.5 mg/dL** | Quelante en cada comida + HD adecuada |
+| ERC 5D (DP) | **3.5–5.5 mg/dL** | Quelante + residual renal |
+| Post-trasplante | <4.5 mg/dL | Restricción + revisión si >6 meses |
+
+#### Calcio sérico (total corregido por albúmina)
+| Situación | Meta | Fórmula corrección |
+|-----------|------|-------------------|
+| Todos los estadios | **8.4–10.2 mg/dL (normal)** | Ca corregido = Ca + 0.8 x (4 − Alb) |
+| Evitar hipercalcemia | <10.2 mg/dL | ↑Ca → suspender análogos VD activa |
+| Evitar hipocalcemia | >8.4 mg/dL | ↓Ca → calcio + VD activa |
+
+#### PTH intacta (PTHi)
+| Estadio | Meta PTHi | Estrategia |
+|---------|----------|-----------|
+| ERC 3 | 35–70 pg/mL | 25-OH-D si deficiencia |
+| ERC 4 | 70–110 pg/mL | Calcitriol/análogo si sube |
+| ERC 5 prediálisis | 150–300 pg/mL | Calcitriol + cinacalcet |
+| **ERC 5D (HD/DP)** | **150–600 pg/mL** | Rango amplio — evitar adinámica ósea |
+| Post-trasplante mes 1–6 | 150–300 pg/mL | Tomar vitamina D activa si persiste |
+| Post-trasplante >6 meses | <130 pg/mL | Cinacalcet si persiste hiperparatiroidismo |
+
+#### Vitamina D (25-OH-D3)
+| Nivel | Clasificación | Acción |
+|-------|-------------|--------|
+| <10 ng/mL | Deficiencia severa | Colecalciferol 50,000 UI/semana x 12 sem |
+| 10–20 ng/mL | Deficiencia | Colecalciferol 2,000–4,000 UI/día |
+| 20–30 ng/mL | Insuficiencia | Colecalciferol 1,000–2,000 UI/día |
+| >30 ng/mL | Suficiente | Mantenimiento 800–1,000 UI/día |
+
+#### Producto calcio-fósforo (Ca x P)
+- Meta: **<55 mg²/dL²** (calcificaciones vasculares si supera)
+- Si Ca x P >55 → priorizar reducción de P + quelante sin calcio
+
+> 📌 **Eje hormonal del MBD:**
+> ↓TFG → ↑FGF-23 → ↑PTH → ↓Calcitriol → ↑P → ↓Ca → círculo vicioso
+        """)
+
+        # Calculator
+        st.markdown("#### Calculadora rápida")
+        mc1, mc2, mc3 = st.columns(3)
+        with mc1:
+            ca_tot = st.number_input("Ca total (mg/dL)", 5.0,15.0,8.8,0.1,key="mbd_ca")
+            alb_m  = st.number_input("Albúmina (g/dL)", 1.0,6.0,3.5,0.1,key="mbd_alb")
+            ca_cor = ca_tot + 0.8*(4.0 - alb_m)
+            st.metric("Ca corregido", f"{ca_cor:.1f} mg/dL",
+                      delta="⬆️ alto" if ca_cor>10.2 else ("⬇️ bajo" if ca_cor<8.4 else "✅ normal"))
+        with mc2:
+            p_ser  = st.number_input("Fósforo (mg/dL)", 0.5,12.0,5.5,0.1,key="mbd_p")
+            caxp   = ca_cor * p_ser
+            st.metric("Ca x P", f"{caxp:.1f} mg²/dL²",
+                      delta="⬆️ ALTO" if caxp>55 else "✅ <55")
+        with mc3:
+            pth_m  = st.number_input("PTHi (pg/mL)", 0.0,3000.0,350.0,10.0,key="mbd_pth")
+            egfr_m = st.number_input("TFG (mL/min)", 0.0,120.0,15.0,1.0,key="mbd_egfr")
+            if egfr_m < 15:
+                meta_pth = "150–600 pg/mL (HD)"
+                en_meta  = 150 <= pth_m <= 600
+            elif egfr_m < 30:
+                meta_pth = "150–300 pg/mL"
+                en_meta  = 150 <= pth_m <= 300
+            elif egfr_m < 45:
+                meta_pth = "70–110 pg/mL"
+                en_meta  = 70 <= pth_m <= 110
+            else:
+                meta_pth = "35–70 pg/mL"
+                en_meta  = 35 <= pth_m <= 70
+            st.metric("PTH en meta", "✅ Sí" if en_meta else "❌ No", delta=meta_pth)
+
+    elif "Quelantes" in mbd_tab:
+        st.markdown("""
+### 💊 Quelantes de Fósforo — Comparativa
+
+| Quelante | Dosis | Con/Sin calcio | Ventaja | Limitación |
+|---------|-------|---------------|---------|-----------|
+| **Sevelamer HCl (Renagel®)** | 800–1600 mg c/comida | Sin calcio | Efecto hipolipemiante + neutro en Ca | Caro, constipación |
+| **Sevelamer Carbonato (Renvela®)** | 800–1600 mg c/comida | Sin calcio | Menos acidosis que HCl | — |
+| **Carbonato de calcio** | 500–1500 mg c/comida | Con calcio | Barato, disponible IMSS | ↑Ca → calcificaciones |
+| **Acetato de calcio (PhosLo®)** | 667 mg c/comida | Con calcio | Más eficaz que carbonato | ↑Ca |
+| **Hidróxido de Al** | 300–600 mg c/comida | Sin calcio | MUY eficaz | ❌ Toxicidad Al — solo corto plazo |
+| **Citrato de Fe (Auryxia®)** | 210 mg Fe c/comida | Sin calcio | Trata anemia + fósforo | Caro |
+| **Oxihidróxido sucroférrico (Velphoro®)** | 500 mg c/comida | Sin calcio | Eficaz, sin Al | Caro, heces negras |
+| **Carbonato de La (Fosrenol®)** | 500–1000 mg c/comida | Sin calcio | Eficaz | Náusea, caro |
+
+#### Cuándo usar cada uno — algoritmo práctico
+```
+Ca sérico NORMAL (8.4–10.2) + P alto:
+  → Primera línea: Sevelamer carbonato (si disponible) o Carbonato de Ca
+  → Segunda: combinación (Ca + sevelamer)
+
+Ca sérico ALTO (>10.2) + P alto:
+  → ❌ NO dar calcio como quelante
+  → Sevelamer + reducir análogos de VD activa
+  → Cinacalcet si PTH alta
+
+Ca sérico BAJO (<8.4) + P alto:
+  → Carbonato de calcio (efecto dual: quelante + suplemento)
+  → + VD activa
+
+Ca x P >55:
+  → Priorizar quelante SIN calcio (sevelamer)
+  → Meta: bajar P antes que Ca
+
+En IMSS disponibles habitualmente:
+  → Carbonato de Ca ✅ · Sevelamer ✅ (en algunos centros) · Hidróxido de Al (solo emergencia)
+```
+
+#### Instrucciones clave para el paciente
+- Tomar CON las comidas (no antes, no después)
+- No masticar / triturar sevelamer (pierde efecto)
+- Si olvida una comida → no tomar el quelante
+- Separar de otros medicamentos ≥2 horas (sevelamer absorbe fármacos)
+        """)
+
+    elif "Vitamina D" in mbd_tab:
+        st.markdown("""
+### 🌡️ Vitamina D — Nativa vs Activa
+
+#### Vitamina D nativa (Colecalciferol / Ergocalciferol)
+- Indicación: corregir deficiencia de 25-OH-D3 (<30 ng/mL)
+- Vías metabólicas requieren riñón → menos eficaz en ERC avanzada para PTH
+
+| Nivel 25-OH-D | Dosis |
+|--------------|-------|
+| <10 ng/mL | 50,000 UI VO c/semana x 12 semanas → luego 2,000 UI/día |
+| 10–20 ng/mL | 4,000 UI/día x 3 meses → 2,000 UI/día |
+| 20–30 ng/mL | 2,000 UI/día |
+| >30 ng/mL | 800–1,000 UI/día mantenimiento |
+
+#### Vitamina D activa y análogos — para PTH
+
+| Fármaco | Dosis | Selectividad VDR | Hipercalcemia |
+|---------|-------|-----------------|--------------|
+| **Calcitriol** (Rocaltrol®) | 0.25–1 mcg c/24h VO o IV x 3/sem en HD | No selectivo | Alta |
+| **Paricalcitol** (Zemplar®) | 1–4 mcg IV x 3/sem o 1–2 mcg VO c/24h | VDR renal selectivo | Menor |
+| **Alfacalcidol** | 0.25–2 mcg/día VO | Moderada | Moderada |
+| **Doxercalciferol** | 2.5–10 mcg x 3/sem IV | Moderada | Moderada |
+
+#### Cuándo agregar VD activa
+```
+PTH > límite superior de meta para el estadio
++ Ca normal o bajo
++ P controlado (<5.5 mg/dL)
+→ Agregar calcitriol 0.25 mcg/día o paricalcitol 1 mcg/día
+
+Ajuste:
+  → Medir PTH, Ca, P cada 4 semanas al inicio
+  → Si Ca sube >10.2 → SUSPENDER VD activa temporalmente
+  → Si P sube >5.5 → Reforzar quelante antes de agregar VD
+
+Paricalcitol vs Calcitriol:
+  → Paricalcitol: menos hipercalcemia, menos absorción GI de Ca
+  → Evidencia de mayor reducción de HVI y mortalidad CV (observacional)
+  → En HD: paricalcitol preferido por menores efectos en Ca/P
+```
+        """)
+
+    elif "Cinacalcet" in mbd_tab:
+        st.markdown("""
+### 🧮 Cinacalcet y Etelcalcetide — Calcimiméticos
+
+#### Mecanismo
+Activan el receptor sensor de calcio (CaSR) en las células paratiroideas
+→ Suprimen PTH SIN aumentar Ca ni P (efecto contrario a VD activa)
+
+#### Cinacalcet (Sensipar®)
+| Parámetro | Detalle |
+|-----------|---------|
+| **Indicación** | Hiperparatiroidismo secundario en HD — PTH persistentemente alta |
+| **Dosis inicial** | 30 mg c/24h VO con comida |
+| **Ajuste** | ↑ a 60 → 90 → 120 → 180 mg c/4 semanas según PTH/Ca |
+| **Meta** | PTH 150–300 pg/mL |
+| **Contraindicación** | Ca <8.4 mg/dL — riesgo de hipocalcemia severa |
+| **Efecto adverso** | Náusea/vómito (40%) → tomar con comida abundante |
+| **Monitoreo** | Ca y PTH 1 semana después de cada ajuste |
+
+#### Etelcalcetide (Parsabiv®) — IV en HD
+| Parámetro | Detalle |
+|-----------|---------|
+| **Ventaja** | Administración IV al final de HD (adherencia asegurada) |
+| **Dosis** | 5 mg 3x/semana → ajustar c/4 semanas |
+| **Disponibilidad MX** | Limitada |
+
+#### Algoritmo de uso — cinacalcet vs VD activa vs combinación
+```
+PTH alta + Ca NORMAL o ALTO:
+  → Cinacalcet (REDUCE Ca + PTH)
+
+PTH alta + Ca BAJO:
+  → VD activa (SUBE Ca + reduce PTH)
+
+PTH muy alta (>600 en HD) + Ca alto + P alto:
+  → Cinacalcet + quelante sin Ca
+  → Evaluar paratiroidectomía si PTH >800–1000 x 6 meses
+
+PTH alta + Ca normal + P normal:
+  → Cualquiera de los dos — preferencia institucional
+  → Combinación a dosis bajas: menos efectos adversos
+```
+
+#### ¿Cuándo cambiar a paratiroidectomía?
+- PTH persistentemente >800 pg/mL a pesar de tratamiento médico x 6 meses
+- Hipercalcemia refractaria (Ca >10.5) sin responder a cinacalcet
+- Hiperparatiroidismo terciario (post-trasplante Ca alto + PTH alta)
+- Calcificaciones progresivas / calcifilaxia
+        """)
+
+    else:  # Paratiroidectomía
+        st.markdown("""
+### 🔪 Paratiroidectomía en ERC
+
+#### Indicaciones (KDIGO 2017)
+```
+Hiperparatiroidismo refractario que NO responde a tratamiento médico:
+  ✅ PTH > 800–1000 pg/mL x ≥6 meses de tratamiento óptimo
+  ✅ Hipercalcemia persistente (Ca >10.5 mg/dL)
+  ✅ Hiperfosfatemia severa refractaria a quelantes
+  ✅ Calcifilaxia (urgencia — paratiroidectomía acelera resolución)
+  ✅ Nódulos paratiroideos >1 cm en USG / MIBI scan
+  ✅ Síntomas: dolor óseo, fracturas, prurito refractario
+```
+
+#### Tipos de paratiroidectomía
+| Técnica | Descripción | Cuándo |
+|---------|-----------|--------|
+| **Total** | Extirpación de las 4 glándulas | Hiperplasia difusa nodular |
+| **Subtotal** | Deja 50 mg de glándula menor | Tejido residual para Ca |
+| **Total + autotrasplante** | Total + implante en antebrazo | Permite reoperación accesible |
+
+#### Cuidados post-paratiroidectomía — "Hungry Bone Syndrome"
+```
+Las primeras 24–72h post-cirugía:
+  → Ca cae abruptamente (los huesos absorben calcio ávido amente)
+  → Hipocalcemia severa con tetania, QT largo, convulsiones
+
+Protocolo:
+  1. Gluconato de Ca 1–2 g IV c/4–6h las primeras 24h
+  2. Calcitriol 2–4 mcg/día (dosis alta post-operatoria)
+  3. Monitoreo Ca c/4–6h x 48h
+  4. Mg sérico (hipomagnesemia asociada)
+  5. Oral: Carbonato de Ca 1–2 g c/8h + calcitriol 0.5–1 mcg c/8h
+
+Meta: Ca ≥8.0 mg/dL sin síntomas
+Hungry bone puede durar semanas → reducir dosis gradualmente
+```
+
+#### Calcifilaxia — urgencia
+```
+Calcifilaxia = calcificación de vasos pequeños + necrosis isquémica de piel
+Apariencia: placas purpúricas dolorosas → úlceras necróticas (gangrena)
+Mortalidad: 60–80% si hay infección sobreañadida
+
+Tratamiento urgente:
+  1. Tiosulfato de sodio 25 g IV x 3/semana post-HD
+  2. Suspender calcio (quelantes, VD activa con calcio)
+  3. Paratiroidectomía urgente si PTH alta
+  4. Curación de heridas especializada
+  5. Analgesia (dolor severo)
+  6. Evitar traumatismos, catéteres en zonas afectadas
+```
+        """)
+
+elif nav == "hta_erc":
+    st.subheader("🩸 Hipertensión Arterial en ERC")
+    st.caption("Ref: KDIGO HTA 2021 | SPRINT trial 2015 | ESC/ESH Guidelines 2023 | "
+               "Cheung AK et al. Kidney Int 2021")
+
+    hta_tab = st.radio("", [
+        "🎯 Metas y diagnóstico",
+        "💊 Selección de antihipertensivo",
+        "🔬 HTA resistente en ERC",
+        "🩺 HTA renovascular",
+        "⚡ Crisis hipertensiva en ERC",
+    ], horizontal=True, key="hta_tab")
+    st.divider()
+
+    if "Metas" in hta_tab:
+        st.markdown("""
+### 🎯 Metas de PA — KDIGO 2021
+
+#### Actualización KDIGO 2021 (más estricta que 2012)
+
+| Situación | Meta PA (KDIGO 2021) | Método medición |
+|-----------|---------------------|----------------|
+| ERC con o sin DM | **<120/80 mmHg** (si tolerada) | Automedición estandarizada |
+| ERC con proteinuria >0.5 g/día | **<120/80 mmHg** | — |
+| ERC en HD | Individual — PA pre-HD <140/90 | PA fuera de HD |
+| ERC post-Tx | **<130/80 mmHg** | — |
+| Adulto mayor >75 años | **<130/80 si tolerada** | Cuidado con hipotensión |
+
+#### Medición estandarizada (SPRINT protocol)
+```
+Requisitos para PA estandarizada (más baja que clínica habitual):
+  1. Paciente sentado, en silencio 5 min antes
+  2. Espalda y pies apoyados
+  3. Sin hablar durante la medición
+  4. Brazo al nivel del corazón
+  5. Promedio de 3 mediciones en 1 visita
+  6. Idealmente: automedición en casa (AMPA)
+
+⚠️ PA "blanca" (clínica alta + casa normal): tratar si hay lesión de órgano blanco
+⚠️ PA "enmascarada" (clínica normal + casa alta): mayor riesgo CV — tratar igual
+```
+
+#### Evaluación del paciente hipertenso con ERC
+| Estudio | Por qué |
+|---------|---------|
+| BH, QS, electrolitos | Función renal basal, K (IECA/ARA-II) |
+| Orina 24h (proteínas + Cr) | Cuantificar proteinuria — guía tratamiento |
+| Ecocardiograma | HVI — marcador de daño |
+| Fondo de ojo | Retinopatía hipertensiva |
+| Doppler renal | Estenosis arteria renal (ver pestaña) |
+| Aldosterona/renina (ARP/ARP) | Si K bajo + HTA resistente → hiperaldosteronismo |
+| Catecolaminas urinarias | Si episódica, sudoración → feocromocitoma |
+        """)
+
+        # BP calculator
+        st.markdown("#### Calculadora de riesgo cardiovascular")
+        bp1, bp2 = st.columns(2)
+        with bp1:
+            hta_pas = st.number_input("PAS (mmHg)", 80, 260, 145, 1, key="hta_pas")
+            hta_pad = st.number_input("PAD (mmHg)", 40, 140, 90, 1, key="hta_pad")
+            hta_egfr = st.number_input("TFG (mL/min)", 0.0, 120.0, 35.0, 1.0, key="hta_egfr")
+        with bp2:
+            hta_prot = st.number_input("Proteinuria (g/día)", 0.0, 20.0, 0.5, 0.1, key="hta_prot")
+            hta_dm2 = st.checkbox("Diabetes mellitus", key="hta_dm2")
+            hta_hvi = st.checkbox("HVI en ecocardio", key="hta_hvi")
+        # Risk assessment
+        en_meta_hta = hta_pas < 130 and hta_pad < 80
+        if not en_meta_hta:
+            st.error(f"⚠️ PA {hta_pas}/{hta_pad} — FUERA de meta (<130/80 KDIGO 2021)")
+        else:
+            st.success(f"✅ PA {hta_pas}/{hta_pad} — En meta KDIGO 2021")
+
+    elif "Selección" in hta_tab:
+        st.markdown("""
+### 💊 Selección de Antihipertensivo en ERC
+
+#### Primera línea según perfil
+
+| Situación clínica | 1ª elección | 2ª línea | Evitar |
+|------------------|------------|---------|--------|
+| ERC + proteinuria >0.5 g/día | **IECA o ARA-II** | Diurético tiazídico | AINEs, IECA+ARA-II juntos |
+| ERC + DM + proteinuria | **IECA o ARA-II** | Calcioantagonista | — |
+| ERC + HTA sin proteinuria | Cualquiera | IECA/ARA-II + tiazídico | — |
+| ERC en HD | Cualquiera (sin restricción especial) | — | Evitar IECA si hipotensión |
+| Post-trasplante | **Amlodipino** (no diltiazem/verapamilo) | IECA/ARA-II | Diltiazem (↑ tacrolimus) |
+| ERC + eritrocitosis | **IECA o ARA-II** | — | — |
+| ERC + HF con FEVI reducida | IECA/ARA-II + betabloqueador | Espironolactona (cuidado K) | — |
+
+#### IECA / ARA-II en ERC — puntos clave
+
+| Punto | Detalle |
+|-------|---------|
+| **Indicación** | ERC con proteinuria >0.5 g/día — renoprotector |
+| **Inicio** | Esperar estabilidad hemodinámica (no en AKI activa) |
+| **Aumento esperado de Cr** | Hasta 30% sobre basal = aceptable (vasodilata eferente) |
+| **Detener si** | Cr sube >30% en 2 semanas o K >5.5 mEq/L |
+| **NO combinar** | IECA + ARA-II (ONTARGET) → mayor daño renal sin beneficio adicional |
+| **Aliskiren** | No combinar con IECA/ARA-II en DM |
+
+#### Diuréticos — ajuste por TFG
+| TFG | Tiazídicos | Diuréticos de asa |
+|-----|-----------|-----------------|
+| >30 mL/min | ✅ Hidroclorotiazida/Clortalidona | Segunda línea |
+| 15–30 mL/min | ⚠️ Eficacia reducida | ✅ Furosemida (dosis mayores) |
+| <15 mL/min | ❌ Ineficaces | ✅ Furosemida 80–160 mg/día |
+
+> 📌 **Clortalidona vs Hidroclorotiazida:**
+> Clortalidona más potente, vida media más larga, MEJOR evidencia en ERC avanzada
+> (CLICK trial: clortalidona 12.5–25 mg efectiva hasta TFG 30)
+
+#### Calcioantagonistas
+- **Dihidropiridínicos** (amlodipino, nifedipino LP): seguros en ERC, primera línea si no hay proteinuria
+- **No-dihidropiridínicos** (diltiazem, verapamilo): antiproteinúricos + eficaces, pero INTERACCIÓN con CNI en trasplante
+        """)
+
+    elif "Resistente" in hta_tab:
+        st.markdown("""
+### 🔬 HTA Resistente en ERC
+
+**Definición:** PA >130/80 mmHg a pesar de ≥3 antihipertensivos en dosis máximas toleradas
+(incluyendo un diurético) con buen apego terapéutico.
+
+#### Causas secundarias a descartar en ERC
+| Causa | Sospecha | Estudio |
+|-------|---------|---------|
+| **Hipervolemia** (más frecuente en ERC) | Edema, ganancia de peso | Ajuste del peso seco en HD |
+| **Hiperaldosteronismo primario** | K bajo espontáneo, HTR | Aldosterona/renina >30 |
+| **Estenosis arteria renal** | Asimetría renal, soplo | Doppler renal (ver tab) |
+| **Feocromocitoma** | Cefalea episódica, sudoración, palpitaciones | Metanefrinas urinarias/plasma |
+| **Síndrome de Cushing** | Obesidad central, estrías | Cortisol libre urinario |
+| **Apnea obstructiva del sueño** | HTA nocturna, somnolencia | Polisomnografía |
+| **No adherencia** | Historia clínica | Medir niveles de fármacos |
+
+#### Manejo escalonado de HTA resistente en ERC
+```
+Paso 1: Verificar adherencia + técnica de medición correcta
+Paso 2: Optimizar diurético (cambiar HCTZ por clortalidona 12.5–25 mg)
+Paso 3: Si K normal/bajo → Espironolactona 25–50 mg/día
+         (PATHWAY-2 trial: espironolactona más eficaz que bisoprolol o doxazosina)
+         Monitorear K c/2 semanas las primeras 8 semanas
+Paso 4: Si K alto → Finerenona (menos hiperpotasemia que espironolactona)
+         O doxazosina alfa-bloqueador
+Paso 5: Intervencionismo — si estenosis arteria renal: angioplastia
+Paso 6: Denervación renal simpática (catéter ablación) — experimental en ERC
+```
+        """)
+
+    elif "Renovascular" in hta_tab:
+        st.markdown("""
+### 🩺 HTA Renovascular — Estenosis de Arteria Renal (EAR)
+
+#### Cuándo sospechar EAR
+```
+Alta probabilidad:
+  ✅ HTA de aparición súbita en >55 años o <30 años sin causa
+  ✅ HTA resistente a 3+ fármacos en dosis plena
+  ✅ Deterioro de función renal al iniciar IECA/ARA-II (>30% de Cr)
+  ✅ Edema pulmonar "flash" recurrente sin causa cardíaca clara
+  ✅ Asimetría renal >1.5 cm en ultrasonido
+  ✅ Soplo abdominal paraumbilical
+  ✅ Aterosclerosis diffusa (enfermedad coronaria, PAD)
+```
+
+#### Causas
+| Causa | Frecuencia | Perfil |
+|-------|-----------|--------|
+| **Aterosclerosis** | 90% | >55 años, factores CV, afecta ostium |
+| **Displasia fibromuscular (FMD)** | 10% | Mujer joven, afecta tercio medio, "rosario" |
+
+#### Diagnóstico
+| Estudio | Sensibilidad | Especificidad | Recomendación |
+|---------|------------|--------------|--------------|
+| **Doppler renal** | 85–90% | 85–90% | Primera línea — no invasivo |
+| **AngioTC renal** | >95% | >95% | Si Doppler no concluyente (contraste → riesgo ERC) |
+| **AngioRM renal** | >90% | >90% | Si ERC + sin contraste yodado |
+| **Arteriografía** (patrón de oro) | 100% | 100% | Solo si se planea revascularización |
+
+#### Tratamiento — ¿cuándo revascularizar?
+
+```
+EAR aterosclerótica:
+  CORAL trial (NEJM 2014): angioplastia + stent NO superior a médico solo
+  → Tratamiento médico es la norma (IECA/ARA-II, estatina, antiagregación)
+  → Revascularizar SOLO si:
+     • HTA verdaderamente resistente (falla 3+ fármacos)
+     • Progresión de ERC documentada bilateralmente
+     • Edema pulmonar flash recurrente
+     • Riñón funcionante único con estenosis significativa
+
+EAR por displasia fibromuscular (FMD):
+  → Angioplastia transluminal (sin stent) = tratamiento de elección
+  → Excelentes resultados (curación HTA en 50%)
+```
+        """)
+
+    else:  # Crisis hipertensiva
+        st.markdown("### ⚡ Crisis Hipertensiva en ERC")
+
+        cris1, cris2 = st.columns(2)
+        with cris1:
+            cr_pas = st.number_input("PAS (mmHg)", 100, 280, 210, 1, key="cr_pas")
+            cr_pad = st.number_input("PAD (mmHg)", 60, 160, 130, 1, key="cr_pad")
+        with cris2:
+            cr_sinto = st.selectbox("Síntomas / Daño de órgano blanco", [
+                "Asintomático (urgencia hipertensiva)",
+                "Cefalea intensa + alteración visual",
+                "Dolor precordial (descartar SCA)",
+                "Déficit neurológico focal (descartar EVC)",
+                "Disnea aguda (EAP hipertensivo)",
+                "Encefalopatía hipertensiva",
+            ], key="cr_sinto")
+
+        if "Asintomático" in cr_sinto:
+            st.info(f"""
+**URGENCIA HIPERTENSIVA — PA {cr_pas}/{cr_pad}**
+No hay daño de órgano blanco. No requiere reducción parenteral urgente.
+
+Manejo oral:
+- Captoprilo 25 mg SL o VO → repetir c/1h hasta 100 mg
+- Amlodipino 10 mg VO (inicio más lento)
+- Meta: reducir 25% en 24–48h, no de golpe
+- Referir a consulta de HTA en 24–72h
+            """)
+        else:
+            st.error(f"**EMERGENCIA HIPERTENSIVA — PA {cr_pas}/{cr_pad} + SÍNTOMAS**")
+            st.markdown(f"""
+**Requiere reducción parenteral URGENTE en UTI/UCI:**
+
+| Situación | Fármaco de elección | Meta en 1h | Meta en 6h |
+|-----------|--------------------|-----------|-----------| 
+| **Encefalopatía** | Nicardipino IV | ↓20% | ↓25% |
+| **EAP hipertensivo** | Nitroglicerina IV + furosemida | ↓25% | PA normal |
+| **SCA** | Nitroglicerina IV + betabloqueador | ↓25% | PA normal |
+| **EVC isquémico** | Labetalol IV (solo si PAS >220) | ↓15% en 24h | Gradual |
+| **EVC hemorrágico** | Nicardipino IV (si PAS >180) | ↓15% en 1h | <160 |
+| **General** | Labetalol IV 20 mg c/10 min o Nicardipino 5 mg/h IV | ↓20–25% | — |
+
+⚠️ **NUNCA bajar la PA más de 25% en la primera hora** — riesgo de isquemia orgánica
+⚠️ En EVC isquémico: NO tratar si PAS <220/110 (presión necesaria para la penumbra)
+
+**En ERC con oliguria + emergencia hipertensiva:**
+- Nicardipino IV 5–15 mg/h (filtrado renal mínimo)
+- Evitar nitroprusiato (acumulación de cianuro en ERC)
+- Diálisis urgente si anuria + edema pulmonar
+            """)
+
+elif nav == "glom_embarazo":
+    st.subheader("🤰 Glomerulopatías en el Embarazo")
+    st.caption("Ref: KDIGO Glomerulonephritis 2021 | ESC/ESH HTA en Embarazo 2018 | "
+               "Buyon JP et al. Arthritis Rheumatol 2017 (LN) | "
+               "Bramham K et al. CJASN 2017 | Nevis IF et al. Kidney Int 2011")
+
+    st.warning("""
+⚠️ **Principio fundamental:** El embarazo en pacientes con glomerulopatía activa conlleva 
+riesgo materno-fetal elevado. El manejo requiere coordinación estrecha entre 
+**nefrología + obstetricia de alto riesgo**. Las decisiones terapéuticas se rigen por
+**lo que es seguro para el binomio madre-feto**, no por el protocolo habitual.
+    """)
+
+    ge_tab = st.radio("", [
+        "⚖️ Preeclampsia vs Glomerulopatía",
+        "🔬 ¿Cuándo biopsiar?",
+        "💊 Medicamentos seguros / contraindicados",
+        "🧮 Calculadora de dosis",
+        "🩺 Por enfermedad específica",
+        "🩸 TMA en el embarazo",
+        "🛡️ Tromboprofilaxis · Lactancia · Consejería",
+        "🩺 Antihipertensivos seguros",
+    ], horizontal=True, key="ge_tab")
+    st.divider()
+
+    if "Preeclampsia" in ge_tab:
+        st.markdown("""
+### ⚖️ El Dilema Central — Preeclampsia vs Glomerulopatía activa
+
+#### ¿Por qué es difícil distinguirlas?
+Ambas presentan la misma tríada: **HTA + proteinuria + edema**.
+En una paciente con glomerulopatía conocida, determinar si la descompensación es 
+**actividad de la enfermedad** o **preeclampsia sobreañadida** define el tratamiento completo.
+
+#### Herramientas diagnósticas diferenciales
+
+| Característica | Preeclampsia | Glomerulopatía activa |
+|---------------|-------------|----------------------|
+| **Semana de inicio** | **>20 semanas** | Cualquier trimestre |
+| **Antecedente** | Sin nefropatía previa (o nueva) | Historia de glomerulopatía |
+| **Cr sérica** | Puede subir (AKI) | Según actividad basal |
+| **Uricemia** | **↑ >5.5 mg/dL** — sensible | Normal o leve |
+| **Hiperuricemia + HTA >20 sem** | Muy sugestivo preeclampsia | — |
+| **Hematuria** | Mínima o ausente | Frecuente (IgAN, LN, ANCA) |
+| **Cilindros** | Raros | Frecuentes |
+| **Complemento C3/C4** | Normal | ↓ en LN activa |
+| **Anti-dsDNA** | Negativo | ↑ en flare de LN |
+| **PIGF/PlGF** | **↓ marcado (<100 pg/mL)** | Normal |
+| **sFlt-1/PlGF ratio** | **>38 (diagnóstico)** | Normal |
+| **Respuesta al parto** | **RESUELVE** con el parto | Persiste post-parto |
+| **Afectación sistémica** | Hígado (HELLP), SNC | Según enfermedad base |
+
+#### Los biomarcadores angiogénicos son clave
+```
+PlGF (factor de crecimiento placentario):
+  → <100 pg/mL en 34–37 semanas: alta probabilidad de preeclampsia
+  → Normal: orienta a glomerulopatía activa
+
+sFlt-1/PlGF ratio:
+  → <38: descarta preeclampsia con VPN >99%
+  → >85: confirma preeclampsia en >34 semanas
+  → 38–85: zona gris — manejo conjunto nefro + OB alto riesgo
+
+📌 En México: disponibles en centros de alta especialidad (IMSS CMN, INNSZ)
+```
+
+#### Preeclampsia sobreañadida a glomerulopatía crónica
+- La más difícil: paciente con ERC/glomerulopatía que ADEMÁS desarrolla preeclampsia
+- Signos de alarma: ↑ agudo de PA (>30/15 mmHg sobre basal), plaquetas <100,000, 
+  alteración hepática, cefalea/escotomas
+- Manejo: tratar AMBAS simultáneamente
+- El parto es el único tratamiento definitivo de la preeclampsia
+        """)
+
+    elif "biopsiar" in ge_tab:
+        st.markdown("""
+### 🔬 Biopsia Renal en el Embarazo — Casi Nunca
+
+#### ¿Por qué evitarla?
+```
+El embarazo genera:
+  → ↑ flujo sanguíneo renal hasta 80%
+  → ↑ vascularización del parénquima
+  → ↓ capacidad de vasoconstricción reflexa
+  → ↓ plaquetas (dilucional)
+  → Dificultad técnica: posición lateral requerida
+
+Consecuencia: riesgo de hemorragia retroperitoneal 2–3x mayor que fuera del embarazo
+```
+
+#### ¿Cuándo SÍ está justificada la biopsia?
+
+| Condición | Semanas | Justificación |
+|-----------|---------|--------------|
+| Síndrome nefrótico severo de **nueva aparición antes de semana 32** | <32 | El diagnóstico cambia el IS que se usará |
+| Sospecha de **nefritis lúpica clase III/IV** sin diagnóstico previo | <32 | Cambia inducción (azatioprina vs ciclofosfamida post-parto) |
+| **AKI severa** de etiología desconocida sin respuesta | <32 | Si el resultado modifica el manejo urgente |
+| **Vasculitis ANCA** sospechada sin confirmación | <32 | El tratamiento agresivo está justificado con diagnóstico |
+
+#### ¿Cuándo NO biopsiar?
+- ≥32–34 semanas → el parto es más seguro que la biopsia
+- Hipertensión no controlada (PA >160/110 al momento del procedimiento)
+- Plaquetas <80,000
+- Si el resultado no cambiará el manejo inmediato
+- Si la paciente puede diferir hasta el post-parto
+
+#### Post-parto — el momento óptimo
+```
+✅ Biopsia post-parto (idealmente 4–6 semanas):
+  → Vascularización ya normalizada
+  → Riesgo hemorrágico comparable al estándar
+  → Permite diagnóstico definitivo para el siguiente embarazo
+  → Puede guiar IS en período de lactancia
+```
+
+> 📌 **Regla práctica:** Si el diagnóstico presunto es suficientemente claro para iniciar IS
+> empírica y la decisión no cambia, diferir la biopsia al post-parto. El tratamiento 
+> empírico basado en la presentación clínica + inmunológicos suele ser suficiente.
+        """)
+
+    elif "Medicamentos" in ge_tab:
+        st.markdown("### 💊 Medicamentos en Glomerulopatía + Embarazo")
+
+        col_si, col_no = st.columns(2)
+        with col_si:
+            st.success("""
+#### ✅ SEGUROS — Pueden usarse en embarazo
+
+| Fármaco | Categoría FDA | Notas |
+|---------|--------------|-------|
+| **Prednisolona** | C | Preferir sobre prednisona — mejor perfil fetal |
+| **Azatioprina** | D | Segura en uso clínico — trasplante, LN |
+| **Ciclosporina** | C | Usada en trasplante — monitorear PA y Cr |
+| **Tacrolimus** | C | Experiencia en trasplante — niveles cambian en 3er trim |
+| **Hidroxicloroquina** | C | **CONTINUAR siempre en LES** — reduce flares |
+| **IVIG** | — | Segura — útil en LN, SHU atípico |
+| **Heparina BPPM** | B | Anticoagulación de elección |
+| **Heparina no fraccionada** | C | Si insuficiencia renal severa |
+| **Labetalol** | C | Antihipertensivo 1ª línea |
+| **Alfa-metildopa** | B | Clásico y muy seguro |
+| **Nifedipino LP** | C | Muy utilizado |
+| **Prednisona** | C | Cruza placenta <10% → segura a dosis <20 mg/día |
+            """)
+
+        with col_no:
+            st.error("""
+#### ❌ CONTRAINDICADOS — Suspender antes o durante embarazo
+
+| Fármaco | Razón | Alternativa |
+|---------|-------|------------|
+| **Micofenolato (MMF)** | Teratogénico (malformaciones faciales, cardíacas) | **Azatioprina** |
+| **IECA / ARA-II** | Agenesia renal fetal, oligohidramnios | **Labetalol / Nifedipino** |
+| **Ciclofosfamida** | Teratogénico, aborto espontáneo | Diferir post-parto |
+| **Metotrexato** | Fetopatía, aborto | **Azatioprina** |
+| **Rituximab** | B-cell depletion neonatal (2°/3er trim) | Prednisolona + azatioprina |
+| **Avacopan** | Sin datos, contraindicado | Prednisolona |
+| **Voclosporina** | Sin datos, evitar | Ciclosporina / Tacrolimus |
+| **Bosentan** | Teratogénico | — |
+| **Diuréticos agresivos** | Reducen perfusión placentaria | Solo en edema pulmonar |
+| **AINEs >32 sem** | Cierre prematuro ductus | Paracetamol |
+
+> ⚠️ **MMF:** Suspender ≥6 semanas ANTES de la concepción.
+> Rituximab: En 1er trimestre con riesgo vital documentado hay reportes de uso.
+            """)
+
+        st.info("""
+#### Cambio de IS al planear el embarazo (consejería preconcepcional)
+```
+Si está en MMF:
+  → Cambiar a Azatioprina 1.5–2 mg/kg/día
+  → Esperar ≥6 semanas post-cambio antes de concebir
+  → Confirmar remisión de la glomerulopatía antes
+
+Si está en IECA/ARA-II:
+  → Cambiar a Labetalol o Alfa-metildopa desde el plan
+  → No esperar la confirmación del embarazo (riesgo en sem 5–12)
+
+Si está en ciclofosfamida:
+  → Completar el ciclo, esperar 3–6 meses, confirmar remisión
+  → Considerar efecto gonadotóxico (preservar fertilidad antes)
+```
+        """)
+
+    elif "Calculadora" in ge_tab:
+        st.markdown("### 🧮 Calculadora de Dosis — Embarazo + Glomerulopatía")
+
+        c_peso = st.number_input("Peso de la paciente (kg)", 30.0, 150.0, 65.0, 0.5, key="ge_peso")
+        c_alb  = st.number_input("Albúmina sérica (g/dL)", 1.0, 5.0, 3.0, 0.1, key="ge_alb")
+        c_trim = st.selectbox("Trimestre", ["1er trimestre (sem 1–12)", "2do trimestre (sem 13–27)", "3er trimestre (sem 28–40)"], key="ge_trim")
+        st.divider()
+
+        # ── INMUNOSUPRESORES ────────────────────────────────────────────────
+        st.markdown("#### 💊 Inmunosupresores")
+        id1, id2, id3 = st.columns(3)
+
+        with id1:
+            st.markdown("**Prednisolona**")
+            pred_dosis_sel = st.selectbox("Indicación",
+                ["Actividad leve (0.5 mg/kg/día)",
+                 "Actividad moderada-severa (1 mg/kg/día)",
+                 "Pulsos IV (500 mg/día × 3 días)"],
+                key="ge_pred_ind")
+            if "0.5" in pred_dosis_sel:
+                pred_mg = round(c_peso * 0.5)
+                pred_label = "0.5 mg/kg/día"
+            elif "1 mg" in pred_dosis_sel:
+                pred_mg = round(c_peso * 1.0)
+                pred_label = "1 mg/kg/día"
+                pred_mg = min(pred_mg, 60)  # cap 60 mg
+            else:
+                pred_mg = 500
+                pred_label = "Pulso IV"
+            st.metric("Dosis diaria", f"{pred_mg} mg/día")
+            st.caption(f"({pred_label}{'  · máx 60 mg' if '1 mg' in pred_dosis_sel else ''})")
+            st.markdown(f"""
+- **Presentación:** comp 5 mg
+- **Número de comprimidos:** {pred_mg//5} comp/día
+- **Horario:** por la mañana con alimentos
+- **Taper:** reducir 10 mg c/2 semanas hasta 20 mg, luego 5 mg c/2 sem
+            """)
+
+        with id2:
+            st.markdown("**Azatioprina**")
+            aza_dosis_sel = st.selectbox("Dosis",
+                ["Mantenimiento (1.5 mg/kg/día)", "Inducción (2 mg/kg/día)"],
+                key="ge_aza_ind")
+            aza_fac = 1.5 if "1.5" in aza_dosis_sel else 2.0
+            aza_mg  = round(c_peso * aza_fac)
+            aza_mg  = min(aza_mg, 150)  # cap práctico
+            st.metric("Dosis diaria", f"{aza_mg} mg/día")
+            st.caption(f"({aza_fac} mg/kg/día · máx 150 mg)")
+            st.markdown(f"""
+- **Presentación:** comp 50 mg
+- **Número de comprimidos:** {aza_mg//50 + (1 if aza_mg % 50 >= 25 else 0)} comp/día
+- **Horario:** dividida c/12h o dosis única
+- **Ajuste renal:** reducir si Cr >2.0 — toxicidad hematológica
+- **Monitoreo:** BH c/2 semanas al inicio
+            """)
+
+        with id3:
+            st.markdown("**Ciclosporina**")
+            csa_dosis_sel = st.selectbox("Indicación",
+                ["SN refractario (3 mg/kg/día)", "Membranosa (5 mg/kg/día)"],
+                key="ge_csa_ind")
+            csa_fac = 3.0 if "3 mg" in csa_dosis_sel else 5.0
+            csa_mg  = round(c_peso * csa_fac)
+            csa_c12 = round(csa_mg / 2)
+            st.metric("Dosis total diaria", f"{csa_mg} mg/día")
+            st.metric("Dosis c/12h", f"{csa_c12} mg")
+            st.markdown(f"""
+- **Presentación:** caps 25/100 mg o sol oral
+- **Horario:** c/12h en ayunas o con comida ligera (constante)
+- **Meta C0:** 75–125 ng/mL
+- **Monitoreo:** PA + Cr semanal → mensual
+- **En 3er trimestre:** niveles tienden a caer → ajustar
+            """)
+
+        st.divider()
+
+        # ── TROMBOPROFILAXIS ────────────────────────────────────────────────
+        st.markdown("#### 🩸 Tromboprofilaxis — Enoxaparina (HBPM)")
+        st.caption("Dosis basada en albúmina y riesgo trombótico — Protocolo ISTH")
+
+        if c_alb >= 3.0:
+            hbpm_ind = "Sin indicación de profilaxis por albúmina sola"
+            hbpm_dosis = "0 — evaluar otros factores de riesgo"
+            hbpm_color = "info"
+        elif c_alb >= 2.5:
+            hbpm_dosis_mg = 40
+            hbpm_ind = "Profilaxis estándar"
+            hbpm_dosis = f"Enoxaparina **{hbpm_dosis_mg} mg SC c/24h**"
+            hbpm_color = "warning"
+        else:
+            hbpm_dosis_mg = 40
+            hbpm_ind = "Profilaxis intensificada (Alb <2.5)"
+            hbpm_dosis = f"Enoxaparina **{hbpm_dosis_mg} mg SC c/12h**"
+            hbpm_color = "error"
+
+        if hbpm_color == "error":
+            st.error(f"🔴 **{hbpm_ind}** — Alb {c_alb} g/dL\n\n{hbpm_dosis}")
+        elif hbpm_color == "warning":
+            st.warning(f"🟡 **{hbpm_ind}** — Alb {c_alb} g/dL\n\n{hbpm_dosis}")
+        else:
+            st.info(f"ℹ️ {hbpm_ind} — Alb {c_alb} g/dL. Evaluar otros factores (SAF, inmovilización, TEV previo).")
+
+        st.markdown(f"""
+| Indicación | Dosis Enoxaparina | Cuándo suspender |
+|-----------|-----------------|-----------------|
+| **Profilaxis** (Alb 2.5–3.0) | **40 mg SC c/24h** | 24h antes del parto |
+| **Profilaxis intensificada** (Alb <2.5) | **40 mg SC c/12h** | 24h antes |
+| **Terapéutica** (TEV activo) | **1 mg/kg SC c/12h** = **{round(c_peso)} mg c/12h** | 24h antes |
+| **SAF de alto riesgo** | HBPM terapéutica + AAS 100 mg | 24h antes |
+        """)
+
+        st.divider()
+
+        # ── ANTIHIPERTENSIVOS ────────────────────────────────────────────────
+        st.markdown("#### 🩺 Antihipertensivos — dosis para esta paciente")
+        ah1, ah2, ah3 = st.columns(3)
+
+        with ah1:
+            st.markdown("**Labetalol VO**")
+            lab_dosis = 100  # mg inicio
+            st.metric("Dosis inicial", "100 mg c/8h")
+            st.markdown("""
+- Titular hasta 400 mg c/8h (2,400 mg/día máx)
+- Si no controla: agregar nifedipino LP
+- No discontinuar abruptamente
+            """)
+
+        with ah2:
+            st.markdown("**Nifedipino LP VO**")
+            st.metric("Dosis inicial", "30 mg c/24h")
+            st.markdown("""
+- Aumentar a 60 mg/día si necesario
+- Tomar con alimentos
+- NO usar cápsulas de liberación inmediata de rutina
+            """)
+
+        with ah3:
+            st.markdown("**Alfa-metildopa VO**")
+            st.metric("Dosis inicial", "250 mg c/8h")
+            st.markdown("""
+- Aumentar a 500 mg c/6h (3 g/día máx)
+- Sedación los primeros días (avisar a la paciente)
+- Seguridad a largo plazo bien documentada
+            """)
+
+        st.divider()
+
+        # ── MgSO4 EN PREECLAMPSIA ───────────────────────────────────────────
+        st.markdown("#### ⚡ Sulfato de Magnesio — Preeclampsia severa")
+        st.info("Indicado en preeclampsia severa para prevenir convulsiones y neuroprotección fetal")
+
+        mg_peso_infusion = c_peso
+        mgso4_carga_g = 4.0
+        mgso4_mant_gh = 1.0
+
+        mg1, mg2 = st.columns(2)
+        with mg1:
+            st.markdown(f"""
+**Dosis de carga:**
+- MgSO4 al 50%: **8 mL IV** (= 4 g) en 15–20 min
+- Diluir en 100 mL SSF → pasar en 15 min
+- O: MgSO4 al 10%: 40 mL IV en 15 min
+
+**Mantenimiento:**
+- MgSO4 al 50%: **2 mL/h** (= 1 g/h) en infusión continua
+- Preparación: 40 mL MgSO4 50% + 460 mL SSF → 2 g/100 mL → pasar a 50 mL/h = 1 g/h
+            """)
+        with mg2:
+            st.error("""
+**Toxicidad de MgSO4 — monitorear:**
+| Mg sérico | Hallazgo | Acción |
+|-----------|---------|--------|
+| 4–7 mEq/L | Nivel terapéutico | Continuar |
+| >7 mEq/L | Pérdida de reflejo patelar | **DETENER** |
+| >10 mEq/L | Paro respiratorio | **GLUCONATO Ca 1g IV** |
+
+Monitoreo c/1h: diuresis (>25 mL/h), reflejos, FR (>12/min)
+Antídoto: Gluconato Ca 10% 10 mL (1 ámpula) IV lento
+            """)
+
+    elif "enfermedad" in ge_tab:
+        st.markdown("### 🩺 Manejo por Enfermedad Específica")
+        enf_sel = st.selectbox("Selecciona la glomerulopatía", [
+            "🌸 Nefritis Lúpica (LN)",
+            "🔁 GESF / FSGS Primaria",
+            "🔵 Nefropatía Membranosa",
+            "🟣 IgA Nefropatía",
+            "🟠 Vasculitis ANCA",
+            "🍬 Nefropatía Diabética",
+            "🔹 Nefritis intersticial / otras",
+        ], key="ge_enf")
+
+        if "Lúpica" in enf_sel:
+            st.markdown("""
+#### 🌸 Nefritis Lúpica en el Embarazo — La más compleja
+
+**Riesgo:** El embarazo puede inducir flare de LN. Los flares aumentan el riesgo de 
+pérdida fetal, preeclampsia, parto prematuro y daño renal permanente.
+
+**Antes del embarazo:**
+- Remisión completa ≥6 meses (Cr estable, proteinuria <500 mg/día, C3/C4 normales, anti-dsDNA negativo o bajo)
+- Suspender MMF → Azatioprina
+- Continuar Hidroxicloroquina (NUNCA suspender)
+- Solicitar: anti-fosfolípidos (SAF), anti-Ro/La (lupus neonatal), anti-dsDNA basal
+
+**Durante el embarazo — monitoreo mensual:**
+```
+  Anti-dsDNA + C3 + C4 + orina (proteinuria + sedimento) + Cr
+  Si anti-dsDNA sube + C3/C4 bajan + proteinuria aumenta → flare de LN
+  Diferencial con preeclampsia: PlGF/sFlt-1 + C3/C4 + uricemia
+```
+
+**Tratamiento del flare durante el embarazo:**
+| Severidad | Tratamiento |
+|-----------|------------|
+| **Leve** (proteinuria sin AKI) | ↑ Prednisona 20–40 mg/día + Azatioprina dosis plena |
+| **Moderada** (AKI o SN) | Metilprednisolona 500 mg IV × 3 días → Prednisona 1 mg/kg |
+| **Severa clase III/IV** | Pulsos MP + Azatioprina + evaluar parto si >34 sem |
+| **Catastrófica** | Igual + IVIG + evaluar parto urgente |
+
+> ❌ NO ciclofosfamida durante el embarazo — diferir al post-parto.
+> ❌ NO MMF. El "gold standard" intraembarazo es Azatioprina.
+
+**Anti-Ro/La positivos — riesgo de lupus neonatal:**
+- Monitoreo fetal con ecocardiografía fetal c/2 semanas (semana 16–26)
+- Bloqueo cardíaco congénito: <3% si anti-Ro+, pero grave
+- Hidroxicloroquina reduce el riesgo de bloqueo cardíaco
+            """)
+
+        elif "GESF" in enf_sel:
+            st.markdown("""
+#### 🔁 GESF / FSGS en el Embarazo
+
+**Riesgo:** Alta tasa de preeclampsia (40–60%), parto prematuro, RCIU.
+Si Cr >1.5 mg/dL al inicio: riesgo de pérdida del injerto/progresión acelerada.
+
+**El problema:** La GESF puede empeorar por la hiperfiltración del embarazo.
+
+**Manejo:**
+```
+Síndrome nefrótico severo (proteinuria >8–10 g/día):
+  → Prednisolona 1 mg/kg/día
+  → Si no responde en 4 semanas: ciclosporina 3–5 mg/kg/día
+  → Tromboprofilaxis obligatoria (HBPM) — riesgo trombótico muy alto
+  → Albumina IV si Alb <2.5 g/dL + edema severo
+
+Control de PA:
+  → Labetalol + Nifedipino LP
+  → Meta <140/90 mmHg (no tan estricta como en no embarazada)
+
+Seguimiento fetal:
+  → Doppler de arteria uterina c/2–4 semanas
+  → Biometría fetal mensual (RCIU frecuente)
+```
+
+> ⚠️ Si Cr >2.5 mg/dL o proteinuria masiva: plantear riesgos/beneficios del embarazo desde la consejería.
+            """)
+
+        elif "Membranosa" in enf_sel:
+            st.markdown("""
+#### 🔵 Nefropatía Membranosa en el Embarazo
+
+**Riesgo:** Moderado-alto. Proteinuria tiende a aumentar (hiperfiltración).
+Alto riesgo trombótico: trombosis de vena renal documentada.
+
+**Monitoreo anti-PLA2R:**
+```
+Pre-embarazo: titular anti-PLA2R IgG4
+  → Si negativo: riesgo de flare bajo
+  → Si positivo y alto: aumenta riesgo durante embarazo
+
+Durante embarazo: medir c/trimestre
+  → Sube en el embarazo → mayor proteinuria esperada
+  → No cambia el tratamiento per se, pero orienta el pronóstico
+```
+
+**Tratamiento:**
+```
+Proteinuria <4 g/día + Cr estable:
+  → Observación + labetalol para PA
+  → Tromboprofilaxis si Alb <2.8 g/dL
+
+Proteinuria >4 g/día o Cr sube:
+  → Prednisolona 0.5–1 mg/kg/día
+  → ± Ciclosporina 3–5 mg/kg/día si no responde
+  → Rituximab: datos limitados, reservar para fallo a lo anterior
+
+Trombosis:
+  → HBPM dosis plena (enoxaparina 1 mg/kg c/12h) si TEV activo
+  → Profiláctica si Alb <2.5 g/dL
+```
+            """)
+
+        elif "IgA" in enf_sel:
+            st.markdown("""
+#### 🟣 IgA Nefropatía en el Embarazo — La más frecuente
+
+**Pronóstico generalmente favorable** si:
+- Cr <1.4 mg/dL al inicio
+- Proteinuria <1 g/día
+- PA controlada
+
+**Riesgo aumenta con:** Cr >1.4, proteinuria >1 g/día, HTA previo.
+
+**Manejo:**
+```
+Sin HTA + Cr normal + proteinuria <1 g/día:
+  → Vigilancia estricta mensual
+  → Sin IS requerida habitualmente
+
+Proteinuria 1–3 g/día:
+  → Labetalol para PA <140/90
+  → Prednisolona 0.5 mg/kg si hematuria + proteinuria creciente
+
+Proteinuria >3 g/día o AKI:
+  → Prednisolona 1 mg/kg + ciclosporina
+  → Tromboprofilaxis si Alb <3.0 g/dL
+```
+
+**Lo que NO se puede usar:**
+- IECA/ARA-II (pilar habitual de IgAN) → contraindicados
+- Sparsentan, budesonida — sin datos en embarazo
+- SGLT2i — contraindicados
+
+**Post-parto:** reiniciar IECA/ARA-II + evaluar biopsia si no se tiene diagnóstico tisular.
+            """)
+
+        elif "ANCA" in enf_sel:
+            st.markdown("""
+#### 🟠 Vasculitis ANCA en el Embarazo — Alto riesgo
+
+**El embarazo puede precipitar flare de vasculitis.**
+Mortalidad perinatal hasta 25–30% en series históricas (mejora con manejo moderno).
+
+**Antes del embarazo:**
+- Remisión completa ≥12 meses (ANCA negativo o estable y bajo)
+- Si fue inducida con ciclofosfamida: esperar ≥3–6 meses post-ciclo
+- Pasar a mantenimiento con azatioprina antes de concebir
+
+**Flare durante el embarazo:**
+```
+Leve (hematuria + proteinuria sin AKI ni pulmonar):
+  → Prednisolona 1 mg/kg/día
+  → Azatioprina 1.5–2 mg/kg/día
+
+Moderado-severo (AKI, afección pulmonar, hemorragia):
+  → Pulsos de metilprednisolona IV
+  → IVIG como coadyuvante
+  → Plasmaféresis si hemorragia pulmonar o AKI rápida
+
+Severo refractario:
+  → Rituximab: usado en casos graves con riesgo vital documentado
+    (depleción de células B en neonato — monitoreo)
+  → Evaluar parto urgente si viable
+```
+
+> ❌ Ciclofosfamida: contraindicada. Reservar para post-parto.
+> ❌ Avacopan: contraindicado en embarazo.
+            """)
+
+        elif "Diabética" in enf_sel:
+            st.markdown("""
+#### 🍬 Nefropatía Diabética en el Embarazo
+
+**Contexto:** DM1 o DM2 con ERC + embarazo. La proteinuria puede aumentar dramáticamente.
+
+**Puntos clave:**
+```
+Cr <1.4 mg/dL + proteinuria <1 g/día: pronóstico razonablemente bueno
+Cr >1.4 mg/dL o proteinuria >3 g/día: riesgo de aceleración de ERC post-parto
+
+La nefropatía diabética NO es IS-tratable durante el embarazo:
+  → El tratamiento es CONTROL DE PA + GLUCOSA
+  → Los IECA/ARA-II (pilares de la ND) están contraindicados
+  → Reemplazar por: Labetalol + Nifedipino LP
+```
+
+**Control glucémico:**
+- Meta HbA1c <6.5% en 1er trimestre (hipoglucemia más riesgo)
+- Meta glucosa preprandial: 70–100 mg/dL
+- Meta postprandial 1h: <140 mg/dL
+- Insulina es el tratamiento de elección (metformina en algunas guías, evitar en ERC avanzada)
+
+**Monitoreo estrecho:**
+- Proteinuria + Cr mensual
+- Fondo de ojo (retinopatía puede empeorar)
+- Doppler fetal c/3–4 semanas (insuficiencia uteroplacentaria)
+            """)
+
+        else:
+            st.markdown("""
+#### 🔹 Otras glomerulopatías / nefritis intersticial
+
+**Principios generales aplicables a cualquier glomerulopatía:**
+
+1. **Evaluar Cr basal + proteinuria basal** → punto de referencia para detectar cambios
+2. **Suspender IECA/ARA-II** antes o inmediatamente al confirmar embarazo
+3. **Iniciar/continuar** labetalol + nifedipino LP para PA <140/90
+4. **Prednisolona** si hay actividad inflamatoria activa
+5. **Tromboprofilaxis** si proteinuria >3 g/día o Alb <3.0 g/dL
+6. **Diferir biopsia** al post-parto si la situación clínica lo permite
+7. **Seguimiento conjunto** con obstetricia de alto riesgo desde semana 8–10
+            """)
+
+    elif "TMA" in ge_tab:
+        st.markdown("""
+### 🩸 TMA en el Embarazo — Diagnóstico Diferencial Urgente
+
+La microangiopatía trombótica (TMA) en el embarazo es una emergencia.
+**La distinción entre las causas define el tratamiento.**
+
+#### Las 4 causas de TMA en el embarazo
+| Característica | **Preeclampsia / HELLP** | **TTP (PTT)** | **aHUS** | **LES / SAF** |
+|---------------|------------------------|--------------|---------|--------------|
+| **Semana** | >20 sem | Cualquiera (>2T) | Post-parto predomina | Cualquiera |
+| **HTA severa** | ✅ Siempre | Variable | ✅ | ✅ |
+| **Plaquetas** | ↓↓ | ↓↓↓ severa | ↓ moderada | ↓ |
+| **Hemólisis (LDH)** | Moderada | Severa | Moderada | Variable |
+| **AKI** | Leve-moderada | Leve | **Severa** | Variable |
+| **Neurológico** | SNC (PRES) | **Predominante** | Leve | Variable |
+| **ADAMTS-13** | **>10%** | **<10%** | >10% | >10% |
+| **C3** | Normal | Normal | ↓ | ↓ |
+| **Respuesta al parto** | ✅ **Resuelve** | No | No | No |
+| **Tratamiento clave** | **PARTO** | **PP + PFC** | **Eculizumab** | IS + anticoag |
+
+#### ADAMTS-13 — clave diagnóstica
+```
+ADAMTS-13 <10% = TTP/PTT → Plasmaféresis + PFC URGENTE
+ADAMTS-13 >10% + post-parto + AKI severa = aHUS → Eculizumab
+
+No esperar resultado de ADAMTS-13 si:
+  → Clínica de TTP (neurológico + plaquetas <30,000 + hemólisis severa)
+  → Iniciar plasmaféresis empírica mientras llega el resultado
+```
+
+#### Manejo por diagnóstico
+| Diagnóstico | Tratamiento inmediato |
+|------------|----------------------|
+| **HELLP** | Parto urgente (si >34 sem o inestable) + MgSO4 + corticoides fetales |
+| **TTP** | Plasmaféresis con PFC (30–40 mL/kg) c/24h + corticoides |
+| **aHUS** | Eculizumab 900 mg IV urgente (vacuna meningocócica o penicilina profiláctica) |
+| **LES/SAF** | Anticoagulación + IVIG + prednisolona según manifestación |
+
+> ⚠️ En México: eculizumab por IMSS / Seguro Popular puede requerir gestión urgente.
+> No retrasar el tratamiento — la TMA puede causar pérdida renal permanente en días.
+        """)
+
+    elif "Trombo" in ge_tab:
+        st.markdown("""
+### 🛡️ Tromboprofilaxis · Lactancia · Consejería Preconcepcional
+
+#### Tromboprofilaxis en Síndrome Nefrótico + Embarazo
+El síndrome nefrótico por sí solo triplica el riesgo de TEV.
+El embarazo lo triplica adicionalmente. **Juntos: riesgo de TEV hasta 9x mayor.**
+
+| Situación | Profilaxis |
+|-----------|-----------|
+| **SN + embarazo** (Alb <3.0 g/dL) | HBPM profiláctica (enoxaparina 40 mg/día) |
+| **SN + embarazo + Alb <2.5 g/dL** | HBPM dosis intermedia (enoxaparina 40 mg c/12h) |
+| **TEV activo en embarazo** | HBPM terapéutica (1 mg/kg c/12h) |
+| **SAF + embarazo** | HBPM + AAS 100 mg/día desde 1er trimestre |
+| **Membranosa + Alb <2.5 g/dL** | HBPM terapéutica o profiláctica según riesgo |
+
+```
+⚠️ Suspender HBPM 24h antes del parto programado
+⚠️ Reiniciar 6–12h post-parto vaginal, 24h post-cesárea
+⚠️ NO usar warfarina en el embarazo (1er trimestre: embriopatía; 3er trimestre: hemorragia)
+⚠️ NO usar anticoagulantes orales directos (ACOD) en embarazo
+```
+
+---
+
+#### Lactancia y Medicamentos IS
+| Fármaco | Lactancia | Recomendación |
+|---------|----------|--------------|
+| **Prednisolona** | ✅ Segura | Esperar 4h post-dosis si >20 mg/día |
+| **Azatioprina** | ✅ Compatible | Niveles muy bajos en leche |
+| **Hidroxicloroquina** | ✅ Segura | Continuar — protege del flare post-parto |
+| **Ciclosporina** | ⚠️ Con cautela | Monitorear niveles en leche — algunos centros la usan |
+| **Tacrolimus** | ⚠️ Con cautela | Niveles bajos en leche — puede usarse |
+| **MMF** | ❌ Contraindicado | Suspender o no lactar |
+| **Ciclofosfamida** | ❌ Contraindicado | Suspender o no lactar |
+| **Rituximab** | ❌ Contraindicado | Presencia en leche documentada |
+| **IECA / ARA-II** | ⚠️ Evitar en prematuros | Seguro en lactantes a término |
+
+---
+
+#### Consejería Preconcepcional — ¿Cuándo es seguro embarazarse?
+
+| Glomerulopatía | Condiciones óptimas para concebir |
+|---------------|----------------------------------|
+| **Nefritis lúpica** | Remisión ≥6 meses · C3/C4 normales · anti-dsDNA bajo · MMF → Aza |
+| **GESF** | Remisión completa (proteinuria <300 mg/día) ≥6–12 meses · Cr <1.5 |
+| **NM primaria** | Anti-PLA2R negativo o muy bajo · Proteinuria <1 g/día |
+| **IgAN** | Cr <1.4 · Proteinuria <1 g/día · PA controlada |
+| **Vasculitis ANCA** | Remisión ≥12 meses · ANCA estable · Aza de mantenimiento |
+| **Cualquiera** | **Cr <2.0 mg/dL** (Cr >2.5: riesgo de no retorno a basal post-parto) |
+
+**Factores de mal pronóstico materno-fetal:**
+- Cr >1.4 mg/dL basal → riesgo de pérdida de función renal post-parto
+- Cr >2.5 mg/dL → discutir riesgo-beneficio del embarazo abiertamente
+- Proteinuria >3 g/día → preeclampsia, RCIU, parto prematuro
+- HTA no controlada → contraindicación relativa hasta control
+- ANCA activo o LN activa → diferir el embarazo
+
+> 📌 **Fertilidad en ERC:** TFG <30 reduce significativamente la fertilidad.
+> En diálisis: ovulación infrecuente (~10%), pero el embarazo es posible.
+> Si TFG <15: el trasplante antes de embarazarse mejora radicalmente el pronóstico.
+        """)
+
+    else:  # Antihipertensivos
+        st.markdown("""
+### 🩺 Antihipertensivos Seguros en el Embarazo con ERC
+
+#### Metas de PA en embarazo con ERC/glomerulopatía
+| Situación | Meta |
+|-----------|------|
+| **Sin proteinuria** | <140/90 mmHg |
+| **Con proteinuria >300 mg/día** | <140/90 (sin bajar de 110/70 — riesgo de hipoperfusión placentaria) |
+| **Preeclampsia severa** | <160/110 urgente (con fármacos IV) |
+
+> ⚠️ No ser demasiado agresivo: PA <110/70 puede causar hipoperfusión placentaria → RCIU.
+
+#### Fármacos antihipertensivos — primera y segunda línea
+
+| Fármaco | Vía | Inicio | Dosis | Uso |
+|---------|-----|--------|-------|-----|
+| **Labetalol** | VO | 30–120 min | 100–400 mg c/8–12h | **1ª línea** — cualquier trimestre |
+| **Alfa-metildopa** | VO | 4–6h | 250–500 mg c/8h | Clásico — muy seguro |
+| **Nifedipino LP** | VO | 30–60 min | 30–60 mg/día | **1ª línea** — vasodilatador |
+| **Labetalol IV** | IV | 5–10 min | 20–80 mg c/10 min | **Crisis** |
+| **Hidralazina IV** | IV | 10–20 min | 5–10 mg c/20 min | Crisis — 2ª línea |
+| **Nifedipino (caps)** | SL/VO | 10–20 min | 10 mg | Crisis — precaución |
+| **Nicardipino IV** | IV | 1–5 min | 5–15 mg/h infusión | Crisis severa |
+
+#### Fármacos PROHIBIDOS en embarazo
+| Fármaco | Razón | Alternativa |
+|---------|-------|------------|
+| **IECA** | Agenesia renal fetal, oligohidramnios, hipotensión neonatal | Labetalol |
+| **ARA-II** | Misma que IECA | Nifedipino LP |
+| **Atenolol** | RCIU, hipoglucemia neonatal | Labetalol |
+| **Nitroprusiato** | Toxicidad por cianuro fetal | Nicardipino IV |
+| **Espironolactona** | Anti-androgénico fetal | — |
+
+#### Algoritmo de crisis hipertensiva en embarazo
+```
+PAS >160 o PAD >110 por ≥15 minutos:
+  → Labetalol IV 20 mg IV en 2 min
+     Si no responde en 10 min: 40 mg IV → 80 mg IV
+  → O Hidralazina IV 5 mg en 2 min → repetir c/20 min hasta 20 mg
+  → O Nifedipino VO 10 mg → repetir a los 30 min si no responde
+
+Meta: PA <160/110 en 30–60 min
+     NO bajar más de 25% en la primera hora
+     
+Si hay signos de preeclampsia severa:
+  → MgSO4 4 g IV en 15 min → 1 g/h infusión (neuroprotección fetal + anticonvulsivante)
+  → Preparar parto si viable (>34 sem o inestable)
+```
+        """)
+
+# ─── FOOTER ───────────────────────────────────────────────────────────────────
+
+elif nav == "recurrencia_tx":
+    st.subheader("🔁 Recurrencia de Glomerulopatías en Trasplante Renal")
+    st.caption("Ref: KDIGO Glomerulonephritis 2021 | Ponticelli C et al. Am J Transplant 2014 | "
+               "Tomas NM et al. NEJM 2016 (anti-PLA2R) | Goodship TH et al. Kidney Int 2017 (aHUS)")
+
+    rg_sel = st.radio("Enfermedad", [
+        "🔁 GESF / FSGS Primaria",
+        "🟣 IgA Nefropatía",
+        "🔵 Nefropatía Membranosa (anti-PLA2R)",
+        "⚡ SHU Atípico (aHUS)",
+        "🌑 MPGN / C3 Glomerulopatía",
+        "🌸 Nefritis Lúpica",
+        "🟠 Vasculitis ANCA",
+        "💎 Oxalosis Primaria tipo 1",
+    ], horizontal=True, key="rg_sel")
+    st.divider()
+
+    if "GESF" in rg_sel or "FSGS" in rg_sel:
+        st.markdown("""
+### 🔁 GESF / FSGS Primaria — Glomeruloesclerosis Focal y Segmentaria
+
+#### Epidemiología de la recurrencia
+| Parámetro | Dato |
+|-----------|------|
+| Recurrencia en 1er trasplante | **20–40%** |
+| Recurrencia en 2° trasplante (con pérdida por GESF previa) | **50–80%** |
+| Tiempo de aparición | Horas a semanas post-Tx (recurrencia temprana = peor pronóstico) |
+| Impacto en el injerto | 50% de pérdida a 5 años si recurrencia no responde |
+
+#### Factores de ALTO riesgo de recurrencia
+- Progresión rápida a ERCT (<3 años) en nativo
+- Inicio en infancia / adolescencia
+- Mutaciones en genes podocitarios ausentes (NPHS1, NPHS2 negativo = GESF idiopática)
+- Pérdida de injerto previo por GESF recurrente
+
+#### Diagnóstico de recurrencia
+```
+Sospecha: proteinuria >1 g/día en los primeros 7 días post-Tx
+          (proteinuria tan temprana es casi patognomónica de recurrencia)
+Confirmación: biopsia → GESF en el injerto (puede ser solo MO + podocituria)
+              Técnica: inmunofluorescencia + microscopía electrónica
+```
+
+#### Tratamiento
+| Línea | Intervención | Dosis / Detalles |
+|-------|-------------|-----------------|
+| **Plasmaféresis** | ⭐ Primera línea urgente | 1–1.5 vol/día x 5–10 sesiones → luego c/2 días x 4–8 sem |
+| **Rituximab** | Primera línea biológica | 375 mg/m² x 1–4 dosis (c/semana o c/2 semanas) |
+| **Ciclosporina** (si estaba en tacrolimus) | Alternativa CNI | Niveles C0 150–200 ng/mL |
+| **IVIG** | Complemento | 1–2 g/kg x 1–2 dosis |
+| **Abatacept** | En recurrencia refractaria | Experimental — bloqueo CD80 podocitario |
+| **Galactosa IV** | Experimental | 0.2 g/kg IV antes y durante PP |
+
+#### Profilaxis pre-trasplante (controversial)
+- Rituximab 1–2 semanas pre-Tx en pacientes con alto riesgo
+- Plasmaféresis intraoperatoria
+- Evidencia limitada — decisión individualizada en comité
+
+> ⚠️ En retrasplante con GESF previa: discutir riesgo de recurrencia con el paciente.
+> Algunos centros contraindican el retrasplante si pérdida por GESF recurrente resistente.
+        """)
+
+    elif "IgA" in rg_sel:
+        st.markdown("""
+### 🟣 IgA Nefropatía — Recurrencia Post-Trasplante
+
+#### Epidemiología
+| Parámetro | Dato |
+|-----------|------|
+| Recurrencia histológica | **50–60%** en biopsia protocolo |
+| Recurrencia clínica (hematuria + proteinuria) | ~30% |
+| Tiempo de aparición | Meses a años (promedio 2–3 años) |
+| Pérdida del injerto por recurrencia IgAN | 5–15% a 10 años |
+
+#### Diagnóstico
+- Biopsia: depósitos de IgA en mesangio en IF (mismo patrón que nativo)
+- Clínica: hematuria microscópica + proteinuria progresiva
+- Galactosa-deficient IgA1 elevada en plasma (no disponible en la mayoría de centros)
+
+#### Tratamiento
+| Intervención | Indicación | Evidencia |
+|-------------|-----------|----------|
+| **IECA / ARA-II** | Proteinuria >500 mg/día | Alta — nefroprotección |
+| **SGLT2 inhibidores** | Proteinuria + TFG >20 | Creciente (EMPA-KIDNEY, DAPA-CKD) |
+| **Omega-3 (aceite de pescado)** | Proteinuria leve | Moderada (controversial) |
+| **Esteroides** | Proteinuria >1 g + histología activa | STOP-IgAN (limitada en Tx) |
+| **Sparsentan** | IgAN activa con proteinuria | PROTECT trial — endotelina + ARB dual |
+| **Budesonida (Nefecon®)** | Proteinuria 0.5–3.5 g + TFG >45 | NEFIGARD trial — nueva evidencia |
+
+> 📌 La recurrencia histológica NO requiere cambio de IS de rutina.
+> El tratamiento se enfoca en la progresión clínica (proteinuria, caída de TFG).
+        """)
+
+    elif "Membranosa" in rg_sel or "PLA2R" in rg_sel:
+        st.markdown("""
+### 🔵 Nefropatía Membranosa Post-Trasplante
+
+#### Tipos en el contexto del trasplante
+| Tipo | Descripción | Cuándo |
+|------|-----------|--------|
+| **Recurrencia de MN primaria** | Anti-PLA2R recurrente en el injerto | Meses a años post-Tx |
+| **MN de novo** | Aparece en injerto sin MN previa | Frecuente — anticuerpos anti-donante en la MBG |
+| **MN por VHB / VHC** | Reactivación viral en IS | Primeros meses |
+| **MN secundaria a drogas** | CNI, AINE, oro | Variable |
+
+#### Monitoreo anti-PLA2R
+```
+Pre-Tx:     Medir título basal de anti-PLA2R IgG4
+Post-Tx mes 3, 6, 12: Medir anti-PLA2R
+  → Título cae: buen pronóstico, probablemente sin recurrencia
+  → Título persiste o sube: riesgo de recurrencia clínica
+  → Proteinuria nueva + PLA2R+: recurrencia confirmada
+```
+
+#### Tratamiento de la recurrencia
+| Intervención | Dosis | Detalle |
+|-------------|-------|---------|
+| **Rituximab** | 375 mg/m² x 2–4 dosis | Igual que MN nativa — respuesta esperada 6–18 meses |
+| **Ciclofosfamida + esteroides** | Protocolo Ponticelli | Si Rituximab falla o título muy alto |
+| **IECA / ARA-II** | Dosis plena | Reducción de proteinuria |
+
+> 📌 Anti-PLA2R IgG4 negativo pre-Tx + sin proteinuria = bajo riesgo de recurrencia.
+> Si título anti-PLA2R >150 U/mL pre-Tx: considerar tratamiento pre-Tx con rituximab.
+        """)
+
+    elif "SHU" in rg_sel or "aHUS" in rg_sel:
+        st.markdown("""
+### ⚡ SHU Atípico (aHUS) — La recurrencia más grave
+
+#### Epidemiología de recurrencia
+| Mutación | Riesgo de recurrencia post-TR |
+|---------|------------------------------|
+| Factor H | **75–90%** — más alta |
+| MCP (CD46) | **15–20%** — más baja |
+| Factor I | **45–80%** |
+| C3 | **40–70%** |
+| Factor B | ~50% |
+| Sin mutación identificada | ~30% |
+| Anti-CFH anticuerpos | ~30% (tratar antes del Tx) |
+
+#### Eculizumab — el cambio de paradigma
+Antes de eculizumab: trasplante renal en aHUS = muy alto riesgo de pérdida del injerto.
+Con eculizumab profiláctico: tasas de recurrencia dramáticamente menores.
+
+#### Protocolo de eculizumab en trasplante aHUS
+| Momento | Dosis | Esquema |
+|---------|-------|---------|
+| Pre-Tx (vacunación meningocócica) | — | Obligatoria 2 semanas antes |
+| Día del Tx (intraoperatorio) | **900 mg IV** | Primera dosis en QX |
+| Semana 1–4 | 900 mg c/semana | x 4 dosis |
+| Mes 2 en adelante | **1,200 mg c/2 semanas** | Mantenimiento indefinido* |
+
+*¿Cuánto tiempo? Controversial — algunos centros intentan suspender a los 3 años.
+Si se suspende: vigilancia estrecha por posible recurrencia tardía.
+
+#### Criterios diagnósticos de recurrencia post-Tx
+```
+✅ Anemia hemolítica microangiopática (LDH alto, Hb baja, esquistocitos)
+✅ Trombocitopenia (<150,000)
+✅ Caída de Cr >25% sobre basal
+✅ C3 bajo / C4 normal (activación vía alterna)
+✅ ADAMTS-13 >10% (para descartar TTP)
+→ Si cumple: eculizumab URGENTE (no esperar confirmación genética)
+```
+
+> ⚠️ En México la disponibilidad de eculizumab puede ser limitada.
+> Si no hay acceso: plasmaféresis intensiva como puente mientras se gestiona.
+        """)
+
+    elif "MPGN" in rg_sel or "C3" in rg_sel:
+        st.markdown("""
+### 🌑 MPGN / C3 Glomerulopatía — Recurrencia Post-Trasplante
+
+#### Epidemiología
+| Tipo | Recurrencia post-Tx | Pérdida injerto |
+|------|-------------------|-----------------|
+| **MPGN tipo I (inmune complejo)** | 20–30% | 10–15% |
+| **C3 Glomerulopatía (C3G)** | **50–70%** | 30–50% |
+| **Enfermedad por Depósitos Densos (DDD / tipo II)** | **>80%** | 50% |
+
+#### Fisiopatología relevante
+- C3G y DDD: desregulación de la vía alterna del complemento
+- Mutaciones o autoanticuerpos: factor H, factor I, C3, C5, factor B
+- C3 nephritic factor (C3Nef): estabiliza C3bBb → consumo continuo de C3
+
+#### Evaluación pre-trasplante
+```
+Obligatorio antes del Tx en C3G/DDD:
+✅ Panel de complemento completo (C3, C4, CH50, AH50)
+✅ Mutaciones en genes del complemento (CFH, CFI, C3, CFB, CFHR1-5)
+✅ C3Nef (anticuerpo anti-C3 convertasa)
+✅ Anti-factor H anticuerpos
+✅ Panel de anticuerpos anti-complemento
+```
+
+#### Tratamiento de la recurrencia
+| Intervención | Evidencia | Detalle |
+|-------------|----------|---------|
+| **Eculizumab** | Moderada (casos y series) | 900–1200 mg según protocolo aHUS |
+| **Rituximab** | Solo si C3Nef o anti-FH+ | Depleta células B productoras |
+| **Plasmaféresis** | Puente/urgencia | Reemplaza factor H deficiente |
+| **MMF + esteroides** | Limitada en DDD | Reducir inflamación complemento-independiente |
+
+> 📌 No existe tratamiento definitivo aprobado para C3G/DDD en trasplante.
+> El pronóstico de injerto es peor que en otras glomerulopatías por la alta recurrencia.
+        """)
+
+    elif "Lúpica" in rg_sel or "Lúpus" in rg_sel:
+        st.markdown("""
+### 🌸 Nefritis Lúpica — Recurrencia Post-Trasplante
+
+#### Epidemiología
+| Parámetro | Dato |
+|-----------|------|
+| Recurrencia histológica | **10–30%** |
+| Recurrencia clínica significativa | ~10% |
+| Impacto en supervivencia del injerto | Generalmente favorable si se controla |
+
+#### Requisitos para trasplante en LES
+- Remisión clínica ≥6–12 meses pre-Tx
+- Anti-dsDNA idealmente negativo o en descenso
+- Complemento C3/C4 normal
+- Sin crisis lúpica activa
+
+#### Monitoreo post-trasplante
+```
+Cada 3–6 meses:
+  → Anti-dsDNA
+  → Complemento C3, C4
+  → Proteinuria
+  → Hemograma (citopenias)
+  → Función del injerto
+
+Señales de alarma:
+  → Anti-dsDNA sube + proteinuria nueva → sospecha recurrencia
+  → Biopsia indicada si Cr sube >20% o proteinuria >1 g/día
+```
+
+#### Manejo
+- **Hidroxicloroquina** (Plaquenil®): continuar indefinidamente — reduce actividad lúpica y eventos CV
+- **Belimumab**: si actividad lúpica extrarrenal — evidencia limitada en Tx
+- **Voclosporina**: nuevo CNI con mayor selectividad — estudios en LES activo
+- Ajustar IS si recurrencia confirmada en biopsia
+        """)
+
+    elif "ANCA" in rg_sel:
+        st.markdown("""
+### 🟠 Vasculitis ANCA — Recurrencia Post-Trasplante
+
+#### Epidemiología
+| Parámetro | Dato |
+|-----------|------|
+| Recurrencia renal en el injerto | **~10–17%** a 5 años |
+| Recurrencia extrarrenal | ~20% (sistémica) |
+| Peor pronóstico: PR3-ANCA vs MPO-ANCA | PR3 mayor riesgo |
+
+#### Monitoreo
+```
+Títulos ANCA c/3–6 meses
+  → Sube ANCA en 2+ mediciones consecutivas = alarma
+  → Sube ANCA + síntomas (hematuria, hemoptisis, sinusitis) → biopsia urgente
+  → Sube ANCA sin síntomas = observar + biopsia si hay cambio en función
+```
+
+#### Tratamiento de recurrencia
+- **Rituximab 375 mg/m² x 4** — igual que en vasculitis nativa (RAVE trial)
+- **Pulsos de ciclofosfamida** si Rituximab no disponible
+- **Avacopan (Tavneos®)** — nuevo, complemento C5a bloqueador, evita esteroides en inducción
+- Ajustar IS de base: algunos centros aumentan dosis de mantenimiento tras recurrencia
+        """)
+
+    else:  # Oxalosis
+        st.markdown("""
+### 💎 Oxalosis Primaria Tipo 1 — Caso especial
+
+#### Fisiopatología
+- Déficit de alanina glioxilato aminotransferasa (AGT) en hígado → acumulación de oxalato
+- El oxalato se deposita en riñones → nefrocalcinosis → ERCT
+- **El problema es hepático, no renal** → trasplante renal aislado falla por recurrencia inmediata
+
+#### Protocolo de trasplante
+| Opción | Indicación | Resultado |
+|--------|-----------|---------|
+| **Trasplante hepático + renal simultáneo (SLKT)** | OP1 con ERCT y función hepática OK | Cura la enfermedad de base → no recurrencia |
+| Trasplante hepático PRIMERO → luego renal | Si riñones nativos aún funcionan | Corregir primero el defecto enzimático |
+| Trasplante renal aislado | ❌ Generalmente contraindicado | Recurrencia en semanas — pérdida segura |
+
+#### Preparación pre-trasplante
+```
+✅ Agentes reductores de oxalato:
+   - Lumasiran (Oxlumo®): ARNi hepático — FDA aprobado 2020
+     Reduce síntesis hepática de oxalato hasta 80%
+     0.3 mg/kg SC mensual x 3 → luego 0.3 mg/kg c/3 meses
+   - Oxalato dietético: restricción <100 mg/día
+   - Piridoxina: 2–20 mg/kg/día (respondedores — 30%)
+   - Citrato potásico: inhibe cristalización
+
+✅ Hiper-hidratación pre/post-Tx:
+   - Diuresis objetivo: >3 mL/kg/h las primeras 48h post-Tx
+   - Para movilizar depósitos de oxalato del injerto
+
+✅ Diálisis pre-Tx: considerar HHD o PD diario para reducir pool de oxalato
+```
+
+> 📌 Lumasiran ha cambiado el pronóstico radicalmente:
+> Permite el trasplante renal aislado si los niveles de oxalato urinario se normalizan.
+        """)
+
+elif nav == "vacunas_tx":
+    st.subheader("💉 Vacunas Post-Trasplante Renal")
+    st.caption("Ref: AST Infectious Diseases Community of Practice 2019 | "
+               "CDC Immunocompromised Vaccination 2023 | KDIGO Transplant 2009")
+    st.warning("""
+⚠️ **Regla de oro:** Las vacunas de **virus vivos atenuados están contraindicadas** en 
+receptores de trasplante bajo inmunosupresión. Solo vacunas de organismos inactivados.
+    """)
+    vac_tab = st.radio("", [
+        "📋 Esquema completo",
+        "⏱️ Timing pre/post-Tx",
+        "🔴 Contraindicadas",
+        "📊 Respuesta inmune",
+    ], horizontal=True, key="vac_tab")
+    st.divider()
+
+    if "Esquema" in vac_tab:
+        st.markdown("""
+### Esquema de vacunación recomendado en trasplante renal
+
+#### Vacunas RECOMENDADAS (inactivadas — seguras con IS)
+| Vacuna | Dosis | Frecuencia | Cuándo post-Tx |
+|--------|-------|-----------|----------------|
+| **Influenza** | 1 dosis IM | **Anual** | Desde mes 1 post-Tx (antes si epidemia) |
+| **Neumococo PCV20** | 1 dosis | Única + refuerzo a 5 años | Desde mes 3–6 post-Tx |
+| **Neumococo PPSV23** | 1 dosis | c/5 años | Mes 3–6 post-Tx |
+| **COVID-19 mRNA** | Serie + booster | c/6–12 meses | Desde semana 1–3 post-Tx |
+| **VHB (recombinante)** | 3 dosis (0, 1, 6 meses) | Titular anti-HBs c/año | Si susceptible — desde mes 1 |
+| **VHA** | 2 dosis (0, 6 meses) | Una vez | Si susceptible — desde mes 3 |
+| **Tdap** | 1 dosis | c/10 años | Desde mes 3 |
+| **Meningococo ACWY** | 1 dosis + refuerzo | c/5 años | Desde mes 3 (obligatorio si eculizumab) |
+| **Meningococo B** | 2 dosis (0, 1 mes) | — | Pre-Tx o desde mes 3 |
+| **HPV (si <26 años)** | 3 dosis | Serie completa | Desde mes 3–6 |
+| **Zóster recombinante (Shingrix®)** | 2 dosis (0, 2–6 meses) | Una vez | Desde mes 6–12 post-Tx |
+
+> 📌 Shingrix (zóster recombinante) = vacuna de subunidades → **SEGURA** en IS
+> (diferente al Zostavax® que es virus vivo — ese SÍ está contraindicado)
+        """)
+
+    elif "Timing" in vac_tab:
+        st.markdown("""
+### ⏱️ Timing — ¿Cuándo vacunar?
+
+#### PRE-TRASPLANTE (idealmente completar antes del Tx):
+```
+≥2–4 semanas antes del Tx:
+  ✅ Vacunas inactivadas: pueden darse en cualquier momento
+     → Influenza, Neumococo, VHB, VHA, Tdap, COVID-19, Meningococo
+
+≥4 semanas antes del Tx (vacunas vivas — última oportunidad):
+  ⚠️ MMR (sarampión, rubéola, parotiditis): última dosis pre-Tx si falta
+  ⚠️ Varicela (si susceptible): 2 dosis, última ≥4 semanas pre-Tx
+  ⚠️ Fiebre amarilla: solo si viaje obligatorio, ≥4 semanas pre-Tx
+  ⚠️ Zóster vivo (Zostavax): ≥4 semanas pre-Tx si >50 años
+
+POST-TRASPLANTE — Mínimo IS para vacunar:
+  Mes 1: Influenza, COVID (urgencia)
+  Mes 3–6: La mayoría de inactivadas
+  Mes 6–12: Zóster recombinante (Shingrix)
+  NUNCA: Vacunas vivas (ver pestaña contraindicadas)
+```
+
+#### Respuesta óptima — cuándo mejor respuesta:
+- Vacunar a IS de mantenimiento (no en inducción ni en tratamiento de rechazo)
+- Idealmente: >6 meses post-Tx (IS en descenso, mejor respuesta)
+- Evitar vacunar durante tratamiento con timoglobulina o rituximab
+        """)
+
+    elif "Contrain" in vac_tab:
+        st.markdown("""
+### 🔴 Vacunas CONTRAINDICADAS en trasplante renal
+
+**Todas las vacunas de virus o bacterias VIVOS ATENUADOS:**
+
+| Vacuna | Tipo | Contraindicación |
+|--------|------|-----------------|
+| **MMR** (sarampión, rubéola, parotiditis) | Virus vivo | ❌ Contraindicada post-Tx |
+| **Varicela** (Varivax®) | Virus vivo | ❌ Contraindicada post-Tx |
+| **Zóster vivo** (Zostavax®) | Virus vivo | ❌ Contraindicada post-Tx |
+| **Fiebre amarilla** | Virus vivo | ❌ Contraindicada — casos de encefalitis fatal |
+| **BCG** | Bacteria viva | ❌ Contraindicada |
+| **Rotavirus** | Virus vivo | ❌ No aplicable adultos |
+| **Influenza intranasal** (FluMist®) | Virus vivo atenuado | ❌ Solo usar forma inyectable |
+| **Cólera oral** (CVD 103) | Bacteria viva | ❌ Contraindicada |
+| **Fiebre tifoidea oral** (Vivotif®) | Bacteria viva | ❌ Solo usar forma inyectable |
+| **Polio oral** (OPV — Sabin) | Virus vivo | ❌ Usar solo IPV inyectable |
+
+#### ¿Qué hacer si hay exposición accidental?
+```
+Exposición a varicela (contacto con caso):
+  → Si vacuna varicela pre-Tx: probable protección parcial
+  → URGENTE: VZIG (inmunoglobulina varicela-zóster) dentro de 96h
+  → O aciclovir IV profiláctico si no hay VZIG disponible
+
+Exposición a sarampión (contacto con caso):
+  → IVIG 0.5 mL/kg IM (dosis alta) dentro de 6 días
+```
+        """)
+
+    else:  # Respuesta inmune
+        st.markdown("""
+### 📊 Respuesta Inmune a Vacunas en Trasplante
+
+#### ¿Por qué responden menos?
+- IS blunts la respuesta de células B y T
+- MMF especialmente reduce la formación de anticuerpos
+- Tacrolimus inhibe activación de células T
+- Respuesta reducida pero NO nula → vacunar igualmente
+
+#### Tasas de seroconversión
+| Vacuna | Población general | Trasplantados |
+|--------|-----------------|--------------|
+| Influenza | >90% | **40–70%** |
+| VHB | >95% | **30–65%** |
+| COVID-19 (2 dosis) | >95% | **30–50%** |
+| COVID-19 (3 dosis) | >97% | **60–70%** |
+| Neumococo | >90% | **50–75%** |
+
+#### Estrategias para mejorar la respuesta
+| Estrategia | Detalle |
+|-----------|---------|
+| **Timing óptimo** | Vacunar >6 meses post-Tx cuando IS es menor |
+| **Dosis doble VHB** | 40 μg (doble dosis Engerix) en lugar de 20 μg estándar |
+| **Reducción temporal de MMF** | -50% de MMF 1–2 semanas antes/después de vacuna COVID |
+| **Titular respuesta** | Anti-spike (COVID), anti-HBs (VHB), hemaglutinación (influenza) |
+| **Refuerzos más frecuentes** | Anual para influenza y COVID (no c/5 años) |
+
+#### Monitoreo post-vacunación
+```
+VHB: Anti-HBs a los 30 días post-serie
+  → <10 mUI/mL: serie adicional (doble dosis)
+  → 10–100 mUI/mL: refuerzo anual
+  → >100 mUI/mL: protección — refuerzo c/5 años
+
+COVID-19: Anti-spike IgG a las 4–8 semanas
+  → <4 U/mL: considerar dosis adicional
+  → Niveles correlacionan con protección pero no la definen exactamente
+```
+        """)
+
 st.divider()
 st.caption(
     f"© Dr. Josué Tapia Nefrólogo — RenalPro {VERSION} — Uso académico exclusivo | "
