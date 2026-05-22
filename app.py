@@ -10152,6 +10152,15 @@ elif nav == "expediente":
                                              value=dx_prefill,
                                              placeholder="Selecciona arriba o escribe aquí")
                     np_notas = st.text_input("Notas adicionales", key="np_notas")
+
+                    # Antropometría — peso (cambia) + talla (constante)
+                    _npa1, _npa2 = st.columns(2)
+                    with _npa1:
+                        np_peso  = st.number_input("Peso (kg)", 0.0, 300.0, 0.0, 0.5, key="np_peso",
+                                                    help="Puede actualizarse en cada consulta")
+                    with _npa2:
+                        np_talla = st.number_input("Talla (cm)", 0.0, 250.0, 0.0, 0.5, key="np_talla",
+                                                    help="Constante — se autocargará en futuras recetas")
                     st.divider()
 
                     # Formulario ampliado — incluye fecha_nacimiento, domicilio, contacto
@@ -10183,7 +10192,8 @@ elif nav == "expediente":
                                     "expediente": _np_exp,
                                     "edad": _np_edad,
                                     "sexo": _np_sexo,
-                                    "peso": 0.0,
+                                    "peso": float(np_peso) if np_peso else 0.0,
+                                    "talla": float(np_talla) if np_talla else None,
                                     "tipo": np_tipo,
                                     "diagnostico": np_dx,
                                     "notas": np_notas,
@@ -10207,6 +10217,107 @@ elif nav == "expediente":
                                 st.error("⚠️ db.py desactualizado en el servidor. "
                                          "Sube el db.py que te entregué a GitHub y espera el redeploy.")
 
+            # ── MODO EDITAR FICHA ─────────────────────────────────────────
+            if st.session_state.get("exp_modo") == "editar":
+                _edit_pid = st.session_state.get("edit_pac_id")
+                _edit_pac = next((p for p in pacientes if p["id"] == _edit_pid), None)
+                if _edit_pac:
+                    with st.expander(f"✏️ Editar ficha — {_edit_pac.get('nombre','—')}", expanded=True):
+                        # Cargar datos ampliados
+                        _ext_data = {}
+                        if _PATIENT_MODULE:
+                            try:
+                                _conn_ed = _db.get_conn()
+                                if _conn_ed:
+                                    _ext_data = get_patient_extended(_conn_ed, _edit_pid) or {}
+                            except Exception:
+                                _ext_data = {}
+                        # Combinar con campos básicos del paciente
+                        _combined = {**_edit_pac, **_ext_data}
+
+                        # Tipo y Dx (igual que en nuevo)
+                        _et1, _et2 = st.columns(2)
+                        with _et1:
+                            _tipo_opts = ["General","TRRC / UCI","Trasplante renal","ERC crónica",
+                                          "Hemodiálisis","Diálisis peritoneal","Agudo hospitalizado"]
+                            _tipo_idx = _tipo_opts.index(_edit_pac.get("tipo","General")) \
+                                        if _edit_pac.get("tipo") in _tipo_opts else 0
+                            ed_tipo = st.selectbox("Tipo de paciente", _tipo_opts,
+                                                    index=_tipo_idx, key="ed_tipo")
+                        with _et2:
+                            ed_dx = st.text_area("Diagnóstico", height=60, key="ed_dx",
+                                                  value=_edit_pac.get("diagnostico","") or "")
+                        ed_notas = st.text_input("Notas adicionales", key="ed_notas",
+                                                  value=_edit_pac.get("notas","") or "")
+
+                        # Antropometría
+                        _ea1, _ea2 = st.columns(2)
+                        with _ea1:
+                            ed_peso = st.number_input("Peso (kg)", 0.0, 300.0,
+                                float(_edit_pac.get("peso") or 0), 0.5, key="ed_peso")
+                        with _ea2:
+                            ed_talla = st.number_input("Talla (cm)", 0.0, 250.0,
+                                float(_edit_pac.get("talla") or 0), 0.5, key="ed_talla",
+                                help="Constante — solo se captura una vez")
+                        st.divider()
+
+                        # Formulario ampliado prellenado
+                        if _PATIENT_MODULE:
+                            _ed_form = render_patient_form_extended(f"edit_{_edit_pid}", _combined)
+                        else:
+                            _ed_form = {}
+                            st.warning("Módulo renalpro_patient no cargado — solo se editarán campos básicos.")
+
+                        _eb1, _eb2 = st.columns(2)
+                        with _eb1:
+                            if st.button("💾 Guardar cambios", type="primary",
+                                          use_container_width=True, key="btn_save_edit"):
+                                # Reunir datos
+                                if _PATIENT_MODULE and _ed_form:
+                                    _ed_nombre = _ed_form.get("nombre_completo", "").strip() or _edit_pac.get("nombre","")
+                                    _ed_exp    = _ed_form.get("id_externo", "") or _edit_pac.get("expediente","")
+                                    _ed_edad   = int(_ed_form.get("edad_años", 0) or _edit_pac.get("edad", 0) or 0)
+                                    _ed_sexo   = _ed_form.get("sexo", "") or _edit_pac.get("sexo","") or "—"
+                                else:
+                                    _ed_nombre = _edit_pac.get("nombre","")
+                                    _ed_exp    = _edit_pac.get("expediente","")
+                                    _ed_edad   = _edit_pac.get("edad",0)
+                                    _ed_sexo   = _edit_pac.get("sexo","")
+                                try:
+                                    _db.update_patient(_edit_pid, uid, {
+                                        "nombre": _ed_nombre,
+                                        "expediente": _ed_exp,
+                                        "edad": _ed_edad,
+                                        "sexo": _ed_sexo,
+                                        "peso": float(ed_peso) if ed_peso else 0.0,
+                                        "talla": float(ed_talla) if ed_talla else None,
+                                        "tipo": ed_tipo,
+                                        "diagnostico": ed_dx,
+                                        "notas": ed_notas,
+                                    })
+                                    if _PATIENT_MODULE and _ed_form:
+                                        try:
+                                            _conn_ed2 = _db.get_conn()
+                                            if _conn_ed2:
+                                                update_patient_extended_fields(_conn_ed2, _edit_pid, _ed_form)
+                                        except Exception:
+                                            pass
+                                    _clear_cache()
+                                    st.session_state.pop("exp_modo", None)
+                                    st.session_state.pop("edit_pac_id", None)
+                                    st.success("✅ Ficha actualizada.")
+                                    st.rerun()
+                                except AttributeError:
+                                    st.error("⚠️ db.py desactualizado en el servidor. "
+                                             "Sube el db.py actualizado a GitHub.")
+                                except Exception as _ee:
+                                    st.error(f"Error al actualizar: {_ee}")
+                        with _eb2:
+                            if st.button("✖️ Cancelar", use_container_width=True, key="btn_cancel_edit"):
+                                st.session_state.pop("exp_modo", None)
+                                st.session_state.pop("edit_pac_id", None)
+                                st.rerun()
+
             # Lista de pacientes
             pacientes_filtrados = [p for p in pacientes
                 if buscar_p.lower() in (p.get("nombre","") + p.get("expediente","")).lower()
@@ -10227,6 +10338,10 @@ elif nav == "expediente":
                         with ec2:
                             if st.button("📋 Abrir expediente", key=f"abrir_{p['id']}", use_container_width=True):
                                 st.session_state["exp_pac_id"] = p["id"]
+                                st.rerun()
+                            if st.button("✏️ Editar ficha", key=f"edit_{p['id']}", use_container_width=True):
+                                st.session_state["exp_modo"] = "editar"
+                                st.session_state["edit_pac_id"] = p["id"]
                                 st.rerun()
                             if st.button("🗑️ Eliminar", key=f"del_exp_{p['id']}", use_container_width=True):
                                 _db.delete_patient(p["id"], uid)
@@ -15207,10 +15322,13 @@ elif nav == "receta":
                         nrx_exp    = st.text_input("N° Expediente", key="nrx_exp")
                         nrx_edad   = st.number_input("Edad", 0, 120, 50, 1, key="nrx_edad")
                     with n2:
-                        nrx_sexo = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="nrx_sexo")
-                        nrx_peso = st.number_input("Peso (kg)", 0.0, 300.0, 70.0, 0.5, key="nrx_peso")
+                        nrx_sexo  = st.selectbox("Sexo", ["Masculino","Femenino","Otro"], key="nrx_sexo")
+                        nrx_peso  = st.number_input("Peso (kg)", 0.0, 300.0, 70.0, 0.5, key="nrx_peso")
+                        nrx_talla = st.number_input("Talla (cm)", 0.0, 250.0, 0.0, 0.5, key="nrx_talla",
+                                                     help="Una sola vez — se autocargará después")
                     pac_data = {"nombre": nrx_nombre, "expediente": nrx_exp,
-                                "edad": nrx_edad, "sexo": nrx_sexo, "peso": nrx_peso}
+                                "edad": nrx_edad, "sexo": nrx_sexo,
+                                "peso": nrx_peso, "talla": nrx_talla}
 
                 st.divider()
 
@@ -15229,6 +15347,12 @@ elif nav == "receta":
                         st.session_state["rx_peso"] = float(_peso_val) if _peso_val else 0.0
                     except (ValueError, TypeError):
                         st.session_state["rx_peso"] = 0.0
+                    # Talla: auto-carga del paciente (constante — no cambia entre consultas)
+                    _talla_val = pac_data.get("talla", 0)
+                    try:
+                        st.session_state["rx_talla"] = float(_talla_val) if _talla_val else 0.0
+                    except (ValueError, TypeError):
+                        st.session_state["rx_talla"] = 0.0
                     _sexo_val = pac_data.get("sexo", "")
                     if _sexo_val in ("Masculino", "Femenino", "No especificado"):
                         st.session_state["rx_sexo"] = _sexo_val
@@ -15252,6 +15376,7 @@ elif nav == "receta":
                     rx_fecha = st.date_input("Fecha *", key="rx_fecha")
                     rx_ta    = st.text_input("TA (mmHg)", placeholder="120/80", key="rx_ta")
                     rx_fc    = st.text_input("FC (lpm)", key="rx_fc", placeholder="72")
+                    rx_fr    = st.text_input("FR (rpm)", key="rx_fr", placeholder="16")
                     rx_temp  = st.text_input("T° (°C)", key="rx_temp", placeholder="36.5")
                     rx_spo2  = st.text_input("SpO₂ (%)", key="rx_spo2", placeholder="98")
 
@@ -15624,6 +15749,7 @@ elif nav == "receta":
                                 if rx_imc > 0: sv.append(f"IMC: {rx_imc:.1f}")
                                 if rx_ta:   sv.append(f"TA: {rx_ta} mmHg")
                                 if rx_fc:   sv.append(f"FC: {rx_fc} lpm")
+                                if rx_fr:   sv.append(f"FR: {rx_fr} rpm")
                                 if rx_temp: sv.append(f"T°: {rx_temp}°C")
                                 if rx_spo2: sv.append(f"SpO₂: {rx_spo2}%")
                                 sv_style = ParagraphStyle("sv", fontName="Helvetica", fontSize=8, leading=11)
