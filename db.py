@@ -154,6 +154,7 @@ def init_tables() -> bool:
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS receta_folio_counter INTEGER DEFAULT 0",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS diagnosticos_custom TEXT DEFAULT '[]'",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS logo_b64 TEXT DEFAULT ''",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS firma_b64 TEXT DEFAULT ''",
         ]:
             try:
                 cur.execute(alter)
@@ -200,6 +201,40 @@ def init_tables() -> bool:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_patients_user ON patients(user_id, is_deleted);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_records_patient ON clinical_records(patient_id);")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_records_user ON clinical_records(user_id);")
+
+        # ── Campos ampliados para patients (renalpro_patient.py) ─────────────
+        for alter_pac in [
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS apellido_paterno VARCHAR(100)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS apellido_materno VARCHAR(100)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS nombres VARCHAR(150)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS curp VARCHAR(20)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS id_externo VARCHAR(50)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS escolaridad VARCHAR(100)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS ocupacion VARCHAR(150)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS estado_civil VARCHAR(30)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS religion VARCHAR(80)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS grupo_etnico VARCHAR(80)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS fecha_ingreso_unidad DATE",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS procedencia VARCHAR(150)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS calle VARCHAR(200)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS no_ext VARCHAR(20)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS no_int VARCHAR(20)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS referencia_dom VARCHAR(300)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS colonia VARCHAR(150)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS municipio VARCHAR(150)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS estado_residencia VARCHAR(100)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS cp VARCHAR(10)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS pais VARCHAR(80) DEFAULT 'México'",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS telefono VARCHAR(30)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS contacto_nombre VARCHAR(150)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS contacto_parentesco VARCHAR(50)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS contacto_telefono VARCHAR(30)",
+        ]:
+            try:
+                cur.execute(alter_pac)
+            except Exception:
+                pass
+
         conn.commit()
         cur.close()
         return True
@@ -672,6 +707,26 @@ def save_user_logo(user_id: int, logo_b64: str) -> bool:
         except Exception:
             pass
         return False
+
+def save_user_firma(user_id: int, firma_b64: str) -> bool:
+    """Guarda la firma digital del usuario para usar en recetas, notas e historias."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET firma_b64=%s WHERE id=%s", (firma_b64, user_id))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+def get_next_folio(user_id: int) -> str:
     """Genera el siguiente folio de receta para el usuario."""
     conn = get_conn()
     if not conn:
