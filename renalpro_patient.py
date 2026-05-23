@@ -153,11 +153,11 @@ def render_patient_form_extended(key_prefix="epf", patient_data=None):
     st.markdown("#### 🪪 Identificación")
     c1, c2, c3 = st.columns(3)
     ap_pat = c1.text_input("Apellido Paterno *", value=g("apellido_paterno"),
-                            key=f"{key_prefix}_ap_pat").strip().upper()
+                            key=f"{key_prefix}_ap_pat").strip()
     ap_mat = c2.text_input("Apellido Materno", value=g("apellido_materno"),
-                            key=f"{key_prefix}_ap_mat").strip().upper()
+                            key=f"{key_prefix}_ap_mat").strip()
     nombres = c3.text_input("Nombre(s) *", value=g("nombres"),
-                             key=f"{key_prefix}_nombres").strip().upper()
+                             key=f"{key_prefix}_nombres").strip()
 
     c1, c2 = st.columns(2)
     curp = c1.text_input("CURP", value=g("curp"), max_chars=18,
@@ -265,7 +265,7 @@ def render_patient_form_extended(key_prefix="epf", patient_data=None):
     st.markdown("#### 🚨 Contacto de Emergencia")
     c1, c2, c3 = st.columns(3)
     cont_nombre = c1.text_input("Nombre completo", value=g("contacto_nombre"),
-                                  key=f"{key_prefix}_cnombre").strip().upper()
+                                  key=f"{key_prefix}_cnombre").strip()
     par_opts = [
         "-- Seleccione --", "Cónyuge/Pareja", "Hijo/a", "Padre", "Madre",
         "Hermano/a", "Abuelo/a", "Nieto/a", "Tío/a", "Otro familiar", "Amigo/a", "Otro",
