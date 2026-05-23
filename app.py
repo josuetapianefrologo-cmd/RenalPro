@@ -2134,6 +2134,7 @@ with st.sidebar:
     _navbtn("📋 Candidato a Trasplante", "eval_candidato")
     _navbtn("🫀 Donante Vivo", "eval_donante_vivo")
     _navbtn("🔴 Nota Post-Trasplante", "nota_tx")
+    _navbtn("🩺 Nota Evolución Post-TX", "nota_evol_tx")
     _navbtn("📅 Seguimiento Post-TR", "seguimiento_tx")
     _navbtn("⏰ Perioperatorio", "periop_tx")
     _navbtn("🩺 Complicaciones Crónicas TR", "complic_cr_tx")
@@ -10747,100 +10748,119 @@ Inducción: {induccion_bg}
                             st.rerun()
                     with rc2:
                         if st.button("🖨️ Imprimir nota", key=f"print_rec_{rec['id']}", use_container_width=True):
-                            try:
-                                import io
-                                from reportlab.lib.pagesizes import letter
-                                from reportlab.lib.units import cm
-                                from reportlab.lib.colors import HexColor, black, white
-                                from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-                                from reportlab.lib.styles import ParagraphStyle
-                                from reportlab.lib.enums import TA_LEFT, TA_CENTER
-                                buf = io.BytesIO()
-                                doc = SimpleDocTemplate(buf, pagesize=letter,
-                                                        leftMargin=2*cm, rightMargin=2*cm,
-                                                        topMargin=2*cm, bottomMargin=2*cm)
-                                AZUL = HexColor("#1E3A8A"); AZULC = HexColor("#EFF6FF"); GRIS = HexColor("#6B7280")
-                                def _P(txt, fs=9, bold=False, color=black, align=TA_LEFT):
-                                    return Paragraph(str(txt) if txt else "",
-                                                     ParagraphStyle("s",
-                                                         fontName="Helvetica-Bold" if bold else "Helvetica",
-                                                         fontSize=fs, textColor=color, alignment=align,
-                                                         spaceAfter=2, leading=fs+3))
-                                story = []
-                                # Header
-                                dr_n = st.session_state.get("sess_nombre","")
-                                dr_c = st.session_state.get("sess_cedula","")
-                                dr_e = st.session_state.get("sess_especialidad","")
-                                dr_i = st.session_state.get("sess_institucion","")
-                                story.append(_P(dr_i or "RenalPro", 12, True, AZUL))
-                                story.append(_P(f"{dr_n} · {dr_e} · Cédula: {dr_c}", 9, color=GRIS))
-                                story.append(HRFlowable(width="100%", thickness=2, color=AZUL))
-                                story.append(Spacer(1, 0.3*cm))
-                                # Patient
-                                story.append(_P(f"NOTA CLÍNICA — {rec.get('tipo','—')}", 11, True, AZUL))
-                                story.append(_P(f"Paciente: {sel_exp.get('nombre','—')} · "
-                                               f"Exp: {sel_exp.get('expediente','—')} · "
-                                               f"Fecha: {str(rec.get('fecha_consulta',''))[:10]}", 10))
-                                story.append(_P(f"Dx: {sel_exp.get('diagnostico','—')}", 9, color=GRIS))
-                                story.append(Spacer(1, 0.3*cm))
-                                # Vitals
-                                sv_p = []
-                                for _k, _l in [("peso","Peso"),("ta","TA"),("fc","FC"),("temp","T°"),("spo2","SpO₂")]:
-                                    if datos_r.get(_k): sv_p.append(f"{_l}: {datos_r[_k]}")
-                                if sv_p:
-                                    story.append(_P("Signos vitales: " + " · ".join(sv_p), 9))
-                                    story.append(Spacer(1, 0.2*cm))
-                                # Labs
-                                labs_p = []
-                                for _k, _l, _u in [("cr","Cr","mg/dL"),("k","K","mEq/L"),
-                                                    ("hb","Hb","g/dL"),("tac","Tac C0","ng/mL"),
-                                                    ("pth","PTH","pg/mL"),("p","P","mg/dL"),
-                                                    ("ferr","Ferritina","ng/mL"),("pcr","PCR","mg/L")]:
-                                    if datos_r.get(_k): labs_p.append(f"{_l}: {datos_r[_k]} {_u}")
-                                if labs_p:
-                                    story.append(_P("Laboratorios: " + " · ".join(labs_p), 9))
-                                    story.append(Spacer(1, 0.2*cm))
-                                # SOAP
-                                for seccion, campo in [
-                                    ("S — Subjetivo / Motivo", "motivo"),
-                                    ("Evolución", "evolucion"),
-                                    ("O — Exploración física", "exp_gen"),
-                                    ("Abdomen / Injerto", "exp_abd"),
-                                    ("A — Análisis", "analisis"),
-                                ]:
-                                    val = datos_r.get(campo,"")
-                                    if val:
-                                        story.append(_P(seccion, 10, True, AZUL))
-                                        story.append(Paragraph(str(val), ParagraphStyle("body", fontName="Helvetica", fontSize=9, leading=13)))
+                            # ── Receta médica con PDF guardado: descarga el ORIGINAL (formato bonito) ──
+                            _has_rx_pdf = (rec.get("tipo") == "Receta médica"
+                                           and isinstance(datos_r, dict)
+                                           and datos_r.get("pdf_b64"))
+                            if _has_rx_pdf:
+                                try:
+                                    import base64 as _b64imp
+                                    _orig_pdf = _b64imp.b64decode(datos_r["pdf_b64"])
+                                    safe_nm = "".join(c for c in sel_exp.get("nombre","pac")
+                                                      if c.isalnum() or c==" ")[:18].strip()
+                                    _folio = datos_r.get("folio", "SIN-FOLIO")
+                                    st.download_button("⬇️ Descargar receta (original)",
+                                                       data=_orig_pdf,
+                                                       file_name=f"Rx_{_folio}_{safe_nm}.pdf",
+                                                       mime="application/pdf",
+                                                       key=f"dl_orig_{rec['id']}")
+                                except Exception as _e_pdf_orig:
+                                    st.error(f"Error al recuperar PDF original: {_e_pdf_orig}")
+                            else:
+                                try:
+                                    import io
+                                    from reportlab.lib.pagesizes import letter
+                                    from reportlab.lib.units import cm
+                                    from reportlab.lib.colors import HexColor, black, white
+                                    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+                                    from reportlab.lib.styles import ParagraphStyle
+                                    from reportlab.lib.enums import TA_LEFT, TA_CENTER
+                                    buf = io.BytesIO()
+                                    doc = SimpleDocTemplate(buf, pagesize=letter,
+                                                            leftMargin=2*cm, rightMargin=2*cm,
+                                                            topMargin=2*cm, bottomMargin=2*cm)
+                                    AZUL = HexColor("#1E3A8A"); AZULC = HexColor("#EFF6FF"); GRIS = HexColor("#6B7280")
+                                    def _P(txt, fs=9, bold=False, color=black, align=TA_LEFT):
+                                        return Paragraph(str(txt) if txt else "",
+                                                         ParagraphStyle("s",
+                                                             fontName="Helvetica-Bold" if bold else "Helvetica",
+                                                             fontSize=fs, textColor=color, alignment=align,
+                                                             spaceAfter=2, leading=fs+3))
+                                    story = []
+                                    # Header
+                                    dr_n = st.session_state.get("sess_nombre","")
+                                    dr_c = st.session_state.get("sess_cedula","")
+                                    dr_e = st.session_state.get("sess_especialidad","")
+                                    dr_i = st.session_state.get("sess_institucion","")
+                                    story.append(_P(dr_i or "RenalPro", 12, True, AZUL))
+                                    story.append(_P(f"{dr_n} · {dr_e} · Cédula: {dr_c}", 9, color=GRIS))
+                                    story.append(HRFlowable(width="100%", thickness=2, color=AZUL))
+                                    story.append(Spacer(1, 0.3*cm))
+                                    # Patient
+                                    story.append(_P(f"NOTA CLÍNICA — {rec.get('tipo','—')}", 11, True, AZUL))
+                                    story.append(_P(f"Paciente: {sel_exp.get('nombre','—')} · "
+                                                   f"Exp: {sel_exp.get('expediente','—')} · "
+                                                   f"Fecha: {str(rec.get('fecha_consulta',''))[:10]}", 10))
+                                    story.append(_P(f"Dx: {sel_exp.get('diagnostico','—')}", 9, color=GRIS))
+                                    story.append(Spacer(1, 0.3*cm))
+                                    # Vitals
+                                    sv_p = []
+                                    for _k, _l in [("peso","Peso"),("ta","TA"),("fc","FC"),("temp","T°"),("spo2","SpO₂")]:
+                                        if datos_r.get(_k): sv_p.append(f"{_l}: {datos_r[_k]}")
+                                    if sv_p:
+                                        story.append(_P("Signos vitales: " + " · ".join(sv_p), 9))
                                         story.append(Spacer(1, 0.2*cm))
-                                # Plan
-                                if datos_r.get("receta"):
-                                    story.append(_P("P — Indicaciones / Receta", 10, True, AZUL))
-                                    for linea in datos_r["receta"].split("\n"):
-                                        if linea.strip():
-                                            story.append(Paragraph(linea, ParagraphStyle("ind", fontName="Helvetica", fontSize=10, leading=15)))
-                                    story.append(Spacer(1, 0.2*cm))
-                                if rec.get("notas"):
-                                    story.append(_P("Plan adicional", 10, True, AZUL))
-                                    story.append(Paragraph(str(rec["notas"]), ParagraphStyle("n", fontName="Helvetica", fontSize=9, leading=13)))
-                                if datos_r.get("prox_cita"):
-                                    story.append(Spacer(1,0.3*cm))
-                                    story.append(_P(f"📅 Próxima cita: {datos_r['prox_cita']}", 10, True, HexColor("#2563EB")))
-                                story.append(Spacer(1, 1*cm))
-                                story.append(HRFlowable(width="100%", thickness=0.5, color=AZULC))
-                                story.append(_P("RenalPro v3.1.0 · NOM-004-SSA3-2012 · Nota generada automáticamente", 7, color=GRIS, align=TA_CENTER))
-                                doc.build(story)
-                                buf.seek(0)
-                                pdf_nota = buf.read()
-                                safe_nm = "".join(c for c in sel_exp.get("nombre","pac") if c.isalnum() or c==" ")[:12].strip()
-                                fecha_r2 = str(rec.get("fecha_consulta",""))[:10]
-                                st.download_button("⬇️ Descargar nota PDF",
-                                                   data=pdf_nota,
-                                                   file_name=f"Nota_{safe_nm}_{fecha_r2}.pdf",
-                                                   mime="application/pdf",
-                                                   key=f"dl_nota_{rec['id']}")
-                            except Exception as _e_pdf:
-                                st.error(f"Error al generar PDF: {_e_pdf}")
+                                    # Labs
+                                    labs_p = []
+                                    for _k, _l, _u in [("cr","Cr","mg/dL"),("k","K","mEq/L"),
+                                                        ("hb","Hb","g/dL"),("tac","Tac C0","ng/mL"),
+                                                        ("pth","PTH","pg/mL"),("p","P","mg/dL"),
+                                                        ("ferr","Ferritina","ng/mL"),("pcr","PCR","mg/L")]:
+                                        if datos_r.get(_k): labs_p.append(f"{_l}: {datos_r[_k]} {_u}")
+                                    if labs_p:
+                                        story.append(_P("Laboratorios: " + " · ".join(labs_p), 9))
+                                        story.append(Spacer(1, 0.2*cm))
+                                    # SOAP
+                                    for seccion, campo in [
+                                        ("S — Subjetivo / Motivo", "motivo"),
+                                        ("Evolución", "evolucion"),
+                                        ("O — Exploración física", "exp_gen"),
+                                        ("Abdomen / Injerto", "exp_abd"),
+                                        ("A — Análisis", "analisis"),
+                                    ]:
+                                        val = datos_r.get(campo,"")
+                                        if val:
+                                            story.append(_P(seccion, 10, True, AZUL))
+                                            story.append(Paragraph(str(val), ParagraphStyle("body", fontName="Helvetica", fontSize=9, leading=13)))
+                                            story.append(Spacer(1, 0.2*cm))
+                                    # Plan
+                                    if datos_r.get("receta"):
+                                        story.append(_P("P — Indicaciones / Receta", 10, True, AZUL))
+                                        for linea in datos_r["receta"].split("\n"):
+                                            if linea.strip():
+                                                story.append(Paragraph(linea, ParagraphStyle("ind", fontName="Helvetica", fontSize=10, leading=15)))
+                                        story.append(Spacer(1, 0.2*cm))
+                                    if rec.get("notas"):
+                                        story.append(_P("Plan adicional", 10, True, AZUL))
+                                        story.append(Paragraph(str(rec["notas"]), ParagraphStyle("n", fontName="Helvetica", fontSize=9, leading=13)))
+                                    if datos_r.get("prox_cita"):
+                                        story.append(Spacer(1,0.3*cm))
+                                        story.append(_P(f"📅 Próxima cita: {datos_r['prox_cita']}", 10, True, HexColor("#2563EB")))
+                                    story.append(Spacer(1, 1*cm))
+                                    story.append(HRFlowable(width="100%", thickness=0.5, color=AZULC))
+                                    story.append(_P("RenalPro v3.1.0 · NOM-004-SSA3-2012 · Nota generada automáticamente", 7, color=GRIS, align=TA_CENTER))
+                                    doc.build(story)
+                                    buf.seek(0)
+                                    pdf_nota = buf.read()
+                                    safe_nm = "".join(c for c in sel_exp.get("nombre","pac") if c.isalnum() or c==" ")[:12].strip()
+                                    fecha_r2 = str(rec.get("fecha_consulta",""))[:10]
+                                    st.download_button("⬇️ Descargar nota PDF",
+                                                       data=pdf_nota,
+                                                       file_name=f"Nota_{safe_nm}_{fecha_r2}.pdf",
+                                                       mime="application/pdf",
+                                                       key=f"dl_nota_{rec['id']}")
+                                except Exception as _e_pdf:
+                                    st.error(f"Error al generar PDF: {_e_pdf}")
                     with rc3:
                         if st.button("🗑️ Eliminar", key=f"del_rec_{rec['id']}", use_container_width=True):
                             _db.delete_clinical_record(rec["id"], uid)
@@ -15969,33 +15989,54 @@ elif nav == "receta":
                             buf.seek(0)
                             pdf_bytes = buf.read()
                             safe = "".join(c for c in rx_nombre if c.isalnum() or c==" ")[:18].strip()
+
+                            # ── AUTO-GUARDAR receta en expediente (con PDF para reimpresión idéntica) ──
+                            _save_msg = ""
+                            if pac_id_rx and uid_rx and _DB_ON and _db.db_ok():
+                                try:
+                                    rx_body_save = "\n".join(
+                                        [f"{i+1}. {it['nombre_completo']} — {it.get('instrucciones','')}"
+                                         for i, it in enumerate(rx_items)])
+                                    _db.add_clinical_record(pac_id_rx, uid_rx, {
+                                        "tipo": "Receta médica",
+                                        "titulo": f"Receta — {dx_str[:60] if dx_str else 'Sin diagnóstico'}",
+                                        "fecha_consulta": rx_fecha,
+                                        "resumen": rx_body_save,
+                                        "notas": rx_notas,
+                                        "datos": {
+                                            "receta": rx_body_save,
+                                            "dx": dx_str, "cie": cie_codes,
+                                            "folio": folio_str,
+                                            "items": [{"n": it["nombre_completo"],
+                                                       "i": it.get("instrucciones",""),
+                                                       "cat": it.get("cat",""),
+                                                       "nombre_generico": it.get("nombre_generico","")}
+                                                      for it in rx_items],
+                                            "paciente": {"nombre": rx_nombre, "exp": rx_exp,
+                                                         "edad": rx_edad, "sexo": rx_sexo,
+                                                         "peso": rx_peso, "talla": rx_talla},
+                                            "vitales": {"ta": rx_ta, "fc": rx_fc, "fr": rx_fr,
+                                                        "temp": rx_temp, "spo2": rx_spo2},
+                                            "prox_fecha": str(rx_prox_fecha) if rx_prox_fecha else "",
+                                            "prox_hora": str(rx_prox_hora) if rx_prox_hora else "",
+                                            "notas_rx": rx_notas,
+                                            "pdf_b64": base64.b64encode(pdf_bytes).decode("ascii"),
+                                        },
+                                    })
+                                    _clear_cache()
+                                    _save_msg = " · 💾 Guardada en expediente"
+                                except AttributeError:
+                                    _save_msg = " · ⚠️ No se guardó (sube db.py actualizado a GitHub)"
+                                except Exception as _se:
+                                    _save_msg = f" · ⚠️ No se guardó ({_se})"
+
                             st.download_button("⬇️ Descargar PDF", data=pdf_bytes,
                                                file_name=f"Rx_{folio_str}_{safe}.pdf",
                                                mime="application/pdf", key="btn_dl_rx")
-                            st.success(f"✅ Folio: **{folio_str}** · {n_pages} página(s) · {len(rx_items)} medicamento(s)")
+                            st.success(f"✅ Folio: **{folio_str}** · {n_pages} página(s) · "
+                                       f"{len(rx_items)} medicamento(s){_save_msg}")
                         except Exception as e:
                             st.error(f"Error PDF: {e}")
-
-                # Save to expediente
-                gb2 = st.columns(1)[0]
-                if pac_id_rx and uid_rx and _DB_ON and _db.db_ok() and rx_items:
-                    if st.button("💾 Guardar en expediente", use_container_width=True, key="btn_save_rx"):
-                        try:
-                            rx_body_save = "\n".join([f"{i+1}. {it['nombre_completo']} — {it.get('instrucciones','')}"
-                                                      for i, it in enumerate(rx_items)])
-                            _db.add_clinical_record(pac_id_rx, uid_rx, {
-                                "tipo": "Receta médica",
-                                "titulo": f"Receta — {dx_str[:60] if dx_str else 'Sin diagnóstico'}",
-                                "fecha_consulta": rx_fecha,
-                                "resumen": rx_body_save,
-                                "notas": rx_notas,
-                                "datos": {"receta": rx_body_save, "dx": dx_str, "cie": cie_codes,
-                                          "items": [{"n": it["nombre_completo"], "i": it.get("instrucciones","")}
-                                                    for it in rx_items]},
-                            })
-                            _clear_cache(); st.success("✅ Receta guardada en expediente.")
-                        except AttributeError:
-                            st.error("Sube el db.py actualizado a GitHub.")
 
                 # Clear prescription button
                 if rx_items:
@@ -18287,6 +18328,461 @@ COVID-19: Anti-spike IgG a las 4–8 semanas
   → Niveles correlacionan con protección pero no la definen exactamente
 ```
         """)
+
+elif nav == "nota_evol_tx":
+    # ══════════════════════════════════════════════════════════════════════════
+    # NOTA DE EVOLUCIÓN POST-TRASPLANTE RENAL (primeras 2 semanas)
+    # Para uso intrahospitalario — pacientes con función inmediata o retardada
+    # ══════════════════════════════════════════════════════════════════════════
+    st.subheader("🩺 Nota de Evolución Post-Trasplante Renal")
+    st.caption("Nota diaria para paciente hospitalizado en las primeras 2 semanas post-TR. "
+               "Incluye función retardada de injerto (FRI) y normoevolutivos.")
+
+    if not _is_auth():
+        st.warning("Inicia sesión para crear notas.")
+    else:
+        from datetime import date as _date_evo, datetime as _dt_evo
+
+        # ── PACIENTE ──────────────────────────────────────────────────────────
+        st.markdown("#### 👤 Receptor")
+        _ne_pmode = st.radio("", ["🔍 Existente", "✏️ Sin paciente (manual)"],
+                             horizontal=True, key="ne_pmode")
+        _ne_pac = {}
+        _ne_pid = None
+        if "Existente" in _ne_pmode and _user_id() and _DB_ON and _db.db_ok():
+            try:
+                _ne_pacs = _cached_patients(_user_id()) or []
+                _ne_q = st.text_input("Buscar", key="ne_buscar",
+                                       placeholder="Nombre o expediente...")
+                _ne_pacs_f = [p for p in _ne_pacs
+                              if _ne_q.lower() in (p.get("nombre","")+p.get("expediente","")).lower()][:30]
+                if _ne_pacs_f:
+                    _ne_opts = {f"{p['nombre']} — Exp:{p.get('expediente','—')}": p for p in _ne_pacs_f}
+                    _ne_sel = st.selectbox("Paciente", list(_ne_opts.keys()), key="ne_sel_pac")
+                    _ne_pac = _ne_opts[_ne_sel]
+                    _ne_pid = _ne_pac.get("id")
+            except Exception as _ee:
+                st.error(f"Error: {_ee}")
+
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            ne_nombre = st.text_input("Nombre del receptor *", key="ne_nombre",
+                                       value=_ne_pac.get("nombre",""))
+            ne_exp    = st.text_input("Expediente", key="ne_exp",
+                                       value=_ne_pac.get("expediente",""))
+            ne_edad   = st.text_input("Edad", key="ne_edad",
+                                       value=str(_ne_pac.get("edad","") or ""))
+        with c2:
+            ne_sexo  = st.selectbox("Sexo", ["Masculino","Femenino"], key="ne_sexo")
+            ne_peso  = st.number_input("Peso hoy (kg)", 0.0, 300.0,
+                float(_ne_pac.get("peso") or 70), 0.1, key="ne_peso")
+            ne_talla = st.number_input("Talla (cm)", 0.0, 250.0,
+                float(_ne_pac.get("talla") or 0), 0.5, key="ne_talla")
+        with c3:
+            ne_fecha = st.date_input("Fecha de la nota *", value=_date_evo.today(),
+                                      key="ne_fecha")
+            ne_hora  = st.time_input("Hora", value=_dt_evo.now().time().replace(microsecond=0),
+                                      key="ne_hora")
+            ne_dpt   = st.number_input("Día post-TR (DPT) *", 0, 30, 1, 1, key="ne_dpt",
+                                        help="Días desde el trasplante")
+
+        st.divider()
+
+        # ── DATOS DEL TRASPLANTE ──────────────────────────────────────────────
+        st.markdown("#### 🫘 Datos del Trasplante")
+        c4, c5 = st.columns(2)
+        with c4:
+            ne_fecha_tx = st.date_input("Fecha del TR", value=_date_evo.today(),
+                                         key="ne_fecha_tx")
+            ne_donador  = st.selectbox("Tipo de donador",
+                ["Vivo relacionado","Vivo no relacionado","Fallecido (DBD)","Fallecido (DCD)"],
+                key="ne_donador")
+            ne_induccion = st.selectbox("Inducción usada",
+                ["Basiliximab","Timoglobulina","Ninguna","Alemtuzumab","Otra"],
+                key="ne_induccion")
+            ne_ind_dosis = st.text_input("Dosis acumulada de inducción", key="ne_ind_dosis",
+                placeholder="ej. Basiliximab 40 mg total · Timoglobulina 4.5 mg/kg total")
+        with c5:
+            ne_hla = st.text_input("HLA mismatches", key="ne_hla", placeholder="ej. 3/6")
+            ne_pra = st.text_input("PRA pre-TR (%)", key="ne_pra", placeholder="ej. 25%")
+            ne_dsa = st.text_input("DSA pre-TR", key="ne_dsa", placeholder="ej. Negativos / MFI 1500 anti-DQ7")
+            ne_xmatch = st.selectbox("Crossmatch", ["Negativo","Positivo","No realizado"],
+                                      key="ne_xmatch")
+
+        st.divider()
+
+        # ── ESTADO CLÍNICO DEL DÍA ────────────────────────────────────────────
+        st.markdown("#### 🩺 Estado clínico del día")
+        ne_subjetivo = st.text_area("Subjetivo / queja principal", height=70,
+            key="ne_subj", placeholder="Estado general, síntomas, dolor, apetito, evacuaciones, sueño...")
+        cv1, cv2, cv3, cv4 = st.columns(4)
+        with cv1:
+            ne_ta  = st.text_input("TA (mmHg)", key="ne_ta", placeholder="120/80")
+            ne_fc  = st.text_input("FC (lpm)", key="ne_fc", placeholder="80")
+        with cv2:
+            ne_fr   = st.text_input("FR (rpm)", key="ne_fr", placeholder="16")
+            ne_temp = st.text_input("T° (°C)", key="ne_temp", placeholder="36.5")
+        with cv3:
+            ne_spo2 = st.text_input("SpO₂ (%)", key="ne_spo2", placeholder="98")
+            ne_dol  = st.text_input("EVA dolor (0–10)", key="ne_dol", placeholder="2")
+        with cv4:
+            ne_diuresis_24h = st.number_input("Diuresis 24h (mL)", 0, 10000, 1500, 50,
+                                               key="ne_diur24")
+            ne_diuresis_h = st.number_input("Diuresis horaria (mL/h)", 0.0, 1000.0, 60.0, 1.0,
+                                             key="ne_diur_h")
+        c_bal1, c_bal2 = st.columns(2)
+        with c_bal1:
+            ne_ingresos = st.number_input("Ingresos 24h (mL)", 0, 10000, 2000, 50,
+                                           key="ne_ingresos")
+        with c_bal2:
+            ne_egresos = st.number_input("Egresos 24h (mL)", 0, 10000, 1800, 50,
+                                          key="ne_egresos")
+        ne_balance = ne_ingresos - ne_egresos
+        st.caption(f"⚖️ **Balance hídrico 24h**: {ne_balance:+d} mL "
+                   f"{'(positivo)' if ne_balance > 0 else '(negativo)' if ne_balance < 0 else '(neutro)'}")
+
+        st.divider()
+
+        # ── EXPLORACIÓN FÍSICA ────────────────────────────────────────────────
+        st.markdown("#### 🫁 Exploración física")
+        ne_ef_gen  = st.text_area("General / cardiopulmonar", height=60, key="ne_ef_gen",
+            placeholder="Consciente, orientado, hidratado. Ruidos cardíacos rítmicos sin soplos. "
+                        "Campos pulmonares ventilados sin agregados...")
+        ne_ef_abd  = st.text_area("Abdomen / Lecho del injerto", height=60, key="ne_ef_abd",
+            placeholder="Blando, depresible. Lecho del injerto en FID sin dolor, sin masas palpables, "
+                        "sin soplos. Herida quirúrgica con buen aspecto, sin secreción...")
+        ne_ef_acc  = st.text_area("Accesos / CVC / FAVI", height=50, key="ne_ef_acc",
+            placeholder="CVC yugular derecho funcional, sin signos de infección. FAVI permeable...")
+
+        st.divider()
+
+        # ── FUNCIÓN DEL INJERTO ───────────────────────────────────────────────
+        st.markdown("#### 🫘 Función del injerto")
+        cf1, cf2 = st.columns(2)
+        with cf1:
+            ne_cr_hoy = st.number_input("Cr hoy (mg/dL)", 0.0, 20.0, 1.5, 0.05, key="ne_cr_hoy")
+            ne_cr_ayer = st.number_input("Cr ayer (mg/dL)", 0.0, 20.0, 1.6, 0.05, key="ne_cr_ayer")
+            _delta_cr = ((ne_cr_hoy - ne_cr_ayer) / ne_cr_ayer * 100) if ne_cr_ayer > 0 else 0
+            st.caption(f"📉 **ΔCr** vs ayer: {_delta_cr:+.1f}%")
+            ne_bun = st.number_input("BUN (mg/dL)", 0, 200, 30, 1, key="ne_bun")
+        with cf2:
+            ne_patron = st.selectbox("Patrón de función", [
+                "Función inmediata (Cr↓ desde día 1, sin TRR)",
+                "Función retardada (FRI — requiere ≥1 sesión de diálisis en 1ª semana)",
+                "Función lenta (Cr↓ sin diálisis pero <10%/día)",
+                "No función primaria (anuria persistente >2 semanas)",
+            ], key="ne_patron_func")
+            ne_trr_hoy = st.selectbox("¿TRR hoy?", ["No","Sí — HD","Sí — DP","Sí — TRRC"],
+                                       key="ne_trr_hoy")
+            if "Sí" in ne_trr_hoy:
+                ne_uf = st.number_input("UF removida hoy (mL)", 0, 6000, 1000, 100,
+                                         key="ne_uf_trr")
+            ne_sesiones_total = st.number_input("Sesiones de diálisis post-TR (acumuladas)",
+                                                 0, 30, 0, 1, key="ne_ses_acum")
+
+        ne_doppler = st.text_input("USG Doppler injerto",
+            placeholder="IR: 0.65 · Flujo arterial normal · Sin colecciones",
+            key="ne_doppler")
+        ne_biopsia = st.text_input("Biopsia del injerto (si se hizo)",
+            placeholder="ej. Banff 1A — rechazo agudo celular leve · NTA · Sin rechazo",
+            key="ne_biopsia")
+
+        st.divider()
+
+        # ── LABORATORIOS ──────────────────────────────────────────────────────
+        st.markdown("#### 🧪 Laboratorios del día")
+        cl1, cl2, cl3 = st.columns(3)
+        with cl1:
+            st.markdown("**BH / Hematológico**")
+            ne_hb   = st.number_input("Hb (g/dL)", 0.0, 25.0, 10.5, 0.1, key="ne_hb")
+            ne_leu  = st.number_input("Leucocitos (10³/µL)", 0.0, 50.0, 8.0, 0.1, key="ne_leu")
+            ne_plt  = st.number_input("Plaquetas (10³/µL)", 0, 1000, 200, 5, key="ne_plt")
+        with cl2:
+            st.markdown("**QS / Electrolitos**")
+            ne_na   = st.number_input("Na (mEq/L)", 100, 180, 138, 1, key="ne_na")
+            ne_k    = st.number_input("K (mEq/L)", 1.0, 8.0, 4.2, 0.1, key="ne_k")
+            ne_p    = st.number_input("P (mg/dL)", 0.0, 15.0, 3.5, 0.1, key="ne_p")
+            ne_ca   = st.number_input("Ca total (mg/dL)", 0.0, 15.0, 8.8, 0.1, key="ne_ca_tx")
+            ne_mg   = st.number_input("Mg (mg/dL)", 0.0, 5.0, 1.8, 0.1, key="ne_mg_tx")
+        with cl3:
+            st.markdown("**IS / Virales**")
+            ne_tac_c0 = st.number_input("Tacrolimus C0 (ng/mL)", 0.0, 50.0, 9.0, 0.1, key="ne_tac",
+                help="Meta primer mes: 8–12 ng/mL · Mes 2–6: 6–10 · >6m: 5–8")
+            ne_cmv  = st.text_input("CMV PCR", key="ne_cmv", placeholder="ej. ND · 250 cp/mL")
+            ne_bk   = st.text_input("BK PCR (>día 14)", key="ne_bk", placeholder="ej. ND · 2000 cp/mL")
+            ne_pcr  = st.text_input("PCR (mg/L)", key="ne_pcr_lab", placeholder="ej. 12")
+
+        ne_uricult = st.text_input("Urocultivo / Sedimento",
+                                    placeholder="Estéril · E. coli >10⁵ UFC sensible a ceftriaxona...",
+                                    key="ne_uricult")
+        ne_otros_labs = st.text_area("Otros laboratorios", height=50, key="ne_otros_labs",
+            placeholder="Glucosa, función hepática, gasometría, ácido úrico, lactato, troponina...")
+
+        st.divider()
+
+        # ── INMUNOSUPRESIÓN ACTUAL ────────────────────────────────────────────
+        st.markdown("#### 🛡️ Inmunosupresión actual")
+        ci1, ci2 = st.columns(2)
+        with ci1:
+            ne_tac_dosis = st.text_input("Tacrolimus dosis actual", key="ne_tac_dosis",
+                placeholder="ej. 4 mg c/12h VO · ajustado por C0")
+            ne_mmf_dosis = st.text_input("MMF / MPA dosis", key="ne_mmf_dosis",
+                placeholder="ej. 1g c/12h VO · MPA 720 mg c/12h")
+        with ci2:
+            ne_pred = st.text_input("Prednisona dosis", key="ne_pred",
+                placeholder="ej. 30 mg/día con descenso programado")
+            ne_otros_is = st.text_input("Otros IS", key="ne_otros_is",
+                placeholder="ej. Rituximab 1g días 0 y 15 si grupo ABO incompatible")
+
+        st.divider()
+
+        # ── PROFILAXIS ────────────────────────────────────────────────────────
+        st.markdown("#### 💊 Profilaxis activas")
+        cp1, cp2 = st.columns(2)
+        with cp1:
+            ne_pf_cmv = st.text_input("Valganciclovir (CMV)", key="ne_pf_cmv",
+                placeholder="ej. 450 mg/día x 3-6 meses según D/R")
+            ne_pf_pjp = st.text_input("TMP-SMX (Pneumocystis)", key="ne_pf_pjp",
+                placeholder="ej. 80/400 mg c/24h x 6 meses")
+        with cp2:
+            ne_pf_otros = st.text_area("Otras profilaxis", height=60, key="ne_pf_otros",
+                placeholder="Nistatina, IBP, HBPM/ASA, antifúngico, fluconazol...")
+
+        st.divider()
+
+        # ── DIAGNÓSTICOS Y PROBLEMAS ACTIVOS ──────────────────────────────────
+        st.markdown("#### 📋 Diagnósticos y problemas activos")
+        ne_dx_principal = st.text_area("Diagnósticos del día", height=80, key="ne_dx",
+            placeholder="1. Postoperatorio inmediato de trasplante renal de donador vivo\n"
+                        "2. Función retardada del injerto en estudio\n"
+                        "3. Hipertensión arterial controlada\n"
+                        "4. ERC estadio G5 trasplantado")
+        ne_problemas = st.text_area("Eventos / complicaciones del día", height=70, key="ne_prob",
+            placeholder="ej. Pico febril aislado sin foco, hemocultivos pendientes; "
+                        "PA controlada; tolerancia oral aceptada...")
+
+        st.divider()
+
+        # ── PLAN ──────────────────────────────────────────────────────────────
+        st.markdown("#### 🎯 Plan terapéutico del día")
+        ne_plan = st.text_area("Plan", height=140, key="ne_plan",
+            placeholder="1. Continuar IS con tacrolimus, MMF, prednisona\n"
+                        "2. Ajustar tacrolimus según C0 (meta 8-12 ng/mL)\n"
+                        "3. Continuar valganciclovir y TMP-SMX profilácticos\n"
+                        "4. Hidratación 2000 mL/24h\n"
+                        "5. Monitorización Cr, K, Tac C0 mañana\n"
+                        "6. Si Cr no desciende para DPT 4, considerar biopsia\n"
+                        "7. Continuar HBPM profiláctica\n"
+                        "8. Vigilancia infecciones (CVC, urinaria, herida)\n"
+                        "9. Educación al paciente: signos de alarma, adherencia a IS")
+
+        ne_pendientes = st.text_input("Pendientes / por solicitar",
+            placeholder="ej. USG Doppler mañana, niveles Tac C0, EGO control",
+            key="ne_pend")
+
+        st.divider()
+
+        # ── GENERAR PDF ───────────────────────────────────────────────────────
+        if st.button("📄 Generar nota PDF", type="primary", use_container_width=True,
+                      key="btn_gen_evol_tx"):
+            if not ne_nombre:
+                st.warning("El nombre del receptor es obligatorio.")
+            else:
+                try:
+                    import io as _io_ev
+                    from reportlab.lib.pagesizes import letter as _letter_ev
+                    from reportlab.lib.units import cm as _cm_ev
+                    from reportlab.lib.colors import HexColor as _HC_ev, black as _bk_ev
+                    from reportlab.platypus import (SimpleDocTemplate as _SDT_ev,
+                        Paragraph as _Par_ev, Spacer as _Sp_ev, Table as _Tbl_ev,
+                        TableStyle as _TS_ev, HRFlowable as _HR_ev)
+                    from reportlab.lib.styles import ParagraphStyle as _PS_ev
+                    from reportlab.lib.enums import TA_LEFT as _TL_ev, TA_CENTER as _TC_ev
+
+                    _AZUL = _HC_ev("#1E3A8A"); _AZUL2 = _HC_ev("#2563EB")
+                    _GRIS = _HC_ev("#6B7280"); _AZULC = _HC_ev("#EFF6FF")
+
+                    def _P_ev(txt, fs=9, bold=False, color=_bk_ev, align=_TL_ev, sp=2):
+                        return _Par_ev(str(txt) if txt else "",
+                            _PS_ev("s", fontName="Helvetica-Bold" if bold else "Helvetica",
+                                fontSize=fs, textColor=color, alignment=align,
+                                spaceAfter=sp, leading=fs+3))
+
+                    _buf_ev = _io_ev.BytesIO()
+                    _doc_ev = _SDT_ev(_buf_ev, pagesize=_letter_ev,
+                        leftMargin=1.8*_cm_ev, rightMargin=1.8*_cm_ev,
+                        topMargin=1.5*_cm_ev, bottomMargin=1.5*_cm_ev)
+                    _story = []
+
+                    # Header
+                    _dr_n = st.session_state.get("sess_nombre","")
+                    _dr_e = st.session_state.get("sess_especialidad","Nefrología/Trasplante")
+                    _dr_c = st.session_state.get("sess_cedula","")
+                    _dr_i = st.session_state.get("sess_institucion","")
+                    _story.append(_P_ev(_dr_i or "RenalPro · Servicio de Trasplante Renal",
+                                         12, True, _AZUL))
+                    _story.append(_P_ev(f"{_dr_n} · {_dr_e} · Cédula: {_dr_c}", 9, color=_GRIS))
+                    _story.append(_HR_ev(width="100%", thickness=2, color=_AZUL))
+                    _story.append(_Sp_ev(1, 0.3*_cm_ev))
+
+                    # Title
+                    _story.append(_P_ev(f"NOTA DE EVOLUCIÓN POST-TRASPLANTE RENAL — DPT {ne_dpt}",
+                                         12, True, _AZUL, _TC_ev))
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # Receptor
+                    _story.append(_P_ev("RECEPTOR", 10, True, _AZUL))
+                    _story.append(_P_ev(
+                        f"<b>{ne_nombre}</b> · Exp: {ne_exp or '—'} · Edad: {ne_edad or '—'} · "
+                        f"Sexo: {ne_sexo} · Peso: {ne_peso:.1f} kg · Talla: {ne_talla:.0f} cm · "
+                        f"Fecha: {ne_fecha} {ne_hora}", 9))
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # Datos TR
+                    _story.append(_P_ev("DATOS DEL TRASPLANTE", 10, True, _AZUL))
+                    _story.append(_P_ev(
+                        f"Fecha TR: {ne_fecha_tx} · Donador: {ne_donador} · "
+                        f"Inducción: {ne_induccion} ({ne_ind_dosis or '—'})", 9))
+                    _story.append(_P_ev(
+                        f"HLA mismatches: {ne_hla or '—'} · PRA: {ne_pra or '—'} · "
+                        f"DSA: {ne_dsa or '—'} · Crossmatch: {ne_xmatch}", 9))
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # Estado clínico
+                    if ne_subjetivo:
+                        _story.append(_P_ev("S — SUBJETIVO", 10, True, _AZUL))
+                        _story.append(_P_ev(ne_subjetivo, 9))
+                    _story.append(_P_ev("O — SIGNOS VITALES Y EXPLORACIÓN", 10, True, _AZUL))
+                    _vit_str = "  ·  ".join(filter(None, [
+                        f"TA: {ne_ta}" if ne_ta else "",
+                        f"FC: {ne_fc} lpm" if ne_fc else "",
+                        f"FR: {ne_fr} rpm" if ne_fr else "",
+                        f"T°: {ne_temp}°C" if ne_temp else "",
+                        f"SpO₂: {ne_spo2}%" if ne_spo2 else "",
+                        f"EVA: {ne_dol}/10" if ne_dol else "",
+                    ]))
+                    _story.append(_P_ev(_vit_str, 9))
+                    _story.append(_P_ev(
+                        f"Diuresis 24h: {ne_diuresis_24h} mL · Horaria: {ne_diuresis_h:.1f} mL/h · "
+                        f"Balance: {ne_balance:+d} mL", 9))
+                    if ne_ef_gen: _story.append(_P_ev(f"General/CP: {ne_ef_gen}", 9))
+                    if ne_ef_abd: _story.append(_P_ev(f"Abdomen/Injerto: {ne_ef_abd}", 9))
+                    if ne_ef_acc: _story.append(_P_ev(f"Accesos: {ne_ef_acc}", 9))
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # Función del injerto
+                    _story.append(_P_ev("FUNCIÓN DEL INJERTO", 10, True, _AZUL))
+                    _story.append(_P_ev(
+                        f"Cr hoy: {ne_cr_hoy:.2f} mg/dL · Cr ayer: {ne_cr_ayer:.2f} · "
+                        f"ΔCr: {_delta_cr:+.1f}% · BUN: {ne_bun} mg/dL", 9))
+                    _story.append(_P_ev(f"Patrón: {ne_patron_func if False else ne_patron}", 9))
+                    _trr_str = f"TRR hoy: {ne_trr_hoy}"
+                    if "Sí" in ne_trr_hoy:
+                        _trr_str += f" · UF: {ne_uf} mL"
+                    _trr_str += f" · Sesiones acumuladas: {ne_sesiones_total}"
+                    _story.append(_P_ev(_trr_str, 9))
+                    if ne_doppler: _story.append(_P_ev(f"USG Doppler: {ne_doppler}", 9))
+                    if ne_biopsia: _story.append(_P_ev(f"Biopsia: {ne_biopsia}", 9))
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # Labs
+                    _story.append(_P_ev("LABORATORIOS", 10, True, _AZUL))
+                    _story.append(_P_ev(
+                        f"BH — Hb: {ne_hb:.1f} g/dL · Leu: {ne_leu:.1f} · Plt: {ne_plt}", 9))
+                    _story.append(_P_ev(
+                        f"QS/Electrolitos — Na: {ne_na} · K: {ne_k:.1f} · "
+                        f"P: {ne_p:.1f} · Ca: {ne_ca:.1f} · Mg: {ne_mg:.1f}", 9))
+                    _story.append(_P_ev(
+                        f"Tacrolimus C0: <b>{ne_tac_c0:.1f} ng/mL</b> · "
+                        f"CMV: {ne_cmv or 'ND'} · BK: {ne_bk or 'ND'} · "
+                        f"PCR: {ne_pcr or '—'} mg/L", 9))
+                    if ne_uricult: _story.append(_P_ev(f"Urocultivo/EGO: {ne_uricult}", 9))
+                    if ne_otros_labs: _story.append(_P_ev(f"Otros: {ne_otros_labs}", 9))
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # IS y profilaxis
+                    _story.append(_P_ev("INMUNOSUPRESIÓN ACTUAL", 10, True, _AZUL))
+                    _story.append(_P_ev(
+                        f"Tacrolimus: {ne_tac_dosis or '—'} · MMF/MPA: {ne_mmf_dosis or '—'}", 9))
+                    _story.append(_P_ev(
+                        f"Prednisona: {ne_pred or '—'} · Otros: {ne_otros_is or '—'}", 9))
+
+                    _story.append(_P_ev("PROFILAXIS", 10, True, _AZUL))
+                    _story.append(_P_ev(f"Valganciclovir: {ne_pf_cmv or '—'}", 9))
+                    _story.append(_P_ev(f"TMP-SMX: {ne_pf_pjp or '—'}", 9))
+                    if ne_pf_otros: _story.append(_P_ev(f"Otras: {ne_pf_otros}", 9))
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # Dx y plan
+                    _story.append(_P_ev("A — DIAGNÓSTICOS Y PROBLEMAS ACTIVOS", 10, True, _AZUL))
+                    if ne_dx_principal:
+                        _story.append(_P_ev(ne_dx_principal.replace("\n","<br/>"), 9))
+                    if ne_problemas:
+                        _story.append(_P_ev(f"<i>Eventos: {ne_problemas}</i>", 9, color=_GRIS))
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    _story.append(_P_ev("P — PLAN TERAPÉUTICO", 10, True, _AZUL))
+                    if ne_plan:
+                        _story.append(_P_ev(ne_plan.replace("\n","<br/>"), 9))
+                    if ne_pendientes:
+                        _story.append(_P_ev(f"<b>Pendientes:</b> {ne_pendientes}", 9))
+
+                    # Firma
+                    _story.append(_Sp_ev(1, 1.0*_cm_ev))
+                    _story.append(_P_ev("_"*40, 9, align=_TC_ev))
+                    _story.append(_P_ev(_dr_n, 10, bold=True, align=_TC_ev))
+                    _story.append(_P_ev(f"{_dr_e} · Cédula: {_dr_c}", 8, color=_GRIS, align=_TC_ev))
+                    _story.append(_Sp_ev(1, 0.3*_cm_ev))
+                    _story.append(_HR_ev(width="100%", thickness=0.5, color=_AZULC))
+                    _story.append(_P_ev(
+                        f"RenalPro {VERSION} · Nota de evolución post-TR · NOM-004-SSA3-2012 · COFEPRIS",
+                        7, color=_GRIS, align=_TC_ev))
+
+                    _doc_ev.build(_story)
+                    _buf_ev.seek(0)
+                    _pdf_ev = _buf_ev.read()
+                    _safe_ev = "".join(c for c in ne_nombre if c.isalnum() or c==" ")[:18].strip()
+
+                    # Guardar en expediente si hay paciente
+                    _save_msg_ev = ""
+                    if _ne_pid and _DB_ON and _db.db_ok():
+                        try:
+                            import base64 as _b64ev
+                            _db.add_clinical_record(_ne_pid, _user_id(), {
+                                "tipo": "Nota evolución Post-TR",
+                                "titulo": f"Evolución DPT {ne_dpt} — {ne_patron[:40]}",
+                                "fecha_consulta": ne_fecha,
+                                "resumen": ne_dx_principal[:500] if ne_dx_principal else "",
+                                "notas": ne_problemas[:300] if ne_problemas else "",
+                                "datos": {
+                                    "dpt": ne_dpt,
+                                    "fecha_tx": str(ne_fecha_tx),
+                                    "donador": ne_donador,
+                                    "induccion": ne_induccion,
+                                    "cr_hoy": ne_cr_hoy, "cr_ayer": ne_cr_ayer,
+                                    "delta_cr_pct": _delta_cr,
+                                    "patron_func": ne_patron,
+                                    "tac_c0": ne_tac_c0,
+                                    "balance_hidrico": ne_balance,
+                                    "diuresis_24h": ne_diuresis_24h,
+                                    "trr_hoy": ne_trr_hoy,
+                                    "sesiones_acum": ne_sesiones_total,
+                                    "pdf_b64": _b64ev.b64encode(_pdf_ev).decode("ascii"),
+                                },
+                            })
+                            _clear_cache()
+                            _save_msg_ev = " · 💾 Guardada en expediente"
+                        except AttributeError:
+                            _save_msg_ev = " · ⚠️ No se guardó (db.py desactualizado)"
+                        except Exception as _se_ev:
+                            _save_msg_ev = f" · ⚠️ No se guardó ({_se_ev})"
+
+                    st.download_button("⬇️ Descargar nota PDF", data=_pdf_ev,
+                        file_name=f"NotaEvol_DPT{ne_dpt}_{_safe_ev}_{ne_fecha}.pdf",
+                        mime="application/pdf", key="btn_dl_evol_tx")
+                    st.success(f"✅ Nota generada · DPT {ne_dpt} · Patrón: {ne_patron[:30]}{_save_msg_ev}")
+                except Exception as _e_ev:
+                    st.error(f"Error al generar PDF: {_e_ev}")
 
 st.divider()
 st.caption(
