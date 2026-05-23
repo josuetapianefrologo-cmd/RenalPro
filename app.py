@@ -10741,11 +10741,24 @@ Inducción: {induccion_bg}
 
                     rc1, rc2, rc3 = st.columns(3)
                     with rc1:
-                        if st.button("📄 Generar receta", key=f"receta_{rec['id']}", use_container_width=True):
-                            st.session_state["receta_pac"] = sel_exp
-                            st.session_state["receta_rec"] = rec
-                            st.session_state["nav_sel"]    = "receta"
-                            st.rerun()
+                        if rec.get("tipo") == "Nota evolución Post-TR":
+                            if st.button("✏️ Editar nota", key=f"edit_nota_evol_{rec['id']}",
+                                          use_container_width=True):
+                                st.session_state["ne_edit_rec_id"] = rec["id"]
+                                st.session_state["nav_sel"] = "nota_evol_tx"
+                                # Limpiar campos previos del formulario
+                                for _k in list(st.session_state.keys()):
+                                    if _k.startswith("ne_") and _k != "ne_edit_rec_id":
+                                        st.session_state.pop(_k, None)
+                                st.session_state.pop("_ne_antecedentes_list", None)
+                                st.session_state.pop("_ne_dx_list", None)
+                                st.rerun()
+                        else:
+                            if st.button("📄 Generar receta", key=f"receta_{rec['id']}", use_container_width=True):
+                                st.session_state["receta_pac"] = sel_exp
+                                st.session_state["receta_rec"] = rec
+                                st.session_state["nav_sel"]    = "receta"
+                                st.rerun()
                     with rc2:
                         if st.button("🖨️ Imprimir nota", key=f"print_rec_{rec['id']}", use_container_width=True):
                             # ── Receta médica con PDF guardado: descarga el ORIGINAL (formato bonito) ──
@@ -18331,25 +18344,71 @@ COVID-19: Anti-spike IgG a las 4–8 semanas
 
 elif nav == "nota_evol_tx":
     # ══════════════════════════════════════════════════════════════════════════
-    # NOTA DE EVOLUCIÓN POST-TRASPLANTE RENAL (primeras 2 semanas)
-    # Para uso intrahospitalario — pacientes con función inmediata o retardada
+    # NOTA DE EVOLUCIÓN POST-TRASPLANTE RENAL — v2 (rediseñada)
+    # • Pre-carga datos del TR y antecedentes desde la última nota del paciente
+    # • DPT auto-incremental · gráficas de tendencia (Cr, Tac C0, balance)
+    # • Diagnósticos del día y antecedentes como listas dinámicas
+    # • Plan terapéutico estructurado por 8 rubros
+    # • Edición de notas previas con reemplazo del registro
     # ══════════════════════════════════════════════════════════════════════════
     st.subheader("🩺 Nota de Evolución Post-Trasplante Renal")
-    st.caption("Nota diaria para paciente hospitalizado en las primeras 2 semanas post-TR. "
-               "Incluye función retardada de injerto (FRI) y normoevolutivos.")
+    st.caption("Nota diaria del paciente hospitalizado en las primeras semanas post-TR · "
+               "FRI / normoevolutivo · Pre-carga datos previos y grafica tendencia")
 
     if not _is_auth():
         st.warning("Inicia sesión para crear notas.")
     else:
         from datetime import date as _date_evo, datetime as _dt_evo
+        import json as _json_evo
 
-        # ── PACIENTE ──────────────────────────────────────────────────────────
+        # ── DETECTAR MODO: nueva o edición ───────────────────────────────────
+        _edit_rec_id = st.session_state.get("ne_edit_rec_id")
+        _edit_data = None
+        if _edit_rec_id:
+            # Modo edición — cargar datos del registro
+            try:
+                uid_ne_e = _user_id()
+                for _p in (_cached_patients(uid_ne_e) or []):
+                    for _r in (_cached_clinical_records(_p["id"]) or []):
+                        if _r.get("id") == _edit_rec_id and _r.get("tipo") == "Nota evolución Post-TR":
+                            _edit_data = _r
+                            st.session_state["_ne_edit_paciente"] = _p
+                            break
+                    if _edit_data: break
+            except Exception:
+                pass
+            if _edit_data:
+                st.info(f"✏️ **Modo edición** · Nota del {_edit_data.get('fecha_consulta','—')} "
+                        f"· DPT {(_edit_data.get('datos_json') or {}).get('dpt','?') if isinstance(_edit_data.get('datos_json'), dict) else '?'}")
+                _b_canc1, _b_canc2 = st.columns([1,3])
+                with _b_canc1:
+                    if st.button("✖️ Cancelar edición", key="btn_ne_cancel_edit"):
+                        st.session_state.pop("ne_edit_rec_id", None)
+                        st.session_state.pop("_ne_edit_paciente", None)
+                        # Limpiar campos
+                        for k in list(st.session_state.keys()):
+                            if k.startswith("ne_"):
+                                st.session_state.pop(k, None)
+                        st.rerun()
+                # Cargar datos previos a session_state si recién entramos a edición
+                _datos_ed = _edit_data.get("datos_json") or _edit_data.get("datos") or {}
+                if isinstance(_datos_ed, str):
+                    try: _datos_ed = _json_evo.loads(_datos_ed)
+                    except Exception: _datos_ed = {}
+
+        # ── IDENTIFICAR PACIENTE Y RECUPERAR NOTAS PREVIAS ───────────────────
         st.markdown("#### 👤 Receptor")
         _ne_pmode = st.radio("", ["🔍 Existente", "✏️ Sin paciente (manual)"],
-                             horizontal=True, key="ne_pmode")
+                             horizontal=True, key="ne_pmode",
+                             disabled=bool(_edit_rec_id))
         _ne_pac = {}
         _ne_pid = None
-        if "Existente" in _ne_pmode and _user_id() and _DB_ON and _db.db_ok():
+        _ne_prev_notas = []  # Notas previas del paciente (Post-TR)
+
+        if _edit_data and st.session_state.get("_ne_edit_paciente"):
+            _ne_pac = st.session_state["_ne_edit_paciente"]
+            _ne_pid = _ne_pac.get("id")
+        elif "Existente" in _ne_pmode and _user_id() and _DB_ON and _db.db_ok():
             try:
                 _ne_pacs = _cached_patients(_user_id()) or []
                 _ne_q = st.text_input("Buscar", key="ne_buscar",
@@ -18364,6 +18423,130 @@ elif nav == "nota_evol_tx":
             except Exception as _ee:
                 st.error(f"Error: {_ee}")
 
+        # Recuperar notas previas Post-TR del paciente (para continuidad y gráficas)
+        if _ne_pid and _DB_ON and _db.db_ok():
+            try:
+                _all_recs = _cached_clinical_records(_ne_pid) or []
+                _ne_prev_notas = [r for r in _all_recs
+                                  if r.get("tipo") == "Nota evolución Post-TR"
+                                  and r.get("id") != _edit_rec_id]
+                _ne_prev_notas.sort(key=lambda r: str(r.get("created_at","")))
+            except Exception:
+                _ne_prev_notas = []
+
+        # Si hay notas previas Y no estamos editando, ofrecer pre-cargar
+        _last_note = None
+        if _ne_prev_notas and not _edit_data:
+            _last_note = _ne_prev_notas[-1]
+            _last_dpt = "?"
+            _last_datos = _last_note.get("datos_json") or _last_note.get("datos") or {}
+            if isinstance(_last_datos, str):
+                try: _last_datos = _json_evo.loads(_last_datos)
+                except Exception: _last_datos = {}
+            _last_dpt = _last_datos.get("dpt","?")
+            _sig_paciente = f"ne_pac_loaded_{_ne_pid}"
+            if st.session_state.get(_sig_paciente) != _ne_pid:
+                # Pre-cargar campos que NO cambian del último registro
+                st.session_state["ne_fecha_tx"] = _last_datos.get("fecha_tx","")
+                st.session_state["ne_donador"]   = _last_datos.get("donador","Vivo relacionado")
+                st.session_state["ne_induccion"] = _last_datos.get("induccion","Basiliximab")
+                st.session_state["ne_ind_dosis"] = _last_datos.get("ind_dosis","")
+                st.session_state["ne_hla"]       = _last_datos.get("hla","")
+                st.session_state["ne_pra_I"]     = _last_datos.get("pra_I","")
+                st.session_state["ne_pra_II"]    = _last_datos.get("pra_II","")
+                st.session_state["ne_dsa"]       = _last_datos.get("dsa","")
+                st.session_state["ne_mica"]      = _last_datos.get("mica","")
+                st.session_state["ne_xmatch"]    = _last_datos.get("xmatch","Negativo")
+                st.session_state["ne_kdpi"]      = _last_datos.get("kdpi","")
+                st.session_state["ne_isq_fria_h"]= _last_datos.get("isq_fria_h",0)
+                st.session_state["ne_isq_fria_m"]= _last_datos.get("isq_fria_m",0)
+                st.session_state["ne_isq_cal"]   = _last_datos.get("isq_caliente_min",0)
+                st.session_state["ne_dur_cx"]    = _last_datos.get("dur_cx","")
+                st.session_state["ne_uresis_temp"]= _last_datos.get("uresis_temp","Sí")
+                st.session_state["ne_area"]      = _last_datos.get("area","UCIA")
+                st.session_state["ne_cama"]      = _last_datos.get("cama","")
+                # Antecedentes
+                _ant_list = _last_datos.get("antecedentes", [])
+                if isinstance(_ant_list, list):
+                    st.session_state["_ne_antecedentes_list"] = list(_ant_list)
+                # DPT auto-incremental
+                try:
+                    st.session_state["ne_dpt"] = int(_last_dpt) + 1
+                except Exception:
+                    pass
+                # Cr previa para mostrar como "ayer"
+                _last_cr = _last_datos.get("cr_hoy")
+                if _last_cr:
+                    try: st.session_state["ne_cr_ayer"] = float(_last_cr)
+                    except Exception: pass
+                st.session_state[_sig_paciente] = _ne_pid
+            st.success(f"📚 **Continuidad activada** · {len(_ne_prev_notas)} nota(s) previa(s) · "
+                       f"Última: DPT {_last_dpt} · DPT actual auto-llenado a {st.session_state.get('ne_dpt', _last_dpt)}")
+
+        # ── GRÁFICAS DE TENDENCIA (si hay ≥2 notas previas) ──────────────────
+        if len(_ne_prev_notas) >= 2:
+            with st.expander(f"📊 Tendencia ({len(_ne_prev_notas)} nota(s) previa(s))", expanded=False):
+                try:
+                    import pandas as _pd_evo
+                    _trend = []
+                    for r in _ne_prev_notas:
+                        d = r.get("datos_json") or r.get("datos") or {}
+                        if isinstance(d, str):
+                            try: d = _json_evo.loads(d)
+                            except Exception: d = {}
+                        _trend.append({
+                            "DPT": d.get("dpt", 0),
+                            "Cr": d.get("cr_hoy", None),
+                            "Tac C0": d.get("tac_c0", None),
+                            "Balance": d.get("balance_hidrico", None),
+                            "Diuresis 24h": d.get("diuresis_24h", None),
+                        })
+                    _df_trend = _pd_evo.DataFrame(_trend).sort_values("DPT").set_index("DPT")
+                    _gc1, _gc2 = st.columns(2)
+                    with _gc1:
+                        st.caption("**Creatinina (mg/dL) por DPT**")
+                        if _df_trend["Cr"].notna().sum() > 0:
+                            st.line_chart(_df_trend["Cr"])
+                        st.caption("**Tacrolimus C0 (ng/mL) por DPT**")
+                        if _df_trend["Tac C0"].notna().sum() > 0:
+                            st.line_chart(_df_trend["Tac C0"])
+                    with _gc2:
+                        st.caption("**Balance hídrico (mL) por DPT**")
+                        if _df_trend["Balance"].notna().sum() > 0:
+                            st.bar_chart(_df_trend["Balance"])
+                        st.caption("**Diuresis 24h (mL) por DPT**")
+                        if _df_trend["Diuresis 24h"].notna().sum() > 0:
+                            st.line_chart(_df_trend["Diuresis 24h"])
+                    st.dataframe(_df_trend, use_container_width=True)
+                except Exception as _eg:
+                    st.caption(f"No se pudo graficar: {_eg}")
+
+        # Helpers para listas dinámicas
+        def _ne_list_widget(label, list_key, placeholder=""):
+            """Widget de lista dinámica: input + botón ➕, lista con 🗑️ por item."""
+            if list_key not in st.session_state:
+                st.session_state[list_key] = []
+            st.markdown(f"**{label}**")
+            _lc1, _lc2 = st.columns([5, 1])
+            with _lc1:
+                _new_val = st.text_input(" ", placeholder=placeholder,
+                                          key=f"{list_key}_input", label_visibility="collapsed")
+            with _lc2:
+                if st.button("➕ Agregar", key=f"{list_key}_btn", use_container_width=True):
+                    if _new_val.strip():
+                        st.session_state[list_key].append(_new_val.strip())
+                        st.session_state[f"{list_key}_input"] = ""
+                        st.rerun()
+            for _i, _item in enumerate(st.session_state[list_key]):
+                _ic1, _ic2 = st.columns([10, 1])
+                with _ic1:
+                    st.markdown(f"&nbsp;&nbsp;**{_i+1}.** {_item}", unsafe_allow_html=True)
+                with _ic2:
+                    if st.button("🗑️", key=f"{list_key}_del_{_i}"):
+                        st.session_state[list_key].pop(_i)
+                        st.rerun()
+
+        # Datos del receptor (campos principales)
         c1, c2, c3 = st.columns(3)
         with c1:
             ne_nombre = st.text_input("Nombre del receptor *", key="ne_nombre",
@@ -18383,35 +18566,91 @@ elif nav == "nota_evol_tx":
                                       key="ne_fecha")
             ne_hora  = st.time_input("Hora", value=_dt_evo.now().time().replace(microsecond=0),
                                       key="ne_hora")
-            ne_dpt   = st.number_input("Día post-TR (DPT) *", 0, 30, 1, 1, key="ne_dpt",
-                                        help="Días desde el trasplante")
+            ne_dpt   = st.number_input("Día post-TR (DPT) *", 0, 60, 1, 1, key="ne_dpt",
+                                        help="Días desde el trasplante · Se auto-incrementa con notas previas")
 
         st.divider()
 
-        # ── DATOS DEL TRASPLANTE ──────────────────────────────────────────────
+        # ── UBICACIÓN ────────────────────────────────────────────────────────
+        st.markdown("#### 🛏️ Ubicación del paciente")
+        _u1, _u2 = st.columns(2)
+        with _u1:
+            ne_area = st.selectbox("Área de hospitalización",
+                ["UCIA (Unidad Cuidados Intensivos Adultos)",
+                 "UTI (Unidad Terapia Intermedia)",
+                 "Hospitalización general",
+                 "Aislado de unidad",
+                 "Otros"], key="ne_area")
+        with _u2:
+            ne_cama = st.text_input("Cama / Cubículo", key="ne_cama",
+                                     placeholder="ej. 7 · Aislado 3")
+
+        st.divider()
+
+        # ── DATOS DEL TRASPLANTE ─────────────────────────────────────────────
         st.markdown("#### 🫘 Datos del Trasplante")
         c4, c5 = st.columns(2)
         with c4:
-            ne_fecha_tx = st.date_input("Fecha del TR", value=_date_evo.today(),
-                                         key="ne_fecha_tx")
+            ne_fecha_tx = st.text_input("Fecha del TR", key="ne_fecha_tx",
+                                         placeholder="2026-05-19")
             ne_donador  = st.selectbox("Tipo de donador",
                 ["Vivo relacionado","Vivo no relacionado","Fallecido (DBD)","Fallecido (DCD)"],
                 key="ne_donador")
+            # KDPI solo aplica para donador fallecido
+            if "Fallecido" in ne_donador:
+                ne_kdpi = st.text_input("KDPI (%)", key="ne_kdpi",
+                    placeholder="ej. 35% (menor = mejor calidad del injerto)")
+            else:
+                ne_kdpi = ""
+                st.caption("ℹ️ KDPI no aplica para donador vivo")
             ne_induccion = st.selectbox("Inducción usada",
                 ["Basiliximab","Timoglobulina","Ninguna","Alemtuzumab","Otra"],
                 key="ne_induccion")
             ne_ind_dosis = st.text_input("Dosis acumulada de inducción", key="ne_ind_dosis",
                 placeholder="ej. Basiliximab 40 mg total · Timoglobulina 4.5 mg/kg total")
         with c5:
-            ne_hla = st.text_input("HLA mismatches", key="ne_hla", placeholder="ej. 3/6")
-            ne_pra = st.text_input("PRA pre-TR (%)", key="ne_pra", placeholder="ej. 25%")
-            ne_dsa = st.text_input("DSA pre-TR", key="ne_dsa", placeholder="ej. Negativos / MFI 1500 anti-DQ7")
+            ne_hla = st.text_input("HLA mismatches", key="ne_hla", placeholder="ej. 3/6 (A:1 B:1 DR:1)")
+            _pra1, _pra2 = st.columns(2)
+            with _pra1:
+                ne_pra_I  = st.text_input("PRA Clase I (%)", key="ne_pra_I",
+                                           placeholder="ej. 15%")
+            with _pra2:
+                ne_pra_II = st.text_input("PRA Clase II (%)", key="ne_pra_II",
+                                           placeholder="ej. 25%")
+            ne_dsa = st.text_input("DSA pre-TR", key="ne_dsa",
+                                    placeholder="ej. Negativos / MFI 1500 anti-DQ7")
+            ne_mica = st.text_input("Anticuerpos anti-MICA", key="ne_mica",
+                                     placeholder="ej. Negativos · Positivo MICA-008")
             ne_xmatch = st.selectbox("Crossmatch", ["Negativo","Positivo","No realizado"],
                                       key="ne_xmatch")
 
+        # Tiempos quirúrgicos
+        st.markdown("**⏱️ Tiempos quirúrgicos**")
+        _t1, _t2, _t3, _t4 = st.columns(4)
+        with _t1:
+            ne_isq_fria_h = st.number_input("Isq. fría (horas)", 0, 48, 0, 1, key="ne_isq_fria_h")
+        with _t2:
+            ne_isq_fria_m = st.number_input("Isq. fría (min)", 0, 59, 0, 1, key="ne_isq_fria_m")
+        with _t3:
+            ne_isq_cal = st.number_input("Isq. caliente (min)", 0, 240, 0, 1, key="ne_isq_cal")
+        with _t4:
+            ne_dur_cx = st.text_input("Duración cx (h:min)", key="ne_dur_cx",
+                                       placeholder="ej. 3:45")
+        ne_uresis_temp = st.radio("¿Uresis temprana post-quirúrgica?",
+            ["Sí","No","Pendiente"], horizontal=True, key="ne_uresis_temp")
+
         st.divider()
 
-        # ── ESTADO CLÍNICO DEL DÍA ────────────────────────────────────────────
+        # ── ANTECEDENTES DEL RECEPTOR ────────────────────────────────────────
+        st.markdown("#### 📜 Antecedentes del Receptor")
+        st.caption("Causa de ERC · Comorbilidades · Cirugías previas · Alergias · "
+                   "Esta sección se pre-carga automáticamente en notas siguientes")
+        _ne_list_widget("Antecedentes (uno por uno)", "_ne_antecedentes_list",
+                         placeholder="ej. DM tipo 2 desde 2010 · HTA · Causa de ERC: nefropatía diabética")
+
+        st.divider()
+
+        # ── ESTADO CLÍNICO DEL DÍA ───────────────────────────────────────────
         st.markdown("#### 🩺 Estado clínico del día")
         ne_subjetivo = st.text_area("Subjetivo / queja principal", height=70,
             key="ne_subj", placeholder="Estado general, síntomas, dolor, apetito, evacuaciones, sueño...")
@@ -18430,20 +18669,28 @@ elif nav == "nota_evol_tx":
                                                key="ne_diur24")
             ne_diuresis_h = st.number_input("Diuresis horaria (mL/h)", 0.0, 1000.0, 60.0, 1.0,
                                              key="ne_diur_h")
-        c_bal1, c_bal2 = st.columns(2)
-        with c_bal1:
+        # Balance hídrico con Blake
+        st.markdown("**⚖️ Balance hídrico 24h**")
+        _bh1, _bh2, _bh3 = st.columns(3)
+        with _bh1:
             ne_ingresos = st.number_input("Ingresos 24h (mL)", 0, 10000, 2000, 50,
                                            key="ne_ingresos")
-        with c_bal2:
+        with _bh2:
             ne_egresos = st.number_input("Egresos 24h (mL)", 0, 10000, 1800, 50,
-                                          key="ne_egresos")
-        ne_balance = ne_ingresos - ne_egresos
-        st.caption(f"⚖️ **Balance hídrico 24h**: {ne_balance:+d} mL "
+                                          key="ne_egresos",
+                                          help="Diuresis + pérdidas insensibles")
+        with _bh3:
+            ne_drenaje_blake = st.number_input("Drenaje Blake (mL)", 0, 5000, 0, 10,
+                                                key="ne_blake",
+                                                help="Se suma a egresos para el balance")
+        ne_balance = ne_ingresos - ne_egresos - ne_drenaje_blake
+        st.caption(f"📐 **Balance**: {ne_ingresos} − ({ne_egresos} + {ne_drenaje_blake}) = "
+                   f"**{ne_balance:+d} mL** "
                    f"{'(positivo)' if ne_balance > 0 else '(negativo)' if ne_balance < 0 else '(neutro)'}")
 
         st.divider()
 
-        # ── EXPLORACIÓN FÍSICA ────────────────────────────────────────────────
+        # ── EXPLORACIÓN FÍSICA ───────────────────────────────────────────────
         st.markdown("#### 🫁 Exploración física")
         ne_ef_gen  = st.text_area("General / cardiopulmonar", height=60, key="ne_ef_gen",
             placeholder="Consciente, orientado, hidratado. Ruidos cardíacos rítmicos sin soplos. "
@@ -18456,14 +18703,16 @@ elif nav == "nota_evol_tx":
 
         st.divider()
 
-        # ── FUNCIÓN DEL INJERTO ───────────────────────────────────────────────
+        # ── FUNCIÓN DEL INJERTO ──────────────────────────────────────────────
         st.markdown("#### 🫘 Función del injerto")
         cf1, cf2 = st.columns(2)
         with cf1:
             ne_cr_hoy = st.number_input("Cr hoy (mg/dL)", 0.0, 20.0, 1.5, 0.05, key="ne_cr_hoy")
-            ne_cr_ayer = st.number_input("Cr ayer (mg/dL)", 0.0, 20.0, 1.6, 0.05, key="ne_cr_ayer")
+            _cr_ayer_default = float(st.session_state.get("ne_cr_ayer", 1.6))
+            ne_cr_ayer = st.number_input("Cr ayer (mg/dL)", 0.0, 20.0, _cr_ayer_default, 0.05, key="ne_cr_ayer")
             _delta_cr = ((ne_cr_hoy - ne_cr_ayer) / ne_cr_ayer * 100) if ne_cr_ayer > 0 else 0
-            st.caption(f"📉 **ΔCr** vs ayer: {_delta_cr:+.1f}%")
+            _trend_emoji = "🟢" if _delta_cr < 0 else "🔴" if _delta_cr > 5 else "🟡"
+            st.caption(f"{_trend_emoji} **ΔCr** vs ayer: {_delta_cr:+.1f}%")
             ne_bun = st.number_input("BUN (mg/dL)", 0, 200, 30, 1, key="ne_bun")
         with cf2:
             ne_patron = st.selectbox("Patrón de función", [
@@ -18474,6 +18723,7 @@ elif nav == "nota_evol_tx":
             ], key="ne_patron_func")
             ne_trr_hoy = st.selectbox("¿TRR hoy?", ["No","Sí — HD","Sí — DP","Sí — TRRC"],
                                        key="ne_trr_hoy")
+            ne_uf = 0
             if "Sí" in ne_trr_hoy:
                 ne_uf = st.number_input("UF removida hoy (mL)", 0, 6000, 1000, 100,
                                          key="ne_uf_trr")
@@ -18489,7 +18739,7 @@ elif nav == "nota_evol_tx":
 
         st.divider()
 
-        # ── LABORATORIOS ──────────────────────────────────────────────────────
+        # ── LABORATORIOS ─────────────────────────────────────────────────────
         st.markdown("#### 🧪 Laboratorios del día")
         cl1, cl2, cl3 = st.columns(3)
         with cl1:
@@ -18508,6 +18758,15 @@ elif nav == "nota_evol_tx":
             st.markdown("**IS / Virales**")
             ne_tac_c0 = st.number_input("Tacrolimus C0 (ng/mL)", 0.0, 50.0, 9.0, 0.1, key="ne_tac",
                 help="Meta primer mes: 8–12 ng/mL · Mes 2–6: 6–10 · >6m: 5–8")
+            # Badge visual del Tac
+            if 8 <= ne_tac_c0 <= 12:
+                st.caption("🟢 En meta primer mes")
+            elif 6 <= ne_tac_c0 < 8 or 12 < ne_tac_c0 <= 15:
+                st.caption("🟡 Fuera de meta — considerar ajuste")
+            elif ne_tac_c0 > 15:
+                st.caption("🔴 Nivel tóxico — reducir dosis")
+            else:
+                st.caption("🟡 Subterapéutico — considerar aumentar")
             ne_cmv  = st.text_input("CMV PCR", key="ne_cmv", placeholder="ej. ND · 250 cp/mL")
             ne_bk   = st.text_input("BK PCR (>día 14)", key="ne_bk", placeholder="ej. ND · 2000 cp/mL")
             ne_pcr  = st.text_input("PCR (mg/L)", key="ne_pcr_lab", placeholder="ej. 12")
@@ -18520,7 +18779,7 @@ elif nav == "nota_evol_tx":
 
         st.divider()
 
-        # ── INMUNOSUPRESIÓN ACTUAL ────────────────────────────────────────────
+        # ── INMUNOSUPRESIÓN ──────────────────────────────────────────────────
         st.markdown("#### 🛡️ Inmunosupresión actual")
         ci1, ci2 = st.columns(2)
         with ci1:
@@ -18534,9 +18793,18 @@ elif nav == "nota_evol_tx":
             ne_otros_is = st.text_input("Otros IS", key="ne_otros_is",
                 placeholder="ej. Rituximab 1g días 0 y 15 si grupo ABO incompatible")
 
+        # Bolos de metilprednisolona
+        st.markdown("**💉 Bolos de metilprednisolona**")
+        _b1, _b2 = st.columns(2)
+        with _b1:
+            ne_mp_bolos = st.number_input("N° de bolos acumulados", 0, 20, 0, 1, key="ne_mp_bolos")
+        with _b2:
+            ne_mp_dosis = st.text_input("Dosis (mg / bolo)", key="ne_mp_dosis",
+                placeholder="ej. 500 mg/día x 3 días")
+
         st.divider()
 
-        # ── PROFILAXIS ────────────────────────────────────────────────────────
+        # ── PROFILAXIS ───────────────────────────────────────────────────────
         st.markdown("#### 💊 Profilaxis activas")
         cp1, cp2 = st.columns(2)
         with cp1:
@@ -18548,239 +18816,573 @@ elif nav == "nota_evol_tx":
             ne_pf_otros = st.text_area("Otras profilaxis", height=60, key="ne_pf_otros",
                 placeholder="Nistatina, IBP, HBPM/ASA, antifúngico, fluconazol...")
 
+        # Profilaxis antibiótica perioperatoria
+        st.markdown("**🦠 Profilaxis antibiótica perioperatoria**")
+        _a1, _a2, _a3 = st.columns(3)
+        with _a1:
+            ne_atb_pre = st.selectbox("¿Se dio?", ["Sí","No","No documentado"], key="ne_atb_pre")
+        with _a2:
+            ne_atb_esquema = st.text_input("Esquema usado", key="ne_atb_esquema",
+                placeholder="ej. Cefazolina 2g IV pre + c/8h x 24h")
+        with _a3:
+            ne_atb_continua = st.selectbox("¿Continúa?", ["No","Sí","Sustituida"], key="ne_atb_continua")
+
         st.divider()
 
-        # ── DIAGNÓSTICOS Y PROBLEMAS ACTIVOS ──────────────────────────────────
-        st.markdown("#### 📋 Diagnósticos y problemas activos")
-        ne_dx_principal = st.text_area("Diagnósticos del día", height=80, key="ne_dx",
-            placeholder="1. Postoperatorio inmediato de trasplante renal de donador vivo\n"
-                        "2. Función retardada del injerto en estudio\n"
-                        "3. Hipertensión arterial controlada\n"
-                        "4. ERC estadio G5 trasplantado")
+        # ── DIAGNÓSTICOS DEL DÍA (lista dinámica) ────────────────────────────
+        st.markdown("#### 📋 Diagnósticos del día")
+        _ne_list_widget("Diagnósticos activos (uno por uno)", "_ne_dx_list",
+                         placeholder="ej. Postoperatorio inmediato de TR de donador vivo")
+
         ne_problemas = st.text_area("Eventos / complicaciones del día", height=70, key="ne_prob",
             placeholder="ej. Pico febril aislado sin foco, hemocultivos pendientes; "
                         "PA controlada; tolerancia oral aceptada...")
 
         st.divider()
 
-        # ── PLAN ──────────────────────────────────────────────────────────────
+        # ── PLAN TERAPÉUTICO POR RUBROS ──────────────────────────────────────
         st.markdown("#### 🎯 Plan terapéutico del día")
-        ne_plan = st.text_area("Plan", height=140, key="ne_plan",
-            placeholder="1. Continuar IS con tacrolimus, MMF, prednisona\n"
-                        "2. Ajustar tacrolimus según C0 (meta 8-12 ng/mL)\n"
-                        "3. Continuar valganciclovir y TMP-SMX profilácticos\n"
-                        "4. Hidratación 2000 mL/24h\n"
-                        "5. Monitorización Cr, K, Tac C0 mañana\n"
-                        "6. Si Cr no desciende para DPT 4, considerar biopsia\n"
-                        "7. Continuar HBPM profiláctica\n"
-                        "8. Vigilancia infecciones (CVC, urinaria, herida)\n"
-                        "9. Educación al paciente: signos de alarma, adherencia a IS")
-
-        ne_pendientes = st.text_input("Pendientes / por solicitar",
-            placeholder="ej. USG Doppler mañana, niveles Tac C0, EGO control",
+        _pl_keys = [
+            ("🛡️ Inmunosupresión", "ne_pl_is",
+             "ej. Continuar tacrolimus 4 mg c/12h, MMF 1g c/12h, prednisona 30 mg/día"),
+            ("💊 Profilaxis infecciosa", "ne_pl_pf",
+             "ej. Mantener TMP-SMX, valganciclovir, nistatina"),
+            ("⚖️ Balance hídrico / hidratación", "ne_pl_bh",
+             "ej. Hidratación 2000 mL/24h, incrementar VO si tolera, vigilar balance"),
+            ("🧪 Laboratorios a solicitar", "ne_pl_lab",
+             "ej. Mañana BH, QS, electrolitos, Tac C0, EGO, urocultivo control"),
+            ("🍽️ Dieta", "ne_pl_dieta",
+             "ej. Dieta para trasplantado, baja carga bacteriana, hiposódica, fraccionada"),
+            ("🔪 Vigilancia quirúrgica", "ne_pl_qx",
+             "ej. Control herida y drenaje Blake, valorar retiro mañana, retiro sonda Foley"),
+            ("❤️ Vigilancia cardiovascular", "ne_pl_cv",
+             "ej. Vigilar TA, ajustar antihipertensivo, control de edemas"),
+            ("📌 Otros / educación", "ne_pl_otros",
+             "ej. Educación al paciente sobre adherencia a IS, signos de alarma, "
+             "movilización temprana, fisioterapia respiratoria"),
+        ]
+        _ne_plan = {}
+        for _lbl, _key, _ph in _pl_keys:
+            _ne_plan[_key] = st.text_area(_lbl, height=60, key=_key, placeholder=_ph)
+        ne_pendientes = st.text_input("📌 Pendientes / por solicitar",
+            placeholder="ej. USG Doppler mañana, niveles Tac C0",
             key="ne_pend")
 
         st.divider()
 
-        # ── GENERAR PDF ───────────────────────────────────────────────────────
-        if st.button("📄 Generar nota PDF", type="primary", use_container_width=True,
+        # ── GENERAR PDF ──────────────────────────────────────────────────────
+        _btn_label = "💾 Actualizar nota" if _edit_data else "📄 Generar nota PDF"
+        if st.button(_btn_label, type="primary", use_container_width=True,
                       key="btn_gen_evol_tx"):
             if not ne_nombre:
                 st.warning("El nombre del receptor es obligatorio.")
             else:
                 try:
                     import io as _io_ev
+                    import base64 as _b64ev
                     from reportlab.lib.pagesizes import letter as _letter_ev
                     from reportlab.lib.units import cm as _cm_ev
-                    from reportlab.lib.colors import HexColor as _HC_ev, black as _bk_ev
+                    from reportlab.lib.colors import HexColor as _HC_ev, black as _bk_ev, white as _wh_ev
                     from reportlab.platypus import (SimpleDocTemplate as _SDT_ev,
                         Paragraph as _Par_ev, Spacer as _Sp_ev, Table as _Tbl_ev,
-                        TableStyle as _TS_ev, HRFlowable as _HR_ev)
+                        TableStyle as _TS_ev, HRFlowable as _HR_ev,
+                        Image as _Img_ev, PageBreak as _PB_ev)
                     from reportlab.lib.styles import ParagraphStyle as _PS_ev
-                    from reportlab.lib.enums import TA_LEFT as _TL_ev, TA_CENTER as _TC_ev
+                    from reportlab.lib.enums import TA_LEFT as _TL_ev, TA_CENTER as _TC_ev, TA_RIGHT as _TR_ev
+                    from reportlab.pdfgen import canvas as _rlcanv_ev
 
-                    _AZUL = _HC_ev("#1E3A8A"); _AZUL2 = _HC_ev("#2563EB")
-                    _GRIS = _HC_ev("#6B7280"); _AZULC = _HC_ev("#EFF6FF")
+                    AZ1 = _HC_ev("#1E3A8A"); AZ2 = _HC_ev("#2563EB")
+                    AZC = _HC_ev("#EFF6FF"); GR  = _HC_ev("#6B7280")
+                    GRL = _HC_ev("#F8FAFC"); AZM = _HC_ev("#BFDBFE")
+                    VRD = _HC_ev("#16A34A"); ROJ = _HC_ev("#DC2626")
+                    AMA = _HC_ev("#CA8A04")
 
-                    def _P_ev(txt, fs=9, bold=False, color=_bk_ev, align=_TL_ev, sp=2):
-                        return _Par_ev(str(txt) if txt else "",
+                    def _P(txt, fs=9, bold=False, color=_bk_ev, align=_TL_ev, sp=2):
+                        return _Par_ev(str(txt) if txt is not None else "",
                             _PS_ev("s", fontName="Helvetica-Bold" if bold else "Helvetica",
                                 fontSize=fs, textColor=color, alignment=align,
                                 spaceAfter=sp, leading=fs+3))
 
-                    _buf_ev = _io_ev.BytesIO()
-                    _doc_ev = _SDT_ev(_buf_ev, pagesize=_letter_ev,
-                        leftMargin=1.8*_cm_ev, rightMargin=1.8*_cm_ev,
-                        topMargin=1.5*_cm_ev, bottomMargin=1.5*_cm_ev)
+                    _buf = _io_ev.BytesIO()
+                    _doc = _SDT_ev(_buf, pagesize=_letter_ev,
+                        leftMargin=1.5*_cm_ev, rightMargin=1.5*_cm_ev,
+                        topMargin=1.3*_cm_ev, bottomMargin=1.5*_cm_ev)
                     _story = []
 
-                    # Header
-                    _dr_n = st.session_state.get("sess_nombre","")
-                    _dr_e = st.session_state.get("sess_especialidad","Nefrología/Trasplante")
-                    _dr_c = st.session_state.get("sess_cedula","")
-                    _dr_i = st.session_state.get("sess_institucion","")
-                    _story.append(_P_ev(_dr_i or "RenalPro · Servicio de Trasplante Renal",
-                                         12, True, _AZUL))
-                    _story.append(_P_ev(f"{_dr_n} · {_dr_e} · Cédula: {_dr_c}", 9, color=_GRIS))
-                    _story.append(_HR_ev(width="100%", thickness=2, color=_AZUL))
-                    _story.append(_Sp_ev(1, 0.3*_cm_ev))
+                    # ── HEADER ─────────────────────────────────────────────
+                    dr_n = st.session_state.get("sess_nombre","Médico")
+                    dr_e = st.session_state.get("sess_especialidad","Nefrología/Trasplante")
+                    dr_c = st.session_state.get("sess_cedula","")
+                    dr_cg = st.session_state.get("sess_ced_general","")
+                    dr_ug = st.session_state.get("sess_univ_general","")
+                    dr_u  = st.session_state.get("sess_universidad","")
+                    dr_cons = st.session_state.get("sess_consejo_nombre","")
+                    dr_cn   = st.session_state.get("sess_consejo_num","")
+                    dr_inst = st.session_state.get("sess_institucion","")
+                    dr_dom  = st.session_state.get("sess_domicilio","")
+                    dr_tel  = st.session_state.get("sess_telefono","")
+                    logo_b64 = st.session_state.get("sess_logo_b64","")
 
-                    # Title
-                    _story.append(_P_ev(f"NOTA DE EVOLUCIÓN POST-TRASPLANTE RENAL — DPT {ne_dpt}",
-                                         12, True, _AZUL, _TC_ev))
-                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+                    if logo_b64:
+                        try:
+                            _logo_cell = _Img_ev(_io_ev.BytesIO(_b64ev.b64decode(logo_b64)),
+                                                  width=1.8*_cm_ev, height=1.8*_cm_ev, kind="proportional")
+                        except Exception:
+                            _logo_cell = _P("☤", 24, True, AZ1, _TC_ev)
+                    else:
+                        _logo_cell = _P("☤", 24, True, AZ1, _TC_ev)
 
-                    # Receptor
-                    _story.append(_P_ev("RECEPTOR", 10, True, _AZUL))
-                    _story.append(_P_ev(
-                        f"<b>{ne_nombre}</b> · Exp: {ne_exp or '—'} · Edad: {ne_edad or '—'} · "
-                        f"Sexo: {ne_sexo} · Peso: {ne_peso:.1f} kg · Talla: {ne_talla:.0f} cm · "
-                        f"Fecha: {ne_fecha} {ne_hora}", 9))
-                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
-
-                    # Datos TR
-                    _story.append(_P_ev("DATOS DEL TRASPLANTE", 10, True, _AZUL))
-                    _story.append(_P_ev(
-                        f"Fecha TR: {ne_fecha_tx} · Donador: {ne_donador} · "
-                        f"Inducción: {ne_induccion} ({ne_ind_dosis or '—'})", 9))
-                    _story.append(_P_ev(
-                        f"HLA mismatches: {ne_hla or '—'} · PRA: {ne_pra or '—'} · "
-                        f"DSA: {ne_dsa or '—'} · Crossmatch: {ne_xmatch}", 9))
-                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
-
-                    # Estado clínico
-                    if ne_subjetivo:
-                        _story.append(_P_ev("S — SUBJETIVO", 10, True, _AZUL))
-                        _story.append(_P_ev(ne_subjetivo, 9))
-                    _story.append(_P_ev("O — SIGNOS VITALES Y EXPLORACIÓN", 10, True, _AZUL))
-                    _vit_str = "  ·  ".join(filter(None, [
-                        f"TA: {ne_ta}" if ne_ta else "",
-                        f"FC: {ne_fc} lpm" if ne_fc else "",
-                        f"FR: {ne_fr} rpm" if ne_fr else "",
-                        f"T°: {ne_temp}°C" if ne_temp else "",
-                        f"SpO₂: {ne_spo2}%" if ne_spo2 else "",
-                        f"EVA: {ne_dol}/10" if ne_dol else "",
+                    _hdr_txt = [
+                        _P(dr_inst or "Servicio de Trasplante Renal", 11, True, AZ1, sp=1),
+                        _P(dr_dom or "—", 8, color=GR, sp=1),
+                        _P(f"Tel: {dr_tel}" if dr_tel else "", 8, color=GR, sp=1),
+                        _P(f"DPT {int(ne_dpt)} · {ne_fecha}", 9, color=AZ2, align=_TR_ev, sp=0),
+                    ]
+                    _th = _Tbl_ev([[_logo_cell, _hdr_txt]], colWidths=[2.2*_cm_ev, 15.8*_cm_ev])
+                    _th.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,-1),AZC),
+                        ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                        ("TOPPADDING",(0,0),(-1,-1),6),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+                        ("LEFTPADDING",(0,0),(-1,-1),8),
+                        ("BOX",(0,0),(-1,-1),1.2,AZ1),
+                        ("LINEABOVE",(0,0),(-1,0),3,AZ2),
                     ]))
-                    _story.append(_P_ev(_vit_str, 9))
-                    _story.append(_P_ev(
-                        f"Diuresis 24h: {ne_diuresis_24h} mL · Horaria: {ne_diuresis_h:.1f} mL/h · "
-                        f"Balance: {ne_balance:+d} mL", 9))
-                    if ne_ef_gen: _story.append(_P_ev(f"General/CP: {ne_ef_gen}", 9))
-                    if ne_ef_abd: _story.append(_P_ev(f"Abdomen/Injerto: {ne_ef_abd}", 9))
-                    if ne_ef_acc: _story.append(_P_ev(f"Accesos: {ne_ef_acc}", 9))
+                    _story.append(_th)
                     _story.append(_Sp_ev(1, 0.2*_cm_ev))
 
-                    # Función del injerto
-                    _story.append(_P_ev("FUNCIÓN DEL INJERTO", 10, True, _AZUL))
-                    _story.append(_P_ev(
-                        f"Cr hoy: {ne_cr_hoy:.2f} mg/dL · Cr ayer: {ne_cr_ayer:.2f} · "
-                        f"ΔCr: {_delta_cr:+.1f}% · BUN: {ne_bun} mg/dL", 9))
-                    _story.append(_P_ev(f"Patrón: {ne_patron_func if False else ne_patron}", 9))
-                    _trr_str = f"TRR hoy: {ne_trr_hoy}"
-                    if "Sí" in ne_trr_hoy:
+                    # Datos del médico
+                    _creds = []
+                    if dr_cg: _creds.append(f"Méd. Gral. Céd.: {dr_cg} | {dr_ug}")
+                    if dr_c:  _creds.append(f"Especialidad Céd.: {dr_c} | {dr_u}")
+                    if dr_cons: _creds.append(f"Certif.: {dr_cons} N°{dr_cn}")
+                    _med_rows = [[_P(dr_n, 11, True, AZ1)], [_P(dr_e, 9, color=GR)]]
+                    for _cr in _creds: _med_rows.append([_P(_cr, 8, color=GR)])
+                    _tm = _Tbl_ev(_med_rows, colWidths=[18*_cm_ev])
+                    _tm.setStyle(_TS_ev([
+                        ("TOPPADDING",(0,0),(-1,-1),1),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),1),
+                        ("LEFTPADDING",(0,0),(-1,-1),3),
+                    ]))
+                    _story.append(_tm)
+                    _story.append(_HR_ev(width="100%", thickness=1.5, color=AZ2))
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # ── TÍTULO + DPT/UBICACIÓN destacado ────────────────────
+                    _story.append(_P("NOTA DE EVOLUCIÓN POST-TRASPLANTE RENAL",
+                                     13, True, AZ1, _TC_ev))
+                    _ubic_txt = f"<b>DPT {int(ne_dpt)}</b> · {ne_fecha} {ne_hora} · {ne_area.split(' (')[0]}"
+                    if ne_cama: _ubic_txt += f" · Cama {ne_cama}"
+                    _t_dpt = _Tbl_ev([[_P(_ubic_txt, 10, color=_wh_ev, align=_TC_ev)]],
+                                     colWidths=[18*_cm_ev])
+                    _t_dpt.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,-1),AZ2),
+                        ("TOPPADDING",(0,0),(-1,-1),6),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+                        ("ROUNDEDCORNERS",[4,4,4,4]),
+                    ]))
+                    _story.append(_t_dpt)
+                    _story.append(_Sp_ev(1, 0.25*_cm_ev))
+
+                    # ── TABLA RECEPTOR ──────────────────────────────────────
+                    _imc = (ne_peso/((ne_talla/100)**2)) if ne_talla > 0 and ne_peso > 0 else 0
+                    _t_pac = _Tbl_ev([
+                        [_P("RECEPTOR", 9, True, _wh_ev), _P("", 8), _P("", 8), _P("", 8), _P("", 8), _P("", 8)],
+                        [_P("Nombre:", 8, True), _P(ne_nombre, 9),
+                         _P("Exp:", 8, True), _P(ne_exp or "—", 9),
+                         _P("Edad:", 8, True), _P(f"{ne_edad} años" if ne_edad else "—", 9)],
+                        [_P("Sexo:", 8, True), _P(ne_sexo, 9),
+                         _P("Peso hoy:", 8, True), _P(f"{ne_peso:.1f} kg", 9),
+                         _P("Talla:", 8, True), _P(f"{ne_talla:.0f} cm · IMC {_imc:.1f}" if ne_talla>0 else "—", 9)],
+                    ], colWidths=[2.2*_cm_ev, 4.5*_cm_ev, 1.5*_cm_ev, 3.5*_cm_ev, 1.6*_cm_ev, 4.7*_cm_ev])
+                    _t_pac.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,0),AZ1),
+                        ("SPAN",(0,0),(-1,0)),
+                        ("BACKGROUND",(0,1),(-1,-1),GRL),
+                        ("TOPPADDING",(0,0),(-1,-1),3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                        ("LEFTPADDING",(0,0),(-1,-1),5),
+                        ("BOX",(0,0),(-1,-1),0.5,AZM),
+                        ("LINEBELOW",(0,0),(-1,0),0.5,AZ1),
+                    ]))
+                    _story.append(_t_pac)
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # ── TABLA DATOS DEL TRASPLANTE ──────────────────────────
+                    _isq_fria_str = f"{ne_isq_fria_h}h {ne_isq_fria_m}min" if (ne_isq_fria_h or ne_isq_fria_m) else "—"
+                    _datos_tx_rows = [
+                        [_P("DATOS DEL TRASPLANTE", 9, True, _wh_ev), _P("", 8), _P("", 8), _P("", 8)],
+                        [_P("Fecha TR:", 8, True), _P(ne_fecha_tx or "—", 9),
+                         _P("Donador:", 8, True), _P(ne_donador, 9)],
+                        [_P("Inducción:", 8, True), _P(f"{ne_induccion}", 9),
+                         _P("Dosis acum.:", 8, True), _P(ne_ind_dosis or "—", 9)],
+                        [_P("HLA mismatches:", 8, True), _P(ne_hla or "—", 9),
+                         _P("Crossmatch:", 8, True), _P(ne_xmatch, 9)],
+                        [_P("PRA Clase I:", 8, True), _P(f"{ne_pra_I or '—'}", 9),
+                         _P("PRA Clase II:", 8, True), _P(f"{ne_pra_II or '—'}", 9)],
+                        [_P("DSA:", 8, True), _P(ne_dsa or "—", 9),
+                         _P("Anti-MICA:", 8, True), _P(ne_mica or "—", 9)],
+                    ]
+                    if ne_kdpi:
+                        _datos_tx_rows.append([_P("KDPI:", 8, True), _P(f"{ne_kdpi}%", 9, color=AZ2, bold=True),
+                                                _P("", 8), _P("", 8)])
+                    _datos_tx_rows.extend([
+                        [_P("Isq. fría:", 8, True), _P(_isq_fria_str, 9),
+                         _P("Isq. caliente:", 8, True), _P(f"{ne_isq_cal} min" if ne_isq_cal else "—", 9)],
+                        [_P("Duración cx:", 8, True), _P(ne_dur_cx or "—", 9),
+                         _P("Uresis post-Qx:", 8, True), _P(ne_uresis_temp, 9, bold=True,
+                            color=VRD if ne_uresis_temp=="Sí" else ROJ if ne_uresis_temp=="No" else GR)],
+                    ])
+                    _t_tx = _Tbl_ev(_datos_tx_rows,
+                                     colWidths=[3*_cm_ev, 6*_cm_ev, 3*_cm_ev, 6*_cm_ev])
+                    _t_tx.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,0),AZ1),
+                        ("SPAN",(0,0),(-1,0)),
+                        ("BACKGROUND",(0,1),(-1,-1),GRL),
+                        ("TOPPADDING",(0,0),(-1,-1),2),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),2),
+                        ("LEFTPADDING",(0,0),(-1,-1),5),
+                        ("BOX",(0,0),(-1,-1),0.5,AZM),
+                    ]))
+                    _story.append(_t_tx)
+                    _story.append(_Sp_ev(1, 0.25*_cm_ev))
+
+                    # ── ANTECEDENTES ────────────────────────────────────────
+                    _ant_list = st.session_state.get("_ne_antecedentes_list", [])
+                    if _ant_list:
+                        _story.append(_P("ANTECEDENTES DEL RECEPTOR", 10, True, AZ1))
+                        for _a in _ant_list:
+                            _story.append(_P(f"• {_a}", 9))
+                        _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # ── ESTADO CLÍNICO ──────────────────────────────────────
+                    if ne_subjetivo:
+                        _story.append(_P("S — SUBJETIVO", 10, True, AZ1))
+                        _story.append(_P(ne_subjetivo, 9))
+                        _story.append(_Sp_ev(1, 0.15*_cm_ev))
+
+                    # Signos vitales en tabla
+                    _t_vit = _Tbl_ev([
+                        [_P("SIGNOS VITALES", 9, True, _wh_ev), _P("", 8), _P("", 8),
+                         _P("", 8), _P("", 8), _P("", 8)],
+                        [_P("TA", 7, True, color=GR, align=_TC_ev),
+                         _P("FC", 7, True, color=GR, align=_TC_ev),
+                         _P("FR", 7, True, color=GR, align=_TC_ev),
+                         _P("T°", 7, True, color=GR, align=_TC_ev),
+                         _P("SpO₂", 7, True, color=GR, align=_TC_ev),
+                         _P("EVA", 7, True, color=GR, align=_TC_ev)],
+                        [_P(ne_ta or "—", 10, True, align=_TC_ev),
+                         _P(f"{ne_fc}" if ne_fc else "—", 10, True, align=_TC_ev),
+                         _P(f"{ne_fr}" if ne_fr else "—", 10, True, align=_TC_ev),
+                         _P(f"{ne_temp}°" if ne_temp else "—", 10, True, align=_TC_ev),
+                         _P(f"{ne_spo2}%" if ne_spo2 else "—", 10, True, align=_TC_ev),
+                         _P(f"{ne_dol}/10" if ne_dol else "—", 10, True, align=_TC_ev)],
+                    ], colWidths=[3*_cm_ev]*6)
+                    _t_vit.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,0),AZ1),
+                        ("SPAN",(0,0),(-1,0)),
+                        ("BACKGROUND",(0,1),(-1,1),AZC),
+                        ("BACKGROUND",(0,2),(-1,2),_wh_ev),
+                        ("TOPPADDING",(0,0),(-1,-1),3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                        ("BOX",(0,0),(-1,-1),0.5,AZM),
+                        ("GRID",(0,1),(-1,-1),0.3,AZM),
+                    ]))
+                    _story.append(_t_vit)
+                    _story.append(_Sp_ev(1, 0.15*_cm_ev))
+
+                    # Balance hídrico tabla
+                    _bal_color = VRD if -500 <= ne_balance <= 500 else AMA if -1500 <= ne_balance <= 1500 else ROJ
+                    _t_bal = _Tbl_ev([
+                        [_P("BALANCE HÍDRICO 24 h", 9, True, _wh_ev), _P("", 8), _P("", 8), _P("", 8)],
+                        [_P("Ingresos:", 8, True, align=_TC_ev),
+                         _P("Egresos:", 8, True, align=_TC_ev),
+                         _P("Drenaje Blake:", 8, True, align=_TC_ev),
+                         _P("BALANCE:", 8, True, align=_TC_ev, color=_bal_color)],
+                        [_P(f"{ne_ingresos} mL", 10, align=_TC_ev),
+                         _P(f"{ne_egresos} mL", 10, align=_TC_ev),
+                         _P(f"{ne_drenaje_blake} mL", 10, align=_TC_ev),
+                         _P(f"{ne_balance:+d} mL", 11, True, color=_bal_color, align=_TC_ev)],
+                        [_P("", 7), _P("", 7), _P("", 7),
+                         _P(f"Diuresis 24h: {ne_diuresis_24h} mL · Horaria: {ne_diuresis_h:.1f} mL/h",
+                            8, color=GR, align=_TC_ev)],
+                    ], colWidths=[4.5*_cm_ev]*4)
+                    _t_bal.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,0),AZ1),
+                        ("SPAN",(0,0),(-1,0)),
+                        ("BACKGROUND",(0,1),(-1,1),AZC),
+                        ("SPAN",(0,3),(2,3)),
+                        ("BACKGROUND",(0,3),(-1,3),GRL),
+                        ("TOPPADDING",(0,0),(-1,-1),3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                        ("BOX",(0,0),(-1,-1),0.5,AZM),
+                        ("GRID",(0,1),(-1,2),0.3,AZM),
+                    ]))
+                    _story.append(_t_bal)
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # Exploración física
+                    if ne_ef_gen or ne_ef_abd or ne_ef_acc:
+                        _story.append(_P("O — EXPLORACIÓN FÍSICA", 10, True, AZ1))
+                        if ne_ef_gen: _story.append(_P(f"<b>General/CP:</b> {ne_ef_gen}", 9))
+                        if ne_ef_abd: _story.append(_P(f"<b>Abdomen/Injerto:</b> {ne_ef_abd}", 9))
+                        if ne_ef_acc: _story.append(_P(f"<b>Accesos:</b> {ne_ef_acc}", 9))
+                        _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # ── FUNCIÓN DEL INJERTO ─────────────────────────────────
+                    _cr_color = VRD if _delta_cr < 0 else ROJ if _delta_cr > 5 else AMA
+                    _cr_arrow = "↓" if _delta_cr < 0 else "↑" if _delta_cr > 5 else "→"
+                    _t_inj = _Tbl_ev([
+                        [_P("FUNCIÓN DEL INJERTO", 9, True, _wh_ev),
+                         _P("", 8), _P("", 8), _P("", 8)],
+                        [_P("Cr hoy", 8, True, color=GR, align=_TC_ev),
+                         _P("Cr ayer", 8, True, color=GR, align=_TC_ev),
+                         _P("ΔCr", 8, True, color=GR, align=_TC_ev),
+                         _P("BUN", 8, True, color=GR, align=_TC_ev)],
+                        [_P(f"{ne_cr_hoy:.2f}", 11, True, align=_TC_ev),
+                         _P(f"{ne_cr_ayer:.2f}", 11, True, align=_TC_ev),
+                         _P(f"{_cr_arrow} {_delta_cr:+.1f}%", 11, True, color=_cr_color, align=_TC_ev),
+                         _P(f"{ne_bun}", 11, True, align=_TC_ev)],
+                        [_P("mg/dL", 7, color=GR, align=_TC_ev),
+                         _P("mg/dL", 7, color=GR, align=_TC_ev),
+                         _P("vs ayer", 7, color=GR, align=_TC_ev),
+                         _P("mg/dL", 7, color=GR, align=_TC_ev)],
+                    ], colWidths=[4.5*_cm_ev]*4)
+                    _t_inj.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,0),AZ1),
+                        ("SPAN",(0,0),(-1,0)),
+                        ("BACKGROUND",(0,1),(-1,1),AZC),
+                        ("TOPPADDING",(0,0),(-1,-1),3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                        ("BOX",(0,0),(-1,-1),0.5,AZM),
+                        ("GRID",(0,1),(-1,-1),0.3,AZM),
+                    ]))
+                    _story.append(_t_inj)
+                    _story.append(_Sp_ev(1, 0.1*_cm_ev))
+                    _story.append(_P(f"<b>Patrón:</b> {ne_patron}", 9))
+                    _trr_str = f"<b>TRR hoy:</b> {ne_trr_hoy}"
+                    if "Sí" in ne_trr_hoy and ne_uf > 0:
                         _trr_str += f" · UF: {ne_uf} mL"
-                    _trr_str += f" · Sesiones acumuladas: {ne_sesiones_total}"
-                    _story.append(_P_ev(_trr_str, 9))
-                    if ne_doppler: _story.append(_P_ev(f"USG Doppler: {ne_doppler}", 9))
-                    if ne_biopsia: _story.append(_P_ev(f"Biopsia: {ne_biopsia}", 9))
+                    _trr_str += f" · Sesiones acumuladas post-TR: {ne_sesiones_total}"
+                    _story.append(_P(_trr_str, 9))
+                    if ne_doppler: _story.append(_P(f"<b>USG Doppler:</b> {ne_doppler}", 9))
+                    if ne_biopsia: _story.append(_P(f"<b>Biopsia:</b> {ne_biopsia}", 9))
                     _story.append(_Sp_ev(1, 0.2*_cm_ev))
 
-                    # Labs
-                    _story.append(_P_ev("LABORATORIOS", 10, True, _AZUL))
-                    _story.append(_P_ev(
-                        f"BH — Hb: {ne_hb:.1f} g/dL · Leu: {ne_leu:.1f} · Plt: {ne_plt}", 9))
-                    _story.append(_P_ev(
-                        f"QS/Electrolitos — Na: {ne_na} · K: {ne_k:.1f} · "
-                        f"P: {ne_p:.1f} · Ca: {ne_ca:.1f} · Mg: {ne_mg:.1f}", 9))
-                    _story.append(_P_ev(
-                        f"Tacrolimus C0: <b>{ne_tac_c0:.1f} ng/mL</b> · "
-                        f"CMV: {ne_cmv or 'ND'} · BK: {ne_bk or 'ND'} · "
-                        f"PCR: {ne_pcr or '—'} mg/L", 9))
-                    if ne_uricult: _story.append(_P_ev(f"Urocultivo/EGO: {ne_uricult}", 9))
-                    if ne_otros_labs: _story.append(_P_ev(f"Otros: {ne_otros_labs}", 9))
+                    # ── LABORATORIOS (3 columnas) ───────────────────────────
+                    # Badge Tac C0
+                    if 8 <= ne_tac_c0 <= 12: _tac_color = VRD; _tac_emoji = "🟢"
+                    elif ne_tac_c0 > 15:     _tac_color = ROJ; _tac_emoji = "🔴"
+                    elif ne_tac_c0 < 6:      _tac_color = AMA; _tac_emoji = "🟡"
+                    else:                     _tac_color = AMA; _tac_emoji = "🟡"
+                    _t_lab = _Tbl_ev([
+                        [_P("LABORATORIOS", 9, True, _wh_ev), _P("", 8), _P("", 8)],
+                        [_P("<b>BH / Hematológico</b>", 9, color=AZ1),
+                         _P("<b>QS / Electrolitos</b>", 9, color=AZ1),
+                         _P("<b>IS / Virales</b>", 9, color=AZ1)],
+                        [_P(f"Hb: <b>{ne_hb:.1f}</b> g/dL<br/>"
+                            f"Leu: {ne_leu:.1f} ×10³<br/>"
+                            f"Plt: {ne_plt} ×10³", 9),
+                         _P(f"Na: <b>{ne_na}</b> · K: <b>{ne_k:.1f}</b><br/>"
+                            f"Ca: {ne_ca:.1f} · P: {ne_p:.1f}<br/>"
+                            f"Mg: {ne_mg:.1f}", 9),
+                         _P(f"<b>Tac C0: <font color='{_tac_color.hexval()[2:]}'>"
+                            f"{ne_tac_c0:.1f}</font> ng/mL</b><br/>"
+                            f"CMV: {ne_cmv or 'ND'}<br/>"
+                            f"BK: {ne_bk or 'ND'} · PCR: {ne_pcr or '—'}", 9)],
+                    ], colWidths=[6*_cm_ev]*3)
+                    _t_lab.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,0),AZ1),
+                        ("SPAN",(0,0),(-1,0)),
+                        ("BACKGROUND",(0,1),(-1,1),AZC),
+                        ("TOPPADDING",(0,0),(-1,-1),3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),
+                        ("BOX",(0,0),(-1,-1),0.5,AZM),
+                        ("GRID",(0,1),(-1,-1),0.3,AZM),
+                        ("VALIGN",(0,2),(-1,2),"TOP"),
+                    ]))
+                    _story.append(_t_lab)
+                    _story.append(_Sp_ev(1, 0.1*_cm_ev))
+                    if ne_uricult: _story.append(_P(f"<b>Urocultivo/EGO:</b> {ne_uricult}", 9))
+                    if ne_otros_labs: _story.append(_P(f"<b>Otros labs:</b> {ne_otros_labs}", 9))
                     _story.append(_Sp_ev(1, 0.2*_cm_ev))
 
-                    # IS y profilaxis
-                    _story.append(_P_ev("INMUNOSUPRESIÓN ACTUAL", 10, True, _AZUL))
-                    _story.append(_P_ev(
-                        f"Tacrolimus: {ne_tac_dosis or '—'} · MMF/MPA: {ne_mmf_dosis or '—'}", 9))
-                    _story.append(_P_ev(
-                        f"Prednisona: {ne_pred or '—'} · Otros: {ne_otros_is or '—'}", 9))
-
-                    _story.append(_P_ev("PROFILAXIS", 10, True, _AZUL))
-                    _story.append(_P_ev(f"Valganciclovir: {ne_pf_cmv or '—'}", 9))
-                    _story.append(_P_ev(f"TMP-SMX: {ne_pf_pjp or '—'}", 9))
-                    if ne_pf_otros: _story.append(_P_ev(f"Otras: {ne_pf_otros}", 9))
+                    # ── INMUNOSUPRESIÓN + PROFILAXIS (2 cols) ──────────────
+                    _is_txt = []
+                    if ne_tac_dosis:  _is_txt.append(f"<b>Tac:</b> {ne_tac_dosis}")
+                    if ne_mmf_dosis:  _is_txt.append(f"<b>MMF/MPA:</b> {ne_mmf_dosis}")
+                    if ne_pred:       _is_txt.append(f"<b>Prednisona:</b> {ne_pred}")
+                    if ne_otros_is:   _is_txt.append(f"<b>Otros:</b> {ne_otros_is}")
+                    if ne_mp_bolos > 0:
+                        _is_txt.append(f"<b>Metilprednisolona:</b> {ne_mp_bolos} bolo(s) · {ne_mp_dosis or '—'}")
+                    _pf_txt = []
+                    if ne_pf_cmv:   _pf_txt.append(f"<b>Valganciclovir:</b> {ne_pf_cmv}")
+                    if ne_pf_pjp:   _pf_txt.append(f"<b>TMP-SMX:</b> {ne_pf_pjp}")
+                    if ne_pf_otros: _pf_txt.append(f"<b>Otras:</b> {ne_pf_otros}")
+                    _pf_txt.append(f"<b>Profilaxis ATB perioperatoria:</b> {ne_atb_pre} · "
+                                    f"{ne_atb_esquema or '—'} · ¿Continúa? {ne_atb_continua}")
+                    _t_isp = _Tbl_ev([
+                        [_P("🛡️ INMUNOSUPRESIÓN", 9, True, _wh_ev),
+                         _P("💊 PROFILAXIS", 9, True, _wh_ev)],
+                        [_P("<br/>".join(_is_txt) if _is_txt else "—", 9),
+                         _P("<br/>".join(_pf_txt) if _pf_txt else "—", 9)],
+                    ], colWidths=[9*_cm_ev, 9*_cm_ev])
+                    _t_isp.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,0),AZ1),
+                        ("BACKGROUND",(0,1),(-1,-1),GRL),
+                        ("TOPPADDING",(0,0),(-1,-1),4),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),
+                        ("BOX",(0,0),(-1,-1),0.5,AZM),
+                        ("VALIGN",(0,1),(-1,1),"TOP"),
+                    ]))
+                    _story.append(_t_isp)
                     _story.append(_Sp_ev(1, 0.2*_cm_ev))
 
-                    # Dx y plan
-                    _story.append(_P_ev("A — DIAGNÓSTICOS Y PROBLEMAS ACTIVOS", 10, True, _AZUL))
-                    if ne_dx_principal:
-                        _story.append(_P_ev(ne_dx_principal.replace("\n","<br/>"), 9))
+                    # ── A: DIAGNÓSTICOS DEL DÍA ─────────────────────────────
+                    _dx_list = st.session_state.get("_ne_dx_list", [])
+                    _story.append(_P("A — DIAGNÓSTICOS Y PROBLEMAS ACTIVOS", 10, True, AZ1))
+                    if _dx_list:
+                        for _i, _d in enumerate(_dx_list, 1):
+                            _story.append(_P(f"<b>{_i}.</b> {_d}", 9))
+                    else:
+                        _story.append(_P("(Sin diagnósticos capturados)", 9, color=GR))
                     if ne_problemas:
-                        _story.append(_P_ev(f"<i>Eventos: {ne_problemas}</i>", 9, color=_GRIS))
+                        _story.append(_P(f"<i>Eventos del día: {ne_problemas}</i>", 9, color=GR))
                     _story.append(_Sp_ev(1, 0.2*_cm_ev))
 
-                    _story.append(_P_ev("P — PLAN TERAPÉUTICO", 10, True, _AZUL))
-                    if ne_plan:
-                        _story.append(_P_ev(ne_plan.replace("\n","<br/>"), 9))
+                    # ── P: PLAN POR RUBROS ──────────────────────────────────
+                    _story.append(_P("P — PLAN TERAPÉUTICO DEL DÍA", 10, True, AZ1))
+                    _plan_rows = []
+                    for _lbl, _key, _ph in _pl_keys:
+                        _val = _ne_plan.get(_key, "").strip()
+                        if _val:
+                            _plan_rows.append([_P(_lbl, 8, True, color=AZ1),
+                                                _P(_val.replace("\n","<br/>"), 9)])
+                    if _plan_rows:
+                        _t_plan = _Tbl_ev(_plan_rows, colWidths=[4.5*_cm_ev, 13.5*_cm_ev])
+                        _t_plan.setStyle(_TS_ev([
+                            ("BACKGROUND",(0,0),(-1,-1),GRL),
+                            ("TOPPADDING",(0,0),(-1,-1),4),
+                            ("BOTTOMPADDING",(0,0),(-1,-1),4),
+                            ("LEFTPADDING",(0,0),(-1,-1),6),
+                            ("BOX",(0,0),(-1,-1),0.5,AZM),
+                            ("GRID",(0,0),(-1,-1),0.3,AZM),
+                            ("VALIGN",(0,0),(-1,-1),"TOP"),
+                        ]))
+                        _story.append(_t_plan)
                     if ne_pendientes:
-                        _story.append(_P_ev(f"<b>Pendientes:</b> {ne_pendientes}", 9))
+                        _story.append(_Sp_ev(1, 0.1*_cm_ev))
+                        _story.append(_P(f"<b>📌 Pendientes:</b> {ne_pendientes}", 9, color=AZ2))
 
-                    # Firma
-                    _story.append(_Sp_ev(1, 1.0*_cm_ev))
-                    _story.append(_P_ev("_"*40, 9, align=_TC_ev))
-                    _story.append(_P_ev(_dr_n, 10, bold=True, align=_TC_ev))
-                    _story.append(_P_ev(f"{_dr_e} · Cédula: {_dr_c}", 8, color=_GRIS, align=_TC_ev))
-                    _story.append(_Sp_ev(1, 0.3*_cm_ev))
-                    _story.append(_HR_ev(width="100%", thickness=0.5, color=_AZULC))
-                    _story.append(_P_ev(
-                        f"RenalPro {VERSION} · Nota de evolución post-TR · NOM-004-SSA3-2012 · COFEPRIS",
-                        7, color=_GRIS, align=_TC_ev))
+                    # ── FIRMA ───────────────────────────────────────────────
+                    _story.append(_Sp_ev(1, 0.8*_cm_ev))
+                    _firma_items = [_P("_"*40, 9, align=_TC_ev), _Sp_ev(1, 0.05*_cm_ev),
+                                     _P(dr_n, 10, bold=True, align=_TC_ev)]
+                    for _cr in _creds: _firma_items.append(_P(_cr, 8, color=GR, align=_TC_ev))
+                    _t_firma = _Tbl_ev([["", _firma_items]], colWidths=[6*_cm_ev, 12*_cm_ev])
+                    _t_firma.setStyle(_TS_ev([("VALIGN",(0,0),(-1,-1),"BOTTOM")]))
+                    _story.append(_t_firma)
+                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
+                    _story.append(_HR_ev(width="100%", thickness=0.5, color=AZM))
+                    _story.append(_P(f"RenalPro {VERSION} · Nota de evolución post-TR · "
+                                     f"NOM-004-SSA3-2012 · COFEPRIS · {dr_inst} · Tel: {dr_tel}",
+                                     7, color=GR, align=_TC_ev))
 
-                    _doc_ev.build(_story)
-                    _buf_ev.seek(0)
-                    _pdf_ev = _buf_ev.read()
+                    # Numeración Página X de Y
+                    class _NC(_rlcanv_ev.Canvas):
+                        def __init__(self, *args, **kwargs):
+                            super().__init__(*args, **kwargs)
+                            self._saved_states = []
+                        def showPage(self):
+                            self._saved_states.append(dict(self.__dict__))
+                            self._startPage()
+                        def save(self):
+                            total = len(self._saved_states)
+                            for state in self._saved_states:
+                                self.__dict__.update(state)
+                                self.setFont("Helvetica", 7)
+                                self.setFillColor(GR)
+                                self.drawRightString(_letter_ev[0] - 1.5*_cm_ev, 0.8*_cm_ev,
+                                    f"Página {self._pageNumber} de {total}")
+                                super().showPage()
+                            super().save()
+
+                    _doc.build(_story, canvasmaker=_NC)
+                    _buf.seek(0)
+                    _pdf_ev = _buf.read()
                     _safe_ev = "".join(c for c in ne_nombre if c.isalnum() or c==" ")[:18].strip()
 
-                    # Guardar en expediente si hay paciente
-                    _save_msg_ev = ""
+                    # ── GUARDAR / ACTUALIZAR ────────────────────────────────
+                    _save_msg = ""
                     if _ne_pid and _DB_ON and _db.db_ok():
                         try:
-                            import base64 as _b64ev
+                            _datos_json = {
+                                "dpt": int(ne_dpt),
+                                "fecha_tx": ne_fecha_tx,
+                                "donador": ne_donador,
+                                "kdpi": ne_kdpi,
+                                "induccion": ne_induccion,
+                                "ind_dosis": ne_ind_dosis,
+                                "hla": ne_hla,
+                                "pra_I": ne_pra_I, "pra_II": ne_pra_II,
+                                "dsa": ne_dsa, "mica": ne_mica,
+                                "xmatch": ne_xmatch,
+                                "isq_fria_h": ne_isq_fria_h,
+                                "isq_fria_m": ne_isq_fria_m,
+                                "isq_caliente_min": ne_isq_cal,
+                                "dur_cx": ne_dur_cx,
+                                "uresis_temp": ne_uresis_temp,
+                                "area": ne_area, "cama": ne_cama,
+                                "antecedentes": st.session_state.get("_ne_antecedentes_list", []),
+                                "dx_list": st.session_state.get("_ne_dx_list", []),
+                                "cr_hoy": ne_cr_hoy, "cr_ayer": ne_cr_ayer,
+                                "delta_cr_pct": _delta_cr,
+                                "patron_func": ne_patron,
+                                "tac_c0": ne_tac_c0,
+                                "balance_hidrico": ne_balance,
+                                "diuresis_24h": ne_diuresis_24h,
+                                "drenaje_blake": ne_drenaje_blake,
+                                "trr_hoy": ne_trr_hoy,
+                                "sesiones_acum": ne_sesiones_total,
+                                "mp_bolos": ne_mp_bolos, "mp_dosis": ne_mp_dosis,
+                                "atb_pre": ne_atb_pre, "atb_esquema": ne_atb_esquema,
+                                "atb_continua": ne_atb_continua,
+                                "plan_rubros": {k: _ne_plan.get(k,"") for _,k,_ in _pl_keys},
+                                "pdf_b64": _b64ev.b64encode(_pdf_ev).decode("ascii"),
+                            }
+                            _resumen = "; ".join([f"{i+1}. {d}" for i,d in
+                                                   enumerate(st.session_state.get("_ne_dx_list", []))])[:500]
+                            if _edit_data:
+                                # Eliminar el registro anterior y crear uno nuevo (reemplazo)
+                                try:
+                                    _db.delete_clinical_record(_edit_data["id"], _user_id())
+                                except Exception:
+                                    pass
                             _db.add_clinical_record(_ne_pid, _user_id(), {
                                 "tipo": "Nota evolución Post-TR",
                                 "titulo": f"Evolución DPT {ne_dpt} — {ne_patron[:40]}",
                                 "fecha_consulta": ne_fecha,
-                                "resumen": ne_dx_principal[:500] if ne_dx_principal else "",
+                                "resumen": _resumen,
                                 "notas": ne_problemas[:300] if ne_problemas else "",
-                                "datos": {
-                                    "dpt": ne_dpt,
-                                    "fecha_tx": str(ne_fecha_tx),
-                                    "donador": ne_donador,
-                                    "induccion": ne_induccion,
-                                    "cr_hoy": ne_cr_hoy, "cr_ayer": ne_cr_ayer,
-                                    "delta_cr_pct": _delta_cr,
-                                    "patron_func": ne_patron,
-                                    "tac_c0": ne_tac_c0,
-                                    "balance_hidrico": ne_balance,
-                                    "diuresis_24h": ne_diuresis_24h,
-                                    "trr_hoy": ne_trr_hoy,
-                                    "sesiones_acum": ne_sesiones_total,
-                                    "pdf_b64": _b64ev.b64encode(_pdf_ev).decode("ascii"),
-                                },
+                                "datos": _datos_json,
                             })
                             _clear_cache()
-                            _save_msg_ev = " · 💾 Guardada en expediente"
+                            _save_msg = " · 💾 Guardada en expediente"
+                            if _edit_data:
+                                _save_msg = " · ✏️ Nota actualizada"
+                                st.session_state.pop("ne_edit_rec_id", None)
+                                st.session_state.pop("_ne_edit_paciente", None)
                         except AttributeError:
-                            _save_msg_ev = " · ⚠️ No se guardó (db.py desactualizado)"
+                            _save_msg = " · ⚠️ No se guardó (db.py desactualizado)"
                         except Exception as _se_ev:
-                            _save_msg_ev = f" · ⚠️ No se guardó ({_se_ev})"
+                            _save_msg = f" · ⚠️ No se guardó ({_se_ev})"
 
                     st.download_button("⬇️ Descargar nota PDF", data=_pdf_ev,
                         file_name=f"NotaEvol_DPT{ne_dpt}_{_safe_ev}_{ne_fecha}.pdf",
                         mime="application/pdf", key="btn_dl_evol_tx")
-                    st.success(f"✅ Nota generada · DPT {ne_dpt} · Patrón: {ne_patron[:30]}{_save_msg_ev}")
+                    st.success(f"✅ Nota generada · DPT {ne_dpt} · {ne_patron[:35]}{_save_msg}")
                 except Exception as _e_ev:
                     st.error(f"Error al generar PDF: {_e_ev}")
 
