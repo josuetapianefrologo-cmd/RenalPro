@@ -1,0 +1,85 @@
+{
+  "_meta": {
+    "tema": "Metas terapéuticas en Trasplante Renal",
+    "referencia": "KDIGO 2020 Care of Kidney Transplant Recipient + Protocolo INNSZ",
+    "fecha_revision": "2026-05-23",
+    "version_guia": "KDIGO 2020"
+  },
+  "tacrolimus_c0": {
+    "descripcion": "Niveles valle (C0) objetivo de tacrolimus por fase post-trasplante",
+    "unidad": "ng/mL",
+    "metas_por_fase": [
+      {
+        "fase": "Primer mes (días 0-30)",
+        "min": 8,
+        "max": 12,
+        "ideal": 10,
+        "nota": "Mayor inmunosupresión por riesgo de rechazo agudo"
+      },
+      {
+        "fase": "Meses 2-6",
+        "min": 6,
+        "max": 10,
+        "ideal": 8,
+        "nota": "Reducción gradual conforme disminuye riesgo de rechazo"
+      },
+      {
+        "fase": "Más de 6 meses",
+        "min": 5,
+        "max": 8,
+        "ideal": 6.5,
+        "nota": "Mantenimiento a largo plazo, minimizar nefrotoxicidad"
+      }
+    ],
+    "umbral_toxico": 15,
+    "umbral_subterapeutico": 6,
+    "ajustes_dosis": {
+      "subterapeutico": "Aumentar dosis 20-25%, recontrolar en 3-5 días",
+      "supraterapeutico_leve": "Reducir dosis 10-20%, recontrolar en 3-5 días",
+      "toxico": "Reducir dosis 30-50% o suspender una toma, recontrolar en 48-72h"
+    }
+  },
+  "creatinina_post_tx": {
+    "descripcion": "Patrones esperados de Cr post-trasplante",
+    "unidad": "mg/dL",
+    "patrones": [
+      {
+        "patron": "Función inmediata",
+        "criterio": "Cr↓ desde día 1, sin necesidad de TRR",
+        "delta_dia_esperado": "Descenso 0.5-1.5 mg/dL/día primera semana",
+        "porcentaje_pacientes_donador_vivo": 90,
+        "porcentaje_pacientes_donador_fallecido": 50
+      },
+      {
+        "patron": "Función retardada (FRI)",
+        "criterio": "Requiere ≥1 sesión de diálisis en 1ª semana",
+        "factores_riesgo": ["DCD", "edad donante >60", "isquemia fría >24h", "KDPI alto"],
+        "duracion_tipica_dias": "5-14 días",
+        "porcentaje_donador_fallecido": "20-40%"
+      },
+      {
+        "patron": "Función lenta",
+        "criterio": "Cr↓ sin diálisis pero <10%/día",
+        "manejo": "Vigilar, considerar biopsia si Cr no baja en 5-7 días"
+      },
+      {
+        "patron": "No función primaria",
+        "criterio": "Anuria persistente >2 semanas, Cr sin mejoría",
+        "etiologias": ["Trombosis vascular", "Rechazo hiperagudo", "NTA prolongada"]
+      }
+    ]
+  },
+  "electrolitos_post_tx": {
+    "K": {"min_normal": 3.5, "max_normal": 5.0, "alerta_hiperkalemia": 5.5, "emergencia": 6.5, "unidad": "mEq/L"},
+    "Na": {"min_normal": 135, "max_normal": 145, "alerta_hiponatremia": 130, "alerta_hipernatremia": 150, "unidad": "mEq/L"},
+    "Ca": {"min_normal": 8.5, "max_normal": 10.5, "alerta_hipocalcemia": 8.0, "emergencia": 7.0, "unidad": "mg/dL"},
+    "P": {"min_normal": 2.5, "max_normal": 4.5, "alerta_hipofosfatemia_post_tx": 2.0, "nota": "Hipofosfatemia común post-TR por hiperparatiroidismo persistente", "unidad": "mg/dL"},
+    "Mg": {"min_normal": 1.7, "max_normal": 2.4, "alerta_hipomagnesemia_tac": 1.5, "nota": "Tacrolimus causa hipomagnesemia frecuente", "unidad": "mg/dL"}
+  },
+  "balance_hidrico_post_tx": {
+    "objetivo_balance_24h_ml": {"min": -500, "max": 500, "nota": "Idealmente neutro las primeras 72h"},
+    "diuresis_minima_ml_kg_h": 0.5,
+    "diuresis_minima_24h_ml": 1000,
+    "alerta_oligoanuria": "Diuresis <0.5 mL/kg/h por 6h consecutivas requiere evaluación urgente"
+  }
+}

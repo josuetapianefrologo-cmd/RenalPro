@@ -1,0 +1,61 @@
+{
+  "_meta": {
+    "tema": "Protocolos de infusión IV — Electrolitos críticos",
+    "referencias": [
+      "Brent J, Critical Care Toxicology 2017",
+      "UpToDate: Treatment of severe hypocalcemia",
+      "Mount DB, NEJM 2024 — Disorders of potassium"
+    ],
+    "fecha_revision": "2026-05-23"
+  },
+  "gluconato_calcio_iv": {
+    "descripcion": "Reposición IV de calcio en hipocalcemia sintomática o severa",
+    "indicaciones": [
+      "Hipocalcemia sintomática (tetania, convulsiones, arritmias)",
+      "Ca corregido <7.5 mg/dL",
+      "QTc prolongado por hipocalcemia",
+      "Sostén de presión arterial en shock cardiogénico con hipocalcemia"
+    ],
+    "ampula_gluconato_10pct": {
+      "volumen_ml": 10,
+      "calcio_elemental_mg": 90,
+      "calcio_elemental_meq": 4.65,
+      "concentracion_pct": 10
+    },
+    "preparacion_estandar": {
+      "n_ampulas_recomendado": 11,
+      "volumen_diluyente_ml": 250,
+      "diluyente": "NaCl 0.9%",
+      "concentracion_final_mg_ml": 3.96,
+      "nota": "Aforado en 250 mL — el volumen final ≈ volumen del diluyente"
+    },
+    "dosis_infusion": {
+      "unidad": "mg/kg/h de calcio elemental",
+      "rango_terapeutico": {"min": 0.5, "max": 2.0},
+      "rangos_recomendados": [
+        {"escenario": "Mantenimiento / leve", "dosis": "0.5-1.5", "nota": "Casos asintomáticos o leve"},
+        {"escenario": "Caso severo / sintomático", "dosis": "1.5-2.0", "nota": "Tetania, convulsiones, arritmias"}
+      ],
+      "limite_maximo_seguro": 2.0,
+      "alerta_sobredosis": "NUNCA exceder 2 mg/kg/h por riesgo de hipercalcemia aguda, arritmias y necrosis tisular si extravasa"
+    },
+    "via_administracion": {
+      "preferida": "Vena central — menos irritante, menor riesgo de necrosis si extravasa",
+      "alternativa": "Vena periférica gruesa antecubital — solo si no hay acceso central",
+      "contraindicada": "Vías periféricas pequeñas o frágiles",
+      "nota_especial": "En sesión de HD puede pasarse por catéter de HD"
+    },
+    "monitoreo": [
+      "Ca corregido cada 4-6h las primeras 24h",
+      "ECG continuo si arritmia previa o QTc prolongado",
+      "Verificar permeabilidad de la vía cada 1-2h",
+      "Vigilar signo de Chvostek y Trousseau"
+    ]
+  },
+  "categorias_severidad_hipocalcemia": {
+    "leve":     {"ca_corregido_min": 8.0, "ca_corregido_max": 8.5, "manejo": "Oral con calcio elemental + vit D"},
+    "moderada": {"ca_corregido_min": 7.5, "ca_corregido_max": 7.9, "manejo": "Oral agresivo, considerar IV si sintomático"},
+    "severa":   {"ca_corregido_min": 6.0, "ca_corregido_max": 7.4, "manejo": "IV obligado, vena central preferida"},
+    "critica":  {"ca_corregido_max": 5.9, "manejo": "IV urgente, monitoreo en UCI, ECG continuo"}
+  }
+}

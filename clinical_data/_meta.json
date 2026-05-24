@@ -1,0 +1,18 @@
+{
+  "paquete": "RenalPro Clinical Data",
+  "version": "1.0.0",
+  "fecha_ultima_revision": "2026-05-23",
+  "responsable_medico": "Dr. Josué Wigberto Tapia López — Nefrología/Trasplante",
+  "institucion": "UMAE Bajío N1 / IMSS CMN del Bajío",
+  "fuentes_principales": [
+    "KDIGO 2024 Clinical Practice Guidelines",
+    "KDIGO 2020 Transplant Recipient",
+    "KDIGO 2017 CKD-MBD Update",
+    "KDIGO 2012 Anemia in CKD",
+    "Protocolos INNSZ Trasplante Renal",
+    "GPC SSA México",
+    "ASN/ERA Recommendations"
+  ],
+  "ciclo_revision": "Semestral o cuando una guía referenciada se actualiza",
+  "disclaimer": "Esta base de datos clínica es referencia. El juicio clínico del médico tratante siempre prevalece."
+}
