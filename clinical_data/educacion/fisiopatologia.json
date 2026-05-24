@@ -1,0 +1,290 @@
+{
+  "_meta": {
+    "tema": "Fisiopatología expandida — Trasplante Renal",
+    "fecha_revision": "2026-05-24",
+    "objetivo": "Entender el POR QUÉ detrás de cada decisión clínica",
+    "estructura": "Cada tema tiene: concepto, mecanismo molecular, relevancia clínica, pearls"
+  },
+  "temas": [
+    {
+      "id": "hla_inmunologia",
+      "titulo": "Sistema HLA y reconocimiento del aloinjerto",
+      "categoria": "Inmunología básica",
+      "concepto_central": "El sistema HLA (Human Leukocyte Antigen) es el complejo mayor de histocompatibilidad humano. Codificado en el brazo corto del cromosoma 6, es el polimorfismo genético más extenso conocido. Su función original es presentar péptidos al sistema inmune para distinguir 'propio' de 'no propio'. En trasplante, los antígenos HLA del donador son reconocidos como extraños por el receptor → activación inmune → rechazo.",
+      "mecanismo_molecular": {
+        "estructura_hla": "HLA Clase I (A, B, C): expresado en TODAS las células nucleadas. Presenta péptidos endógenos a T CD8+ (citotóxicos). Estructura: cadena α (3 dominios) + β2-microglobulina.\nHLA Clase II (DR, DQ, DP): expresado en APCs (células dendríticas, macrófagos, células B) y endotelio activado. Presenta péptidos exógenos a T CD4+ (helper). Estructura: cadenas α + β (2 dominios cada una).",
+        "reconocimiento": "PRESENTACIÓN DIRECTA: APCs del donador migran al receptor → presentan HLA directamente a T del receptor. Domina rechazo agudo temprano.\n\nPRESENTACIÓN INDIRECTA: APCs del receptor procesan HLA del donador (como péptido) → presentan a T del receptor en HLA del receptor. Domina rechazo crónico y AMR.\n\nPRESENTACIÓN SEMI-DIRECTA: APCs del receptor adquieren HLA donador (via vesículas, trogocitosis) y lo presentan. Mecanismo emergente, importancia creciente.",
+        "polimorfismo": "Cada locus tiene cientos a miles de alelos. Probabilidad de match perfecto en 2 personas no relacionadas: ~1 en millones. En hermanos: 25% match completo, 50% medio match, 25% no match (por herencia mendeliana de haplotipos)."
+      },
+      "relevancia_clinica": [
+        "Más mismatches HLA = mayor riesgo de rechazo agudo y crónico",
+        "Impacto jerárquico: DR > B > A >> C, DQ, DP",
+        "DR es el más importante para supervivencia del injerto a largo plazo",
+        "PRA (Panel Reactive Antibodies) mide sensibilización previa a HLA — embarazos, transfusiones, TR previo aumentan PRA",
+        "Pacientes con PRA alto son 'hipersensibilizados' — difícil encontrar donador compatible",
+        "Crossmatch detecta DSA preformados específicos contra el donador (positivo = contraindicación absoluta clásicamente)"
+      ],
+      "pearls_avanzados": [
+        "Con desensibilización (rituximab + plasmaféresis + IVIG), se pueden trasplantar pacientes hiperinmunizados, pero supervivencia es modestamente menor",
+        "El epitope mismatch (PIRCHE, HLA-Matchmaker) es más predictivo que el conteo de mismatch tradicional — mide antígenos compartidos por estructura, no por alelo",
+        "La asignación deceased donor en muchos países considera mismatch + tiempo en lista + sensibilización",
+        "En donador vivo hermano HLA-idéntico, el rechazo HLA es raro pero NO cero — antígenos menores (mHA) y no-HLA siguen siendo importantes"
+      ],
+      "referencias_clave": [
+        "Wood KJ, Goto R. Mechanisms of rejection: current perspectives. Transplantation 2012;93:1-10",
+        "Halloran PF. Immunosuppressive drugs for kidney transplantation. NEJM 2004;351:2715-2729",
+        "Süsal C et al. Identification of HLA-DR-specific antibodies as relevant for kidney graft outcome. Transplantation 2015"
+      ]
+    },
+    {
+      "id": "rechazo_celular_mecanismo",
+      "titulo": "Rechazo agudo celular (TCMR) — fisiopatología",
+      "categoria": "Rechazo",
+      "concepto_central": "El rechazo agudo celular es mediado por LINFOCITOS T (CD4+ y CD8+) que reconocen aloantígenos HLA del injerto y desencadenan una respuesta inflamatoria que daña preferentemente los TÚBULOS y, en casos severos, las ARTERIAS del injerto. Es la forma más común de rechazo agudo (60-70% de los rechazos) y generalmente responde bien a esteroides.",
+      "mecanismo_molecular": {
+        "fase_aferente": "1. Migración de células dendríticas (APCs) del injerto a ganglios linfáticos del receptor.\n2. Reconocimiento por T CD4+ helper a través de HLA Clase II.\n3. Activación de T CD4+ requiere DOS SEÑALES: a) TCR-HLA-péptido, b) CD28-CD80/86 (coestimulación). Sin coestimulación = anergia.\n4. T CD4+ activadas producen IL-2, IFN-γ → proliferación clonal y diferenciación a Th1 (subset relevante en rechazo).\n5. Activación paralela de T CD8+ por HLA Clase I.",
+        "fase_eferente": "1. T efectoras (CD4+ y CD8+) migran al injerto.\n2. En el intersticio: infiltrado inflamatorio (i en Banff).\n3. Migración al epitelio tubular → tubulitis (t en Banff).\n4. T CD8+ mediante perforina/granzima B inducen apoptosis tubular.\n5. T CD4+ activan macrófagos que amplifican daño.\n6. En casos severos: invasión de íntima arterial (v lesions) — endotelitis.",
+        "via_calcineurina": "La activación de T requiere CALCINEURINA: TCR engagement → ↑Ca²⁺ → calmodulina → calcineurina (fosfatasa) → defosforilación de NFAT → NFAT entra al núcleo → transcripción de IL-2, IFN-γ, otras citoquinas.\n\nTACROLIMUS y CICLOSPORINA INHIBEN CALCINEURINA → bloquean producción de IL-2 → inhiben proliferación de T. Esta es la base de su acción inmunosupresora."
+      },
+      "relevancia_clinica": [
+        "Banff IA-IB: tubulitis sin arteritis → responde 80-90% a bolos de metilprednisolona",
+        "Banff IIA-IIB: arteritis intimal → 50-60% responde a esteroides; mayoría requiere ATG",
+        "Banff III: arteritis transmural → daño severo, peor pronóstico, requiere ATG + manejo agresivo",
+        "Mayor riesgo en primeros 3 meses post-TR, disminuye con el tiempo",
+        "Diagnóstico definitivo: BIOPSIA con clasificación Banff (no clínico)",
+        "Marcadores tempranos: ascenso de Cr >20% sobre nadir, ↓ diuresis, en ocasiones febrícula o malestar"
+      ],
+      "pearls_avanzados": [
+        "El infiltrado infiltrante incluye no solo T sino también macrófagos y, raramente, eosinófilos",
+        "Belatacept (CTLA4-Ig) bloquea coestimulación CD80/86-CD28 — alternativa a CNI",
+        "Borderline rejection: i1-t1 — no cumple criterios IA pero puede progresar; manejo controvertido",
+        "Rechazo subclínico (detectado en biopsia protocolo sin elevación de Cr) — pronóstico discutido, algunos centros tratan",
+        "La fibrosis intersticial / atrofia tubular crónica (IF/TA) puede ser resultado de TCMR repetidos",
+        "TCMR temprana repetida es factor de riesgo para rechazo crónico y pérdida del injerto"
+      ],
+      "referencias_clave": [
+        "Halloran PF. T cell-mediated rejection of kidney transplants: a personal viewpoint. Am J Transplant 2010",
+        "Loupy A et al. Banff 2019 Kidney Meeting Report. Am J Transplant 2020",
+        "Solez K et al. Banff '07 classification. Am J Transplant 2008"
+      ]
+    },
+    {
+      "id": "amr_mecanismo",
+      "titulo": "Rechazo mediado por anticuerpos (AMR) — fisiopatología",
+      "categoria": "Rechazo",
+      "concepto_central": "El AMR es mediado por anticuerpos donador-específicos (DSA) producidos por células plasmáticas (derivadas de B activadas) que se unen al endotelio del injerto y activan el complemento + reclutamiento de células NK. A diferencia del TCMR (que daña túbulos), el AMR daña la MICROCIRCULACIÓN — capilares peritubulares (CPT) y glomerulares. Es responsable de ~30% de rechazos agudos y de la mayoría de pérdidas tardías de injerto.",
+      "mecanismo_molecular": {
+        "generacion_dsa": "DSA pueden ser:\n1. PRE-FORMADOS: por exposición previa a HLA (transfusiones, embarazos, trasplante previo). Detectados por crossmatch positivo.\n2. DE NOVO (dnDSA): generados post-TR, especialmente por NO ADHERENCIA, sub-inmunosupresión, o exposición a HLA del donador no reconocido. Aparecen meses-años post-TR.\n\nLa producción requiere:\n- T CD4+ helper que reconoce HLA del donador (presentación indirecta)\n- Células B que reconocen el mismo HLA via BCR\n- Cooperación T-B en centros germinales\n- Diferenciación a células plasmáticas productoras de IgG\n\nClases de Ac más patogénicas: IgG1 e IgG3 (activan complemento eficientemente). IgG2 e IgG4 son menos patogénicas.",
+        "dano_microvascular": "Los DSA se unen al endotelio del injerto (capilares peritubulares principalmente) → activación del complemento clásico:\n\nC1q se une a Fc de IgG → C1r/s activado → C4 → C4b (depositado en endotelio = C4d marker!) → C2 → C3 → C5 → MAC (C5b-9) → daño endotelial directo.\n\nADEMÁS:\n- Reclutamiento de NK cells via FcγR\n- ADCC (citotoxicidad celular dependiente de anticuerpo)\n- Activación de plaquetas → trombosis microvascular\n- Pérdida de glicocalix endotelial\n- TMA (microangiopatía trombótica) en casos severos\n\nLa MICROCIRCULACIÓN DAÑADA causa:\n- Glomerulitis (g): infiltrado leucocitario en lumen glomerular\n- Capilaritis peritubular (ptc): infiltrado leucocitario en lumen CPT\n- Crónicamente: glomerulopatía de trasplante (cg) — doble contorno de membrana basal glomerular por reparación reiterada"
+      },
+      "relevancia_clinica": [
+        "Banff requiere los 3 criterios para diagnóstico de AMR activo:\n  a) Histología de daño agudo (g>0, ptc>0, TMA, ATN aguda)\n  b) Evidencia de interacción Ac-endotelio (C4d+ o microvascular inflammation g+ptc>0 o ECRG positivo)\n  c) DSA detectables",
+        "AMR temprano (<1 mes): generalmente por DSA pre-formados; presentación severa con disfunción inmediata",
+        "AMR tardío (>3 meses): generalmente por dnDSA; presentación más insidiosa con proteinuria + Cr ascendente",
+        "AMR crónico activo: caracterizado por cg + actividad microvascular + DSA",
+        "C4d-NEGATIVO AMR existe (Banff 2017+): si g+ptc>0 + DSA, puede diagnosticarse sin C4d+",
+        "Tratamiento: TPE + IVIG + Rituximab ± bortezomib ± eculizumab — más complejo y menos efectivo que TCMR"
+      ],
+      "pearls_avanzados": [
+        "MFI (Mean Fluorescence Intensity) del DSA correlaciona con severidad: MFI <1000 (clínicamente irrelevante), 1000-3000 (vigilancia), >3000 (clínicamente significativo), >10000 (alta intensidad)",
+        "DSA que activan C1q en testing son más patogénicos que C1q-negativos",
+        "IgG3 son los más eficientes activando complemento (rate de AMR severo)",
+        "ECRG (Endothelial Cell-specific RNA Gene expression) — emergente, predice AMR antes de cambios morfológicos",
+        "AMR crónico es la principal causa de pérdida tardía del injerto (>2 años post-TR)",
+        "Estrategia 'desensibilización pre-TR': protocolo TPE + IVIG + rituximab para reducir DSA pre-existentes",
+        "Carfilzomib (proteasoma inhibitor) elimina células plasmáticas, emergente para AMR refractario"
+      ],
+      "referencias_clave": [
+        "Loupy A et al. Antibody-Mediated Rejection of Solid-Organ Allografts. NEJM 2018",
+        "Haas M et al. Banff 2017 Meeting Report. Am J Transplant 2018",
+        "Stegall MD et al. Terminal complement inhibition decreases AMR. Am J Transplant 2011 — eculizumab data"
+      ]
+    },
+    {
+      "id": "cni_mecanismo",
+      "titulo": "Inhibidores de calcineurina (Tac, CsA) — mecanismo y toxicidad",
+      "categoria": "Inmunosupresión",
+      "concepto_central": "Tacrolimus y Ciclosporina A son los pilares de la inmunosupresión post-TR. Ambos bloquean la activación de T CD4+ inhibiendo CALCINEURINA, la fosfatasa que activa NFAT (factor de transcripción de IL-2). Tac es ~100x más potente que CsA molarmente, pero también más tóxico. Ambos tienen ventana terapéutica estrecha — requieren MONITOREO de niveles.",
+      "mecanismo_molecular": {
+        "molecular": "Vía de activación normal de T:\n1. TCR-HLA-péptido + CD28-CD80/86 → ↑Ca²⁺ intracelular\n2. Ca²⁺ se une a calmodulina → calmodulina-Ca²⁺ activa CALCINEURINA (fosfatasa)\n3. Calcineurina desfosforila NFAT (Factor Nuclear de células T activadas)\n4. NFAT desfosforilado entra al núcleo\n5. NFAT promueve transcripción de IL-2, IFN-γ, IL-4, TNF-α\n6. IL-2 estimula proliferación clonal de T → respuesta inmune\n\nCSA y TAC bloquean este proceso:\n- CsA se une a CICLOFILINA → complejo CsA-ciclofilina inhibe calcineurina\n- Tac se une a FKBP12 → complejo Tac-FKBP12 inhibe calcineurina\n- Resultado: NFAT permanece fosforilado en citoplasma → NO transcripción de IL-2 → NO activación de T",
+        "diferencias_tac_csa": "Tacrolimus:\n- Más potente (10-100x molar)\n- Menos hirsutismo, hiperplasia gingival\n- Menos HTA\n- MÁS NODAT\n- Más neurotoxicidad (temblor)\n- Más alopecia\n- Mayor riesgo de PTLD\n- Vía exclusivamente CYP3A4\n\nCiclosporina:\n- Menos diabetógena\n- Más HTA (vasoconstricción aferente)\n- Más hirsutismo, hiperplasia gingival\n- Mayor dislipidemia\n- Mayor riesgo de gota (hiperuricemia)\n- Metabolismo CYP3A4 + P-gp"
+      },
+      "relevancia_clinica": [
+        "Ventana terapéutica estrecha: niveles bajos → rechazo; niveles altos → toxicidad renal, neurológica, metabólica",
+        "Tac C0 (valle) metas: 8-12 ng/mL primer mes, 6-10 meses 2-6, 5-8 después",
+        "MONITOREO ESENCIAL: niveles c/2-3 días primera semana, semanal primer mes, c/2-4 sem hasta estable",
+        "Tac C2 (2h post-dosis) o AUC son mejores predictores de exposición pero más complejos clínicamente"
+      ],
+      "toxicidades_principales": [
+        {
+          "tipo": "Nefrotoxicidad",
+          "mecanismo": "Vasoconstricción arteriola aferente → ↓ flujo renal → ↓ TFG. Crónicamente: fibrosis intersticial/atrofia tubular (IF/TA), arteriolopatía.",
+          "manejo": "Niveles bajos, considerar conversión a belatacept o mTOR si TFG declina"
+        },
+        {
+          "tipo": "Neurotoxicidad",
+          "mecanismo": "Inhibición de transportadores y miscellaneous mecanismos endoteliales cerebrales. Temblor (50%+), cefalea, parestesias, mioclonías, convulsiones, PRES (Posterior Reversible Encephalopathy Syndrome) en casos severos.",
+          "manejo": "Reducir dosis, en casos severos cambiar a CsA o belatacept"
+        },
+        {
+          "tipo": "NODAT",
+          "mecanismo": "Inhibición de calcineurina en células β pancreáticas → ↓ transcripción de insulina + apoptosis β.",
+          "manejo": "Cambiar a CsA si severo, reducir esteroides, antidiabéticos"
+        },
+        {
+          "tipo": "HTA",
+          "mecanismo": "Vasoconstricción sistémica + retención hidrosalina renal. Mayor con CsA.",
+          "manejo": "Antihipertensivos, preferir CCB (amlodipina interactúa con Tac pero útil)"
+        },
+        {
+          "tipo": "Hipomagnesemia",
+          "mecanismo": "Inhibición de reabsorción tubular distal de Mg. Especialmente Tac.",
+          "manejo": "Suplementación Mg, vigilar arritmias"
+        },
+        {
+          "tipo": "Hirsutismo y hiperplasia gingival",
+          "mecanismo": "Específico de CsA. No bien entendido.",
+          "manejo": "Cambiar a Tac si problema cosmético"
+        }
+      ],
+      "pearls_avanzados": [
+        "Tacrolimus se administra a estómago vacío (con comida ↓ absorción 30%)",
+        "Variabilidad farmacocinética enorme entre pacientes (genética CYP3A5: rapid metabolizers requieren dosis MAYORES)",
+        "Polimorfismos CYP3A5*1: dosis típicas 1.5-2x mayores. Más común en afroamericanos.",
+        "Toronja, granada: contienen inhibidores CYP3A4 — aumentan niveles. EDUCAR al paciente.",
+        "Cambio de marca/genérico puede alterar farmacocinética — recheckear niveles",
+        "Formulación de liberación prolongada (Advagraf, Envarsus): mejor adherencia, perfil similar",
+        "Conversión 1:1 mg entre marcas NO es exacta — siempre monitorizar"
+      ],
+      "referencias_clave": [
+        "Brunet M et al. Therapeutic Drug Monitoring of Tacrolimus: Updates and Recommendations. Ther Drug Monit 2019",
+        "Halloran PF. Immunosuppressive drugs for kidney transplantation. NEJM 2004",
+        "Naesens M et al. Calcineurin inhibitor nephrotoxicity. Clin J Am Soc Nephrol 2009"
+      ]
+    },
+    {
+      "id": "bk_fisiopatologia",
+      "titulo": "BK virus — biología y nefropatía",
+      "categoria": "Infecciones",
+      "concepto_central": "El BK virus (BKV) es un poliomavirus que coloniza el tracto urinario humano de forma latente en >80% de adultos. Bajo inmunosupresión, particularmente con CNI + MMF, BKV reactiva y puede causar VIRURIA → VIREMIA → NEFROPATÍA, con pérdida del injerto en 30-60% de los casos no manejados. La clave es VIGILANCIA con PCR + REDUCCIÓN de IS oportuna.",
+      "mecanismo_molecular": {
+        "biologia": "BKV (Polyomaviridae) es DNA virus pequeño no envuelto. Su genoma codifica:\n- Proteínas tempranas: large T antigen (LT) y small t antigen — replicación viral\n- Proteínas tardías: VP1, VP2, VP3 — capside\n\nMecanismo de latencia: integración no productiva en epitelio urotelial (vejiga, uréter, papilas renales). Latencia controlada por inmunidad celular T-mediada (T CD4+ y CD8+ específicos).\n\nReactivación: con inmunosupresión, IS reducen vigilancia inmune, BKV reactiva y replica activamente.",
+        "patogenesis_nefropatia": "Cascada:\n1. Replicación urotelial → VIRURIA (PCR orina >10⁷ cp/mL, deconding cells en EGO)\n2. Diseminación retrógrada a tubulos renales (especialmente colectores)\n3. Replicación en epitelio tubular → VIREMIA (BK PCR plasma detectable)\n4. Daño tubular directo + infiltrado inflamatorio (linfocitos, células plasmáticas)\n5. Activación de fibrosis intersticial\n6. Si no controlada: pérdida progresiva de nefronas → IF/TA → pérdida del injerto\n\nHistología característica:\n- Inclusiones intranucleares en epitelio tubular ('basofilia nuclear')\n- SV40 antigen (Large T antigen) positivo por inmunohistoquímica — DIAGNÓSTICO\n- Inflamación intersticial (puede confundirse con rechazo!)\n- Tubulitis (también confunde con rechazo)\n- Fibrosis intersticial + atrofia tubular en casos avanzados (Banff BKVAN A, B, C)"
+      },
+      "relevancia_clinica": [
+        "Screening universal: PCR BK plasma a los meses 1, 3, 6, 9, 12, luego c/3 meses hasta año 2",
+        "Viruria es predecesor: aparece primero, después viremia, después nefropatía",
+        "Cortes de viremia:\n  - <1,000 cp/mL: bajo riesgo, monitorizar\n  - 1,000-10,000 cp/mL: significativa, reducir IS\n  - >10,000 cp/mL: alta sospecha de BKVAN — biopsia\n  - 'Sostenida' (≥3 sem >10,000): BKVAN probable",
+        "Diagnóstico DEFINITIVO de nefropatía: BIOPSIA con SV40+",
+        "BKVAN: clase A (focal), B (más extenso), C (fibrosis severa) — pronóstico peor a mayor clase",
+        "Diagnóstico diferencial CRÍTICO: BKVAN vs rechazo agudo. Histología puede ser similar (tubulitis), pero rechazo NO tiene SV40+",
+        "ERROR FRECUENTE: dar bolos esteroideos por 'rechazo' cuando es BKVAN — empeora viremia"
+      ],
+      "factores_riesgo": [
+        "Donador fallecido (vs vivo)",
+        "DGF (función retardada)",
+        "Esquemas con MMF en dosis altas",
+        "Inducción con timoglobulina (más IS profunda)",
+        "Múltiples episodios de rechazo previo",
+        "Receptor mayor (>60 años) o pediátrico",
+        "Diabetes mellitus",
+        "Stent ureteral prolongado",
+        "BKV seronegativo del receptor con donador seropositivo (controversial)"
+      ],
+      "manejo": [
+        "PILAR: REDUCCIÓN DE IS — no hay antiviral verdaderamente efectivo",
+        "Estrategia escalonada según viremia y BKVAN:",
+        "  - Reducir Tac C0 objetivo: 4-6 ng/mL (era 8-12)",
+        "  - Reducir MMF 25-50% (1g c/12h → 500-750mg c/12h)",
+        "  - Algunos centros suspender MMF temporalmente",
+        "  - MANTENER prednisona (no suspender, riesgo de rechazo)",
+        "Adyuvantes (evidencia limitada):",
+        "  - Cidofovir 0.25-1 mg/kg c/2 semanas SIN probenecid — NEFROTÓXICO, evitar TFG <30",
+        "  - Leflunomida 100 mg/día x 3 días, luego 40-60 mg/día (vigilar teriflunomide 50-100 µg/mL)",
+        "  - IVIG 2 g/kg total (1-2 g/kg dividido en 2-5 días)",
+        "  - Cambio a CsA o mTOR (sirolimus) — menos asociados a BK",
+        "Monitoreo: PCR BK plasma c/2 semanas hasta declinación >1 log y luego no detectable",
+        "Biopsia control 6-12 semanas si BKVAN"
+      ],
+      "pearls_avanzados": [
+        "BK virus tiene tropismo por el aparato urotelial — explica viruria masiva y deconding cells en EGO",
+        "Si baja BK PCR pero sube Cr durante manejo, SOSPECHAR RECHAZO desenmascarado por reducción IS — biopsiar",
+        "El compromiso del injerto único es ASIMÉTRICO típicamente — afecta más colectores corticales",
+        "Re-trasplante en pérdida por BKVAN: posible, pero requiere preparación específica (algunos centros pre-vacunan con BK-VP1)",
+        "JC virus es 'primo' del BK — puede causar leucoencefalopatía multifocal progresiva (LMP), raro pero devastador",
+        "No hay vacuna comercial efectiva (en investigación)",
+        "Algunos centros utilizan profilaxis con ciprofloxacino — evidencia débil"
+      ],
+      "referencias_clave": [
+        "Hirsch HH et al. Polyomavirus-associated nephropathy in renal transplantation. Am J Transplant 2013",
+        "Kotton CN et al. The Transplantation Society International Consensus Guidelines on BK Polyomavirus. Transplantation 2024",
+        "Brennan DC et al. Incidence of BK with tacrolimus vs cyclosporine in kidney transplantation. Am J Transplant 2005"
+      ]
+    },
+    {
+      "id": "cmv_fisiopatologia",
+      "titulo": "CMV en trasplante — biología y manejo",
+      "categoria": "Infecciones",
+      "concepto_central": "El citomegalovirus (CMV, HHV-5) es la infección viral más importante post-TR. Coloniza >70% de adultos. Permanece latente en monocitos/macrófagos. Bajo inmunosupresión REACTIVA o, en D+/R-, ocurre infección primaria con curso severo. Causa: 1) Síndrome CMV (febril sin afectación tisular), 2) Enfermedad CMV invasiva (colitis, neumonitis, retinitis, hepatitis, etc.). Es prevenible con profilaxis efectiva.",
+      "mecanismo_molecular": {
+        "biologia": "CMV (β-herpesvirus, HHV-5):\n- DNA virus grande envuelto\n- Genoma codifica >200 proteínas (vs ~10 de BK virus)\n- Glycoproteínas envueltas: gB, gH, gL, gO, gM, gN, UL128-131 — clave para entry celular y target de neutralization\n- Vías de entry: gB-gH para fibroblastos, complejo UL128-131 para mieloide/endotelial",
+        "latencia_reactivacion": "Permanece latente en:\n- Monocitos / macrófagos (principal reservorio)\n- Células CD34+ hematopoyéticas\n- Células endoteliales\n\nReactivación gatillada por:\n- Inmunosupresión (especialmente IS profunda con timoglobulina, MMF)\n- Stress sistémico (sepsis, cirugía)\n- TNF-α, otros factores inflamatorios",
+        "patogenia_enfermedad": "Daño por:\n1. Replicación lítica en endotelio: vasculitis, microangiopatía\n2. Replicación en epitelio: ulceración GI (colitis, esofagitis), neumonitis, retinitis\n3. Mielosupresión directa (citopenias)\n4. Inmunomodulación: inhibición de MHC I, evasión inmune\n5. EFECTO INDIRECTO: aumenta riesgo de:\n   - Otras infecciones (Aspergillus, PJP)\n   - Rechazo agudo (CMV es 'gatillo' inmunológico)\n   - Pérdida del injerto a largo plazo (vasculopatía CMV)\n   - PTLD (asociación discutida)\n   - Cardiovascular acelerado"
+      },
+      "relevancia_clinica": [
+        "PROFILAXIS según estado D/R:\n  - D+/R- ALTO riesgo: valganciclovir 900 mg/d × 6 meses (extender a 12 si alto riesgo IS adicional)\n  - R+ INTERMEDIO: valganciclovir 900 mg/d × 3 meses\n  - D-/R- BAJO: NO requiere profilaxis CMV (solo TMP-SMX para PJP)",
+        "Diagnóstico:\n  - INFECCIÓN: PCR plasma positivo, sin síntomas\n  - SÍNDROME CMV: fiebre + malestar + citopenias + PCR positivo, sin afectación tisular",
+        "  - ENFERMEDAD CMV INVASIVA: PCR + síntomas órgano-específicos + idealmente biopsia",
+        "Tratamiento:\n  - Síndrome leve: Valganciclovir 900 mg c/12h VO",
+        "  - Enfermedad GI o severa: Ganciclovir 5 mg/kg IV c/12h",
+        "  - Reducir MMF 50% (sinergiza con replicación CMV)",
+        "  - Duración: mínimo 2-3 semanas Y hasta PCR no detectable × 2 semanas consecutivas",
+        "Resistencia (sospecha si PCR no baja >1 log en 2 sem):\n  - Test genotípico: UL97 (ganciclovir-R), UL54 (foscarnet-R)\n  - Tratamiento: maribavir (FDA 2021), foscarnet (nefrotóxico)"
+      ],
+      "factores_riesgo": [
+        "D+/R- (mayor riesgo, infección primaria)",
+        "Inducción con timoglobulina o alemtuzumab",
+        "Episodios de rechazo tratados con bolos MP o ATG",
+        "Esquemas con MMF a dosis altas",
+        "Coinfección con HHV-6, HHV-7 (sinergia)",
+        "Diabetes mellitus",
+        "Edad avanzada",
+        "Linfopenia <500"
+      ],
+      "manejo_avanzado": [
+        "Valganciclovir AJUSTAR POR TFG:\n  - TFG >60: 900 mg/día (profilaxis) o 900 mg c/12h (tratamiento)\n  - TFG 40-60: 450 mg/día o 450 mg c/12h",
+        "  - TFG 25-40: 450 mg c/48h o 450 mg/día",
+        "  - TFG 10-25: 450 mg 2× semana o 450 mg c/48h",
+        "  - TFG <10: NO USAR — usar ganciclovir IV ajustado",
+        "Toxicidad valganciclovir: neutropenia (vigilar BH semanal primer mes), nefrotoxicidad, anemia",
+        "Letermovir alternative:\n  - Mecanismo: inhibe complejo terminasa CMV (UL56)",
+        "  - 480 mg/día (240 mg si ciclosporina) VO o IV",
+        "  - NO requiere ajuste por TFG, NO mielotóxico",
+        "  - Aprobado para profilaxis, NO tratamiento",
+        "  - Resistencia emergente",
+        "Maribavir:\n  - Mecanismo: inhibe pUL97 (kinasa de CMV)",
+        "  - 400 mg c/12h VO",
+        "  - Aprobado para CMV refractario o resistente",
+        "  - Sin nefrotoxicidad ni mielotoxicidad",
+        "  - Interactúa con Tac (aumenta niveles)"
+      ],
+      "pearls_avanzados": [
+        "PCR plasma puede ser falsamente negativa en colitis CMV (~20%) — biopsiar si sospecha clínica fuerte",
+        "Carga viral cuantitativa estandarizada en UI/mL (no copias) según WHO desde 2010",
+        "PCR cualitativa positiva pero baja (<200 UI/mL) puede ser 'blip' clinically irrelevant",
+        "PROFILAXIS PROLONGADA en D+/R- (200 días vs 100) reduce significativamente enfermedad CMV tardía (estudio IMPACT)",
+        "Estrategia 'preemptive' (monitoreo + tratamiento si PCR positivo) es alternativa a profilaxis universal — más usada en algunos centros europeos",
+        "Vacuna CMV: en desarrollo (no comercial aún) — gB subunit, mRNA, otros",
+        "IgIV CMV-específica (Cytogam): adyuvante en enfermedad severa o D+/R-",
+        "Recurrencia post-tratamiento ocurre en 25-40% — vigilar PCR mensual × 3-6 meses",
+        "CMV asocia a mayor mortalidad cardiovascular post-TR — efecto indirecto",
+        "El termo 'CMV resistente' debe confirmarse genotípicamente — no solo por respuesta clínica"
+      ],
+      "referencias_clave": [
+        "Kotton CN et al. The Third International Consensus Guidelines on the Management of CMV in Solid-organ Transplantation. Transplantation 2018",
+        "Razonable HE et al. AST IDC: CMV. Clin Transplant 2019",
+        "Avery RK et al. Maribavir for refractory CMV in transplant recipients. NEJM 2022 (Phase 3)"
+      ]
+    }
+  ]
+}
