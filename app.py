@@ -3,10 +3,10 @@
 # ============================================================
 # Módulos nuevos v2.0:
 #   + Citrato Regional completo (acumulación, contraindicaciones, monitoreo)
-#   + Sodio en TRRC (predicción + corrección)
+#   + Sodio en CRRT (predicción + corrección)
 #   + Predicción HD + KoA
 #   + Plasmaféresis / TPE
-#   + Reposición de electrolitos en TRRC
+#   + Reposición de electrolitos en CRRT
 #   + Tarjeta de orden de enfermería
 #   + CSS clínico oscuro mejorado
 # ============================================================
@@ -680,7 +680,7 @@ section[data-testid="stSidebar"]{display:none!important;}
     Plataforma Clínica de Nefrología
   </div>
   <div style="color:rgba(255,255,255,0.55);font-size:12px;margin-top:4px;">
-    TRRC · Nefrología · Trasplante · Guardia
+    CRRT · Nefrología · Trasplante · Guardia
   </div>
 </div>""", unsafe_allow_html=True)
 
@@ -835,7 +835,7 @@ def watson(sex: str, age: float, height_cm: float, weight_kg: float) -> float:
 
 def calc_na_pred_trrc(sex, age, ht, wt, na_plasma, na_bags, qeff, tiempo_hr,
                       na_cit_sol=0.0, inf_cit=0.0, na_post=0.0, inf_post=0.0) -> dict:
-    """Predicción de sodio post-TRRC."""
+    """Predicción de sodio post-CRRT."""
     tbw = watson(sex, age, ht, wt)
     if tbw <= 0:
         return {}
@@ -848,7 +848,7 @@ def calc_na_pred_trrc(sex, age, ht, wt, na_plasma, na_bags, qeff, tiempo_hr,
 
 def calc_na_corr_trrc(sex, age, ht, wt, na_plasma, na_meta, qeff, na_bags,
                       na_cit_sol=0.0, inf_cit=0.0) -> dict:
-    """Estrategias de corrección de sodio en TRRC."""
+    """Estrategias de corrección de sodio en CRRT."""
     tbw = watson(sex, age, ht, wt)
     if tbw <= 0 or qeff <= 0:
         return {}
@@ -1659,7 +1659,7 @@ def export_pdf_pro():
         ],
         "Choque cardiogénico": [
             "UF conservadora: 100–150 mL/h para evitar hipotensión",
-            "Monitoreo estrecho de PA c/15–30 min durante TRRC",
+            "Monitoreo estrecho de PA c/15–30 min durante CRRT",
             "Considerar soporte inotrópico antes de UF agresiva",
             "Evitar hipokalemia (riesgo arrítmico) — K en bolsas según laboratorio",
         ],
@@ -1676,12 +1676,12 @@ def export_pdf_pro():
         ],
         "Hiponatremia severa": [
             "Meta de corrección: NO exceder 8–10 mEq/L en 24h (riesgo de mielinolisis)",
-            "Na en bolsas de reemplazo ajustado según cálculo de sodio TRRC",
+            "Na en bolsas de reemplazo ajustado según cálculo de sodio CRRT",
             "Monitoreo de Na sérico c/2–4h hasta estabilización",
         ],
         "Hipernatremia": [
             "Corrección gradual: No bajar Na >10 mEq/L/24h (riesgo de edema cerebral)",
-            "Usar solución de reemplazo con Na ajustado — ver módulo Sodio TRRC",
+            "Usar solución de reemplazo con Na ajustado — ver módulo Sodio CRRT",
             "Monitoreo de Na sérico c/2–4h",
         ],
         "Rabdomiólisis": [
@@ -1755,7 +1755,7 @@ def export_pdf_pro():
          Paragraph('Ajustar composición de bolsas según resultado', E_TD)],
         [Paragraph('c/ 24 h', E_TD_B),
          Paragraph('BH, Creatinina, BUN, Urea', E_TD),
-         Paragraph('Monitoreo de función y adecuación de TRRC', E_TD)],
+         Paragraph('Monitoreo de función y adecuación de CRRT', E_TD)],
     ]
     story.append(data_table(lab_rows, col_widths=[2.5*cm, 6*cm, 9*cm]))
     story.append(Spacer(1, 4*mm))
@@ -1828,7 +1828,7 @@ def export_pdf_pro():
              Paragraph('Valor objetivo / acción', E_TH)],
             [Paragraph('Cada hora', E_TD_B),
              Paragraph('Qb, Qe, UF, presiones del circuito, temperatura del paciente', E_TD),
-             Paragraph('Registrar en hoja de TRRC. Avisar si P acceso < −250 o P retorno >250 mmHg', E_TD)],
+             Paragraph('Registrar en hoja de CRRT. Avisar si P acceso < −250 o P retorno >250 mmHg', E_TD)],
             [Paragraph('c/ 4–6 h', E_TD_B),
              Paragraph('aPTT', E_TD),
              Paragraph('Meta 45–80 s. Si <45: ↑ HNF. Si >100: ↓ HNF o pausar. AVISAR MÉDICO', E_TD)],
@@ -2047,7 +2047,7 @@ st.markdown(f"""
             Plataforma Clínica de Nefrología
         </div>
         <div style="font-size:12px; color:rgba(255,255,255,0.75); margin-top:4px; font-weight:500;">
-            TRRC · Nefrología · Trasplante · Guardia
+            CRRT · Nefrología · Trasplante · Guardia
         </div>
         <div style="font-size:10px; color:rgba(255,255,255,0.50); margin-top:3px;">
             Dr. Josué Tapia · León, Gto. · {VERSION} · Uso académico
@@ -2108,14 +2108,14 @@ with st.sidebar:
     _navbtn("🏥 Expediente Clínico", "expediente")
     _navbtn("📄 Receta Médica", "receta")
 
-    _navsec("TRRC / CRRT")
+    _navsec("CRRT / CRRT")
     _navbtn("🩺 Prescripción", "presc")
     _navbtn("🧪 Citrato RCA", "cit")
-    _navbtn("🧂 Sodio en TRRC", "na")
+    _navbtn("🧂 Sodio en CRRT", "na")
     _navbtn("⚗️ Electrolitos & Bolsas", "electrolitos")
     _navbtn("📐 Kt/V por objetivos", "ktv")
     _navbtn("⚖️ Balance dinámico", "bal")
-    _navbtn("🔧 Complicaciones TRRC", "complic")
+    _navbtn("🔧 Complicaciones CRRT", "complic")
 
     _navsec("OTRAS TERAPIAS")
     _navbtn("💉 Predicción HD + KoA", "hd")
@@ -2176,7 +2176,7 @@ with st.sidebar:
 # ─── NAVEGACIÓN: variable de control ──────────────────────────────────────────
 nav = st.session_state.get("nav_sel", "presc")
 
-# ── Variables globales TRRC — leídas de session_state (definidas en módulo Prescripción) ──
+# ── Variables globales CRRT — leídas de session_state (definidas en módulo Prescripción) ──
 # Todos los módulos que usen estos valores los toman de aquí
 peso      = float(st.session_state.get("sb_peso", 70.0))
 hto       = float(st.session_state.get("sb_hto", 0.30))
@@ -2188,18 +2188,18 @@ escenarios = list(st.session_state.get("sb_escenarios", ["Sepsis / choque sépti
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB: SCORES / CANDIDATURA TRRC
+# TAB: SCORES / CANDIDATURA CRRT
 # Refs: SOFA (Sepsis-3, 2016), APACHE II, KDIGO 2026 AKI (borrador público)
 #       STARRT-AKI 2020, AKIKI 2016, AKIKI-2 2021
 # ══════════════════════════════════════════════════════════════════════════════
 if nav == "scores":
-    st.subheader("📊 Scores de Severidad y Candidatura a TRRC")
+    st.subheader("📊 Scores de Severidad y Candidatura a CRRT")
     st.info("💡 Los scores de mortalidad (SOFA, APACHE II) son **pronósticos**, "
-            "no contraindicaciones al TRRC. Un score alto indica enfermedad crítica "
+            "no contraindicaciones al CRRT. Un score alto indica enfermedad crítica "
             "severa que **justifica** el soporte renal continuo.")
 
     modo_score = st.radio("Calculadora", ["SOFA", "APACHE II", "AKI — KDIGO 2026",
-                                          "🏥 Candidatura a TRRC"], horizontal=True,
+                                          "🏥 Candidatura a CRRT"], horizontal=True,
                           key="modo_score")
 
     # ── SOFA ──────────────────────────────────────────────────────────────────
@@ -2302,7 +2302,7 @@ if nav == "scores":
         if sofa_total >= 2: st.error(f"🔴 SOFA ≥2: criterio diagnóstico de **SEPSIS** si hay infección sospechada.")
         if renal_score >= 2:
             st.warning(f"⚠️ SOFA renal {renal_score}/4 — AKI significativa. "
-                       f"SOFA total {sofa_total} **justifica TRRC**, no lo contraindica.")
+                       f"SOFA total {sofa_total} **justifica CRRT**, no lo contraindica.")
         st.session_state["sofa_total"] = sofa_total
 
     # ── APACHE II ─────────────────────────────────────────────────────────────
@@ -2492,11 +2492,11 @@ if nav == "scores":
 
         if apache2_total > 25:
             st.error(f"🔴 APACHE II {apache2_total} — Enfermedad crítica severa. "
-                     "Este score **indica soporte orgánico agresivo**, incluido TRRC. "
+                     "Este score **indica soporte orgánico agresivo**, incluido CRRT. "
                      "No es contraindicación.")
         elif apache2_total > 15:
             st.warning(f"🟠 APACHE II {apache2_total} — Enfermedad moderada-severa. "
-                       "Evaluar indicaciones de TRRC.")
+                       "Evaluar indicaciones de CRRT.")
         else:
             st.info(f"ℹ️ APACHE II {apache2_total} — Documentar en expediente como contexto clínico.")
         st.session_state["apache2_total"] = apache2_total
@@ -2528,7 +2528,7 @@ if nav == "scores":
             uo_dur = st.selectbox("Durante cuántas horas", ["<6h", "6–12h", "12–24h", "≥24h"],
                                   key="kd_uo_dur")
         with kd6:
-            en_rrt = st.checkbox("¿Ya inició TRR (diálisis/TRRC)?", key="kd_rrt")
+            en_rrt = st.checkbox("¿Ya inició TRR (diálisis/CRRT)?", key="kd_rrt")
 
         # Calculate staging
         ratio_cr = cr_act / cr_base if cr_base > 0 else 0
@@ -2562,10 +2562,10 @@ if nav == "scores":
             st.warning(f"🟡 **AKI Estadio 1** — Riesgo. Monitoreo estrecho, evitar nefrotóxicos, "
                        f"optimizar volemia. Evaluar TRR si hay indicación urgente.")
         elif aki_stage == 2:
-            st.error(f"🔴 **AKI Estadio 2** — Daño. Evaluar TRRC. "
+            st.error(f"🔴 **AKI Estadio 2** — Daño. Evaluar CRRT. "
                      f"Iniciar si hay indicaciones de urgencia o hemodynamia inestable.")
         else:
-            st.error(f"🔴 **AKI Estadio 3** — Falla renal. **Indicación formal de evaluar TRRC** "
+            st.error(f"🔴 **AKI Estadio 3** — Falla renal. **Indicación formal de evaluar CRRT** "
                      f"(KDIGO 2026, Capítulo 5). Sin beneficio de inicio acelerado vs estándar "
                      f"(STARRT-AKI 2020). Individualizar timing según contexto clínico.")
 
@@ -2586,7 +2586,7 @@ if nav == "scores":
 *KDIGO 2026 recomienda el uso de biomarcadores validados para estratificación de riesgo de AKI, especialmente en pacientes en UCI.*
             """)
 
-        with st.expander("📊 Evidencia sobre timing de inicio de TRRC"):
+        with st.expander("📊 Evidencia sobre timing de inicio de CRRT"):
             st.markdown("""
 | Ensayo | Diseño | Resultado principal |
 |--------|--------|---------------------|
@@ -2600,9 +2600,9 @@ if nav == "scores":
             """)
         st.session_state["aki_stage"] = aki_stage
 
-    # ── CANDIDATURA A TRRC ────────────────────────────────────────────────────
+    # ── CANDIDATURA A CRRT ────────────────────────────────────────────────────
     else:
-        st.markdown("### 🏥 Candidatura a TRRC — Evaluación integral")
+        st.markdown("### 🏥 Candidatura a CRRT — Evaluación integral")
         st.caption("Basado en KDIGO 2026, SCCM/ESICM guidelines. "
                    "Los scores de mortalidad son pronósticos, NO contraindicaciones.")
 
@@ -2654,13 +2654,13 @@ if nav == "scores":
             if c_acceso: contras_activas.append("Sin acceso vascular posible")
             if c_choque: contras_activas.append("Choque irreversible inminente")
             if c_coag_abs: contras_activas.append("Coagulopatía refractaria absoluta")
-            st.error(f"⛔ **TRRC no indicado en este momento** por: {', '.join(contras_activas)}. "
+            st.error(f"⛔ **CRRT no indicado en este momento** por: {', '.join(contras_activas)}. "
                      f"Re-evaluar si las condiciones cambian.")
         elif n_indics >= 2:
-            st.success(f"✅ **TRRC INDICADO** — {n_indics} indicaciones presentes. "
+            st.success(f"✅ **CRRT INDICADO** — {n_indics} indicaciones presentes. "
                        f"Iniciar según disponibilidad y metas de atención.")
         elif n_indics == 1:
-            st.warning(f"🟡 **TRRC a evaluar** — 1 indicación presente. "
+            st.warning(f"🟡 **CRRT a evaluar** — 1 indicación presente. "
                        f"Puede ser suficiente si hay deterioro progresivo. Decisión clínica individualizada.")
         else:
             st.info("ℹ️ Sin indicaciones formales activas al momento. Monitoreo continuo y reevaluación.")
@@ -2688,29 +2688,63 @@ if nav == "scores":
         if indics_texto:
             texto_exp = (
                 f"Paciente con enfermedad crítica severa ({scores_txt}). "
-                f"Se indica inicio de Terapia de Reemplazo Renal Continua (TRRC) por las siguientes indicaciones: "
+                f"Se indica inicio de Terapia de Reemplazo Renal Continua (CRRT) por las siguientes indicaciones: "
                 f"{'; '.join(indics_texto)}. "
                 f"Los scores de severidad documentados reflejan la gravedad de la disfunción orgánica "
                 f"y constituyen indicación de soporte renal continuo, de acuerdo con KDIGO 2026 "
                 f"(Capítulo 5: Kidney Replacement Therapy) y guías SCCM/ESICM. "
-                f"Se planifica TRRC con modalidad, flujos y anticoagulación según prescripción adjunta. "
+                f"Se planifica CRRT con modalidad, flujos y anticoagulación según prescripción adjunta. "
                 f"Inicio individualizado; sin evidencia de beneficio del inicio acelerado vs estándar "
                 f"(STARRT-AKI 2020, n=2927, mortalidad 90d 43.9 vs 43.7%, p=0.92)."
             )
         else:
             texto_exp = (
                 f"Paciente con monitoreo renal activo ({scores_txt}). "
-                f"Sin indicaciones formales de TRRC al momento de esta evaluación. "
+                f"Sin indicaciones formales de CRRT al momento de esta evaluación. "
                 f"Se continuará vigilancia estrecha y se reevaluará candidatura ante cambios clínicos. "
                 f"Criterios de inicio según KDIGO 2026."
             )
         st.text_area("Copiar al expediente:", value=texto_exp, height=180, key="texto_expediente")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 1: PRESCRIPCIÓN TRRC
+# TAB 1: PRESCRIPCIÓN CRRT
 # ══════════════════════════════════════════════════════════════════════════════
 elif nav == "presc":
-    st.subheader("Prescripción TRRC — Recomendación combinada")
+    st.subheader("Prescripción CRRT — Recomendación combinada")
+
+    # ── SELECTOR DE PACIENTE (igual que Receta y Nota Evolución) ─────────────
+    _pr_pmode = st.radio("", ["🔍 Paciente existente", "✏️ Sin paciente"],
+                          horizontal=True, key="pr_pmode")
+    _pr_pac = {}
+    _pr_pid = None
+    if "existente" in _pr_pmode.lower() and _is_auth() and _DB_ON and _db.db_ok():
+        try:
+            _pr_pacs = _cached_patients(_user_id()) or []
+            _pr_q = st.text_input("Buscar paciente", key="pr_buscar",
+                                   placeholder="Nombre o expediente...")
+            _pr_pacs_f = [p for p in _pr_pacs
+                          if _pr_q.lower() in (p.get("nombre","")+p.get("expediente","")).lower()][:30]
+            if _pr_pacs_f:
+                _pr_opts = {f"{p['nombre']} — Exp:{p.get('expediente','—')}": p for p in _pr_pacs_f}
+                _pr_sel = st.selectbox("Paciente", list(_pr_opts.keys()), key="pr_sel_pac")
+                _pr_pac = _pr_opts[_pr_sel]
+                _pr_pid = _pr_pac.get("id")
+                # Pre-cargar peso si está disponible
+                if _pr_pac.get("peso") and not st.session_state.get("_pr_peso_loaded"):
+                    try:
+                        st.session_state["sb_peso"] = float(_pr_pac["peso"])
+                        st.session_state["_pr_peso_loaded"] = True
+                    except Exception:
+                        pass
+                st.caption(f"📋 Paciente: **{_pr_pac.get('nombre','—')}** · "
+                           f"Exp: {_pr_pac.get('expediente','—')} · "
+                           f"Edad: {_pr_pac.get('edad','—')} · "
+                           f"Peso: {_pr_pac.get('peso','—')} kg")
+            else:
+                st.info("Sin pacientes registrados. Usa modo 'Sin paciente' para prescripción libre.")
+        except Exception as _pre:
+            st.warning(f"No se pudo cargar lista de pacientes: {_pre}")
+    st.divider()
 
     # ── PARÁMETROS DEL PACIENTE ────────────────────────────────────────────────
     st.markdown("#### ⚙️ Parámetros globales")
@@ -3325,10 +3359,10 @@ elif nav == "cit":
         st.success(f"✅ Sin criterios de acumulación. Ratio Ca total/iónico = {ratio_ca:.2f} (normal <2.5).")
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 3: SODIO EN TRRC
+# TAB 3: SODIO EN CRRT
 # ══════════════════════════════════════════════════════════════════════════════
 elif nav == "na":
-    st.subheader("Sodio en TRRC — Predicción y Corrección")
+    st.subheader("Sodio en CRRT — Predicción y Corrección")
 
     modo_na = st.radio("Modo", ["📊 Predicción de sodio", "🎯 Corrección de sodio"], horizontal=True,
                        key="modo_na")
@@ -3351,7 +3385,7 @@ elif nav == "na":
     st.markdown("### Parámetros de la terapia")
     nat1, nat2, nat3 = st.columns(3)
     with nat1:
-        na_bags = st.number_input("[Na] en bolsas TRRC (mEq/L)", 100.0, 160.0, 140.0, 1.0,
+        na_bags = st.number_input("[Na] en bolsas CRRT (mEq/L)", 100.0, 160.0, 140.0, 1.0,
                                   key="na_bags", help="Na en solución de reemplazo/dializato")
         na_qeff = st.number_input("Efluente total (mL/hr)", 0, 6000, int(dosis_mlkg * peso),
                                   100, key="na_qeff")
@@ -3414,7 +3448,7 @@ elif nav == "na":
                 st.caption("Mantener [Na] en bolsas sin cambios. Ajustar sólo el flujo postfiltro.")
             with rc2:
                 st.markdown("#### Estrategia 2")
-                st.markdown("**Ajustar [Na] en bolsas TRRC** (sin reposición postfiltro adicional)")
+                st.markdown("**Ajustar [Na] en bolsas CRRT** (sin reposición postfiltro adicional)")
                 st.metric("[Na] objetivo en bolsas", f"{result_corr['target_bags']:.1f} mEq/L")
                 st.caption("Mantener flujo de efluente. Cambiar composición de la solución.")
             # Alertas
@@ -4119,7 +4153,7 @@ TPE remueve **crioglobulinas circulantes** antes de que precipiten:
 # TAB 6: KT/V POR OBJETIVOS
 # ══════════════════════════════════════════════════════════════════════════════
 elif nav == "ktv":
-    st.subheader("Dosis por objetivos (Kt/V urea — TRRC)")
+    st.subheader("Dosis por objetivos (Kt/V urea — CRRT)")
     V = st.number_input("Volumen de distribución V (L) ≈ 0.6xpeso", value=round(0.6 * peso, 1),
                         step=0.1)
     C0 = st.number_input("Urea inicial C0 (mg/dL)", value=150.0, step=1.0)
@@ -4151,7 +4185,7 @@ elif nav == "bal":
     peso_seco = st.number_input("Peso seco objetivo (kg)", value=max(0.0, peso - 5), step=0.5)
     fo_actual = (peso - peso_seco) / peso_seco if peso_seco > 0 else 0.0
     fo_obj = st.number_input("FO% objetivo (p. ej. 0.05 = 5%)", value=0.05, step=0.01)
-    horas_trrc = st.number_input("Horas de TRRC planificadas (h)", value=24, step=1)
+    horas_trrc = st.number_input("Horas de CRRT planificadas (h)", value=24, step=1)
     ingresos = st.number_input("Ingresos previstos (mL)", value=0, step=50)
     uresis_res = st.number_input("Uresis residual 24h (mL)",
                                  value=int(st.session_state.get("ur_main", 0)), step=50)
@@ -4204,8 +4238,8 @@ elif nav == "anticoag":
 
         # ── NOMOGRAMA HNF COMPLETO ─────────────────────────────────────────
         st.divider()
-        st.markdown("### 📊 Nomograma HNF para TRRC")
-        st.caption("Objetivo aPTT en TRRC: **45–80 segundos** (anticoagulación moderada). "
+        st.markdown("### 📊 Nomograma HNF para CRRT")
+        st.caption("Objetivo aPTT en CRRT: **45–80 segundos** (anticoagulación moderada). "
                    "Más conservador que anticoagulación terapéutica sistémica.")
 
         hn1, hn2 = st.columns(2)
@@ -4281,8 +4315,8 @@ elif nav == "anticoag":
 
         with st.expander("🔬 Anti-Xa como alternativa al aPTT"):
             st.markdown(f"""
-**Anti-Xa para monitoreo de HNF en TRRC:**
-- Meta: **0.3–0.7 UI/mL** (anticoagulación moderada para TRRC)
+**Anti-Xa para monitoreo de HNF en CRRT:**
+- Meta: **0.3–0.7 UI/mL** (anticoagulación moderada para CRRT)
 - Ventaja: No afectado por factor VIII elevado, lupus anticoagulante o coagulopatías
 - Tomar muestra: **4–6h** después de iniciar o cambiar dosis, en estado estable
 - Ajuste: mismo nomograma de aPTT como referencia; usar anti-Xa para confirmar
@@ -4310,7 +4344,7 @@ elif nav == "fund":
     qp_f, qp_h_f, qe_f, qr_pre_f, qr_post_f, qd_f, ff_f = flows_and_ff(
         qb, hto, dosis_mlkg, peso, uf, mod_for_fund or "CVVHDF")
 
-    st.markdown("### Fórmulas TRRC (LaTeX)")
+    st.markdown("### Fórmulas CRRT (LaTeX)")
     st.latex(r"Q_p = Q_b \times (1 - Hto)")
     st.latex(r"Q_{p,h} = Q_p \times 60 \quad \text{(mL/h)}")
     st.latex(r"Q_e = \text{dosis}_{mL/kg/h} \times \text{peso}_{kg}")
@@ -4334,7 +4368,7 @@ elif nav == "fund":
     st.latex(r"C_{res}^{1\,ses} = e^{-n_{recambios}} \times 100\%")
     st.latex(r"C_{res}^{total} = (0.55 + 0.45 \cdot e^{-n_{rec}})^{n_{ses}} \times 100\%")
 
-    st.markdown("### Sustitución numérica (valores actuales TRRC)")
+    st.markdown("### Sustitución numérica (valores actuales CRRT)")
     nc1, nc2, nc3 = st.columns(3)
     with nc1:
         st.write(f"**Qb** = {int(qb)} mL/min")
@@ -4379,6 +4413,20 @@ elif nav == "resumen":
     st.caption("Completa todos los campos y luego genera el PDF. "
                "Este documento integra prescripción, anticoagulación y monitoreo en un solo lugar.")
 
+    # Banner: redirigir al módulo Prescripción para el flujo clínico principal
+    _b1, _b2 = st.columns([5, 1])
+    with _b1:
+        st.info("💡 **¿Solo necesitas la prescripción CRRT?** Usa el módulo dedicado de "
+                "**🩺 Prescripción** (sidebar). Allí puedes seleccionar paciente existente o "
+                "registrar uno nuevo, y guardar la prescripción en el expediente para reimpresión.\n\n"
+                "Este módulo **Resumen / PDF** es para generar un **documento integrado completo** "
+                "que combina prescripción + anticoagulación + monitoreo + orden de enfermería + "
+                "fundamento clínico en un solo PDF de 3 páginas.")
+    with _b2:
+        if st.button("🩺 Ir a Prescripción", use_container_width=True, key="btn_go_presc"):
+            st.session_state["nav_sel"] = "presc"
+            st.rerun()
+
     # ── Sección 1: Identificación ─────────────────────────────────────────────
     st.markdown("### 👤 Identificación del paciente")
     idU, _ = st.columns([3, 1])
@@ -4406,7 +4454,7 @@ elif nav == "resumen":
 
     # ── Sección 2: Prescripción completa ──────────────────────────────────────
     st.divider()
-    st.markdown("### ⚙️ Prescripción TRRC")
+    st.markdown("### ⚙️ Prescripción CRRT")
 
     mod_rs, filtro_rs, coment_rs = combinar_recomendaciones(escenarios)
     filtro_rs = st.session_state.get("ui_filtro", filtro_rs)
@@ -4512,12 +4560,12 @@ elif nav == "resumen":
             st.warning(f"**Hiponatremia: Na = {na_actual:.0f} mEq/L** — "
                        "Corrección máxima: ≤8–10 mEq/L/24h (≤8 si riesgo de ODS). "
                        "Ajustar [Na] en bolsas o flujo postfiltro. "
-                       "Ve a pestaña 🧂 Sodio TRRC para calcular la estrategia.")
+                       "Ve a pestaña 🧂 Sodio CRRT para calcular la estrategia.")
         elif na_actual > 150:
             st.warning(f"**Hipernatremia: Na = {na_actual:.0f} mEq/L** — "
                        "Corrección: ≈0.5 mEq/L/hr (8–10 mEq/día). "
                        "Usar dializado con Na más alto. "
-                       "Ve a pestaña 🧂 Sodio TRRC para calcular la estrategia.")
+                       "Ve a pestaña 🧂 Sodio CRRT para calcular la estrategia.")
 
     # ── Sección 5: Monitoreo (dinámico) ───────────────────────────────────────
     st.divider()
@@ -4580,9 +4628,9 @@ elif nav == "resumen":
     for a in alertas_txt:
         st.markdown(f"- {a}")
 
-    # ── Sección 7: Electrolitos TRRC ──────────────────────────────────────────
+    # ── Sección 7: Electrolitos CRRT ──────────────────────────────────────────
     st.divider()
-    st.markdown("### ⚗️ Guía rápida de electrolitos en TRRC")
+    st.markdown("### ⚗️ Guía rápida de electrolitos en CRRT")
     k_enf = float(st.session_state.get("k_main", 4.0))
     ph_enf = float(st.session_state.get("ph_main", 7.35))
     hco3_enf = float(st.session_state.get("hco3_main", 20.0))
@@ -5352,7 +5400,7 @@ elif nav == "refs":
     st.caption("Las referencias se actualizan al cambiar escenarios o anticoagulación.")
 
 elif nav == "electrolitos":
-    st.subheader("⚗️ Electrolitos en TRRC & Cálculo de Bolsas")
+    st.subheader("⚗️ Electrolitos en CRRT & Cálculo de Bolsas")
     elec_modo = st.radio("Sección",
         ["🔵 Fosfato", "🟢 Magnesio", "📦 Bolsas de solución", "🧬 Composición de bolsas"],
         horizontal=True, key="elec_modo")
@@ -5361,8 +5409,8 @@ elif nav == "electrolitos":
 
     # ── FOSFATO ────────────────────────────────────────────────────────────────
     if elec_modo == "🔵 Fosfato":
-        st.markdown("### Hipofosforemia en TRRC")
-        st.info("La hipofosforemia es la complicación electrolítica más frecuente en TRRC prolongado "
+        st.markdown("### Hipofosforemia en CRRT")
+        st.info("La hipofosforemia es la complicación electrolítica más frecuente en CRRT prolongado "
                 "(las soluciones estándar no contienen fosfato). Incidencia: 50–80% en CRRT >24h.")
 
         ep1, ep2 = st.columns(2)
@@ -5371,7 +5419,7 @@ elif nav == "electrolitos":
             peso_phos = st.number_input("Peso (kg)", 10.0, 300.0, peso_elec, 0.5, key="peso_phos")
         with ep2:
             phos_meta = st.number_input("Meta de fósforo (mg/dL)", 2.0, 5.0, 3.0, 0.1, key="phos_meta")
-            via_phos = st.selectbox("Vía de administración", ["IV (de elección en TRRC)", "Oral/SNG"], key="via_phos")
+            via_phos = st.selectbox("Vía de administración", ["IV (de elección en CRRT)", "Oral/SNG"], key="via_phos")
 
         r_phos = phos_dose_iv(phos_act, peso_phos)
         pr1, pr2, pr3 = st.columns(3)
@@ -5381,7 +5429,7 @@ elif nav == "electrolitos":
 
         st.markdown(f"### Esquema de reposición")
         if phos_act >= 2.5:
-            st.success("✅ Fósforo normal. Monitorear cada 6–8h durante TRRC.")
+            st.success("✅ Fósforo normal. Monitorear cada 6–8h durante CRRT.")
         else:
             if "IV" in via_phos:
                 st.markdown(f"""
@@ -5394,13 +5442,13 @@ elif nav == "electrolitos":
 | Tasa máxima | **7 mmol/hr** (riesgo de hipocalcemia e hipotensión) |
 | Monitoreo | Fósforo, Ca, K c/4–6h durante reposición |
 
-> 🔸 Con TRRC activo: el fosfato se elimina continuamente. Puede requerirse infusión continua o agregar fosfato a las bolsas de reemplazo ({f"{phos_meta:.1f} – 1.5 mmol/L" } en bolsas si disponible).
+> 🔸 Con CRRT activo: el fosfato se elimina continuamente. Puede requerirse infusión continua o agregar fosfato a las bolsas de reemplazo ({f"{phos_meta:.1f} – 1.5 mmol/L" } en bolsas si disponible).
                 """)
             else:
                 dosis_oral = (phos_meta - phos_act) * peso_phos * 0.3  # rough estimate
                 st.info(f"Oral/SNG: Fosfato de sodio/potasio oral. Dosis estimada: {dosis_oral:.0f}–{dosis_oral*1.5:.0f} mg de fósforo elemental dividido en 3–4 dosis. Ajustar según respuesta.")
 
-        with st.expander("📋 Fosfato en bolsas de TRRC"):
+        with st.expander("📋 Fosfato en bolsas de CRRT"):
             st.markdown("""
 **Agregar fosfato a las bolsas de reemplazo:**
 - Concentración objetivo: **1.0–1.5 mmol/L** en la solución
@@ -5412,8 +5460,8 @@ elif nav == "electrolitos":
 
     # ── MAGNESIO ───────────────────────────────────────────────────────────────
     elif elec_modo == "🟢 Magnesio":
-        st.markdown("### Hipomagnesemia en TRRC")
-        st.info("Mg se elimina libremente en TRRC si las soluciones no lo contienen. "
+        st.markdown("### Hipomagnesemia en CRRT")
+        st.info("Mg se elimina libremente en CRRT si las soluciones no lo contienen. "
                 "Prismasol®/Accusol® contienen ~0.6 mmol/L de Mg. Vigilar niveles c/12–24h.")
 
         mg1, mg2 = st.columns(2)
@@ -5453,7 +5501,7 @@ elif nav == "electrolitos":
 
     # ── BOLSAS ─────────────────────────────────────────────────────────────────
     elif elec_modo == "📦 Bolsas de solución":
-        st.markdown("### Cálculo de bolsas de solución para TRRC")
+        st.markdown("### Cálculo de bolsas de solución para CRRT")
         st.caption("Cuántas bolsas pedir a farmacia para una prescripción dada.")
 
         bb1, bb2, bb3 = st.columns(3)
@@ -5464,7 +5512,7 @@ elif nav == "electrolitos":
                                         int(st.session_state.get("presc_qr_post", 360)), 50, key="bb_post")
         with bb2:
             qd_b = st.number_input("Qd Dialisato (mL/hr)", 0, 5000, 800, 50, key="bb_qd")
-            horas_b = st.number_input("Horas de TRRC", 1, 72, 24, 1, key="bb_horas")
+            horas_b = st.number_input("Horas de CRRT", 1, 72, 24, 1, key="bb_horas")
         with bb3:
             tam_bolsa = st.selectbox("Tamaño de bolsa disponible",
                                      ["5 L", "2.5 L", "1 L"], key="bb_tam")
@@ -5490,7 +5538,7 @@ elif nav == "electrolitos":
 
         st.info(f"📦 **Pedir a farmacia:** {bolsas_pre} bolsas PRE + {bolsas_post} bolsas POST + "
                 f"{bolsas_dial} bolsas dialisato = **{bolsas_total} bolsas de {tam_bolsa}** "
-                f"para {horas_b}h de TRRC.")
+                f"para {horas_b}h de CRRT.")
         st.caption("Pedir 10–20% extra por posibles pérdidas o interrupciones.")
 
     # ── COMPOSICIÓN DE BOLSAS ──────────────────────────────────────────────────
@@ -6533,14 +6581,14 @@ Los **HIF-PHI** actúan bloqueando la enzima **prolil-hidroxilasa** (PHD), que n
     st.caption("Fuentes: KDIGO 2012/2021, Micromedex, Lexicomp, Drug Prescribing in Renal Failure (Bennett). Actualizar según fichas técnicas vigentes.")
 
 elif nav == "complic":
-    st.subheader("🔧 Complicaciones del Circuito TRRC & Transición a HD Intermitente")
+    st.subheader("🔧 Complicaciones del Circuito CRRT & Transición a HD Intermitente")
     comp_modo = st.radio("Sección",
-        ["⚙️ Troubleshooting del circuito", "🛑 Cuándo suspender TRRC", "🔄 Transición a HD intermitente"],
+        ["⚙️ Troubleshooting del circuito", "🛑 Cuándo suspender CRRT", "🔄 Transición a HD intermitente"],
         horizontal=True, key="comp_modo")
 
     if comp_modo == "⚙️ Troubleshooting del circuito":
         st.markdown("### ⚙️ Guía de Troubleshooting")
-        st.caption("Abordaje sistemático de las complicaciones más frecuentes del circuito de TRRC.")
+        st.caption("Abordaje sistemático de las complicaciones más frecuentes del circuito de CRRT.")
 
         problema = st.selectbox("Selecciona el problema", [
             "🔴 Coagulación del filtro / pérdida del circuito",
@@ -6638,9 +6686,9 @@ elif nav == "complic":
 1. Activar calentador de solución en la máquina (si disponible) — target 37–38°C
 2. Calentamiento externo: cobertores, aire caliente (Bair Hugger)
 3. Si T° <35°C: evaluar reducir flujos temporalmente
-4. Monitorear T° cada hora en pacientes críticos con TRRC
+4. Monitorear T° cada hora en pacientes críticos con CRRT
 
-**Nota clínica:** La hipotermia en TRRC puede enmascarar fiebre y alterar la respuesta a sepsis. Un paciente con TRRC normotérmico puede estar febril sin criterios clínicos.
+**Nota clínica:** La hipotermia en CRRT puede enmascarar fiebre y alterar la respuesta a sepsis. Un paciente con CRRT normotérmico puede estar febril sin criterios clínicos.
                 """
             },
             "🔵 Alarmas de volumen / balance": {
@@ -6664,7 +6712,7 @@ Ver módulo **⚗️ Electrolitos & Bolsas** para cálculo de dosis de reposici�
 - Fósforo <1.0 mg/dL: 0.32–0.64 mmol/kg IV en 6–12h (máx 7 mmol/hr)
 - Mg <1.2 mg/dL: MgSO₄ 2–4g IV en 2–4h
 
-**Preventivo:** considerar agregar fosfato 1.0–1.5 mmol/L y Mg a bolsas si TRRC >24h
+**Preventivo:** considerar agregar fosfato 1.0–1.5 mmol/L y Mg a bolsas si CRRT >24h
                 """
             },
         }
@@ -6682,10 +6730,10 @@ Ver módulo **⚗️ Electrolitos & Bolsas** para cálculo de dosis de reposici�
                 st.markdown("**🛠️ Manejo**")
                 st.markdown(g["manejo"])
 
-    elif comp_modo == "🛑 Cuándo suspender TRRC":
-        st.markdown("### 🛑 Criterios de Suspensión de TRRC")
+    elif comp_modo == "🛑 Cuándo suspender CRRT":
+        st.markdown("### 🛑 Criterios de Suspensión de CRRT")
         st.markdown("""
-> La decisión de suspender TRRC es tan importante como la de iniciarla. Suspender demasiado pronto → rebote de falla renal. Suspender demasiado tarde → prolongar riesgos innecesarios.
+> La decisión de suspender CRRT es tan importante como la de iniciarla. Suspender demasiado pronto → rebote de falla renal. Suspender demasiado tarde → prolongar riesgos innecesarios.
         """)
 
         st.markdown("#### ✅ Criterios de recuperación renal (suspensión exitosa)")
@@ -6699,13 +6747,13 @@ Ver módulo **⚗️ Electrolitos & Bolsas** para cálculo de dosis de reposici�
 | NGAL urinario | <200 ng/mL sugiere recuperación tubular | Exploratorio |
         """)
 
-        st.markdown("#### 🔄 Trial de suspensión (weaning de TRRC)")
+        st.markdown("#### 🔄 Trial de suspensión (weaning de CRRT)")
         st.info("""
 **Protocolo sugerido:**
-1. Suspender TRRC durante **24–48 horas** en prueba
+1. Suspender CRRT durante **24–48 horas** en prueba
 2. Monitorear cada 6–8 horas: creatinina, diuresis, K, pH
 3. **Éxito:** creatinina no sube >0.3 mg/dL en 24h + diuresis ≥500 mL/día
-4. **Fracaso:** creatinina sube, oliguria, hipercalemia, acidosis → reiniciar TRRC o transitar a IHD
+4. **Fracaso:** creatinina sube, oliguria, hipercalemia, acidosis → reiniciar CRRT o transitar a IHD
         """)
 
         st.markdown("#### ⛔ Criterios de suspensión definitiva (sin recuperación)")
@@ -6715,14 +6763,14 @@ Ver módulo **⚗️ Electrolitos & Bolsas** para cálculo de dosis de reposici�
 - **Limitación del esfuerzo terapéutico (LET):** decisión compartida con familia/paciente
         """)
 
-        st.warning("⚠️ La recuperación renal post-TRRC es posible incluso después de semanas de terapia. No suspender prematuramente por ausencia de diuresis si la causa subyacente aún está activa.")
+        st.warning("⚠️ La recuperación renal post-CRRT es posible incluso después de semanas de terapia. No suspender prematuramente por ausencia de diuresis si la causa subyacente aún está activa.")
 
         st.caption("Ref: KDIGO 2012 AKI, STARRT-AKI, Wald R (NEJM 2020), Gibney N (Crit Care Med 2008)")
 
     else:
-        st.markdown("### 🔄 Transición de TRRC a HD Intermitente (IHD)")
+        st.markdown("### 🔄 Transición de CRRT a HD Intermitente (IHD)")
         st.markdown("""
-> **¿Cuándo pasar de TRRC a IHD?** No siempre el paciente recupera función renal. Si requiere diálisis de mantenimiento pero ya no necesita soporte continuo, la transición a IHD convencional es el siguiente paso.
+> **¿Cuándo pasar de CRRT a IHD?** No siempre el paciente recupera función renal. Si requiere diálisis de mantenimiento pero ya no necesita soporte continuo, la transición a IHD convencional es el siguiente paso.
         """)
 
         st.markdown("#### Criterios para considerar transición a IHD")
@@ -6732,23 +6780,23 @@ Ver módulo **⚗️ Electrolitos & Bolsas** para cálculo de dosis de reposici�
 | **Hemodinámica** | PAM >65 mmHg sin vasopresores o con dosis mínima estable |
 | **Tolerancia a UF** | Capaz de tolerar UF de 2–3 L en 4h sin hipotensión |
 | **Acceso vascular** | Catéter funcionante o acceso permanente (FAV, Permcath) |
-| **Causa** | No hay indicación activa de TRRC (no más sepsis, no edema cerebral) |
+| **Causa** | No hay indicación activa de CRRT (no más sepsis, no edema cerebral) |
 | **Frecuencia** | Diuresis <200 mL/día (si oligúrico) o necesidad persistente de diálisis |
         """)
 
         st.markdown("#### Proceso de transición")
         st.info("""
 **Paso a paso:**
-1. Evaluar tolerancia hemodinámica con un test: suspender TRRC 4–6h y monitorear PA
+1. Evaluar tolerancia hemodinámica con un test: suspender CRRT 4–6h y monitorear PA
 2. Solicitar acceso vascular definitivo si no lo tiene (Permcath, tunelizado)
 3. Primera sesión de IHD: **3–3.5h**, UF conservadora (≤10 mL/kg/h)
 4. Monitoreo estrecho: PA cada 15–30 min durante primera sesión
 5. Ajustar prescripción según tolerancia y laboratorios post-sesión
         """)
 
-        st.markdown("#### Ventajas de IHD vs TRRC")
+        st.markdown("#### Ventajas de IHD vs CRRT")
         st.markdown("""
-| | TRRC | IHD |
+| | CRRT | IHD |
 |--|------|-----|
 | **Hemodinámica** | Mejor tolerada en inestabilidad | Requiere estabilidad |
 | **Movilización** | Dificulta rehabilitación | Permite rehabilitación entre sesiones |
@@ -6760,15 +6808,15 @@ Ver módulo **⚗️ Electrolitos & Bolsas** para cálculo de dosis de reposici�
         st.caption("Ref: Schetz M, Crit Care 2007 | Wald R, NEJM 2020 | KDIGO AKI 2012")
 
 elif nav == "acceso":
-    st.subheader("🫀 Acceso Vascular — TRRC y Hemodiálisis Crónica")
+    st.subheader("🫀 Acceso Vascular — CRRT y Hemodiálisis Crónica")
     acc_modo = st.radio("Sección",
-        ["🔵 Catéteres para TRRC", "🟢 Acceso vascular para HD crónica", "📐 Vigilancia y complicaciones"],
+        ["🔵 Catéteres para CRRT", "🟢 Acceso vascular para HD crónica", "📐 Vigilancia y complicaciones"],
         horizontal=True, key="acc_modo")
 
-    if acc_modo == "🔵 Catéteres para TRRC":
-        st.markdown("### 🔵 Catéteres para TRRC — Selección y Colocación")
+    if acc_modo == "🔵 Catéteres para CRRT":
+        st.markdown("### 🔵 Catéteres para CRRT — Selección y Colocación")
         st.markdown("""
-> El acceso vascular es el **talón de Aquiles de la TRRC**. Un catéter mal colocado o disfuncional es la causa más común de pérdida del circuito y subóptima entrega de dosis.
+> El acceso vascular es el **talón de Aquiles de la CRRT**. Un catéter mal colocado o disfuncional es la causa más común de pérdida del circuito y subóptima entrega de dosis.
         """)
 
         st.markdown("#### Especificaciones del catéter")
@@ -6780,7 +6828,7 @@ elif nav == "acceso":
 | **Longitud yugular D** | 15–16 cm | Punta en unión VCS-AD |
 | **Longitud yugular I** | 19–20 cm | Más larga por trayecto tortuoso |
 | **Flujo mínimo** | ≥150–200 mL/min | Para Qb objetivo de 200 mL/min |
-| **Tipo** | No tunelizado (agudo) | Tunelizado si TRRC >2–3 semanas |
+| **Tipo** | No tunelizado (agudo) | Tunelizado si CRRT >2–3 semanas |
         """)
 
         st.markdown("#### Sitios de acceso — jerarquía recomendada")
@@ -6802,12 +6850,12 @@ elif nav == "acceso":
 - Punta en unión VCS-aurícula derecha → flujo óptimo
 - Si punta en vena cava superior alta: mayor riesgo de trombosis y flujo pobre
 
-**Evaluación de flujo antes de conectar TRRC:**
+**Evaluación de flujo antes de conectar CRRT:**
 - Aspirar y refluir cada lumen libremente
 - Flujo por gravedad >100 mL/min en cada lumen = aceptable
 - Si pobre flujo: reposicionar antes de conectar (rotar, retirar 1–2 cm)
 
-**Sello del catéter (entre sesiones de TRRC):**
+**Sello del catéter (entre sesiones de CRRT):**
 - Heparina 1,000 UI/mL (sello estándar) en cada lumen, volumen del lumen (+0.1 mL)
 - CitraLock 46.7%: reservar para CRBSI o disfunción recurrente
 - NO rtPA de rutina (reservar para oclusión confirmada)
@@ -6917,7 +6965,7 @@ elif nav == "pacientes":
 
 elif nav == "enfermeria":
     anticoag_enf = st.session_state.get("anticoagulacion_tipo", "HNF")
-    st.subheader(f"👩‍⚕️ Protocolo de Enfermería — TRRC con {'HNF' if anticoag_enf == 'HNF' else 'Citrato RCA'}")
+    st.subheader(f"👩‍⚕️ Protocolo de Enfermería — CRRT con {'HNF' if anticoag_enf == 'HNF' else 'Citrato RCA'}")
     st.caption("Guía adaptativa según anticoagulación seleccionada en el módulo de Prescripción.")
 
     if anticoag_enf not in ("HNF", "RCA"):
@@ -6940,7 +6988,7 @@ elif nav == "enfermeria":
 | ☐ | **Bolsas de reemplazo** disponibles (pedir a farmacia según cálculo) |
 | ☐ | **Alarmas de la máquina** verificadas y dentro de rango |
 | ☐ | **Signos vitales basales** documentados (PA, FC, T°, SpO₂) |
-| ☐ | **Hora de inicio** registrada en hoja de TRRC |
+| ☐ | **Hora de inicio** registrada en hoja de CRRT |
                 """)
             else:
                 st.error("⚠️ **REGLA ABSOLUTA:** El calcio SIEMPRE por línea post-filtro SISTÉMICA. "
@@ -6965,11 +7013,11 @@ elif nav == "enfermeria":
                 st.markdown("""
 | Frecuencia | Qué monitorear | Objetivo / Acción |
 |-----------|---------------|------------------|
-| **Cada hora** | Qb, Qe, UF, presiones del circuito, T° del paciente | Registrar en hoja de TRRC |
+| **Cada hora** | Qb, Qe, UF, presiones del circuito, T° del paciente | Registrar en hoja de CRRT |
 | **c/ 4–6 h** | aPTT | Meta **45–80 s** — ajustar HNF según nomograma |
 | **c/ 12 h** | Plaquetas + TP/INR | Vigilar HIT (↓ plaquetas ≥50% = AVISAR MÉDICO URGENTE) |
 | **c/ 6–8 h** | Na, K, HCO₃⁻, Ca, Mg, Fósforo | Ajustar composición de bolsas |
-| **c/ 24 h** | Creatinina, BUN, BH | Evaluación de adecuación de TRRC |
+| **c/ 24 h** | Creatinina, BUN, BH | Evaluación de adecuación de CRRT |
 | **Cada hora** | Balance de líquidos (entradas/salidas) | Discrepancia >200 mL/h → avisar médico |
 | **Continuo** | Presión transmembrana (TMP), presión de acceso/retorno | Alarma sostenida → revisar circuito |
                 """)
@@ -6993,7 +7041,7 @@ elif nav == "enfermeria":
             if anticoag_enf == "HNF":
                 alertas = [
                     ("🔴 URGENTE", "Plaquetas ↓ ≥50% del basal", "SOSPECHAR HIT. SUSPENDER HNF. Avisar médico. NO reiniciar heparina."),
-                    ("🔴 URGENTE", "PAM <65 mmHg durante TRRC", "Reducir UF. Valorar pausar sesión. Avisar médico."),
+                    ("🔴 URGENTE", "PAM <65 mmHg durante CRRT", "Reducir UF. Valorar pausar sesión. Avisar médico."),
                     ("🟠 IMPORTANTE", "FF >25%", "Reducir UF o Qr_post. Aumentar Qr_pre. Riesgo de coagulación del filtro."),
                     ("🟠 IMPORTANTE", "aPTT >100 s", "Reducir HNF. Si >120s: pausar 30–60 min. Vigilar sangrado activo."),
                     ("🟠 IMPORTANTE", "aPTT <45 s pese a ajuste", "Verificar acceso vascular. Considerar bolo de HNF."),
@@ -7028,7 +7076,7 @@ elif nav == "enfermeria":
             st.markdown("""
 | Paso | Acción |
 |------|--------|
-| **1** | Registrar hora de fin, volumen total tratado y balance final en hoja de TRRC |
+| **1** | Registrar hora de fin, volumen total tratado y balance final en hoja de CRRT |
 | **2** | Suspender infusiones: HNF (o citrato + calcio simultáneamente si RCA) |
 | **3** | Desconectar circuito según protocolo aséptico |
 | **4** | Sellar catéter con heparina 1,000 UI/mL (volumen del lumen + 0.1 mL por cada lumen) |
@@ -10149,7 +10197,7 @@ elif nav == "expediente":
                     _npt1, _npt2 = st.columns(2)
                     with _npt1:
                         np_tipo = st.selectbox("Tipo de paciente", [
-                            "General","TRRC / UCI","Trasplante renal","ERC crónica",
+                            "General","CRRT / UCI","Trasplante renal","ERC crónica",
                             "Hemodiálisis","Diálisis peritoneal","Agudo hospitalizado"
                         ], key="np_tipo")
                     with _npt2:
@@ -10256,7 +10304,7 @@ elif nav == "expediente":
                         # Tipo y Dx (igual que en nuevo)
                         _et1, _et2 = st.columns(2)
                         with _et1:
-                            _tipo_opts = ["General","TRRC / UCI","Trasplante renal","ERC crónica",
+                            _tipo_opts = ["General","CRRT / UCI","Trasplante renal","ERC crónica",
                                           "Hemodiálisis","Diálisis peritoneal","Agudo hospitalizado"]
                             _tipo_idx = _tipo_opts.index(_edit_pac.get("tipo","General")) \
                                         if _edit_pac.get("tipo") in _tipo_opts else 0
@@ -10344,7 +10392,7 @@ elif nav == "expediente":
             if pacientes_filtrados:
                 for p in pacientes_filtrados:
                     records = _cached_clinical_records(p["id"])
-                    tipo_icon = {"TRRC / UCI":"🏥","Trasplante renal":"💉","ERC crónica":"🔵",
+                    tipo_icon = {"CRRT / UCI":"🏥","Trasplante renal":"💉","ERC crónica":"🔵",
                                  "Hemodiálisis":"⚙️","Diálisis peritoneal":"💧"}.get(p.get("tipo",""),"👤")
                     with st.expander(f"{tipo_icon} **{p.get('nombre','—')}** · Exp: {p.get('expediente','—')} · "
                                      f"{p.get('edad','—')} años · {len(records)} registro(s)"):
@@ -10376,7 +10424,7 @@ elif nav == "expediente":
                     st.session_state.pop("exp_pac_id", None)
                     st.rerun()
             with col_title:
-                tipo_icon = {"TRRC / UCI":"🏥","Trasplante renal":"💉","ERC crónica":"🔵",
+                tipo_icon = {"CRRT / UCI":"🏥","Trasplante renal":"💉","ERC crónica":"🔵",
                              "Hemodiálisis":"⚙️"}.get(sel_exp.get("tipo",""),"👤")
                 st.markdown(f"### {tipo_icon} {sel_exp.get('nombre','—')} · "
                             f"Exp: {sel_exp.get('expediente','—')} · "
@@ -10479,7 +10527,7 @@ Inducción: {induccion_bg}
                 with soap2:
                     nr_tipo  = st.selectbox("Tipo", [
                         "Consulta externa","Seguimiento","Urgencias / Guardia",
-                        "Trasplante","TRRC / UCI","Interconsulta","Otro"
+                        "Trasplante","CRRT / UCI","Interconsulta","Otro"
                     ], key="nr_tipo")
                 with soap3:
                     nr_titulo = st.text_input("Título / motivo", key="nr_titulo",
@@ -10700,7 +10748,7 @@ Inducción: {induccion_bg}
 
             # Lista de registros
             st.markdown(f"#### Registros clínicos ({len(records)})")
-            tipo_icons = {"TRRC / Prescripción":"🏥","Nefrología / Calculadoras":"🔢",
+            tipo_icons = {"CRRT / Prescripción":"🏥","Nefrología / Calculadoras":"🔢",
                           "Trasplante / Inmunosupresores":"💉","Glomerulopatía":"🔵",
                           "Guardia / Urgencias":"⚡","Consulta externa":"🩺",
                           "Seguimiento":"📊","Interconsulta":"🔄","Otro":"📋"}
@@ -13107,7 +13155,7 @@ Injerto renal con buena función → produce EPO
                         nrx_peso   = st.number_input("Peso (kg)", 0.0, 300.0, 70.0, 0.5, key="nrx_peso")
                     with np3:
                         nrx_tipo   = st.selectbox("Tipo", ["Trasplante renal","ERC crónica",
-                            "Hemodiálisis","TRRC / UCI","General"], key="nrx_tipo")
+                            "Hemodiálisis","CRRT / UCI","General"], key="nrx_tipo")
                         nrx_dx_sel = st.selectbox("Diagnóstico principal", todos_dx[:20], key="nrx_dx_sel")
                         nrx_dx     = nrx_dx_sel if not nrx_dx_sel.startswith("✏️") else st.text_input("Dx manual", key="nrx_dx_txt")
 
@@ -14867,7 +14915,7 @@ Porque saben lo que tú vas a aprender aquí:
 
 ✅ Inicio de diuresis → "slow DGF":
    → Creatinina comienza a caer (aunque lentamente)
-   → Esto es la señal de que el TRRC tubular está recuperando
+   → Esto es la señal de que el CRRT tubular está recuperando
    → Ajustar IS gradualmente al nivel objetivo
 ```
 
@@ -14894,7 +14942,7 @@ Porque saben lo que tú vas a aprender aquí:
 - ⚠️ KDPI <85%
 
 > 📌 **Regla práctica:** Si el Doppler muestra flujo y la Cr cae aunque sea 0.2 mg/dL/día,
-> el riñón va a funcionar. Ten paciencia. La naturaleza del TRRC tubular es recuperarse.
+> el riñón va a funcionar. Ten paciencia. La naturaleza del CRRT tubular es recuperarse.
         """)
 
     elif "KDPI" in dgf_tab:
@@ -16155,7 +16203,7 @@ elif nav == "hipocalcemia_iv":
             "Hospitalizado — hipocalcemia aguda",
             "Paciente en HD — hipocalcemia durante sesión",
             "Post-paratiroidectomía (Hungry Bone Syndrome)",
-            "TRRC con citrato — iCa sistémico bajo",
+            "CRRT con citrato — iCa sistémico bajo",
             "Post-transfusión masiva",
             "Hipomagnesemia coexistente",
         ], key="hipo_ctx")
@@ -16371,9 +16419,9 @@ Protocolo infusión: Ajustar vel hasta lograr Ca >8.0 mg/dL:
 - Si Ca ≥8.0: mantener con oral + calcitriol
         """)
 
-    with st.expander("💧 TRRC con citrato — iCa sistémico bajo"):
+    with st.expander("💧 CRRT con citrato — iCa sistémico bajo"):
         st.info("""
-**En TRRC con RCA:**
+**En CRRT con RCA:**
 - iCa sistémico <1.0 mmol/L = aumentar infusión de calcio (gluconato o CaCl₂)
 - Calcular: tasa infusión Ca (mL/h) = [Meta − iCa actual] x 0.5 x peso / conc_meq_ml
 - Monitorear iCa sistémico c/4–6h
@@ -16672,11 +16720,11 @@ HD = clearance de urea + solutos + agua
 *Elección de modalidad en SCR:*
 | Modalidad | Ventaja en SCR |
 |-----------|---------------|
-| **TRRC (CVVHDF)** | Inestabilidad hemodinámica — más lenta y segura |
+| **CRRT (CVVHDF)** | Inestabilidad hemodinámica — más lenta y segura |
 | **HD intermitente** | HD crónico con SCR descompensado |
 | **UF aislada** | Solo congestión sin indicación de diálisis |
 
-*Patrón de TRRC en SCR:*
+*Patrón de CRRT en SCR:*
 - Dosis mínima: 20 mL/kg/h (RENAL trial)
 - Ultrafiltración neta: 100–200 mL/h según tolerancia
 - Evitar hipotensión → empeora perfusión renal + cardíaca
@@ -18784,7 +18832,7 @@ elif nav == "nota_evol_tx":
                 "Función lenta (Cr↓ sin diálisis pero <10%/día)",
                 "No función primaria (anuria persistente >2 semanas)",
             ], key="ne_patron_func")
-            ne_trr_hoy = st.selectbox("¿TRR hoy?", ["No","Sí — HD","Sí — DP","Sí — TRRC"],
+            ne_trr_hoy = st.selectbox("¿TRR hoy?", ["No","Sí — HD","Sí — DP","Sí — CRRT"],
                                        key="ne_trr_hoy")
             ne_uf = 0
             if "Sí" in ne_trr_hoy:
