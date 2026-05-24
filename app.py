@@ -2152,6 +2152,10 @@ with st.sidebar:
     _navbtn("🫀 Donante Vivo", "eval_donante_vivo")
     _navbtn("🔴 Nota Post-Trasplante", "nota_tx")
     _navbtn("🩺 Nota Evolución Post-TX", "nota_evol_tx")
+    _navbtn("🌡️ Algoritmo Fiebre Post-TR", "fiebre_tx")
+    _navbtn("👶 Embarazo en TR", "embarazo_tx")
+    _navbtn("🦠 Algoritmo CMV", "algo_cmv")
+    _navbtn("🟣 Algoritmo BK", "algo_bk")
     _navbtn("📅 Seguimiento Post-TR", "seguimiento_tx")
     _navbtn("⏰ Perioperatorio", "periop_tx")
     _navbtn("🩺 Complicaciones Crónicas TR", "complic_cr_tx")
@@ -19496,6 +19500,382 @@ elif nav == "nota_evol_tx":
                     st.success(f"✅ Nota generada · DPT {ne_dpt} · {ne_patron[:35]}{_save_msg}")
                 except Exception as _e_ev:
                     st.error(f"Error al generar PDF: {_e_ev}")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ALGORITMO DE FIEBRE POST-TRASPLANTE
+# DDx priorizado por tiempo post-TR · Estudios sugeridos · Manejo empírico
+# ═══════════════════════════════════════════════════════════════════════════════
+elif nav == "fiebre_tx":
+    st.subheader("🌡️ Algoritmo de Fiebre en el Paciente Trasplantado")
+    st.caption("DDx priorizado por tiempo post-TR (KDIGO 2020 + AST IDC 2019 + IDSA Guidelines)")
+
+    fc1, fc2 = st.columns(2)
+    with fc1:
+        f_dpt = st.number_input("Días post-TR (DPT)", 0, 3650, 30, 1, key="ft_dpt")
+        f_temp = st.number_input("Temperatura (°C)", 36.0, 42.0, 38.5, 0.1, key="ft_temp")
+    with fc2:
+        f_neut = st.selectbox("Neutropenia (<1000)", ["No","Sí","Desconocido"], key="ft_neut")
+        f_cvc  = st.selectbox("CVC presente", ["No","Sí","Recién retirado <72h"], key="ft_cvc")
+
+    f_sint = st.multiselect("Síntomas / signos", [
+        "Disuria / polaquiuria","Dolor en injerto","Tos / disnea",
+        "Diarrea","Dolor abdominal","Cefalea / alteración del estado mental",
+        "Lesiones cutáneas","Adenopatías","Sin foco aparente",
+        "Hipotensión / sepsis","Herida quirúrgica con secreción",
+    ], key="ft_sint")
+
+    st.divider()
+    st.markdown("### 🎯 Diagnóstico diferencial priorizado")
+
+    # ── Ventana temporal ──────────────────────────────────────────────────
+    if f_dpt < 30:
+        st.error("**🟥 PRIMER MES POST-TR** (mayor riesgo nosocomial y quirúrgico)")
+        ddx = [
+            ("🥇 Infección de herida quirúrgica", "USG/TC lecho · Cultivo de secreción · Hemocultivos"),
+            ("🥇 Infección urinaria / pielonefritis del injerto", "EGO + urocultivo · USG/Doppler · Función renal"),
+            ("🥇 Neumonía nosocomial / VAP", "Rx tórax · Hemocultivos · Cultivo expectoración o BAL"),
+            ("🥈 Bacteriemia por CVC", "2 hemocultivos pareados (CVC + periférico) · Retirar CVC si confirmado"),
+            ("🥈 Colección perineferal / linfocele infectado", "USG/TC con contraste · Considerar drenaje"),
+            ("🥉 Reactivación HSV / VZV", "Si lesiones cutáneas: PCR + cultivo"),
+            ("🥉 Fiebre por timoglobulina (CRS)", "Premedicar mejor, descartar infección antes"),
+        ]
+    elif f_dpt < 180:
+        st.warning("**🟧 1–6 MESES POST-TR** (oportunistas + reactivaciones virales)")
+        ddx = [
+            ("🥇 CMV (colitis, neumonitis, viremia)", "PCR CMV cuantitativo · Considerar TAC tórax/abdomen"),
+            ("🥇 Pneumocystis jirovecii (PJP)", "TAC tórax (vidrio esmerilado) · BAL con PCR · LDH"),
+            ("🥇 BK virus (raramente fiebre, más nefropatía)", "PCR BK plasma + orina · Biopsia si dudas"),
+            ("🥈 Aspergilosis pulmonar", "TAC tórax · Galactomanano · BAL"),
+            ("🥈 Tuberculosis (reactivación)", "Rx + TAC tórax · BAAR · Quantiferón · PCR"),
+            ("🥈 Nocardiosis (pulmón, SNC, piel)", "TAC tórax + cerebro · Cultivo prolongado"),
+            ("🥉 Toxoplasmosis (en D+/R-)", "PCR Toxo · Serología · RM cerebro si SNC"),
+            ("🥉 IVU recurrente", "EGO + urocultivo · USG"),
+        ]
+    else:
+        st.info("**🟢 >6 MESES POST-TR** (similar a comunitario + oportunistas tardíos)")
+        ddx = [
+            ("🥇 Infecciones comunitarias (neumonía, IVU, gastroenteritis)", "Manejo estándar pero con cobertura amplia"),
+            ("🥇 Influenza / VSR / COVID-19", "PCR respiratoria · Considerar oseltamivir si influenza"),
+            ("🥈 CMV tardío (si profilaxis suspendida)", "PCR CMV"),
+            ("🥈 PJP tardío (sobre todo si TMP-SMX suspendido)", "TAC tórax · BAL"),
+            ("🥈 Criptococosis (meningitis)", "Antígeno criptocócico sérico · LCR si sospecha"),
+            ("🥉 Endemias regionales (histoplasma, coccidio)", "Serología · Cultivos"),
+            ("🥉 PTLD / Linfoma asociado a EBV", "PCR EBV · LDH · TAC · Biopsia si masas"),
+            ("🥉 IVU recurrente con función deteriorada", "Estudio urológico"),
+        ]
+    for d, est in ddx:
+        st.markdown(f"- **{d}** — _{est}_")
+
+    # ── Banderas rojas ────────────────────────────────────────────────────
+    if "Hipotensión / sepsis" in f_sint or f_temp >= 39:
+        st.error("🚨 **CRITERIOS DE SEPSIS** — Iniciar antibiótico empírico amplio espectro en <1h "
+                 "(carbapenémico ± vancomicina), hemocultivos x2, lactato, fluidos 30 mL/kg, "
+                 "considerar ingreso a UCI")
+    if "Cefalea / alteración del estado mental" in f_sint:
+        st.warning("⚠️ **SNC**: descartar meningitis (PL si plaquetas y coagulación permiten), "
+                   "RM cerebro · Considerar Listeria (ampicilina IV) · Toxo · Criptococo · LEMP")
+    if "Tos / disnea" in f_sint:
+        st.info("🫁 **Pulmonar**: Rx tórax + TAC alta resolución si Rx negativa pero sospecha alta · "
+                "Saturación · Considerar BAL si infiltrados difusos")
+
+    st.divider()
+    st.markdown("### 💊 Manejo inicial sugerido (mientras llegan cultivos)")
+    st.markdown("""
+- **Reducir IS temporalmente** si infección severa (suspender MMF, reducir Tac a niveles bajos)
+- **Mantener esteroides** (NO suspender bruscamente — riesgo de Addison)
+- **Hemocultivos x2** antes de antibiótico (CVC + periférico)
+- **EGO + urocultivo · Rx tórax · PCR CMV/BK basal · BH/QS/PCR/procalcitonina**
+- **Antibiótico empírico**:
+  - 1er mes / nosocomial: piperacilina-tazobactam o meropenem ± vancomicina (si CVC/MRSA)
+  - 1–6 meses con sospecha PJP: TMP-SMX dosis tratamiento (15-20 mg/kg/día)
+  - Comunitario tardío: ceftriaxona ± azitromicina (neumonía típica)
+- **Considerar interconsulta a infectología** desde el inicio si fiebre persistente >48-72h
+    """)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EMBARAZO EN TRASPLANTE RENAL
+# Criterios para embarazo seguro · Cambio de IS · Monitoreo trimestral
+# ═══════════════════════════════════════════════════════════════════════════════
+elif nav == "embarazo_tx":
+    st.subheader("👶 Embarazo en Trasplante Renal")
+    st.caption("Basado en KDIGO 2020 · AST Position Paper 2023 · NTPR (National Transplantation Pregnancy Registry)")
+
+    st.markdown("### ✅ Criterios para considerar embarazo seguro")
+    cri = st.columns(2)
+    with cri[0]:
+        c_tiempo = st.checkbox("≥1–2 años post-TR con función estable", value=True, key="emb_tiempo")
+        c_cr = st.checkbox("Cr <1.5 mg/dL (idealmente <1.3)", value=True, key="emb_cr")
+        c_prot = st.checkbox("Proteinuria <500 mg/día", value=True, key="emb_prot")
+    with cri[1]:
+        c_rech = st.checkbox("Sin episodios de rechazo en último año", value=True, key="emb_rech")
+        c_ta = st.checkbox("TA controlada con ≤2 antihipertensivos seguros", value=True, key="emb_ta")
+        c_inf = st.checkbox("Sin infecciones activas (CMV, BK, hepatitis)", value=True, key="emb_inf")
+
+    crit_ok = all([c_tiempo, c_cr, c_prot, c_rech, c_ta, c_inf])
+    if crit_ok:
+        st.success("🟢 **Cumple criterios** — embarazo de riesgo aceptable con manejo conjunto Nefro + Ginecología-MFM")
+    else:
+        st.error("🔴 **NO cumple todos los criterios** — diferir embarazo y optimizar estado renal/clínico")
+
+    st.divider()
+    st.markdown("### 💊 Ajustes de inmunosupresión ANTES del embarazo")
+    st.markdown("""
+| Fármaco | Acción | Comentario |
+|---|---|---|
+| **Micofenolato (MMF/MFS)** | 🛑 **SUSPENDER 6 semanas antes** | TERATÓGENO categoría D · cambiar a azatioprina |
+| **Azatioprina** | ✅ Permitido | Reemplazo seguro de MMF · dosis 1-2 mg/kg/día |
+| **Tacrolimus** | ✅ Continuar | Categoría C · puede requerir aumento de dosis (volumen distribución cambia) |
+| **Ciclosporina A** | ✅ Continuar | Categoría C · vigilar TA y nefrotoxicidad |
+| **Esteroides (prednisona)** | ✅ Continuar | Dosis mínima efectiva (<10 mg/día ideal) |
+| **mTOR (Sirolimus/Everolimus)** | 🛑 **SUSPENDER** | Categoría C-D · cambiar a Tac + azatioprina |
+| **Belatacept** | ⚠️ Evitar | Datos limitados |
+    """)
+
+    st.divider()
+    st.markdown("### 📊 Monitoreo durante el embarazo")
+    st.markdown("""
+**Mensual:**
+- Función renal (Cr, BUN, EGO, proteinuria)
+- Niveles de tacrolimus C0 (puede requerir AJUSTE — volumen distribución aumenta)
+- TA (objetivo <140/90, ideal <130/80)
+- BH (vigilar anemia que se agrava por azatioprina + embarazo)
+
+**Trimestral:**
+- USG obstétrico con Doppler arteria uterina
+- Detección de preeclampsia (PIGF, sFlt-1 si disponible)
+- Cultivo de orina (riesgo aumentado de IVU)
+
+**Banderas rojas:**
+- Cr aumenta >25% del basal → riesgo de pérdida del injerto
+- TA descontrolada → preeclampsia inminente
+- Proteinuria nueva o aumentada → preeclampsia vs rechazo
+    """)
+
+    st.divider()
+    st.markdown("### 🍼 Periparto y postparto")
+    st.markdown("""
+- **Vía de parto**: cesárea NO obligatoria, vaginal preferida si condiciones obstétricas permiten
+- **Antibiótico profiláctico** en parto (cefazolina) — riesgo aumentado de IVU
+- **Esteroides "de estrés"** durante parto (hidrocortisona 100 mg IV)
+- **Vigilancia neonatal**: niveles de Tac en cordón, riesgo de inmunosupresión transitoria del RN
+- **Lactancia**: tacrolimus y prednisona **compatibles** (niveles bajos en leche, sin efectos adversos en NTPR)
+- **MMF**: si se va a reintroducir, NO durante lactancia
+- **Anticoncepción post-parto**: DIU de cobre o progestágeno preferidos · evitar estrógenos (trombosis)
+    """)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ALGORITMO CMV EN TRASPLANTE RENAL
+# Profilaxis · Preemptive · Tratamiento · Refractario / resistente
+# ═══════════════════════════════════════════════════════════════════════════════
+elif nav == "algo_cmv":
+    st.subheader("🦠 Algoritmo CMV en Trasplante Renal")
+    st.caption("Basado en The Transplantation Society International Consensus 2018 + KDIGO 2020")
+
+    cmv1, cmv2 = st.columns(2)
+    with cmv1:
+        d_ser = st.selectbox("Donador (D)", ["D+ (positivo)","D- (negativo)","Desconocido"], key="cmv_d")
+        r_ser = st.selectbox("Receptor (R)", ["R+ (positivo)","R- (negativo)","Desconocido"], key="cmv_r")
+    with cmv2:
+        cmv_dpt = st.number_input("Días post-TR", 0, 3650, 30, 1, key="cmv_dpt")
+        cmv_pcr = st.number_input("PCR CMV plasma (UI/mL)", 0, 10000000, 0, 100, key="cmv_pcr")
+    cmv_sint = st.multiselect("Síntomas/signos compatibles", [
+        "Fiebre","Diarrea/colitis","Tos/disnea","Hepatitis (transaminasas ↑)",
+        "Leucopenia/neutropenia","Trombocitopenia","Retinitis","Asintomático"
+    ], key="cmv_sint")
+    cmv_tfg = st.number_input("TFGe (mL/min/1.73m²)", 10, 150, 60, 1, key="cmv_tfg")
+
+    st.divider()
+
+    # ── Categorización de riesgo ──────────────────────────────────────────
+    if "D+" in d_ser and "R-" in r_ser:
+        riesgo = "alto"
+        st.error("🔴 **D+/R- = RIESGO ALTO** (R nunca expuesto a CMV)")
+        prof_dur = "6 meses (algunos extienden a 12)"
+    elif "R+" in r_ser:
+        riesgo = "intermedio"
+        st.warning("🟡 **R+ = RIESGO INTERMEDIO** (reactivación posible)")
+        prof_dur = "3 meses"
+    elif "D-" in d_ser and "R-" in r_ser:
+        riesgo = "bajo"
+        st.success("🟢 **D-/R- = RIESGO BAJO** (no profilaxis CMV-específica necesaria)")
+        prof_dur = "Solo TMP-SMX (cubre PJP)"
+    else:
+        riesgo = "desconocido"
+        st.info("ℹ️ Estado serológico desconocido — tratar como R+ (intermedio) hasta clarificar")
+        prof_dur = "3 meses"
+
+    # ── Fase 1: Profilaxis ────────────────────────────────────────────────
+    st.markdown("### 1️⃣ Profilaxis primaria")
+    if riesgo == "bajo":
+        st.markdown("**No requiere antiviral CMV-específico.**")
+    else:
+        vlg_dosis = "900 mg/día VO"
+        if cmv_tfg < 60:
+            if cmv_tfg >= 40: vlg_dosis = "450 mg/día"
+            elif cmv_tfg >= 25: vlg_dosis = "450 mg c/48h"
+            elif cmv_tfg >= 10: vlg_dosis = "450 mg 2× semana"
+            else: vlg_dosis = "No usar (TFG <10) — usar ganciclovir IV"
+        st.markdown(f"""
+- **Valganciclovir**: **{vlg_dosis}** por **{prof_dur}**
+- Alternativa si intolerancia / leucopenia: **letermovir 480 mg/día VO** (no requiere ajuste por TFG, no mielotóxico)
+- Vigilancia BH semanal primer mes, luego mensual
+- Si neutropenia <1000 → suspender, valorar G-CSF, considerar cambio a letermovir
+        """)
+
+    # ── Fase 2: PCR positivo ──────────────────────────────────────────────
+    st.markdown("### 2️⃣ Si PCR CMV detectable (post-profilaxis o sin profilaxis)")
+    sint_activos = [s for s in cmv_sint if s != "Asintomático"]
+    if cmv_pcr > 0:
+        if cmv_pcr < 1000 and not sint_activos:
+            st.info(f"📊 PCR baja ({cmv_pcr} UI/mL) sin síntomas → **monitorización estrecha** "
+                    f"(PCR c/semana) · Si duplica en 1 sem, iniciar tratamiento preemptive")
+        elif cmv_pcr >= 1000 and not sint_activos:
+            st.warning(f"🟡 **CMV viremia asintomática** ({cmv_pcr} UI/mL) → **Tratamiento preemptive**")
+            st.markdown("""
+- **Valganciclovir 900 mg c/12h VO** (ajustar por TFG, ver tabla)
+- O **ganciclovir 5 mg/kg IV c/12h** si intolerancia oral
+- Duración: hasta PCR negativa por 2 semanas consecutivas (mínimo 2-3 semanas)
+- **REDUCIR MMF** 50% durante tratamiento
+            """)
+        elif sint_activos:
+            st.error(f"🔴 **ENFERMEDAD CMV** ({cmv_pcr} UI/mL + síntomas: {', '.join(sint_activos)})")
+            st.markdown("""
+**Tratamiento de enfermedad CMV:**
+- **Ganciclovir 5 mg/kg IV c/12h** (preferido en enfermedad severa o GI)
+- O **valganciclovir 900 mg c/12h VO** (si leve-moderada, sin afectación GI)
+- **REDUCIR MMF** 50% o suspender temporalmente
+- Duración: mínimo 2-3 semanas Y hasta PCR negativa x2 semanas
+- Si retinitis o SNC: tratamiento prolongado + valorar foscarnet
+- Considerar **IVIG CMV-específico** en casos severos
+            """)
+    else:
+        st.success("✅ PCR no detectable — sin acción adicional")
+
+    # ── Fase 3: Refractariedad ────────────────────────────────────────────
+    st.markdown("### 3️⃣ CMV refractario o resistente")
+    st.markdown("""
+**Sospechar resistencia si:**
+- PCR no disminuye >1 log10 después de 2 semanas de tratamiento dosis plena
+- Recaída clínica con misma dosis
+
+**Manejo:**
+- **Test de resistencia genotípica** (UL97, UL54)
+- **Maribavir 400 mg c/12h VO** (aprobado FDA 2021 para CMV refractario post-TR, KDIGO 2024)
+- **Foscarnet 60 mg/kg IV c/8h** (alternativa pero nefrotóxico — vigilar Cr y electrolitos)
+- **Reducir IS aún más**: suspender MMF, reducir Tac al mínimo
+- IVIG adicional · considerar células T específicas CMV (centros especializados)
+    """)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ALGORITMO BK VIRUS EN TRASPLANTE RENAL
+# Screening · Categorización · Reducción de IS · Nefropatía BK
+# ═══════════════════════════════════════════════════════════════════════════════
+elif nav == "algo_bk":
+    st.subheader("🟣 Algoritmo BK Virus en Trasplante Renal")
+    st.caption("Basado en AST IDC 2019 · KDIGO 2020 · The Transplantation Society 2024")
+
+    bk1, bk2 = st.columns(2)
+    with bk1:
+        bk_dpt = st.number_input("Días post-TR", 0, 3650, 90, 1, key="bk_dpt")
+        bk_plasma = st.number_input("BK PCR plasma (copias/mL)", 0, 10000000, 0, 100, key="bk_plasma")
+    with bk2:
+        bk_orina = st.number_input("BK PCR orina (copias/mL)", 0, 100000000, 0, 1000, key="bk_orina")
+        bk_cr_basal = st.number_input("Cr basal (mg/dL)", 0.5, 10.0, 1.2, 0.1, key="bk_cr_basal")
+        bk_cr_actual = st.number_input("Cr actual (mg/dL)", 0.5, 10.0, 1.2, 0.1, key="bk_cr_actual")
+
+    bk_biopsia = st.selectbox("Biopsia (si realizada)", [
+        "No realizada",
+        "Sin nefropatía BK",
+        "Nefropatía BK confirmada (SV40+)",
+    ], key="bk_biopsia")
+
+    st.divider()
+
+    # Cambio en Cr
+    delta_cr = (bk_cr_actual - bk_cr_basal) / bk_cr_basal * 100 if bk_cr_basal > 0 else 0
+    cr_alerta = abs(delta_cr) >= 15
+
+    st.markdown("### 🎯 Categorización del riesgo")
+
+    # ── Algoritmo principal ──────────────────────────────────────────────
+    if bk_biopsia == "Nefropatía BK confirmada (SV40+)":
+        st.error("🔴 **NEFROPATÍA BK CONFIRMADA por biopsia**")
+        st.markdown("""
+**Manejo:**
+1. **REDUCIR IS agresivamente**:
+   - Reducir Tac C0 objetivo a **4-6 ng/mL** (50% reducción típica)
+   - Reducir MMF 50% (de 1g c/12h a 500mg c/12h) o suspender si severo
+   - Mantener prednisona ≥5 mg/día (no suspender)
+2. **Monitorización**: PCR BK plasma cada 2 semanas hasta declinación >1 log
+3. **Considerar adyuvantes** (evidencia limitada, casos individuales):
+   - **Cidofovir 0.25-1 mg/kg c/2 semanas** SIN probenecid (nefrotóxico — evitar si TFG <30)
+   - **Leflunomida 100 mg/día x 3 días, luego 40-60 mg/día** (vigilar niveles teriflunomida 50-100 µg/mL)
+   - **IVIG 2 g/kg dividido en 2-5 días**
+4. **Biopsia de control en 6-12 semanas** si no mejora función
+5. **Rechazo concomitante**: difícil DDx — biopsia + considerar bolos MP solo si rechazo agudo confirmado
+        """)
+    elif bk_plasma >= 10000:
+        st.error(f"🔴 **VIREMIA BK ALTA** ({bk_plasma:,} copias/mL ≥ 10⁴)")
+        st.markdown("""
+**Sospecha de nefropatía BK probable (presumed BKVAN):**
+- **BIOPSIA RENAL** indicada (gold standard para diagnóstico definitivo)
+- Mientras se obtiene biopsia:
+  - **Reducir IS empíricamente**: Tac C0 objetivo 4-6 ng/mL, MMF 50%
+  - PCR BK semanal hasta declinación
+- Si Cr ↑ >15%: alta sospecha de nefropatía
+        """)
+    elif bk_plasma >= 1000:
+        st.warning(f"🟡 **VIREMIA BK SIGNIFICATIVA** ({bk_plasma:,} copias/mL)")
+        st.markdown("""
+**Manejo:**
+- **Reducir IS preventivamente**:
+  - Reducir Tac C0 a 5-7 ng/mL (era 8-12)
+  - Reducir MMF 25-50% (1g c/12h → 500-750 mg c/12h)
+- **Monitorización**: PCR BK plasma c/2 semanas
+- Si viremia persiste o aumenta a >10⁴ → biopsia
+- Función renal: Cr semanal
+        """)
+    elif bk_plasma > 0:
+        st.info(f"🟢 **Viremia baja** ({bk_plasma:,} copias/mL)")
+        st.markdown("""
+**Manejo:**
+- **Monitorización** sin cambios de IS aún
+- PCR BK plasma c/4 semanas
+- Si aumenta > 1 log o llega a ≥1000 → reducir IS
+        """)
+    elif bk_orina >= 10000000:
+        st.warning(f"🟡 **Viruria BK ALTA** ({bk_orina:,} copias/mL ≥ 10⁷) sin viremia detectable")
+        st.markdown("""
+- **Repetir PCR BK plasma en 2-4 semanas** (predecesor de viremia)
+- Considerar reducción ligera de IS preventiva si tendencia ascendente
+- Si viruria aislada persistente sin viremia → vigilancia, no requiere acción agresiva
+        """)
+    else:
+        st.success("✅ Sin viremia detectable y viruria baja/ausente — sin acción específica")
+        st.markdown("**Continuar screening**: PCR BK plasma c/3 meses primer año post-TR")
+
+    # ── Alerta de cambio en Cr ────────────────────────────────────────────
+    if cr_alerta:
+        st.warning(f"⚠️ **ΔCr: {delta_cr:+.1f}%** vs basal — Confirma sospecha de nefropatía. "
+                   f"**Biopsia urgente** si no se ha hecho.")
+
+    st.divider()
+    st.markdown("### 📋 Screening recomendado post-TR (AST IDC 2019)")
+    st.markdown("""
+- **Mes 1, 3, 6, 9, 12**: PCR BK plasma
+- **Después**: c/3 meses hasta los 24 meses · luego anual hasta 5 años
+- **Si TFG ↓ inexplicada en cualquier momento**: PCR BK + biopsia
+
+**Factores de riesgo BKVAN:**
+- Donador fallecido · DGF · Rechazo agudo previo (más IS recibida)
+- Receptor pediátrico · Receptor mayor (>60a)
+- Uso de timoglobulina (induce mayor inmunosupresión)
+- Esquemas con MMF en dosis altas
+    """)
+
 
 st.divider()
 st.caption(
