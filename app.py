@@ -58,6 +58,23 @@ try:
 except ImportError:
     _CONSULTA_MODULE = False
 
+# ── Paquete clinical_data: datos clínicos en JSON (KDIGO, protocolos) ─────────
+try:
+    from clinical_data import (get_meta as _cd_meta,
+                                 get_gluconato_ca_iv as _cd_gluconato_ca,
+                                 get_tac_c0_metas as _cd_tac_metas,
+                                 format_revision_caption as _cd_revision,
+                                 tac_c0_evaluar as _cd_tac_eval)
+    _CLINICAL_DATA = True
+except ImportError:
+    _CLINICAL_DATA = False
+    # Stubs para no romper si el paquete no está
+    _cd_meta = lambda: {}
+    _cd_gluconato_ca = lambda: {}
+    _cd_tac_metas = lambda: []
+    _cd_revision = lambda x: ""
+    _cd_tac_eval = lambda c0, d=30: {}
+
 # ── Caché de consultas DB (evita ir a Railway en cada clic) ───────────────────
 @st.cache_data(ttl=15)
 def _cached_prescriptions(uid: int):
@@ -16182,19 +16199,42 @@ elif nav == "hipocalcemia_iv":
     # ── PROTOCOLO CMN BAJÍO ────────────────────────────────────────────────────
     st.markdown("### 💉 Gluconato de Calcio IV")
 
+    # ── DATOS CLÍNICOS desde clinical_data/protocolos_iv.json ────────────────
+    _gluc_ca = _cd_gluconato_ca() if _CLINICAL_DATA else {}
+    _rev_iv = _cd_revision("protocolos_iv") if _CLINICAL_DATA else ""
+    if _rev_iv:
+        st.caption(f"📚 {_rev_iv}")
+    # Constantes desde JSON con fallback seguro
+    _ampula = _gluc_ca.get("ampula_gluconato_10pct", {})
+    _ca_por_amp_mg_json = _ampula.get("calcio_elemental_mg", CA_POR_AMP_MG)
+    _ca_por_amp_meq_json = _ampula.get("calcio_elemental_meq", CA_POR_AMP_MEQ)
+    _prep = _gluc_ca.get("preparacion_estandar", {})
+    _n_amp_default = _prep.get("n_ampulas_recomendado", 11)
+    _vol_default = _prep.get("volumen_diluyente_ml", 250)
+    # Rango de dosis desde JSON
+    _dosis_cfg = _gluc_ca.get("dosis_infusion", {}).get("rango_terapeutico", {})
+    _dosis_min = _dosis_cfg.get("min", 0.5)
+    _dosis_max = _dosis_cfg.get("max", 2.0)
+    _dosis_default = 1.0
+    _help_dosis = ("Mantenimiento: 0.5–1.5 mg/kg/h · Casos graves: 1.5–2.0 mg/kg/h · "
+                   "NUNCA exceder 2 mg/kg/h (riesgo hipercalcemia aguda)")
+    # Si JSON tiene texto de help, usarlo
+    _alerta = _gluc_ca.get("dosis_infusion", {}).get("alerta_sobredosis")
+    if _alerta:
+        _help_dosis = _alerta
+
     prot1, prot2 = st.columns(2)
     with prot1:
         n_amp  = st.number_input("N° de ámpulas de gluconato Ca 10%",
-                                 1, 20, 11, 1, key="hipo_namp",
-                                 help="Cada ámpula: 10 mL · 1 g de gluconato Ca · 90 mg de Ca elemental")
+                                 1, 20, _n_amp_default, 1, key="hipo_namp",
+                                 help=f"Cada ámpula: 10 mL · {_ca_por_amp_mg_json} mg de Ca elemental")
         vol_sf = st.number_input("Volumen NaCl 0.9% (mL)",
-                                 50, 500, 250, 50, key="hipo_vol",
+                                 50, 500, _vol_default, 50, key="hipo_vol",
                                  help="Aforadas en esta cantidad de NaCl 0.9%")
     with prot2:
         dosis_mg_kg_h = st.number_input("Dosis objetivo (mg/kg/h)",
-                                         0.5, 2.0, 1.0, 0.1, key="hipo_dosis",
-                                         help="Mantenimiento: 0.5–1.5 mg/kg/h · Casos graves: 1.5–2.0 mg/kg/h · "
-                                              "NUNCA exceder 2 mg/kg/h (riesgo hipercalcemia aguda)")
+                                         _dosis_min, _dosis_max, _dosis_default, 0.1, key="hipo_dosis",
+                                         help=_help_dosis)
         via_h  = st.selectbox("Vía de acceso", [
             "Vena central (preferida — menos irritante)",
             "Vena periférica gruesa (antecubital)",
@@ -16202,8 +16242,8 @@ elif nav == "hipocalcemia_iv":
         ], key="hipo_via")
 
     # Cálculos del protocolo (nuevo flujo: dosis → tasa)
-    ca_total_mg  = n_amp * CA_POR_AMP_MG        # mg Ca elemental total
-    ca_total_meq = n_amp * CA_POR_AMP_MEQ        # mEq total
+    ca_total_mg  = n_amp * _ca_por_amp_mg_json    # mg Ca elemental total (desde JSON)
+    ca_total_meq = n_amp * _ca_por_amp_meq_json    # mEq total (desde JSON)
     vol_total_ml = vol_sf                         # aforado = volumen final ≈ vol_sf
     conc_mg_ml   = ca_total_mg / vol_total_ml    # mg Ca/mL
     conc_meq_ml  = ca_total_meq / vol_total_ml   # mEq Ca/mL
@@ -16223,10 +16263,12 @@ elif nav == "hipocalcemia_iv":
     r5.metric("Duración bolsa", f"{duracion_h:.1f} h")
 
     # Validación de rango
-    if 0.5 <= dosis_mg_kg_h <= 2.0:
-        st.success(f"🟢 Dosis **{dosis_mg_kg_h} mg/kg/h** dentro del rango terapéutico (0.5–2.0 mg/kg/h)")
+    if _dosis_min <= dosis_mg_kg_h <= _dosis_max:
+        st.success(f"🟢 Dosis **{dosis_mg_kg_h} mg/kg/h** dentro del rango terapéutico "
+                   f"({_dosis_min}–{_dosis_max} mg/kg/h)")
     else:
-        st.error(f"🔴 Dosis **{dosis_mg_kg_h} mg/kg/h** FUERA del rango terapéutico (0.5–2.0 mg/kg/h)")
+        st.error(f"🔴 Dosis **{dosis_mg_kg_h} mg/kg/h** FUERA del rango terapéutico "
+                 f"({_dosis_min}–{_dosis_max} mg/kg/h)")
 
     st.info(f"""
 **🏥 Preparación y administración:**
