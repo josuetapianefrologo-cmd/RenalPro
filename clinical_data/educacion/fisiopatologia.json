@@ -3,7 +3,8 @@
     "tema": "Fisiopatología expandida — Trasplante Renal",
     "fecha_revision": "2026-05-24",
     "objetivo": "Entender el POR QUÉ detrás de cada decisión clínica",
-    "estructura": "Cada tema tiene: concepto, mecanismo molecular, relevancia clínica, pearls"
+    "estructura": "Cada tema tiene: concepto, mecanismo molecular, relevancia clínica, pearls",
+    "version": "2.0 - Expansión avanzada"
   },
   "temas": [
     {
@@ -284,6 +285,246 @@
         "Kotton CN et al. The Third International Consensus Guidelines on the Management of CMV in Solid-organ Transplantation. Transplantation 2018",
         "Razonable HE et al. AST IDC: CMV. Clin Transplant 2019",
         "Avery RK et al. Maribavir for refractory CMV in transplant recipients. NEJM 2022 (Phase 3)"
+      ]
+    },
+    {
+      "id": "hla_avanzado_epitope_matching",
+      "titulo": "HLA avanzado: epitope matching y anticuerpos no-HLA",
+      "categoria": "Inmunología avanzada",
+      "concepto_central": "El conteo tradicional 0-6 mismatch es una APROXIMACIÓN GRUESA. La inmunogenicidad real del injerto depende de los EPITOPES (parches de 3-15 aminoácidos accesibles a anticuerpos) que difieren, no de los antígenos completos. Dos pacientes con '3/6 MM' pueden tener riesgos muy distintos de generar DSA según sus epitopes específicos. Además, los anticuerpos no-HLA (MICA, AT1R, anti-vimentin) tienen relevancia creciente en rechazo y pérdida del injerto, especialmente cuando 'no se explica' la falla con DSA HLA tradicionales.",
+      "mecanismo_molecular": {
+        "estructura_y_accesibilidad": "Un antígeno HLA tiene cientos de aminoácidos pero solo algunos están en la SUPERFICIE ACCESIBLE a anticuerpos. Estos parches accesibles se llaman EPITOPES. Un epitope puede ser compartido entre varios antígenos HLA (cross-reactive epitope groups, CREGs).\n\nEjemplo clave: HLA-B7 y HLA-B27 comparten el epitope 80I (Isoleucina en posición 80). Un paciente sensibilizado contra B7 puede tener anticuerpos que también reconozcan B27 — incluso sin haber estado expuesto a B27 nunca. Eso predice rechazo si recibe injerto B27.",
+        "eplets_y_pirche": "ELLET: subset más pequeño del epitope, definido por residuos polimórficos en estrecha proximidad (15 Å). Es la unidad funcional de inmunogenicidad.\n\nHerramientas computacionales:\n- HLAMatchmaker (Duquesnoy 2002): cuenta eplet mismatches entre donador y receptor. Eplet load <10 = bajo riesgo; >25 = alto riesgo de DSA de novo.\n- PIRCHE-II (Predicted Indirectly ReCognizable HLA Epitopes): predice qué péptidos HLA donador serán presentados por HLA-II del receptor a T-helper, gatillando producción de DSA.\n- Resultados: pacientes con PIRCHE alto tienen 3-5x más riesgo de DSA de novo y de rechazo crónico.",
+        "hla_dq_emerging": "HLA-DQ era considerado menos importante. Hoy sabemos:\n- DQ es altamente expresado en endotelio activado\n- Mismatches DQ son fuertes predictores de DSA de novo\n- DSA anti-DQ son los más comunes en DSA de novo (40-60% de dnDSA)\n- DQ mismatch >2 eplets predice rechazo crónico independientemente de DR mismatch\n- Algunos centros ya tipifican DQ rutinariamente para asignación",
+        "anticuerpos_no_hla": "Aunque la atención clásica está en HLA, hay otros antígenos diana relevantes:\n\n1. MICA (MHC class I-related chain A): expresado en epitelio activado y endotelio. Anti-MICA presentes en 10-20% de TR pre-trasplante. Asociados a peor supervivencia del injerto independiente de DSA HLA.\n\n2. AT1R (Angiotensin II Type 1 Receptor): autoanticuerpo. Anti-AT1R causa vasoconstricción y daño endotelial. Asociado con HTA maligna post-TR, rechazo refractario, TMA-like injury. Se mide ya en algunos centros.\n\n3. Anti-vimentina, anti-perlecan, anti-fibronectin: liberados durante isquemia-reperfusión, exponen antígenos crípticos. Anti-vimentina asociado a vasculopatía crónica del injerto.\n\n4. Anti-LG3 (perlecan fragment): emergente, vasculopatía.\n\n5. Anti-NK cell markers (anti-KIR, anti-NKG2D): contribuyen a daño NK-mediado."
+      },
+      "relevancia_clinica": [
+        "Selección de donador en hipersensibilizados: ahora se selecciona NO solo por evitar antígenos completos, sino por evitar EPITOPES contra los que el paciente tiene anticuerpos",
+        "Predicción de DSA de novo: eplet load >25 y PIRCHE-II alto → vigilancia más estrecha de DSA + biopsia protocolo a 3-6 meses",
+        "AMR 'sin DSA detectables': considerar anticuerpos no-HLA (anti-AT1R, anti-MICA) — algunos casos de AMR antes 'inexplicado' son por anti-no-HLA",
+        "HTA maligna post-TR + rechazo: pedir anti-AT1R — losartán + IS más intensa",
+        "Asignación de donador en lista: futuro está en epitope-based matching, no en antígeno-based",
+        "DSA anti-DQ son los más patogénicos a largo plazo — vigilar específicamente"
+      ],
+      "pearls_avanzados": [
+        "Eplet load entre donador y receptor se puede calcular en herramientas online (HLAMatchmaker.com) — útil pre-TR vivo",
+        "Pacientes hiperinmunizados pueden tener cPRA (calculated PRA) de 99% pero con epitope-based selection encontrar donadores compatibles",
+        "Anti-AT1R se asocia con HTA refractaria + microangiopatía trombótica injertaria — tratamiento: losartán (antagonista AT1R) + plasmaféresis si severo",
+        "Anti-MICA pre-TR predice supervivencia del injerto a 5 años (estudio CTOT-01) — pero NO se mide rutinariamente todavía",
+        "El concepto 'compatible' está evolucionando: ya no es 'sin mismatch', sino 'sin epitopes que el paciente reconozca como extraños'",
+        "Polimorfismos en KIR (Killer cell Immunoglobulin-like Receptors) y su interacción con HLA-C del donador modulan respuesta NK — predictor emergente",
+        "Polymorfismo FCGR3A (Fc gamma receptor): pacientes con genotipo VV tienen mayor ADCC por NK → AMR más severa con menor MFI de DSA"
+      ],
+      "referencias_clave": [
+        "Duquesnoy RJ. HLAMatchmaker: a molecularly based algorithm for histocompatibility determination. Hum Immunol 2002",
+        "Wiebe C et al. Class II HLA epitope matching — a strategy to minimize de novo donor-specific antibody development. Am J Transplant 2013",
+        "Geneugelijk K, Spierings E. PIRCHE-II: an algorithm to predict indirectly recognizable HLA epitopes. Hum Immunol 2020",
+        "Reinsmoen NL et al. Anti-angiotensin type 1 receptor antibodies associated with antibody mediated rejection. Transplantation 2010",
+        "Zou Y et al. Antibodies against MICA antigens and kidney-transplant rejection. NEJM 2007"
+      ]
+    },
+    {
+      "id": "complemento_en_tr",
+      "titulo": "Sistema del complemento en trasplante renal",
+      "categoria": "Inmunología avanzada",
+      "concepto_central": "El sistema del complemento es una cascada de proteínas plasmáticas que amplifican respuestas inmunes. Tiene papel CENTRAL en AMR (vía clásica activada por DSA), en glomerulopatías que recurren post-TR (aHUS, C3GN — vía alternativa), y en isquemia-reperfusión injury. Entender el complemento permite usar racionalmente eculizumab, ravulizumab e inhibidores emergentes (iptacopan, avacopan).",
+      "mecanismo_molecular": {
+        "vias_de_activacion": "Tres vías convergen en C3:\n\n1. VÍA CLÁSICA: activada por complejos antígeno-anticuerpo (IgG, IgM). C1q se une a Fc de Ac → C1r/s activado → C4 (depositado como C4d, MARCA DE ACTIVACIÓN) → C2 → C4b2b (C3 convertase clásica).\n\n2. VÍA ALTERNATIVA: activación espontánea (hidrólisis de C3) o sobre superficies sin reguladores. C3(H2O) → factor B → factor D → C3bBb (C3 convertase alternativa). Es AMPLIFICACIÓN, no inicio — los productos amplifican más activación. Por eso pequeño defecto en reguladores (factor H) causa enfermedad masiva (aHUS, C3GN).\n\n3. VÍA DE LECTINAS (MBL): MBL se une a manosa en patógenos → MASPs activan C4 y C2 (como vía clásica).\n\nCONVERGENCIA: las tres vías generan C3 convertase → C3b + C3a (anafilatoxina). C3b se une a C3 convertase → C5 convertase → C5a (quimiotaxis) + C5b → C5b-9 = MAC (Membrane Attack Complex) que perfora membranas celulares.",
+        "reguladores_y_proteccion": "Para evitar autoataque, las células propias tienen REGULADORES:\n- CD55 (DAF, Decay Accelerating Factor): acelera disociación de C3 convertase\n- CD59: bloquea ensamblaje de MAC\n- CD46 (MCP, Membrane Cofactor Protein): cofactor de factor I para degradar C3b/C4b\n- Factor H (en plasma): regulador clave de vía alternativa\n- Factor I: degrada C3b y C4b\n\nMUTACIONES en estos reguladores causan enfermedades:\n- aHUS: mutaciones en CFH (factor H, 30%), CFI, MCP, C3 ganador de función, factor B ganador de función\n- C3GN/DDD: anticuerpos anti-C3 convertase (C3 nephritic factor), mutaciones factor H\n- PNH: deficiencia de CD55/CD59 (GPI-anchored)",
+        "en_amr": "AMR es prototípico de daño complemento-mediado por anticuerpos:\n1. DSA (IgG1 e IgG3, principalmente) se une a HLA endotelial\n2. C1q reconoce Fc de IgG, activa cascada clásica\n3. C4b se deposita en endotelio → MARCA C4d POSITIVO en CPT\n4. C3 convertase produce C3a (anafilotoxina, quimiotaxis), C5a, MAC\n5. Daño endotelial directo + reclutamiento de neutrófilos/NK\n6. Microvascular injury → glomerulitis (g) + capilaritis peritubular (ptc)\n\nIMPORTANTE: en algunos pacientes, AMR ocurre con C4d NEGATIVO (Banff 2017+ reconoce esto). Esto puede ser por:\n- Daño mediado por NK (ADCC) sin complemento\n- Anticuerpos que no activan complemento (IgG2, IgG4)\n- Daño por células T citotóxicas adicional"
+      },
+      "relevancia_clinica": [
+        "C4d POSITIVO en CPT (capilares peritubulares): marca de activación complemento clásica → AMR mediado por DSA",
+        "C4d NEGATIVO no descarta AMR (Banff 2017+) — pero requiere otros criterios (g+ptc>0 + DSA)",
+        "ECULIZUMAB (anti-C5): bloquea formación de MAC. Indicaciones aprobadas: aHUS, PNH. Off-label: AMR refractario, profilaxis en TR alto riesgo, recurrencia aHUS post-TR (excelente prevención)",
+        "RAVULIZUMAB: anti-C5 de acción prolongada (cada 8 semanas vs eculizumab cada 2 semanas). Misma eficacia, mejor adherencia",
+        "IPTACOPAN: inhibidor oral de factor B (vía alternativa). Aprobado en PNH 2023, en estudios en C3GN, IgA nefropatía",
+        "AVACOPAN: antagonista del receptor de C5a (C5aR1). Aprobado en ANCA vasculitis 2021, en estudios en glomerulopatías post-TR",
+        "PEGCETACOPLAN: inhibidor de C3. Aprobado en PNH, estudios en C3GN",
+        "En TR de paciente con aHUS por mutación CFH conocida: eculizumab profiláctico peri-TR previene recurrencia (>95% efectividad vs 50-100% recurrencia sin tratamiento)"
+      ],
+      "pearls_avanzados": [
+        "Niveles de C3 y C4 séricos pueden estar bajos en AMR activo (consumo) — pista clínica indirecta",
+        "CH50 (hemolytic complement 50) refleja función global del complemento — baja en consumo",
+        "Vía alternativa siempre 'tickea' a bajo nivel (activación espontánea continua) — los reguladores la mantienen controlada. Cualquier defecto regulador → catástrofe",
+        "C5a es la anafilatoxina más potente — quimiotaxis masiva de neutrófilos, vasodilatación, permeabilidad capilar",
+        "En aHUS post-TR de receptor con mutación: el riñón nuevo NO tiene la mutación (es del donador), pero el complemento alterado (factor H mutado del receptor) circula sistémico → daña el injerto",
+        "Eculizumab requiere VACUNACIÓN antimeningocócica pre-tratamiento (Neisseria evade complemento) — 2-4 semanas antes idealmente, o cefalexina profiláctica si urgente",
+        "Costo eculizumab: ~$500,000 USD/año — barrera importante en LatAm. Ravulizumab modestamente más barato.",
+        "C1q-binding DSA assay (in vitro) predice patogenicidad — DSA C1q+ son más peligrosos que C1q-"
+      ],
+      "referencias_clave": [
+        "Stegall MD et al. Terminal Complement Inhibition Decreases Antibody-Mediated Rejection in Sensitized Renal Transplant Recipients. Am J Transplant 2011",
+        "Legendre CM et al. Terminal Complement Inhibitor Eculizumab in Atypical Hemolytic-Uremic Syndrome. NEJM 2013",
+        "Goodship THJ et al. Atypical hemolytic uremic syndrome and C3 glomerulopathy: KDIGO Controversies Conference. Kidney Int 2017",
+        "Sicard A et al. Detection of C3d-binding donor-specific anti-HLA antibodies at diagnosis of humoral rejection predicts renal graft loss. JASN 2015",
+        "Heeger PS, Kemper C. Novel roles of complement in T effector cell regulation. Immunobiology 2012"
+      ]
+    },
+    {
+      "id": "tregs_y_tolerancia_operacional",
+      "titulo": "Células T helper, Treg y tolerancia operacional",
+      "categoria": "Inmunología avanzada",
+      "concepto_central": "La respuesta inmune al aloinjerto está mediada por subsets diferenciados de células T helper (Th1, Th2, Th17, Tfh, Treg). El balance entre células T efectoras (que rechazan) y T reguladoras (que suprimen) determina si hay rechazo o aceptación. La TOLERANCIA OPERACIONAL — capacidad de suspender toda IS sin rechazo — ocurre en ~1% de TR espontáneamente, y es el santo grial de la inmunología del trasplante. Entender los Treg permite usar racionalmente belatacept, mTOR, y terapias celulares emergentes.",
+      "mecanismo_molecular": {
+        "subsets_t_helper": "Las células T CD4+ naïve se diferencian a subsets según el ambiente de citoquinas durante la activación:\n\n1. Th1: gatilladas por IL-12 + IFN-γ. Factor de transcripción T-bet. Producen IFN-γ, IL-2, TNF-β. Inmunidad celular, anti-viral, anti-tumoral. PROTAGONISTAS DEL RECHAZO CELULAR.\n\n2. Th2: gatilladas por IL-4. Factor GATA3. Producen IL-4, IL-5, IL-13. Anti-parasitario, alergia. Rol limitado en rechazo.\n\n3. Th17: gatilladas por TGF-β + IL-6 + IL-23. Factor RORγt. Producen IL-17, IL-22, IL-21. Inflamación tisular crónica, autoinmunidad. PAPEL EN AMR Y RECHAZO CRÓNICO.\n\n4. Tfh (T follicular helper): en centros germinales. Producen IL-21. AYUDAN A CÉLULAS B PARA DIFERENCIACIÓN A PLASMÁTICAS PRODUCTORAS DE DSA.\n\n5. Treg (T reguladoras): factor FoxP3. Producen IL-10, TGF-β, IL-35. CTLA-4 alto. SUPRIMEN respuesta inmune. SUBSETS: Treg natural (tímicas, nTreg) e inducidas (iTreg, en periferia).",
+        "treg_biologia": "Tregs surgen de dos formas:\n1. Naturales (nTreg): seleccionadas en TIMO. Reconocen self-antigens con afinidad intermedia, en lugar de morir por selección negativa, sobreviven como Tregs. Salen al pool periférico.\n\n2. Inducidas (iTreg): T CD4+ naive periféricas que, en presencia de TGF-β + ácido retinoico (de DCs tolerogénicas), se diferencian a Treg.\n\nMECANISMOS DE SUPRESIÓN POR TREG:\n- Citoquinas inhibitorias: IL-10, TGF-β, IL-35\n- Citolysis directa: granzymes A/B contra T efectoras\n- Disrupción metabólica: IL-2 consumption (Treg expresa CD25 alto), apoptosis por privación\n- Modulación de DCs: down-regulan CD80/86 vía CTLA-4 → menos coestimulación → menos activación de T efectoras\n- Generación de adenosina (CD39 + CD73 expresados en Treg)",
+        "tolerancia_central_vs_periferica": "TOLERANCIA CENTRAL (timo): durante desarrollo, T con alta afinidad por self mueren por apoptosis (selección negativa). Algunas se 'salvan' como Tregs naturales. Tolerancia central es contra antígenos propios — NO contra aloantígenos del injerto (que el receptor nunca vio en timo).\n\nTOLERANCIA PERIFÉRICA: mecanismos contra antígenos no presentados en timo (incluyendo aloantígenos):\n- Anergia: T activadas sin coestimulación adecuada → no funcional\n- Ignorancia: T no encuentran su antígeno (secuestrado)\n- Apoptosis activada (AICD)\n- Supresión por Tregs\n- Edición de B cells\n\nEn TR: queremos generar TOLERANCIA PERIFÉRICA al aloinjerto. Mecanismo principal: expansión y activación de Tregs específicos por aloantígenos.",
+        "tolerancia_operacional": "Tolerancia operacional = capacidad de mantener función del injerto SIN IS o con IS mínima.\n\nCaracterísticas en pacientes que la logran (~1% de TR, identificados en estudios IOT y RISET):\n- Razón Treg / T efectoras elevada\n- Treg que reconocen específicamente HLA del donador\n- Microbiota intestinal específica (Clostridia productoras de butirato → expansión Treg)\n- Polimorfismos pro-tolerogénicos (algunos HLA-G, IL-10 promoter)\n- Ausencia de inflamación crónica\n- Buena adherencia + IS adecuada durante años (paradójicamente, la IS bien dosificada permite emergencia de tolerancia)\n\nEstrategias emergentes para INDUCIR tolerancia:\n- Adoptive Treg therapy (expansión ex vivo + reinfusión)\n- Quimerismo hematopoyético (Stanford protocol: combined HSC + kidney from same donor)\n- Belatacept (favorece Treg via bloqueo CD28)\n- mTOR inhibitors (sirolimus, everolimus expanden Treg)"
+      },
+      "relevancia_clinica": [
+        "Tac y CsA paradójicamente INHIBEN Tregs (que requieren IL-2 para sobrevivir) → contraproducentes para tolerancia. Aún así son la base de IS por su potencia contra T efectoras.",
+        "Sirolimus y everolimus FAVORECEN Tregs (mTORC1 inhibition mantiene FoxP3) — base molecular del beneficio post-TR a largo plazo",
+        "Belatacept (CTLA4-Ig) bloquea coestimulación pero PRESERVA Tregs (CTLA-4 endógeno de Tregs no es afectado) → razón parcial de su beneficio en función a largo plazo",
+        "ATG induce expansión transitoria de Tregs post-depleción — efecto pro-tolerancia inadvertido",
+        "Esteroides inhiben Tregs en algunos modelos, neutral en otros — efecto neto incierto",
+        "Adoptive Treg therapy: ensayos clínicos en TR (ONE Study, deLTa) muestran seguridad, eficacia modesta",
+        "Identificación de pacientes con tolerancia operacional permite REDUCIR IS gradualmente sin rechazo (en estudios)",
+        "Microbiota → metabolitos → Treg: probióticos productores de butirato emergentes como adyuvantes"
+      ],
+      "pearls_avanzados": [
+        "FoxP3 es el marker definitivo de Treg pero también se expresa transitoriamente en T activadas — el verdadero Treg estable requiere demethilación del FoxP3 locus (TSDR - Treg-specific demethylated region)",
+        "Razón Treg/Teff en sangre periférica puede predecir riesgo de rechazo, pero correlación con razón en injerto es imperfecta",
+        "IL-2 baja dosis (subcutánea) expande selectivamente Tregs — ensayos clínicos en TR (LITRA trial) muestran promesa",
+        "Tregs específicos del donador (no policlonales) son más efectivos — campo de expansión ex vivo con aloantígenos del donador",
+        "Algunos HLA-G del donador favorecen tolerancia (HLA-G es no-clásica, modulador inmune)",
+        "Microbioma intestinal en TR: pacientes con disbiosis post-TR tienen más rechazo. Restauración con FMT (transplante fecal) en estudios.",
+        "Quimerismo total (Stanford protocol): HSC del donador + riñón → 70-80% tolerancia operacional a 5 años pero con riesgo de GVHD",
+        "Tolerancia parcial (IS minimal) puede ser meta más realista que tolerancia completa"
+      ],
+      "referencias_clave": [
+        "Sakaguchi S et al. Regulatory T cells and immune tolerance. Cell 2008",
+        "Wood KJ, Sakaguchi S. Regulatory T cells in transplantation tolerance. Nat Rev Immunol 2003",
+        "Brouard S et al. Identification of a peripheral blood transcriptional biomarker panel associated with operational renal allograft tolerance. PNAS 2007",
+        "Sawitzki B et al. Regulatory cell therapy in kidney transplantation (The ONE Study). Lancet 2020",
+        "Scandling JD et al. Tolerance and chimerism after renal and hematopoietic-cell transplantation. NEJM 2008"
+      ]
+    },
+    {
+      "id": "mmf_purinas",
+      "titulo": "MMF y biosíntesis de purinas — mecanismo molecular",
+      "categoria": "Inmunosupresión",
+      "concepto_central": "El micofenolato mofetilo (MMF) y su forma sódica (MFS, Myfortic) inhiben SELECTIVAMENTE la inosina monofosfato deshidrogenasa tipo II (IMPDH-II), enzima clave en la síntesis DE NOVO de nucleótidos de guanina. Los linfocitos T y B son CRÍTICAMENTE dependientes de esta vía porque no pueden utilizar la vía de salvage de manera eficiente. Otras células sí — por eso MMF es relativamente selectivo para linfocitos.",
+      "mecanismo_molecular": {
+        "biosintesis_purinas": "Las purinas (adenina, guanina) son esenciales para DNA, RNA, ATP. Hay DOS VÍAS para obtenerlas:\n\n1. VÍA DE NOVO (síntesis): a partir de ribosa-5-fosfato + aminoácidos + tetrahidrofolato → IMP (inosine monophosphate) → divergencia:\n   - IMP + aspartato + GTP → AMP (vía adenina)\n   - IMP + glutamina + NAD+ → XMP → GMP (vía guanina) — ESTA ES LA INHIBIDA POR MMF\n\nLa enzima IMP → XMP es la IMPDH (inosine monophosphate dehydrogenase).\n\n2. VÍA DE SALVAGE (rescate): recicla bases libres y nucleósidos de la degradación de ácidos nucleicos:\n   - Adenina → AMP (via APRT)\n   - Guanina → GMP (via HGPRT)\n   - Hipoxantina → IMP (via HGPRT)",
+        "selectividad_linfocitica": "La mayoría de células (hepatocitos, células epiteliales, fibroblastos, etc.) utilizan principalmente la VÍA DE SALVAGE (eficiente, conservadora de energía) y reservan la vía de novo para situaciones de alta demanda.\n\nLINFOCITOS T Y B son DIFERENTES:\n- Cuando se activan y proliferan, necesitan MUCHOS nucleótidos para replicar su DNA\n- Tienen vía de salvage RELATIVAMENTE INEFICIENTE\n- Dependen mucho más de la VÍA DE NOVO\n- Expresan principalmente IMPDH tipo II (inducible, regulada)\n\nOtras células expresan más IMPDH tipo I (constitutiva).\n\nMMF inhibe SELECTIVAMENTE IMPDH-II → bloquea preferentemente proliferación linfocitaria.",
+        "farmacologia": "MMF (Cellcept) es PRODROGA — se hidroliza a MICOFENOLATO ÁCIDO (MPA) en intestino e hígado.\n\nMFS (Myfortic) es la forma SÓDICA con liberación entérica — menos hidrólisis temprana en estómago, libera MPA en intestino delgado → menos efecto GI superior, pero efectos GI inferiores similares.\n\nFarmacocinética:\n- MPA tiene PIK temprano (1-2h) + PIK tardío (6-12h) por CIRCULACIÓN ENTEROHEPÁTICA — MPA glucurónido excretado en bilis, hidrolizado por flora intestinal, MPA reabsorbido\n- Cualquier disrupción de flora (antibióticos) reduce niveles de MPA significativamente\n- Niveles MPA AUC 30-60 mg·h/L son target en algunos centros (controversial)",
+        "interacciones": "MMF interactúa con:\n- AINEs: ↑ niveles MPA (desplazamiento de proteínas)\n- Sevelamer: ↓ absorción (administrar separado)\n- Antiácidos con Mg/Al: ↓ absorción\n- Antibióticos amplio espectro: disrupción flora → ↓ AUC (especialmente metronidazol, fluoroquinolonas)\n- CsA: ↓ niveles MPA (inhibe circulación enterohepática)\n- Tac: NO afecta significativamente MPA — por eso combinación Tac+MMF es preferida",
+        "polimorfismos": "Polimorfismos en UGT1A9 y UGT2B7 (enzimas que glucuronidan MPA):\n- UGT1A9*22 (-275T>A): ↑ actividad → ↓ MPA niveles → menor eficacia y posible aumento rechazo\n- UGT1A9*3: ↓ actividad → ↑ MPA → más toxicidad GI/citopenias\n- IMPDH polymorphisms: variación en sensibilidad farmacodinámica\n\nMonitoreo TDM (therapeutic drug monitoring) de MPA podría individualizar dosis pero NO es estándar aún."
+      },
+      "relevancia_clinica": [
+        "MMF dosis estándar: 1g c/12h (Cellcept) o 720 mg c/12h (Myfortic)",
+        "Equivalencia: 250 mg MMF ≈ 180 mg MFS · 1000 mg MMF ≈ 720 mg MFS",
+        "Inhibe proliferación de T y B → reduce rechazo agudo + REDUCE FORMACIÓN DE DSA DE NOVO (clave en TR a largo plazo)",
+        "Efectos adversos PRINCIPALES:\n  - GI superior: diarrea, dolor abdominal, náusea (30%) — MFS tiene menos por liberación entérica\n  - Leucopenia (10-15%) — vigilar BH semanal primer mes",
+        "  - Anemia (10%)\n  - Trombocitopenia (raro)\n  - Aumento de infecciones (CMV, BK, otros)\n  - TERATOGÉNICO (categoría D) — labio leporino, atresia auditiva, otras malformaciones",
+        "Suspender 6 SEMANAS antes de concepción planeada (mujer u hombre)",
+        "Reemplazo en embarazo: azatioprina 1-2 mg/kg/día (categoría D pero datos extensos de seguridad)",
+        "En diarrea por MMF: reducir dosis o cambiar a MFS (no mejor evidencia pero algunos pacientes toleran)",
+        "En citopenias: reducir dosis 25-50% — NO suspender abruptamente (riesgo rechazo)"
+      ],
+      "pearls_avanzados": [
+        "MPA tiene EFECTOS PLEIOTROPICOS más allá de inhibición IMPDH: inhibe glicosilación de adhesion molecules (selectina E, ICAM-1, VCAM-1) → reduce reclutamiento leucocitario al injerto",
+        "MPA induce APOPTOSIS en T activadas (no solo bloquea proliferación)",
+        "MPA inhibe DENDRITIC CELLS maduración → modulación adicional",
+        "MPA tiene EFECTO ANTI-FIBRÓTICO (inhibe proliferación de fibroblastos) — beneficio potencial en fibrosis del injerto",
+        "Combinación Tac + MMF + esteroides es la triple terapia estándar — sinergismo bien establecido",
+        "Suspensión de MMF en pacientes con AMR crónico activo: NO recomendable — empeora pronóstico",
+        "Test farmacodinámico de actividad IMPDH (medición en linfocitos) está en investigación — podría individualizar dosis",
+        "ENCIDIA-K2 trial: TDM de MPA por AUC no mostró ventaja vs dosis fija — pero diseño tuvo limitaciones",
+        "Para pacientes con teratogenicidad importante (mujer en edad fértil): considerar azatioprina como alternativa de mantenimiento si tolerancia GI mala"
+      ],
+      "referencias_clave": [
+        "Allison AC, Eugui EM. Mycophenolate mofetil and its mechanisms of action. Immunopharmacology 2000",
+        "Bunnapradist S et al. Mycophenolate mofetil dose reductions and discontinuations after gastrointestinal complications. Transplantation 2006",
+        "van Gelder T et al. The pharmacokinetic and pharmacodynamic properties of mycophenolic acid (MPA) in renal transplant patients. Transplantation 2008",
+        "Le Meur Y et al. Individualized mycophenolate mofetil dosing based on drug exposure significantly improves patient outcomes after renal transplantation. Am J Transplant 2007",
+        "Cabiddu G et al. Best practice on pregnancy in chronic kidney disease. J Nephrol 2018"
+      ]
+    },
+    {
+      "id": "isquemia_reperfusion",
+      "titulo": "Isquemia-reperfusión injury (IRI) — fisiopatología del DGF",
+      "categoria": "Lesión del injerto",
+      "concepto_central": "La isquemia-reperfusión injury (IRI) es la lesión que sufre el injerto durante la extracción, preservación y reperfusión. Causa daño tubular agudo + activación inflamatoria + activación del complemento + reclutamiento inmune. Es el principal contribuyente a la DGF (función retardada del injerto) y predispone a rechazo agudo. Mecanismos clave: estrés oxidativo, activación de inmunidad innata, DAMPs (Damage-Associated Molecular Patterns), y muerte celular regulada (no solo apoptosis — necroptosis, ferroptosis, pyroptosis).",
+      "mecanismo_molecular": {
+        "fase_isquemica": "Durante isquemia (sin oxígeno):\n1. Mitocondrias no pueden hacer fosforilación oxidativa → ATP depletion\n2. Bombas iónicas (Na+/K+ ATPasa, Ca²⁺ ATPasa) fallan por falta de ATP\n3. Acumulación intracelular de Na+, Ca²⁺, H+ → edema celular, activación de proteasas/fosfolipasas\n4. Acumulación de hipoxantina (degradación de AMP)\n5. Activación de HIF-1α (Hypoxia-Inducible Factor) — respuesta adaptativa\n6. Si isquemia prolongada: cell death pathways activados\n\nEn TR de donador fallecido (especialmente DCD):\n- Tiempo de isquemia caliente (warm ischemia): de paro circulatorio a extracción/perfusión\n- Tiempo de isquemia fría (cold ischemia): preservación en líquido (UW, HTK, Custodiol) a 4°C — reduce metabolismo pero no lo elimina\n- Tiempo total >18-24h se asocia con peor pronóstico",
+        "fase_reperfusion": "La REPERFUSIÓN paradójicamente AMPLIFICA el daño:\n\n1. ESTRÉS OXIDATIVO BURST:\n   - Hipoxantina acumulada + oxígeno → xantina oxidasa → ácido úrico + ROS (superóxido)\n   - Mitocondrias dañadas generan ROS masivamente al reanudar respiración\n   - ROS dañan lípidos (peroxidación), proteínas, DNA\n\n2. ACTIVACIÓN DEL COMPLEMENTO:\n   - Vía alternativa principalmente (los reguladores como CD55, CD59 están reducidos en endotelio isquémico)\n   - C3a, C5a → quimiotaxis de neutrófilos\n   - C5b-9 (MAC) → daño celular directo\n\n3. DAMPs (Damage-Associated Molecular Patterns):\n   - HMGB1 (High Mobility Group Box 1): liberado de núcleo de células dañadas\n   - ATP extracelular\n   - DNA mitocondrial\n   - Ácido hialurónico fragmentado\n   - Heat shock proteins (HSP70, HSP90)\n   \n   Los DAMPs se unen a TLR2/4 (Toll-like receptors) en células inmunes y endoteliales → activación de NF-κB → cascada inflamatoria\n\n4. INFLAMASOMA NLRP3:\n   - Activado por ROS, K+ eflujo, DAMPs\n   - Activa caspase-1 → IL-1β + IL-18 (citoquinas inflamatorias) + pyroptosis (muerte inflamatoria)\n\n5. RECLUTAMIENTO LEUCOCITARIO:\n   - Neutrófilos primero (más ROS, NETs, proteasas)\n   - Macrófagos M1 (pro-inflamatorios)\n   - Activación de células dendríticas residentes → migran a ganglios → activan T (LINK A RECHAZO ADAPTATIVO)",
+        "muerte_celular_regulada": "Tradicionalmente se pensaba que daño celular era apoptosis (regulada) o necrosis (no regulada). Hoy se reconoce que necrosis también tiene formas reguladas:\n\n1. NECROPTOSIS: muerte celular inflamatoria mediada por RIPK1/RIPK3 + MLKL. Liberación masiva de DAMPs → amplifica inflamación. Inhibida por necrostatin-1.\n\n2. FERROPTOSIS: muerte por peroxidación lipídica dependiente de hierro. Inhibida por GPX4 (glutathione peroxidase 4). Importante en daño tubular renal post-isquemia. Inhibida por liproxstatin-1.\n\n3. PYROPTOSIS: muerte por activación de gasdermin D (cleaved por caspase-1 del inflamasoma). Forma poros, libera contenido celular.\n\n4. PARAPTOSIS: muerte por estrés mitocondrial sin caspasas.\n\nEn IRI, las TUBULOS PROXIMALES (especialmente segmento S3, más sensible a hipoxia) sufren combinación de necroptosis + ferroptosis + apoptosis."
+      },
+      "relevancia_clinica": [
+        "DGF (función retardada del injerto): necesidad de TRR en primera semana post-TR. Incidencia 20-40% en donadores fallecidos, <5% en vivos",
+        "DGF asocia con:\n  - Aumento de rechazo agudo (1.5-2x)\n  - Mayor estadía hospitalaria\n  - Pérdida del injerto a 1 año: 8% vs 3% sin DGF\n  - Supervivencia a largo plazo modestamente reducida",
+        "Tiempo de isquemia fría >18h aumenta significativamente DGF",
+        "DCD (donor after circulatory death) tiene 50%+ DGF (vs 20-25% DBD) por isquemia caliente adicional",
+        "Soluciones de preservación: UW (University of Wisconsin) y HTK (Bretschneider/Custodiol) son las más usadas. Sin diferencias significativas en outcomes a corto plazo",
+        "PERFUSIÓN MECÁNICA HIPOTÉRMICA (HMP): bomba que circula líquido frío continuamente. Reduce DGF ~20% vs preservación estática (estudio Moers 2009)",
+        "PERFUSIÓN MECÁNICA NORMOTÉRMICA (NMP): a 37°C con sangre — emergente, permite 'reactivar' injertos limítrofes y evaluarlos antes de implantar",
+        "Estrategias anti-IRI en estudios:\n  - Inhibidores de complemento (mirococept C3 inhibitor)\n  - Anti-CD40L\n  - Inhibidores de necroptosis y ferroptosis\n  - Mesenchymal stem cells",
+        "AKI post-TR por IRI es DIFERENTE de AKI por rechazo o por CNI — clínica y biopsia ayudan a diferenciar"
+      ],
+      "pearls_avanzados": [
+        "El SEGMENTO S3 del túbulo proximal es el MÁS SENSIBLE a hipoxia/IRI — por su localización en médula externa con perfusión limitada",
+        "Hipotermia profunda (<10°C) reduce metabolismo a 10-15% del normal — pero no lo elimina",
+        "DAMPs causan inflamación 'estéril' (sin patógeno) — concepto crucial: el sistema inmune innato no distingue entre daño infeccioso y daño isquémico",
+        "TLR4 es el sensor principal de DAMPs en TR — inhibidores TLR4 en investigación",
+        "Ferroptosis es importante en IRI renal: el hierro liberado del riñón dañado amplifica ROS — quelantes de hierro tienen evidencia preclínica",
+        "Suero de pacientes con IRI severo activa complemento alternativo in vitro — biomarcador potencial",
+        "C5a inhibitors (avacopan) tienen efecto en IRI preclínico — estudios en curso",
+        "Mensagem renal pre-condicionamiento isquémico: episodios cortos repetidos de isquemia antes de la principal — protege via mecanismos endógenos (HIF-1α, eritropoyetina endógena). Probado en modelos animales.",
+        "ddcfDNA (donor-derived cell-free DNA) sube post-IRI — biomarcador de daño del injerto",
+        "Macrophages M2 (resolución, healing) son IMPORTANTES para recuperar de IRI — exceso de M1 prolonga inflamación. Balance M1/M2 es target terapéutico."
+      ],
+      "referencias_clave": [
+        "Moers C et al. Machine Perfusion or Cold Storage in Deceased-Donor Kidney Transplantation. NEJM 2009",
+        "Bonventre JV, Yang L. Cellular pathophysiology of ischemic acute kidney injury. J Clin Invest 2011",
+        "Jang HR, Rabb H. Immune cells in experimental acute kidney injury. Nat Rev Nephrol 2015",
+        "Linkermann A et al. Synchronized renal tubular cell death involves ferroptosis. PNAS 2014",
+        "Hosgood SA et al. Normothermic Machine Perfusion versus Static Cold Storage in Donation after Circulatory Death Kidney Transplantation. JAMA Surg 2023"
+      ]
+    },
+    {
+      "id": "inmunidad_innata_tr",
+      "titulo": "Inmunidad innata en trasplante renal — NK, macrófagos, complemento",
+      "categoria": "Inmunología avanzada",
+      "concepto_central": "Tradicionalmente el foco en inmunología del trasplante ha sido la inmunidad ADAPTATIVA (T y B cells). Sin embargo, la INMUNIDAD INNATA (NK cells, macrófagos, células dendríticas, monocitos, complemento) tiene papel CENTRAL en rechazo agudo, AMR, rechazo crónico, y en isquemia-reperfusión. Es la 'frontera emergente' de la inmunología del trasplante y target de terapias futuras.",
+      "mecanismo_molecular": {
+        "nk_cells": "Las células Natural Killer (NK) son linfocitos innatos que matan células sin sensibilización previa.\n\nRECEPTORES NK:\n- INHIBITORIOS: KIR (Killer cell Immunoglobulin-like Receptor) reconocen HLA-I propio. Si presente → NO matar (missing-self rule).\n- ACTIVADORES: NKG2D, NKp46, NKp30, etc. Reconocen señales de stress celular (MICA/B, ULBPs).\n- ADCC: NK expresan CD16 (FcγRIIIA) — se unen a Fc de IgG en células recubiertas por anticuerpos → mediación de daño SIN COMPLEMENTO\n\nEN AMR:\n- DSA se unen a HLA endotelial → NK reconocen via CD16 → ADCC → daño endotelial sin necesidad de complemento\n- Esto explica AMR con C4d NEGATIVO\n- Polymorphism FCGR3A-V158F: pacientes con genotipo VV tienen ADCC más eficiente → AMR más severo con menor MFI de DSA\n\nKIR-HLA mismatching: si donador tiene HLA-C que no inhibe las KIR del receptor → NK del receptor activadas → daño al injerto. Concepto emergente, similar a 'GVHD' en BMT pero en TR.",
+        "macrofagos": "Macrófagos tienen plasticidad: pueden ser PRO-INFLAMATORIOS (M1) o RESOLVING (M2):\n\nM1 (clásicamente activados): inducidos por IFN-γ + LPS/TLR signals. Producen TNF, IL-1β, IL-6, IL-12, NO, ROS. Microbicidas, pro-inflamatorios, daño tisular. PROTAGONISTAS DE RECHAZO ACTIVO.\n\nM2 (alternativamente activados): inducidos por IL-4, IL-13. Subsets M2a (resolución), M2b (immunoregulación), M2c (remodelación tisular). Producen IL-10, TGF-β, arginasa. Resolución de inflamación, healing, fibrosis. AMBIVALENTES: necesarios para reparación pero exceso → fibrosis del injerto.\n\nEN TR:\n- Macrófagos infiltran injerto durante rechazo agudo (parte del 'i' en Banff)\n- Macrófagos crónicos M2 contribuyen a IF/TA (fibrosis intersticial / atrofia tubular)\n- Reprogramación de M1→M2 es target terapéutico\n- Cells therapy: macrófagos regulatorios (Mreg) en ensayos\n\nEspecialmente en AMR crónico: infiltrado de macrófagos en capilares peritubulares (puede confundirse con linfocitos por morfología) — CD68 stain identifica.",
+        "dendritic_cells": "Dendritic cells (DCs) son las APCs profesionales. Bridge entre innate y adaptive immunity.\n\nSUBSETS:\n- cDC1 (conventional type 1): presentación cruzada (cross-presentation) a CD8+, anti-tumoral\n- cDC2: presentación a CD4+\n- pDC (plasmacitoides): producen IFN-α en respuesta a virus, anti-viral\n- Tolerogenic DCs: presentación sin coestimulación adecuada → tolerancia\n\nEN TR:\n- DCs del donador (passenger leukocytes) migran al receptor → presentación DIRECTA → activación de T del receptor\n- DCs del receptor procesan HLA del donador → presentación INDIRECTA\n- DCs tolerogénicos (vitamin D3 + IL-10 treated) en estudios para inducir tolerancia\n- DC therapy: ensayos clínicos en TR",
+        "complement_innate": "El complemento es parte de la inmunidad innata. Ya cubierto en tema separado. Resaltar aquí:\n- Activa rápidamente sin memoria previa\n- Coordina con células innatas (C5a quimiotaxis neutrófilos)\n- Es target terapéutico clave (eculizumab, iptacopan, avacopan)",
+        "monocytes_neutrophils": "MONOCYTES: precursores de macrófagos. Subsets:\n- Classical CD14+CD16-: pro-inflammatorios, reclutados rápidamente\n- Non-classical CD14lowCD16+: 'patrullaje' endotelial\n- Intermediate CD14+CD16+: heterogéneos\n\nEn TR: monocitos infiltran injerto en rechazo, se diferencian a macrófagos M1 dominantes.\n\nNEUTRÓFILOS: principales en IRI temprano. Producen ROS, proteasas, NETs (Neutrophil Extracellular Traps — DNA + histonas + enzymes que atrapan patógenos pero amplifican inflamación estéril).\n\nNETosis: muerte programada de neutrófilos liberando NETs. En IRI renal exacerba daño. Inhibidores en investigación.",
+        "innate_lymphoid_cells_ilc": "Innate Lymphoid Cells (ILCs): subset emergente.\n- ILC1: producen IFN-γ, equivalente innato de Th1\n- ILC2: producen IL-5, IL-13, equivalente Th2\n- ILC3: producen IL-17, IL-22, equivalente Th17\n\nEn TR: rol emergente, especialmente ILC3 en inflamación crónica del injerto. Investigación activa."
+      },
+      "relevancia_clinica": [
+        "AMR puede ocurrir con C4d NEGATIVO — implica daño por NK/ADCC en lugar de (o en adición a) complemento",
+        "Estos pacientes son MÁS DIFÍCILES de tratar — eculizumab no funciona si daño es NK-mediado",
+        "FCGR3A-V158F polymorphism puede identificar pacientes con riesgo de AMR severo independiente de MFI de DSA — campo emergente",
+        "Macrofagos M2 en biopsia tardía: marcador de IF/TA progresivo — pronóstico peor",
+        "Belatacept tiene efectos sobre células innatas (DCs principalmente) además de coestimulación — parte de su mecanismo",
+        "ATG depleta no solo T cells sino también NK (CD16+ son target) — explica parte de su efecto",
+        "Tocilizumab (anti-IL6R) en AMR refractario: efecto sobre macrófagos M1 y on B activation. Pequeños estudios positivos.",
+        "Reglas de matching KIR-HLA podrían incorporarse en futuro a asignación (NK 'compatibility')",
+        "Inhibidores de inflamasoma NLRP3 (MCC950 y otros) en investigación preclínica"
+      ],
+      "pearls_avanzados": [
+        "El conteo de NK en sangre periférica baja DURANTE rechazo activo — pueden estar reclutadas al injerto",
+        "NK CD56bright (productoras de citoquinas, no citotóxicas) son inmunomoduladoras — balance con CD56dim (citotóxicas) importa",
+        "DSA IgG1 e IgG3 (que activan complemento Y ADCC) son los más patogénicos. IgG2 e IgG4 activan menos complemento — pero pueden mediar ADCC",
+        "Macrófagos también pueden mediar ADCC vía CD64 (FcγRI)",
+        "ILCs son tisulares (no circulan tanto) — biopsia podría identificarlos, sangre no",
+        "Pyroptosis (muerte por inflamasoma) puede ocurrir en células tubulares en rechazo + IRI",
+        "Mreg (macrófagos regulatorios) en ONE Study no mostraron beneficio claro pero seguros — diseño limitado",
+        "Concepto 'Trained Immunity': células innatas tienen 'memoria' epigenética — pueden estar 'preparadas' por exposiciones previas. Implicaciones en TR aún se exploran.",
+        "Microbioma intestinal modula inmunidad innata sistémica — eje gut-immune-graft",
+        "Neutrophil/Lymphocyte ratio (NLR) en sangre es marcador emergente de actividad inmune post-TR — fácil de medir, predictivo en algunos estudios"
+      ],
+      "referencias_clave": [
+        "Hidalgo LG et al. NK cell transcripts and NK cells in kidney biopsies from patients with donor-specific antibodies. Am J Transplant 2010",
+        "Wood KJ, Bushell A, Hester J. Regulatory immune cells in transplantation. Nat Rev Immunol 2012",
+        "Riquelme P et al. TIGIT+ iTregs elicited by human regulatory macrophages control T cell immunity. Nat Commun 2018",
+        "Sablik KA et al. Tocilizumab and active antibody-mediated rejection in kidney transplantation. Transplant Direct 2018",
+        "Halloran PF et al. Molecular phenotyping of rejection by kidney biopsy: the INTERCOMEX study. Am J Transplant 2017"
       ]
     }
   ]
