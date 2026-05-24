@@ -1,0 +1,224 @@
+{
+  "_meta": {
+    "tema": "Referencias clave en Trasplante Renal — RCTs históricos y modernos",
+    "fecha_revision": "2026-05-24",
+    "objetivo": "Saber estas referencias diferencia un fellow promedio de uno excelente"
+  },
+  "categorias": [
+    {
+      "categoria": "RCTs históricos de inmunosupresión",
+      "estudios": [
+        {
+          "nombre": "Calne RY et al. Cyclosporin A initially as the only immunosuppressant in 34 recipients of cadaveric organs. Lancet 1979",
+          "punto_clave": "Primer reporte del uso clínico de ciclosporina en TR humano. Cambió la era moderna del trasplante.",
+          "relevancia": "Histórico — base de inmunosupresión moderna"
+        },
+        {
+          "nombre": "Vincenti F et al. Interleukin-2-Receptor Blockade with Daclizumab to Prevent Acute Rejection in Renal Transplantation. NEJM 1998",
+          "punto_clave": "Estudio pivotal de basiliximab/daclizumab. Demostró eficacia y seguridad de bloqueo IL-2R en inducción.",
+          "relevancia": "Aprobación FDA de basiliximab"
+        },
+        {
+          "nombre": "Brennan DC et al. Rabbit Anti-thymocyte Globulin versus Basiliximab in Renal Transplantation. NEJM 2006",
+          "punto_clave": "ATG superior a basiliximab para prevenir rechazo agudo en pacientes de alto riesgo, sin diferencias en supervivencia del injerto.",
+          "relevancia": "Define indicaciones de cada inducción según riesgo"
+        },
+        {
+          "nombre": "Ekberg H et al. Reduced exposure to calcineurin inhibitors in renal transplantation (ELITE-Symphony). NEJM 2007",
+          "punto_clave": "Régimen con Tac de bajo nivel + MMF + basiliximab + esteroides es superior. Estableció Tac como CNI preferido.",
+          "relevancia": "Cambió práctica global hacia Tac"
+        },
+        {
+          "nombre": "Vincenti F et al. Belatacept-Based Maintenance Therapy in Renal Transplantation (BENEFIT/BENEFIT-EXT). NEJM 2016 (extensión 7 años)",
+          "punto_clave": "Belatacept mantiene mejor TFG vs CsA a 7 años a pesar de más rechazo temprano. Mortalidad y pérdida de injerto similares.",
+          "relevancia": "Alternativa a CNI a largo plazo"
+        }
+      ]
+    },
+    {
+      "categoria": "Banff classification — Patología del rechazo",
+      "estudios": [
+        {
+          "nombre": "Solez K et al. International standardization of criteria for histologic diagnosis of renal allograft rejection. The Banff working classification. Kidney Int 1993",
+          "punto_clave": "Primer consenso Banff. Estableció criterios morfológicos para rechazo agudo.",
+          "relevancia": "Fundación de Banff"
+        },
+        {
+          "nombre": "Loupy A et al. The Banff 2019 Kidney Meeting Report. Am J Transplant 2020",
+          "punto_clave": "Última actualización: criterios actuales para TCMR, AMR, AMR crónico, glomerulopatía de trasplante. Concepto de 'rechazo molecular' usando microarrays.",
+          "relevancia": "GOLD STANDARD actual"
+        },
+        {
+          "nombre": "Haas M et al. Banff 2017 Meeting Report: Revised diagnostic criteria for chronic active T cell-mediated rejection. Am J Transplant 2018",
+          "punto_clave": "Definió cAMR con criterios revisados. Estableció C4d-negative AMR como entidad.",
+          "relevancia": "Cambió diagnóstico de AMR"
+        }
+      ]
+    },
+    {
+      "categoria": "Rechazo mediado por anticuerpos",
+      "estudios": [
+        {
+          "nombre": "Loupy A et al. Antibody-Mediated Rejection of Solid-Organ Allografts. NEJM 2018;379:1150-1160",
+          "punto_clave": "Revisión definitiva sobre fisiopatología, diagnóstico y tratamiento de AMR.",
+          "relevancia": "Referencia LIBRO para AMR"
+        },
+        {
+          "nombre": "Stegall MD et al. Terminal Complement Inhibition Decreases Antibody-Mediated Rejection in Sensitized Renal Transplant Recipients. Am J Transplant 2011",
+          "punto_clave": "Eculizumab reduce AMR en pacientes desensibilizados de alto riesgo.",
+          "relevancia": "Validó complemento como target"
+        },
+        {
+          "nombre": "Sautenet B et al. One-Year Results of the Effects of Rituximab on Acute Antibody-Mediated Rejection in Renal Transplantation: RITUX ERAH, a Multicenter Double-Blind Randomized Placebo-Controlled Trial. Transplantation 2016",
+          "punto_clave": "Rituximab NO mostró beneficio claro vs placebo en AMR — aunque estudio pequeño y con limitaciones.",
+          "relevancia": "Cuestiona uso rutinario de rituximab en AMR"
+        }
+      ]
+    },
+    {
+      "categoria": "Infecciones — CMV y BK",
+      "estudios": [
+        {
+          "nombre": "Humar A et al. Extended-duration valganciclovir prophylaxis in CMV D+/R- kidney transplant patients (IMPACT trial). Am J Transplant 2010",
+          "punto_clave": "Profilaxis 200 días vs 100 días reduce significativamente enfermedad CMV tardía.",
+          "relevancia": "Cambió guidelines a 6 meses mínimo en D+/R-"
+        },
+        {
+          "nombre": "Marty FM et al. Letermovir Prophylaxis for Cytomegalovirus in Hematopoietic-Cell Transplantation. NEJM 2017",
+          "punto_clave": "Letermovir efectivo y no mielotóxico — aunque estudio en BMT, abrió uso en SOT.",
+          "relevancia": "Aprobación de letermovir"
+        },
+        {
+          "nombre": "Avery RK et al. Maribavir for Refractory Cytomegalovirus Infections in Hematopoietic-Cell or Solid-Organ Transplant Recipients. NEJM 2022",
+          "punto_clave": "Maribavir superior a tratamiento de elección del investigador en CMV refractario/resistente. Aprobación FDA.",
+          "relevancia": "Nueva opción para CMV resistente"
+        },
+        {
+          "nombre": "Kotton CN et al. The Transplantation Society International Consensus Guidelines on the Management of BK Polyomavirus. Transplantation 2024",
+          "punto_clave": "Guía consensuada más reciente para BKV: screening, diagnóstico, manejo.",
+          "relevancia": "Estándar actual"
+        }
+      ]
+    },
+    {
+      "categoria": "Recurrencia de enfermedad primaria",
+      "estudios": [
+        {
+          "nombre": "Wei C et al. Modification of kidney barrier function by the urokinase receptor. Nat Med 2008",
+          "punto_clave": "Identificación de suPAR (urokinase receptor soluble) como factor circulante en FSGS.",
+          "relevancia": "Avance fisiopatológico clave"
+        },
+        {
+          "nombre": "Watts AJB et al. Discovery of Autoantibodies Targeting Nephrin in Minimal Change Disease. JASN 2022",
+          "punto_clave": "Anti-nephrin antibodies identificados — nuevo target para entender MCD/FSGS.",
+          "relevancia": "Fronterizo"
+        },
+        {
+          "nombre": "Goodship THJ et al. Atypical hemolytic uremic syndrome and C3 glomerulopathy: conclusions from a KDIGO Controversies Conference. Kidney Int 2017",
+          "punto_clave": "Recurrencia de aHUS y C3GN — eculizumab profiláctico transforma pronóstico de aHUS.",
+          "relevancia": "Estándar para complement-mediated diseases"
+        }
+      ]
+    },
+    {
+      "categoria": "Desensibilización y ABO incompatible",
+      "estudios": [
+        {
+          "nombre": "Jordan SC et al. IVIG and Intra-Transplant Plasmapheresis to Reduce Anti-HLA Antibodies. Am J Transplant 2003",
+          "punto_clave": "Protocolo IVIG + plasmaféresis para desensibilizar pacientes hipersensibilizados.",
+          "relevancia": "Permitió TR en pacientes 'imposibles'"
+        },
+        {
+          "nombre": "Tanabe K et al. ABO-incompatible kidney transplantation: long-term outcomes. Clin Transplant 2014",
+          "punto_clave": "Resultados a largo plazo de ABOi TR — supervivencia comparable a ABOc con protocolo moderno.",
+          "relevancia": "Validó ABOi TR como práctica estándar"
+        },
+        {
+          "nombre": "Marfo K et al. Desensitization Protocols and Their Outcome. CJASN 2011",
+          "punto_clave": "Revisión sistemática de protocolos de desensibilización HLA — outcomes y limitaciones.",
+          "relevancia": "Referencia clave para desensibilización"
+        }
+      ]
+    },
+    {
+      "categoria": "NODAT y metabólico",
+      "estudios": [
+        {
+          "nombre": "Sharif A et al. Proceedings from an International Consensus Meeting on PTDM. Am J Transplant 2014",
+          "punto_clave": "Definición consensuada de NODAT (PTDM) y criterios diagnósticos.",
+          "relevancia": "Estándar de definición"
+        },
+        {
+          "nombre": "EMPA-KIDNEY Collaborative Group. Empagliflozin in patients with chronic kidney disease. NEJM 2023",
+          "punto_clave": "Empagliflozin reduce eventos renales y CV en ERC, INCLUYE pacientes con TR. Establece seguridad post-TR.",
+          "relevancia": "Cambió paradigma de iSGLT2 en TR"
+        },
+        {
+          "nombre": "Hecking M et al. NODAT after kidney transplantation: an overview of risk factors and prevention. Curr Opin Nephrol Hypertens 2020",
+          "punto_clave": "Revisión exhaustiva de NODAT — factores de riesgo, prevención, manejo.",
+          "relevancia": "Excelente revisión clínica"
+        }
+      ]
+    },
+    {
+      "categoria": "Donador vivo y deceased",
+      "estudios": [
+        {
+          "nombre": "Rao PS et al. A comprehensive risk quantification score for deceased donor kidneys: the kidney donor risk index. Transplantation 2009",
+          "punto_clave": "Desarrollo del KDRI/KDPI — calculadora de calidad de kidney offered.",
+          "relevancia": "Base del sistema UNOS"
+        },
+        {
+          "nombre": "Lentine KL et al. KDIGO Clinical Practice Guideline on the Evaluation and Care of Living Kidney Donors. Transplantation 2017",
+          "punto_clave": "Guía consensuada para evaluación de donadores vivos.",
+          "relevancia": "Estándar internacional"
+        },
+        {
+          "nombre": "Massie AB et al. Quantifying postdonation risk of ESRD in living kidney donors. JASN 2017",
+          "punto_clave": "Riesgo de ERC post-donación cuantificado — modesto pero real, especialmente en afroamericanos jóvenes.",
+          "relevancia": "Cambió consejería pre-donación"
+        }
+      ]
+    },
+    {
+      "categoria": "Cáncer post-TR",
+      "estudios": [
+        {
+          "nombre": "Engels EA et al. Spectrum of cancer risk among US solid organ transplant recipients. JAMA 2011",
+          "punto_clave": "Análisis poblacional del riesgo aumentado de >30 tipos de cáncer post-SOT.",
+          "relevancia": "Datos epidemiológicos definitivos"
+        },
+        {
+          "nombre": "Dierickx D, Habermann TM. Post-Transplantation Lymphoproliferative Disorders. NEJM 2018",
+          "punto_clave": "Revisión completa de PTLD: epidemiología, diagnóstico, manejo.",
+          "relevancia": "Referencia LIBRO para PTLD"
+        },
+        {
+          "nombre": "Knoll GA et al. Effect of Sirolimus on Malignancy and Survival After Kidney Transplantation: Systematic Review and Meta-analysis. BMJ 2014",
+          "punto_clave": "mTOR inhibitors reducen incidencia de cáncer (especialmente piel) pero aumentan mortalidad temprana. Pesar riesgo/beneficio.",
+          "relevancia": "Soporte para conversión a mTOR en pacientes oncológicos"
+        }
+      ]
+    },
+    {
+      "categoria": "Guías y consensos KDIGO",
+      "estudios": [
+        {
+          "nombre": "KDIGO Clinical Practice Guideline for the Care of the Kidney Transplant Recipient. Am J Transplant 2009",
+          "punto_clave": "Primera guía KDIGO para TR. Actualizada posteriormente.",
+          "relevancia": "Histórica"
+        },
+        {
+          "nombre": "KDIGO 2020 Clinical Practice Guideline on the Evaluation and Management of Candidates for Kidney Transplantation. Transplantation 2020",
+          "punto_clave": "Guía actualizada de evaluación pre-TR. Cambió varios criterios.",
+          "relevancia": "Estándar actual de candidatura"
+        },
+        {
+          "nombre": "KDIGO 2024 Clinical Practice Guideline for the Evaluation and Management of CKD. Kidney Int 2024",
+          "punto_clave": "Última guía de ERC general. Relevante para TR por manejo de complicaciones crónicas.",
+          "relevancia": "Actualización 2024 incluye finerenona, sparsentan, iSGLT2"
+        }
+      ]
+    }
+  ]
+}
