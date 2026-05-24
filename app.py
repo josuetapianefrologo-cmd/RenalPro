@@ -75,6 +75,24 @@ except ImportError:
     _cd_revision = lambda x: ""
     _cd_tac_eval = lambda c0, d=30: {}
 
+# ── Paquete clinical_data.educacion: contenido pedagógico TR ──────────────────
+try:
+    from clinical_data import (get_lista_casos as _cd_casos,
+                                 get_lista_preguntas as _cd_preguntas,
+                                 get_lista_temas_fisiopatologia as _cd_fisio,
+                                 get_lista_tablas as _cd_tablas,
+                                 get_lista_referencias as _cd_refs,
+                                 get_lista_controversias as _cd_controversias)
+    _EDUCACION_TR = True
+except ImportError:
+    _EDUCACION_TR = False
+    _cd_casos = lambda: []
+    _cd_preguntas = lambda: []
+    _cd_fisio = lambda: []
+    _cd_tablas = lambda: []
+    _cd_refs = lambda: []
+    _cd_controversias = lambda: []
+
 # ── Caché de consultas DB (evita ir a Railway en cada clic) ───────────────────
 @st.cache_data(ttl=15)
 def _cached_prescriptions(uid: int):
@@ -2165,6 +2183,7 @@ with st.sidebar:
     _navbtn("📋 Resumen / PDF", "resumen")
     _navbtn("📚 Fundamento", "fund")
     _navbtn("📖 Referencias", "refs")
+    _navbtn("🎓 Aprendizaje TR", "aprendizaje")
 
     _navsec("CUENTA")
     _navbtn("👤 Mi Cuenta", "micuenta")
@@ -19875,6 +19894,440 @@ elif nav == "algo_bk":
 - Uso de timoglobulina (induce mayor inmunosupresión)
 - Esquemas con MMF en dosis altas
     """)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 🎓 APRENDIZAJE TR — Módulo educativo para fellow de trasplante
+# Casos clínicos, banco de preguntas, fisiopatología, controversias,
+# tablas comparativas y referencias clave (RCTs históricos y modernos).
+# Contenido en clinical_data/educacion/*.json (editable sin tocar código).
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "aprendizaje":
+    st.subheader("🎓 Aprendizaje TR — Para fellow de trasplante")
+    st.caption("Contenido pedagógico curado: fisiopatología, casos, preguntas, controversias. "
+               "El 'porqué' detrás del 'qué hacer'.")
+
+    if not _EDUCACION_TR:
+        st.warning("⚠️ Módulo educativo no disponible. Verifique que la carpeta "
+                   "`clinical_data/educacion/` esté presente en el repositorio.")
+    else:
+        # ── Pestañas ──────────────────────────────────────────────────────────
+        tab_fisio, tab_casos, tab_preg, tab_ctv, tab_tab, tab_ref = st.tabs([
+            "🔬 Fisiopatología",
+            "📋 Casos clínicos",
+            "❓ Banco de preguntas",
+            "⚖️ Controversias",
+            "📊 Tablas comparativas",
+            "📖 Referencias clave",
+        ])
+
+        # ═════════════════════════════════════════════════════════════════════
+        # 🔬 FISIOPATOLOGÍA EXPANDIDA
+        # ═════════════════════════════════════════════════════════════════════
+        with tab_fisio:
+            st.markdown("### Fisiopatología expandida — El porqué de cada tema")
+            st.caption("Mecanismos moleculares + relevancia clínica + pearls avanzados. "
+                       "Para entender, no memorizar.")
+
+            temas_fisio = _cd_fisio()
+            if not temas_fisio:
+                st.info("No hay temas disponibles.")
+            else:
+                titulos_fisio = [t.get("titulo", t.get("id", "?")) for t in temas_fisio]
+                sel_idx = st.selectbox(
+                    "Selecciona tema:",
+                    options=list(range(len(temas_fisio))),
+                    format_func=lambda i: titulos_fisio[i],
+                    key="apr_fisio_sel",
+                )
+                tema = temas_fisio[sel_idx]
+
+                st.markdown(f"#### {tema.get('titulo', '')}")
+                st.caption(f"Categoría: {tema.get('categoria', '—')}")
+
+                # Concepto central
+                if tema.get("concepto_central"):
+                    st.markdown("##### 💡 Concepto central")
+                    st.markdown(tema["concepto_central"])
+
+                # Mecanismo molecular (dict con sub-secciones)
+                mec = tema.get("mecanismo_molecular", {})
+                if isinstance(mec, dict) and mec:
+                    st.markdown("##### 🧬 Mecanismo molecular")
+                    for sub_key, sub_val in mec.items():
+                        with st.expander(sub_key.replace("_", " ").title()):
+                            st.markdown(sub_val)
+                elif isinstance(mec, str) and mec:
+                    st.markdown("##### 🧬 Mecanismo molecular")
+                    st.markdown(mec)
+
+                # Relevancia clínica
+                if tema.get("relevancia_clinica"):
+                    st.markdown("##### 🩺 Relevancia clínica")
+                    for item in tema["relevancia_clinica"]:
+                        st.markdown(f"- {item}")
+
+                # Toxicidades (si aplica, ej. CNI)
+                if tema.get("toxicidades_principales"):
+                    st.markdown("##### ⚠️ Toxicidades principales")
+                    for tox in tema["toxicidades_principales"]:
+                        with st.expander(f"🔸 {tox.get('tipo', '?')}"):
+                            if tox.get("mecanismo"):
+                                st.markdown(f"**Mecanismo:** {tox['mecanismo']}")
+                            if tox.get("manejo"):
+                                st.markdown(f"**Manejo:** {tox['manejo']}")
+
+                # Factores de riesgo (si aplica)
+                if tema.get("factores_riesgo"):
+                    st.markdown("##### 📌 Factores de riesgo")
+                    for item in tema["factores_riesgo"]:
+                        st.markdown(f"- {item}")
+
+                # Manejo (si aplica)
+                if tema.get("manejo"):
+                    st.markdown("##### 🎯 Manejo")
+                    for item in tema["manejo"]:
+                        st.markdown(f"- {item}")
+
+                # Manejo avanzado (si aplica, ej. CMV)
+                if tema.get("manejo_avanzado"):
+                    st.markdown("##### 🎯 Manejo avanzado")
+                    for item in tema["manejo_avanzado"]:
+                        st.markdown(f"- {item}")
+
+                # Pearls avanzados
+                if tema.get("pearls_avanzados"):
+                    st.markdown("##### 💎 Pearls avanzados")
+                    for pearl in tema["pearls_avanzados"]:
+                        st.markdown(f"- {pearl}")
+
+                # Referencias
+                if tema.get("referencias_clave"):
+                    st.markdown("##### 📚 Referencias clave")
+                    for ref in tema["referencias_clave"]:
+                        st.markdown(f"- _{ref}_")
+
+        # ═════════════════════════════════════════════════════════════════════
+        # 📋 CASOS CLÍNICOS DIDÁCTICOS
+        # ═════════════════════════════════════════════════════════════════════
+        with tab_casos:
+            st.markdown("### Casos clínicos con razonamiento paso a paso")
+            st.caption("Lee el caso, intenta razonar TÚ MISMO antes de revelar el análisis.")
+
+            casos = _cd_casos()
+            if not casos:
+                st.info("No hay casos disponibles.")
+            else:
+                titulos_casos = [f"{c.get('id', '?')}: {c.get('titulo', '?')}" for c in casos]
+                sel_idx = st.selectbox(
+                    "Selecciona caso:",
+                    options=list(range(len(casos))),
+                    format_func=lambda i: titulos_casos[i],
+                    key="apr_caso_sel",
+                )
+                caso = casos[sel_idx]
+
+                st.markdown(f"#### {caso.get('titulo', '')}")
+                col_meta1, col_meta2 = st.columns(2)
+                with col_meta1:
+                    st.caption(f"📁 **Categoría:** {caso.get('categoria', '—')}")
+                with col_meta2:
+                    st.caption(f"🎯 **Nivel:** {caso.get('nivel', '—')}")
+
+                # Presentación
+                st.markdown("##### 📖 Presentación del caso")
+                st.info(caso.get("presentacion", ""))
+
+                # Datos clave (resumen)
+                if caso.get("datos_clave"):
+                    with st.expander("📊 Datos clave (resumen)", expanded=False):
+                        for k, v in caso["datos_clave"].items():
+                            st.markdown(f"- **{k.replace('_', ' ').capitalize()}:** {v}")
+
+                st.markdown("---")
+                st.markdown("##### 🤔 Razona TÚ antes de continuar:")
+                st.markdown(
+                    "1. ¿Cuál es tu diagnóstico diferencial priorizado?\n"
+                    "2. ¿Qué estudios solicitarías?\n"
+                    "3. ¿Cuál sería tu manejo inicial?"
+                )
+
+                if st.checkbox("🔍 Ver análisis y solución", key=f"apr_caso_show_{sel_idx}"):
+                    # DDx priorizado
+                    if caso.get("ddx_priorizado"):
+                        st.markdown("##### 🔎 Diagnóstico diferencial priorizado")
+                        for ddx in caso["ddx_priorizado"]:
+                            prob = ddx.get("probabilidad", "")
+                            color = "🔴" if "Muy alta" in prob or "Alta" in prob else (
+                                "🟠" if "Media" in prob else "🟡")
+                            st.markdown(
+                                f"{color} **{ddx.get('diagnostico', '?')}** "
+                                f"_({prob})_"
+                            )
+                            st.markdown(f"   → {ddx.get('razon', '')}")
+
+                    # Factores de riesgo (si aplica, NODAT)
+                    if caso.get("factores_riesgo_identificados"):
+                        st.markdown("##### 📌 Factores de riesgo identificados")
+                        for fr in caso["factores_riesgo_identificados"]:
+                            st.markdown(f"- {fr}")
+
+                    # Estudios solicitados
+                    if caso.get("estudios_solicitados"):
+                        st.markdown("##### 🔬 Estudios solicitados")
+                        for est in caso["estudios_solicitados"]:
+                            st.markdown(f"**{est.get('estudio', '?')}**")
+                            st.markdown(f"   _Razón: {est.get('razon', '')}_")
+
+                    # Diagnóstico final
+                    if caso.get("diagnostico_final"):
+                        st.markdown("##### 🎯 Diagnóstico final")
+                        st.success(caso["diagnostico_final"])
+
+                    # Fisiopatología
+                    if caso.get("fisiopatologia"):
+                        with st.expander("🧬 Fisiopatología (el porqué)", expanded=True):
+                            st.markdown(caso["fisiopatologia"])
+
+                    # Manejo
+                    if caso.get("manejo"):
+                        st.markdown("##### 💊 Manejo")
+                        for m in caso["manejo"]:
+                            st.markdown(f"- {m}")
+
+                    # Evolución
+                    if caso.get("evolucion"):
+                        st.markdown("##### 📈 Evolución")
+                        st.markdown(caso["evolucion"])
+
+                    # Pearls
+                    if caso.get("pearls"):
+                        st.markdown("##### 💎 Pearls (puntos clave de aprendizaje)")
+                        for pearl in caso["pearls"]:
+                            st.markdown(f"- ✨ {pearl}")
+
+                    # Referencias
+                    if caso.get("referencias"):
+                        st.markdown("##### 📚 Referencias")
+                        for ref in caso["referencias"]:
+                            st.markdown(f"- _{ref}_")
+
+        # ═════════════════════════════════════════════════════════════════════
+        # ❓ BANCO DE PREGUNTAS TIPO BOARD
+        # ═════════════════════════════════════════════════════════════════════
+        with tab_preg:
+            st.markdown("### Banco de preguntas tipo board")
+            st.caption("Autoevaluación con explicación. Razona ANTES de ver la respuesta.")
+
+            preguntas = _cd_preguntas()
+            if not preguntas:
+                st.info("No hay preguntas disponibles.")
+            else:
+                # Filtro por categoría
+                categorias = sorted(set(p.get("categoria", "—") for p in preguntas))
+                cat_sel = st.selectbox(
+                    "Filtra por categoría:",
+                    options=["Todas"] + categorias,
+                    key="apr_preg_cat",
+                )
+                preguntas_filt = (preguntas if cat_sel == "Todas"
+                                   else [p for p in preguntas if p.get("categoria") == cat_sel])
+
+                st.caption(f"📊 {len(preguntas_filt)} preguntas disponibles")
+                st.markdown("---")
+
+                # Iteración por preguntas
+                for idx, p in enumerate(preguntas_filt):
+                    with st.container():
+                        st.markdown(f"#### Pregunta {idx + 1}")
+                        st.caption(f"Categoría: {p.get('categoria', '—')} · ID: {p.get('id', '?')}")
+                        st.markdown(p.get("pregunta", ""))
+
+                        # Opciones
+                        opciones = p.get("opciones", [])
+                        if opciones:
+                            usr_resp = st.radio(
+                                "Tu respuesta:",
+                                options=opciones,
+                                key=f"apr_preg_{p.get('id', idx)}",
+                                index=None,
+                            )
+
+                            if st.button("✅ Revelar respuesta",
+                                         key=f"apr_preg_reveal_{p.get('id', idx)}"):
+                                correcta = p.get("correcta", "")
+                                if usr_resp == correcta:
+                                    st.success(f"✅ ¡Correcto! Respuesta: **{correcta}**")
+                                else:
+                                    st.error(f"❌ Respuesta correcta: **{correcta}**")
+                                    if usr_resp:
+                                        st.caption(f"Tu elección: {usr_resp}")
+
+                                # Explicación siempre
+                                if p.get("explicacion"):
+                                    with st.expander("📚 Explicación detallada", expanded=True):
+                                        st.markdown(p["explicacion"])
+
+                                # Referencia
+                                if p.get("referencia"):
+                                    st.caption(f"📖 _Ref: {p['referencia']}_")
+
+                        st.markdown("---")
+
+        # ═════════════════════════════════════════════════════════════════════
+        # ⚖️ CONTROVERSIAS EN TR
+        # ═════════════════════════════════════════════════════════════════════
+        with tab_ctv:
+            st.markdown("### Controversias en TR — Donde no hay consenso pleno")
+            st.caption("Un fellow excelente sabe DÓNDE está la incertidumbre. "
+                       "Entender los argumentos > memorizar protocolos.")
+
+            controv = _cd_controversias()
+            if not controv:
+                st.info("No hay controversias disponibles.")
+            else:
+                titulos_ctv = [c.get("titulo", c.get("id", "?")) for c in controv]
+                sel_idx = st.selectbox(
+                    "Selecciona controversia:",
+                    options=list(range(len(controv))),
+                    format_func=lambda i: titulos_ctv[i],
+                    key="apr_ctv_sel",
+                )
+                ctv = controv[sel_idx]
+
+                st.markdown(f"#### {ctv.get('titulo', '')}")
+                st.caption(f"Categoría: {ctv.get('categoria', '—')}")
+
+                # Contexto
+                if ctv.get("contexto"):
+                    st.markdown("##### 📖 Contexto")
+                    st.info(ctv["contexto"])
+
+                # Argumentos a favor y en contra (general o belatacept)
+                col_pro, col_con = st.columns(2)
+                with col_pro:
+                    pro_keys = ["argumentos_a_favor", "argumentos_a_favor_atg",
+                                "argumentos_a_favor_basiliximab", "argumentos_a_favor_equivalencia"]
+                    for k in pro_keys:
+                        if ctv.get(k):
+                            label = k.replace("argumentos_a_favor", "A FAVOR").replace("_", " ").upper()
+                            st.markdown(f"##### ✅ {label}")
+                            for arg in ctv[k]:
+                                st.markdown(f"- {arg}")
+
+                with col_con:
+                    con_keys = ["argumentos_en_contra", "argumentos_en_contra_atg",
+                                "argumentos_en_contra_basiliximab", "argumentos_de_riesgo_aumentado"]
+                    for k in con_keys:
+                        if ctv.get(k):
+                            label = k.replace("argumentos_en_contra", "EN CONTRA").replace(
+                                "argumentos_de_riesgo_aumentado", "RIESGO AUMENTADO"
+                            ).replace("_", " ").upper()
+                            st.markdown(f"##### ⚠️ {label}")
+                            for arg in ctv[k]:
+                                st.markdown(f"- {arg}")
+
+                # Evidencia actual
+                if ctv.get("evidencia_actual"):
+                    st.markdown("##### 🔬 Evidencia actual")
+                    st.markdown(ctv["evidencia_actual"])
+
+                # Posición KDIGO
+                if ctv.get("posicion_kdigo"):
+                    st.markdown("##### 📋 Posición KDIGO")
+                    st.success(ctv["posicion_kdigo"])
+
+                # Práctica actual
+                if ctv.get("practica_actual"):
+                    st.markdown("##### 🌎 Práctica actual")
+                    st.markdown(ctv["practica_actual"])
+
+                # Criterios de buenos/malos candidatos (si aplica)
+                if ctv.get("criterios_buenos_candidatos"):
+                    st.markdown("##### ✅ Buenos candidatos")
+                    for c in ctv["criterios_buenos_candidatos"]:
+                        st.markdown(f"- {c}")
+                if ctv.get("criterios_malos_candidatos"):
+                    st.markdown("##### ❌ Malos candidatos")
+                    for c in ctv["criterios_malos_candidatos"]:
+                        st.markdown(f"- {c}")
+
+                # Consideraciones éticas (si aplica)
+                if ctv.get("consideraciones_eticas"):
+                    st.markdown("##### ⚖️ Consideraciones éticas")
+                    for ce in ctv["consideraciones_eticas"]:
+                        st.markdown(f"- {ce}")
+
+                # Alternativas emergentes (si aplica)
+                if ctv.get("alternativas_emergentes"):
+                    st.markdown("##### 🚀 Alternativas emergentes")
+                    for alt in ctv["alternativas_emergentes"]:
+                        st.markdown(f"- {alt}")
+
+                # Pearls para decidir
+                if ctv.get("pearls_para_decidir"):
+                    st.markdown("##### 💎 Pearls para decidir")
+                    for pearl in ctv["pearls_para_decidir"]:
+                        st.markdown(f"- ✨ {pearl}")
+
+                # Referencias
+                if ctv.get("referencias_principales"):
+                    st.markdown("##### 📚 Referencias principales")
+                    for ref in ctv["referencias_principales"]:
+                        st.markdown(f"- _{ref}_")
+
+        # ═════════════════════════════════════════════════════════════════════
+        # 📊 TABLAS COMPARATIVAS
+        # ═════════════════════════════════════════════════════════════════════
+        with tab_tab:
+            st.markdown("### Tablas comparativas — Diferencial rápido")
+            st.caption("Para distinguir entidades similares en segundos.")
+
+            tablas = _cd_tablas()
+            if not tablas:
+                st.info("No hay tablas disponibles.")
+            else:
+                titulos_t = [t.get("titulo", t.get("id", "?")) for t in tablas]
+                sel_idx = st.selectbox(
+                    "Selecciona tabla:",
+                    options=list(range(len(tablas))),
+                    format_func=lambda i: titulos_t[i],
+                    key="apr_tab_sel",
+                )
+                tab = tablas[sel_idx]
+
+                st.markdown(f"#### {tab.get('titulo', '')}")
+
+                columnas = tab.get("columnas", [])
+                filas = tab.get("filas", [])
+                if columnas and filas:
+                    import pandas as pd
+                    df = pd.DataFrame(filas, columns=columnas)
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Tabla sin datos.")
+
+        # ═════════════════════════════════════════════════════════════════════
+        # 📖 REFERENCIAS CLAVE
+        # ═════════════════════════════════════════════════════════════════════
+        with tab_ref:
+            st.markdown("### Referencias clave en TR — RCTs históricos y modernos")
+            st.caption("Saber estas referencias te diferencia de un fellow promedio.")
+
+            cats_refs = _cd_refs()
+            if not cats_refs:
+                st.info("No hay referencias disponibles.")
+            else:
+                for cat in cats_refs:
+                    with st.expander(f"📂 {cat.get('categoria', '?')}", expanded=False):
+                        estudios = cat.get("estudios", [])
+                        for est in estudios:
+                            st.markdown(f"**{est.get('nombre', '?')}**")
+                            if est.get("punto_clave"):
+                                st.markdown(f"💡 _{est['punto_clave']}_")
+                            if est.get("relevancia"):
+                                st.caption(f"🎯 {est['relevancia']}")
+                            st.markdown("---")
 
 
 st.divider()
