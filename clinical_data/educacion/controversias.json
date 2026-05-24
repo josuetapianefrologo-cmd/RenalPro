@@ -1,0 +1,293 @@
+{
+  "_meta": {
+    "tema": "Controversias en Trasplante Renal",
+    "fecha_revision": "2026-05-24",
+    "objetivo": "Áreas donde no hay consenso — entender los argumentos te hace mejor clínico que memorizar protocolos",
+    "nota": "Un fellow excelente sabe DÓNDE está la incertidumbre, no solo lo que está establecido"
+  },
+  "controversias": [
+    {
+      "id": "ctv_01",
+      "titulo": "¿Suspensión temprana de esteroides (Steroid Withdrawal / Avoidance)?",
+      "categoria": "Inmunosupresión de mantenimiento",
+      "contexto": "Tradicionalmente la prednisona ha sido parte del trío estándar (Tac+MMF+pred). Sus efectos adversos a largo plazo (osteoporosis, NODAT, HTA, dislipidemia, obesidad, cataratas) son significativos. Existe debate sobre si se debe suspender en pacientes seleccionados.",
+      "argumentos_a_favor": [
+        "Reducción de NODAT (30% menos en algunos estudios)",
+        "Menor osteoporosis y fracturas post-TR",
+        "Menor riesgo CV a largo plazo",
+        "Menor obesidad / síndrome metabólico",
+        "Mejor crecimiento en pediátricos",
+        "Estudios randomizados (Vincenti et al., 2008) mostraron tasas comparables de rechazo en bajo riesgo"
+      ],
+      "argumentos_en_contra": [
+        "Mayor incidencia de rechazo crónico (especialmente AMR) a largo plazo",
+        "Datos de registros largos (UNOS) sugieren peor supervivencia del injerto a >5 años",
+        "Pacientes de alto riesgo inmunológico tienen mayor rechazo sin esteroides",
+        "Disposición a rebrote inflamatorio post-suspensión",
+        "Efectividad depende de protocolo (rapid early withdrawal <7 días vs late withdrawal post-meses) — datos conflictivos"
+      ],
+      "evidencia_actual": "ESTUDIO ASTAGE (2008): randomizó early steroid withdrawal vs continuación, mostró equivalencia en bajo riesgo a 5 años, pero análisis posthoc sugiere subgrupos perdidos. Meta-análisis posteriores muestran ligero aumento de rechazo agudo pero sin pérdida de injerto significativo en pacientes correctamente seleccionados.",
+      "posicion_kdigo": "KDIGO 2020 sugiere considerar steroid withdrawal SOLO en pacientes de BAJO RIESGO INMUNOLÓGICO (1B): PRA bajo, primer TR, sin DSA, donador vivo HLA-matched. NO en alto riesgo.",
+      "practica_actual": "Variable según centro. Aproximadamente 30-40% de centros estadounidenses lo practican rutinariamente en bajo riesgo. En LatAm es menos común — la mayoría mantiene prednisona 5 mg/día.",
+      "pearls_para_decidir": [
+        "NUNCA suspender en alto riesgo (PRA >50%, DSA+, retrasplante)",
+        "Si se suspende, hacer en primeras 1-2 semanas post-TR (early withdrawal) — mejor que tardío",
+        "Mantener Tac+MMF a dosis pleno cuando se suspende esteroides",
+        "Vigilar marcadores de rechazo subclinico (biopsia protocolo a los 3-6 meses recomendada en algunos centros)",
+        "Considerar reintroducción si: aparición de DSA de novo, episodio de rechazo, mismatch HLA detectado tardíamente",
+        "Discusión individualizada con paciente — informar pros y contras"
+      ],
+      "referencias_principales": [
+        "Vincenti F et al. Randomized double-blind trial of early steroid withdrawal in renal transplantation: 5-year results. Am J Transplant 2008",
+        "Pirsch JD et al. Long-term outcomes of steroid avoidance in kidney transplantation. Transplantation 2015",
+        "KDIGO 2020 Transplant Recipient Guideline, Section 5"
+      ]
+    },
+    {
+      "id": "ctv_02",
+      "titulo": "¿Belatacept como reemplazo de CNI a largo plazo?",
+      "categoria": "Inmunosupresión de mantenimiento",
+      "contexto": "Los CNI (Tac/CsA) son nefrotóxicos a largo plazo (fibrosis intersticial/atrofia tubular). Belatacept (CTLA4-Ig, bloquea coestimulación CD80/86-CD28) es una alternativa que ha mostrado mejor TFG a largo plazo en estudios BENEFIT.",
+      "argumentos_a_favor": [
+        "MEJOR función renal a 7 años (BENEFIT trial): TFG ~70 vs 60 mL/min en CsA",
+        "Menor incidencia de NODAT",
+        "Sin hipertensión inducida por CNI",
+        "Mejor perfil lipídico",
+        "Sin nefrotoxicidad",
+        "No requiere monitoreo de niveles (administración IV mensual fija)",
+        "Mejor adherencia teóricamente (admin in-clinic)"
+      ],
+      "argumentos_en_contra": [
+        "MAYOR tasa de rechazo agudo en primer año (especialmente TCMR Banff IIB-III, severo)",
+        "Mayor riesgo de PTLD en pacientes EBV-NEGATIVOS (CONTRAINDICACIÓN ABSOLUTA en EBV-)",
+        "Requiere infusión mensual IV (logística, costo)",
+        "Costo elevado (subsidios variables)",
+        "No disponible en todos los países o sistemas de salud",
+        "Datos a largo plazo (>10 años) más limitados que CNI",
+        "Estudios SIN comparación directa con tacrolimus (solo vs CsA)"
+      ],
+      "evidencia_actual": "BENEFIT y BENEFIT-EXT (Vincenti 2010, 2016): randomización vs CsA. Belatacept = mejor TFG a 7 años. Estudios observacionales más recientes sugieren beneficio similar vs Tac pero sin RCT cabeza-a-cabeza adecuado. Tasa de PTLD en EBV-: ~3% vs 0% en EBV+ (clara contraindicación).",
+      "posicion_kdigo": "KDIGO menciona belatacept como alternativa válida en pacientes seleccionados, especialmente con toxicidad por CNI o si se requiere mejor función renal a largo plazo.",
+      "practica_actual": "Mucho mayor uso en EUA y Europa que en LatAm (disponibilidad y costo). Se usa principalmente en: 1) Toxicidad por CNI con TFG declinante, 2) NODAT severo en CNI, 3) Pacientes EBV+ con efectos adversos importantes de Tac.",
+      "pearls_para_decidir": [
+        "EBV- es CONTRAINDICACIÓN ABSOLUTA (riesgo PTLD)",
+        "Verificar serología EBV pre-TR",
+        "Iniciar belatacept en TR de novo es OK; conversión de CNI a belatacept es alternativa válida",
+        "Requiere antiviral + antiPJP profilácticos prolongados",
+        "Aprende a manejar episodio de rechazo agudo más frecuente en primer año",
+        "Costo y logística son barreras reales — pesar viabilidad antes de iniciar"
+      ],
+      "referencias_principales": [
+        "Vincenti F et al. Belatacept and Long-Term Outcomes in Kidney Transplantation (BENEFIT). NEJM 2016",
+        "Larsen CP et al. Belatacept-based regimens versus cyclosporine in renal transplantation. Lancet 2010",
+        "Adams AB et al. Belatacept Conversion Protocol for Late Steroid Withdrawal. Am J Transplant 2017"
+      ]
+    },
+    {
+      "id": "ctv_03",
+      "titulo": "¿ATG vs Basiliximab en inducción de riesgo intermedio?",
+      "categoria": "Inducción",
+      "contexto": "Para riesgo BAJO (donador vivo HLA match, PRA bajo) basiliximab es claro. Para riesgo ALTO (PRA >50%, DSA, retrasplante) ATG es claro. En el rango INTERMEDIO (donador fallecido, PRA 10-50%, mismatch DR moderado) hay debate.",
+      "argumentos_a_favor_atg": [
+        "Reduce incidencia de rechazo agudo más significativamente que basiliximab (en alto riesgo)",
+        "Provee 'cobertura' inmunológica más profunda — útil en escenarios de IS retrasada",
+        "Tradicionalmente preferida si DGF anticipada (permite retrasar Tac)",
+        "Efectiva en pacientes con HLA mismatch importante",
+        "Datos consistentes a 5+ años en supervivencia del injerto"
+      ],
+      "argumentos_en_contra_atg": [
+        "Mayor riesgo de INFECCIONES post-TR (CMV, BK, otras virales)",
+        "Mayor riesgo de PTLD (especialmente con dosis acumuladas >7 mg/kg)",
+        "Trombocitopenia y leucopenia frecuentes",
+        "Reacciones a la infusión (fiebre, escalofríos, hipotensión)",
+        "Riesgo de enfermedad del suero",
+        "Costo elevado",
+        "Inmunosupresión profunda prolongada (efecto persiste meses)"
+      ],
+      "argumentos_a_favor_basiliximab": [
+        "Perfil de seguridad EXCELENTE (sin infecciones aumentadas significativamente)",
+        "Sin mielotoxicidad o complicaciones agudas",
+        "Sin riesgo aumentado de PTLD",
+        "Costo menor",
+        "Administración en 2 dosis (días 0 y 4) sin requerimiento de monitoreo intensivo",
+        "Suficiente para riesgo BAJO según múltiples estudios"
+      ],
+      "argumentos_en_contra_basiliximab": [
+        "MENOS efectivo que ATG para prevenir rechazo en alto riesgo",
+        "No reduce rechazo subclinico tanto como ATG",
+        "No permite retrasar tanto inicio de Tac en DGF",
+        "En pacientes con mismatch DR significativo, tasas de rechazo más altas a 5 años"
+      ],
+      "evidencia_actual": "Estudio Brennan 2006 (NEJM): ATG vs basiliximab en ALTO RIESGO — ATG superior. Para riesgo intermedio no hay RCT definitivo. Meta-análisis sugieren beneficio modesto de ATG, pero la mayoría es por reducción de rechazo agudo, no de pérdida de injerto a largo plazo.",
+      "posicion_kdigo": "KDIGO recomienda ATG en alto riesgo, basiliximab en bajo riesgo. Para intermedio: 'discutible' — preferir ATG si DGF anticipada, basiliximab si infecciones son preocupación.",
+      "practica_actual": "Variable. En México y LatAm: basiliximab dominante por costo y disponibilidad. En EUA y Europa: ATG más común en riesgo intermedio. Algunos centros usan ATG en TODOS los donadores fallecidos.",
+      "pearls_para_decidir": [
+        "Si DGF anticipada (KDPI >80%, ECD, isquemia fría prolongada): preferir ATG",
+        "Si infecciones son preocupación clínica (paciente con historia, BMI alto, DM): preferir basiliximab",
+        "Si PRA 10-30%: discusión individualizada — basiliximab con monitoreo estrecho es razonable",
+        "Si PRA >50%: ATG es estándar",
+        "Considerar dosis acumulada de ATG (1.5 mg/kg × 3-5 días = 4.5-7.5 mg/kg total)",
+        "EBV+ paciente NO contraindica ATG, pero vigilar PTLD",
+        "Si donador vivo HLA idéntico: ni siquiera basiliximab puede ser necesario (algunos centros)"
+      ],
+      "referencias_principales": [
+        "Brennan DC et al. Rabbit Anti-Thymocyte Globulin versus Basiliximab in Renal Transplantation. NEJM 2006",
+        "Hellemans R et al. Induction therapy for kidney transplant recipients. Transplant Rev 2017",
+        "KDIGO 2020 Transplant Recipient, Section 5.1"
+      ]
+    },
+    {
+      "id": "ctv_04",
+      "titulo": "¿TR ABO-incompatible — equivalente o subóptimo al ABO-compatible?",
+      "categoria": "Donador vivo / Desensibilización",
+      "contexto": "Históricamente ABOi era contraindicación. Protocolos modernos con rituximab + plasmaféresis + IVIG permiten TR ABOi exitoso. ¿Pero los resultados son realmente equivalentes?",
+      "argumentos_a_favor_equivalencia": [
+        "Estudios japoneses (Tanabe 2014): supervivencia del injerto a 5-10 años COMPARABLE a ABOc (>80%)",
+        "Acceso a donador vivo en pacientes que esperan años por compatible",
+        "Reduce mortalidad en lista de espera de diálisis",
+        "Calidad de vida superior comparado con esperar donador compatible",
+        "Datos del registro ABO-incompatible muestran resultados consistentes",
+        "Aprendizaje sobre dinámica de Ac anti-A/B útil para otras situaciones inmunológicas"
+      ],
+      "argumentos_de_riesgo_aumentado": [
+        "Mayor incidencia de rechazo humoral en primeras 2 semanas (período sensible)",
+        "Mayor incidencia de infecciones por inmunosupresión adicional (rituximab profundo)",
+        "Sangrado quirúrgico aumentado (procedimiento de plasmaféresis afecta coagulación)",
+        "Riesgo de pérdida del injerto en primeros 30 días: 5-10% vs 2-5% ABOc",
+        "Costo significativo del protocolo (rituximab + TPE + IVIG = ~$15-30k USD adicionales)",
+        "Requiere centro especializado con experiencia",
+        "No todos los pares ABOi tienen igual riesgo (A2 a B y O es relativamente sencillo; A1 a O es alto riesgo)"
+      ],
+      "evidencia_actual": "Estudios prospectivos y registros: a 5-10 años, supervivencia del injerto en ABOi 75-85%, similar a ABOc en mismos centros. Diferencia principal está en los primeros 30 días. Calidad del injerto a largo plazo (en pacientes que sobreviven al período crítico) es excelente.",
+      "consideraciones_eticas": [
+        "¿Es ético desensibilizar cuando hay opción de espera por compatible? (depende de tiempo en lista, estado del paciente)",
+        "Aspectos de costo-efectividad: ABOi cuesta más pero acceso temprano puede compensar",
+        "Equidad: ABOi requiere centros especializados — desigualdad geográfica",
+        "Donador vivo: presión psicológica si solo hay donador ABOi disponible"
+      ],
+      "practica_actual": "En Japón: hasta 30% de TR vivos son ABOi (cultural y necesidad). En EUA: 5-10%. En LatAm: <5% (acceso limitado). En México: pocos centros lo realizan.",
+      "pearls_para_decidir": [
+        "Discutir con paciente Y donador vivo opciones: esperar por compatible vs ABOi",
+        "Si paciente joven con larga expectativa de vida: ABOi puede ser razonable si pareja vivo es claro candidato",
+        "Si paciente mayor o con comorbilidades: pesar riesgos peri-operatorios",
+        "A2 a B o A2 a O son MÁS SEGUROS (títulos bajos típicamente)",
+        "A1 a otros tipos requiere protocolo más intenso",
+        "Centros con experiencia <20 ABOi/año: derivar a centros de mayor volumen",
+        "Eculizumab profiláctico NO está estandarizado pero algunos casos lo usan en alto riesgo"
+      ],
+      "referencias_principales": [
+        "Tanabe K et al. ABO-incompatible kidney transplantation: long-term outcomes. Clin Transplant 2014",
+        "Genberg H et al. ABO-incompatible kidney transplantation using antigen-specific immunoadsorption. Transplantation 2008",
+        "Montgomery RA et al. ABO incompatible kidney transplantation: a paradigm ready for broad implementation. Transplantation 2009"
+      ]
+    },
+    {
+      "id": "ctv_05",
+      "titulo": "¿Conversión de Tac a mTOR (sirolimus/everolimus) después del año 1?",
+      "categoria": "Inmunosupresión de conversión",
+      "contexto": "La nefrotoxicidad crónica del CNI (IF/TA) es factor importante en pérdida tardía del injerto. mTOR (sirolimus, everolimus) son anti-proliferativos sin nefrotoxicidad directa. ¿Cambiar de Tac a mTOR después de estabilidad inicial mejoraría supervivencia del injerto?",
+      "argumentos_a_favor": [
+        "Reduce o elimina nefrotoxicidad por CNI",
+        "Estudios CONVERT, ZEUS, SOCRATES mostraron mejor TFG con conversión a sirolimus",
+        "Reduce incidencia de cáncer post-TR (efecto anti-tumoral)",
+        "Reduce incidencia de cáncer de piel no melanoma 30-50%",
+        "Efecto anti-CMV documentado",
+        "Reduce hipertrofia de VI cardíaca",
+        "Permite menores dosis o eliminación de IS",
+        "Puede mejorar reactivaciones virales"
+      ],
+      "argumentos_en_contra": [
+        "Mayor PROTEINURIA post-conversión (puede ser severa)",
+        "Empeoramiento de FSGS o nefropatía por mTOR ('toxicidad podocitaria')",
+        "Complicaciones de cicatrización (dehiscencia, sangrado, linfocele)",
+        "Aftas orales (estomatitis) frecuente y molesta",
+        "Acné y rash",
+        "Dislipidemia significativa",
+        "Edema y derrames",
+        "Citopenias (anemia, trombocitopenia)",
+        "Infertilidad reversible en hombres",
+        "Mayor incidencia de neumonitis intersticial",
+        "Mayor rechazo agudo si conversión tardía sin protocolo cuidadoso"
+      ],
+      "evidencia_actual": "CONVERT trial (2010): conversión de CsA a sirolimus a 6-120 meses post-TR. Mejor TFG en pacientes con TFG basal >40 mL/min. Peor en pacientes con TFG <40 (proteinuria empeoró). Estudios más recientes con everolimus muestran mejor tolerabilidad. Decisión depende de TFG basal, proteinuria, comorbilidades.",
+      "criterios_buenos_candidatos": [
+        "TFG estable >40 mL/min",
+        "Proteinuria baseline <0.8 g/día",
+        "Sin glomerulopatía recurrente activa",
+        "Sin historia de rechazo reciente",
+        "Sin cicatrización pendiente (sin cirugía planeada en próximos 6 meses)",
+        "Comorbilidades en las que mTOR beneficia (cáncer de piel recurrente, CMV refractario, malignidad)",
+        "Toxicidad por CNI documentada (NODAT severo, HTA, neurotoxicidad)"
+      ],
+      "criterios_malos_candidatos": [
+        "TFG <40 mL/min",
+        "Proteinuria >0.8 g/día baseline",
+        "Glomerulopatía recurrente (FSGS especialmente)",
+        "Rechazo en últimos 6 meses",
+        "Cirugía planeada",
+        "Pacientes muy mayores con múltiples comorbilidades"
+      ],
+      "practica_actual": "Conversión a mTOR es selectiva, no rutinaria. En USA ~10-15% de TR de larga evolución. En LatAm <5%. Mayor uso en pacientes con cáncer no curable (post-PTLD, post-cáncer de piel múltiple).",
+      "pearls_para_decidir": [
+        "MEDIR proteinuria PRE-conversión — si >0.8 g/día NO convertir",
+        "Conversión gradual: reducir CNI primero, agregar mTOR, luego suspender CNI",
+        "Vigilar proteinuria mensualmente primer año post-conversión",
+        "Estomatitis severa: reducir dosis o suspender; si mejora, reintroducir más gradualmente",
+        "No conversión si planeación quirúrgica próxima",
+        "EVEROLIMUS preferido sobre SIROLIMUS por mejor tolerabilidad y dosificación c/12h",
+        "Niveles meta everolimus: 3-8 ng/mL"
+      ],
+      "referencias_principales": [
+        "Schena FP et al. Conversion from calcineurin inhibitors to sirolimus maintenance therapy in renal allograft recipients (CONVERT). Transplantation 2009",
+        "Holdaas H et al. Conversion of long-term kidney transplant recipients from calcineurin inhibitor therapy to everolimus: a randomized, multicenter, 24-month study. Transplantation 2011",
+        "Knoll GA et al. Effect of Sirolimus on Malignancy and Survival After Kidney Transplantation: Systematic Review. BMJ 2014"
+      ]
+    },
+    {
+      "id": "ctv_06",
+      "titulo": "¿Biopsia protocolo asintomática — necesaria o sobre-medicalización?",
+      "categoria": "Monitoreo",
+      "contexto": "La biopsia protocolo se hace en pacientes ASINTOMÁTICOS con función estable para detectar rechazo subclínico, BK, IF/TA en estadios tempranos. ¿Es beneficio o riesgo innecesario?",
+      "argumentos_a_favor": [
+        "Detecta rechazo subclínico en 10-30% (Banff i1-i2 o borderline) que progresan si no se tratan",
+        "Detecta BK nefropatía temprana antes de progresión",
+        "Identifica recurrencia de glomerulopatía primaria",
+        "Permite ajuste de IS para prevenir cronicidad",
+        "Pacientes con biopsia protocolo en estudios han mostrado mejor supervivencia a largo plazo",
+        "Detecta nefrotoxicidad por CNI en tiempo de poder revertir",
+        "Estudios CALC-CSA y otros muestran beneficio en TR de alto riesgo"
+      ],
+      "argumentos_en_contra": [
+        "Procedimiento INVASIVO con riesgos (sangrado 1-3%, fístula AV, infección, dolor)",
+        "Pérdida de injerto por biopsia: <0.1% pero existe",
+        "Costo del procedimiento y staff",
+        "Hallazgos 'borderline' pueden llevar a TRATAMIENTO INNECESARIO (bolos esteroideos en pacientes que no progresarían)",
+        "No todos los hallazgos requieren intervención (rechazo subclínico tratado vs no tratado: pronóstico similar en algunos estudios)",
+        "Variabilidad inter-observador en patología",
+        "Sampling error (la biopsia toma una pequeña parte del órgano)"
+      ],
+      "evidencia_actual": "Estudios mixtos. RCT en bajo riesgo: biopsia protocolo NO mejora outcomes significativamente. RCT en alto riesgo (PRA alto, DSA+): SÍ beneficio. Datos del registro español y francés sugieren beneficio en TR con factores de riesgo específicos.",
+      "posicion_kdigo": "KDIGO 2020 NO recomienda biopsia protocolo rutinaria (Grade 2C). Solo si beneficio clínico claro: alto riesgo inmunológico, sospecha clínica subclinica, post-tratamiento de rechazo.",
+      "practica_actual": "Variable. Centros como Mayo Clinic y Edinburgh hacen biopsias protocolo a los 3, 6, 12 meses en alto riesgo. En LatAm raro hacer biopsia protocolo — generalmente solo si clínicamente indicado.",
+      "alternativas_emergentes": [
+        "ddcfDNA (donor-derived cell-free DNA): biomarcador sanguíneo que detecta rechazo subclínico, no invasivo",
+        "Microarrays moleculares (Banff molecular): clasificación molecular del injerto",
+        "Urinary CXCL10: marcador de inflamación renal",
+        "Test moleculares emergentes con potencial de reemplazar biopsia"
+      ],
+      "pearls_para_decidir": [
+        "ALTO RIESGO INMUNOLÓGICO (PRA >50%, DSA+, retrasplante): biopsia protocolo a 3-6-12 meses es razonable",
+        "BAJO RIESGO con función estable: NO biopsia rutinaria",
+        "Post-tratamiento de rechazo: biopsia a 4-6 semanas para evaluar respuesta",
+        "Aparición de DSA de novo: biopsia para descartar AMR subclínico",
+        "ddcfDNA (Allosure, otros): considerar como adyuvante en pacientes que no quieren biopsia rutinaria",
+        "Si Cr ESTABLE pero proteinuria nueva (>500 mg/g): biopsia indicada"
+      ],
+      "referencias_principales": [
+        "Rush D et al. Beneficial effects of treatment of early subclinical rejection: a randomized study. JASN 1998",
+        "Anglicheau D et al. Subclinical rejection of the kidney allograft. CJASN 2016",
+        "Mengel M et al. Banff 2019 Meeting Report: Molecular diagnostics in transplant pathology. Am J Transplant 2020"
+      ]
+    }
+  ]
+}
