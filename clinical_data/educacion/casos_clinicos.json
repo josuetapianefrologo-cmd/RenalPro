@@ -1,0 +1,468 @@
+{
+  "_meta": {
+    "tema": "Casos clínicos didácticos — Trasplante Renal",
+    "fecha_revision": "2026-05-24",
+    "responsable_medico": "Dr. Josué Wigberto Tapia López",
+    "referencias_principales": [
+      "Brenner & Rector's The Kidney 11th ed.",
+      "Danovitch GM, Handbook of Kidney Transplantation 6th ed.",
+      "Halloran PF, Mechanisms of Allograft Rejection. NEJM 2004",
+      "KDIGO 2020 Clinical Practice Guideline for Care of Kidney Transplant Recipient"
+    ],
+    "nota": "Cada caso entrena razonamiento clínico, no memoria. Lee el caso, intenta razonar antes de ver el análisis."
+  },
+  "casos": [
+    {
+      "id": "caso_01",
+      "titulo": "Cr en ascenso al día 5 post-TR de donador vivo",
+      "categoria": "Rechazo agudo celular",
+      "nivel": "Fellow",
+      "presentacion": "Hombre de 42 años, ERC por nefropatía diabética, recibió TR de donador vivo HLA-idéntico hace 5 días. Inducción con basiliximab 40 mg total, mantenimiento con tacrolimus, MMF y prednisona. Cr nadir 1.1 mg/dL al día 3. Ahora día 5: Cr 1.8 mg/dL, Tac C0 8.5 ng/mL, sin fiebre, diuresis 1800 mL/24h, TA 140/85, sin dolor en injerto.",
+      "datos_clave": {
+        "edad": 42,
+        "donador": "Vivo HLA-idéntico",
+        "dpt": 5,
+        "induccion": "Basiliximab 40 mg",
+        "cr_nadir": 1.1,
+        "cr_actual": 1.8,
+        "delta_cr_pct": 63.6,
+        "tac_c0": 8.5,
+        "diuresis": "Adecuada"
+      },
+      "ddx_priorizado": [
+        {
+          "diagnostico": "Toxicidad por tacrolimus",
+          "probabilidad": "Media",
+          "razon": "C0 8.5 está en meta del primer mes (8-12), pero variabilidad individual. CNI causa vasoconstricción aferente."
+        },
+        {
+          "diagnostico": "Rechazo agudo (celular)",
+          "probabilidad": "Posible",
+          "razon": "Aunque HLA-idéntico tiene riesgo bajo de rechazo HLA, puede haber mismatch en mHA (antígenos minor) o no-HLA"
+        },
+        {
+          "diagnostico": "Obstrucción ureteral / stent obstruido",
+          "probabilidad": "Posible",
+          "razon": "Día 5 es típico. Diuresis adecuada NO descarta obstrucción parcial"
+        },
+        {
+          "diagnostico": "Trombosis de arteria renal o vena",
+          "probabilidad": "Baja",
+          "razon": "Diuresis preservada hace muy improbable. Pero descartar siempre."
+        },
+        {
+          "diagnostico": "Nefritis intersticial por medicamentos",
+          "probabilidad": "Baja",
+          "razon": "Considerar TMP-SMX, IBPs, otros recién iniciados"
+        }
+      ],
+      "estudios_solicitados": [
+        {"estudio": "USG renal con Doppler", "razon": "Descartar obstrucción, evaluar IR, flujos, colecciones"},
+        {"estudio": "EGO + urocultivo", "razon": "Descartar IVU, valorar sedimento (cilindros, células)"},
+        {"estudio": "Repetir Tac C0 mismo día", "razon": "Confirmar nivel, descartar pico transitorio"},
+        {"estudio": "BH, electrolitos, gasometría", "razon": "Baseline y descartar otros desbalances"},
+        {"estudio": "Reducir Tac empíricamente 25%", "razon": "Si sospecha de toxicidad por CNI, prueba terapéutica"},
+        {"estudio": "Si Cr no mejora en 24-48h → biopsia renal", "razon": "Gold standard para diagnóstico"}
+      ],
+      "diagnostico_final": "Biopsia muestra: Banff IA (rechazo agudo celular leve) — infiltrado intersticial >25%, tubulitis i2 t2, sin arteritis intimal.",
+      "fisiopatologia": "El rechazo celular es mediado por linfocitos T CD4+/CD8+ que reconocen aloantígenos HLA del donador a través de presentación DIRECTA (T del receptor reconoce HLA del donador en sus propias APCs) o INDIRECTA (T del receptor reconoce péptidos HLA donador procesados por APCs propias). Genera infiltrado intersticial, tubulitis (linfocitos dentro de túbulos = i+t), y en casos severos arteritis intimal (v lesions). En HLA-idéntico el rechazo HLA es raro pero existen antígenos menores (mHA) y no-HLA que pueden gatillar respuesta.",
+      "manejo": [
+        "Bolos de metilprednisolona 500 mg IV c/24h × 3 días",
+        "Optimizar IS: confirmar adherencia, ajustar Tac al límite alto (10-12 ng/mL)",
+        "MMF mantener (no reducir durante rechazo)",
+        "Si NO respuesta en 5-7 días con bolos → considerar ATG (timoglobulina 1.5 mg/kg/día × 5-7 días)",
+        "Vigilar Cr diaria, repetir biopsia si no responde",
+        "NO reducir IS durante rechazo aunque haya infección concomitante (excepto sepsis grave)"
+      ],
+      "evolucion": "Cr baja de 1.8 → 1.3 → 1.0 mg/dL en 5 días post-bolos. Tac mantenido en 10 ng/mL. Egresa al día 12 con Cr 1.0 mg/dL.",
+      "pearls": [
+        "Cualquier ascenso >20-25% sobre el nadir es ROJO hasta demostrar lo contrario",
+        "HLA-idéntico NO inmuniza contra rechazo (mHA + no-HLA)",
+        "Biopsia es el gold standard — no perder tiempo con DDx cuando se puede biopsia",
+        "Banff IA generalmente responde a esteroides solos (90% respuesta)",
+        "Banff IB-IIA responde a esteroides 70%, considerar ATG si no responde",
+        "Banff IIB-III: ATG primera línea, no esteroides solos",
+        "NUNCA reducir IS empíricamente sin biopsia en sospecha de rechazo"
+      ],
+      "referencias": [
+        "Solez K et al. Banff '07 classification of renal allograft pathology. Am J Transplant 2008;8:753-60",
+        "Loupy A et al. The Banff 2019 Kidney Meeting Report. Am J Transplant 2020;20:2318-31",
+        "KDIGO 2020 Transplant Recipient, Chapter 7"
+      ]
+    },
+    {
+      "id": "caso_02",
+      "titulo": "Cr ascenso al mes 4 con DSA positivo de novo",
+      "categoria": "Rechazo mediado por anticuerpos (AMR)",
+      "nivel": "Fellow avanzado",
+      "presentacion": "Mujer 38 años, TR de donador fallecido hace 4 meses, 4/6 mismatch HLA, PRA pre-TR 0%, DSA pre-TR negativos, función inmediata. Asintomática, viene a control de rutina. Cr pasó de 1.2 (basal estable) a 1.6 mg/dL. Tac C0 7.2 ng/mL. Proteinuria 800 mg/g (nueva). Confiesa que olvidó dosis 2 veces en último mes.",
+      "datos_clave": {
+        "edad": 38,
+        "dpt": 120,
+        "cr_basal": 1.2,
+        "cr_actual": 1.6,
+        "delta_cr_pct": 33,
+        "proteinuria_g": 0.8,
+        "tac_c0": 7.2,
+        "adherencia": "Subóptima",
+        "dsa_pretx": "Negativos"
+      },
+      "ddx_priorizado": [
+        {
+          "diagnostico": "Rechazo agudo mediado por anticuerpos (AMR de novo)",
+          "probabilidad": "Alta",
+          "razon": "No adherencia + DSA de novo + Cr ascenso + proteinuria es PATRÓN CLÁSICO"
+        },
+        {
+          "diagnostico": "Rechazo crónico activo mediado por anticuerpos (cAMR)",
+          "probabilidad": "Alta si tiempo >3 meses",
+          "razon": "En 4 meses puede ser temprano para crónico, pero posible si subclinico previo"
+        },
+        {
+          "diagnostico": "Rechazo agudo celular concomitante",
+          "probabilidad": "Media",
+          "razon": "Puede coexistir (mixto)"
+        },
+        {
+          "diagnostico": "Recurrencia de enfermedad primaria",
+          "probabilidad": "Variable",
+          "razon": "Depende de la causa de ERC original (FSGS, IgA, lupus son recurrentes)"
+        },
+        {
+          "diagnostico": "BK nefropatía",
+          "probabilidad": "Posible",
+          "razon": "4 meses es tiempo típico de aparición"
+        }
+      ],
+      "estudios_solicitados": [
+        {"estudio": "DSA actual (Luminex con MFI)", "razon": "Detectar DSA de novo, identificar especificidad y intensidad"},
+        {"estudio": "PCR BK plasma + orina", "razon": "Descartar nefropatía BK"},
+        {"estudio": "Biopsia renal con C4d", "razon": "Diagnóstico definitivo — c4d+, glomerulitis, capilaritis peritubular"},
+        {"estudio": "Proteinuria 24h o índice prot/Cr", "razon": "Cuantificar"},
+        {"estudio": "Tac C0, ¿concordancia con dosis?", "razon": "Confirmar no adherencia con niveles bajos variables"}
+      ],
+      "diagnostico_final": "DSA positivos de novo (anti-DQ7, MFI 8000). Biopsia: rechazo mediado por anticuerpos activo (g1, ptc2, C4d+ difuso, cg0). Banff 2019 categoría 2 (active AMR).",
+      "fisiopatologia": "El AMR es mediado por anticuerpos donador-específicos (DSA) que se unen a antígenos HLA en el endotelio del injerto. Activan la cascada del complemento clásico (vía C1q→C4→C3→C5b-9), reclutan neutrófilos y NK cells, generando daño endotelial. Microscópicamente: glomerulitis (g) y capilaritis peritubular (ptc) por infiltrado leucocitario en lumen capilar. C4d depositado en CPT es marca de activación de complemento. En crónico: glomerulopatía de trasplante (cg) por engrosamiento de membrana basal glomerular.",
+      "manejo": [
+        "Plasmaféresis (TPE) 5-7 sesiones, c/48h, recambio 1 volumen plasmático con albúmina 5%",
+        "IVIG 100-200 mg/kg post-TPE (cada sesión) — repleta inmunoglobulinas removidas",
+        "IVIG dosis alta 1-2 g/kg al final del protocolo TPE",
+        "Rituximab 375 mg/m² × 1-2 dosis (anti-CD20, elimina células B productoras de Ac)",
+        "Considerar bortezomib (anti-plasmocito) o eculizumab (anti-C5) en casos refractarios",
+        "Optimizar IS basal: Tac C0 8-10 ng/mL, MMF dosis plena, prednisona ≥10 mg/día",
+        "Educación intensiva sobre adherencia + apoyo psicológico/social"
+      ],
+      "evolucion": "Post-protocolo TPE+IVIG+Rituximab: DSA MFI 8000→2500, Cr 1.6→1.3 mg/dL. Biopsia control a 3 meses: g0 ptc0 C4d-. Continúa con función estable.",
+      "pearls": [
+        "DSA de novo + Cr ascenso = AMR hasta demostrar lo contrario",
+        "No adherencia es el factor de riesgo modificable #1 para DSA de novo",
+        "C4d+ no es obligatorio para diagnóstico en Banff 2017+ (C4d-negative AMR existe)",
+        "AMR temprano (<6 m) tiene mejor pronóstico que cAMR",
+        "Monitorización de DSA debe ser rutinaria, especialmente con factores de riesgo",
+        "El daño microvascular en AMR es predictor independiente de pérdida del injerto"
+      ],
+      "referencias": [
+        "Haas M et al. Banff 2017 Meeting Report: Revised diagnostic criteria for chronic active T cell-mediated rejection, antibody-mediated rejection, and prospects for integrative endpoints for next-generation clinical trials. Am J Transplant 2018",
+        "Loupy A et al. Antibody-Mediated Rejection of Solid-Organ Allografts. NEJM 2018;379:1150-1160",
+        "KDIGO 2020 Transplant Recipient, Section 8"
+      ]
+    },
+    {
+      "id": "caso_03",
+      "titulo": "Cr en ascenso al mes 6, fiebre ausente, BK PCR plasma 50,000 cp/mL",
+      "categoria": "Nefropatía por BK virus",
+      "nivel": "Fellow",
+      "presentacion": "Hombre 56 años, TR de donador fallecido (KDPI 35%) hace 6 meses, inducción con timoglobulina 4.5 mg/kg total (por DGF), mantenimiento Tac+MMF+prednisona. Función estable hasta ahora con Cr 1.4 mg/dL. Control de rutina: Cr 1.7 mg/dL (asintomático), Tac C0 9.5 ng/mL. Screening rutinario muestra BK PCR plasma 50,000 cp/mL (previo no detectable).",
+      "datos_clave": {
+        "edad": 56,
+        "dpt": 180,
+        "kdpi": 35,
+        "induccion": "Timoglobulina (alta IS)",
+        "cr_basal": 1.4,
+        "cr_actual": 1.7,
+        "bk_plasma": 50000,
+        "tac_c0": 9.5,
+        "sintomas": "Asintomático"
+      },
+      "ddx_priorizado": [
+        {
+          "diagnostico": "Nefropatía BK probable (presumed BKVAN)",
+          "probabilidad": "Muy alta",
+          "razon": "BK plasma ≥10,000 cp/mL + Cr en ascenso = altamente sugerente, debe biopsiarse"
+        },
+        {
+          "diagnostico": "Viremia BK sin nefropatía",
+          "probabilidad": "Posible",
+          "razon": "Cr puede subir por otra causa coincidente"
+        },
+        {
+          "diagnostico": "Rechazo agudo (celular o humoral)",
+          "probabilidad": "Importante DDx",
+          "razon": "Banff puede confundirse con BK — necesita SV40 stain"
+        }
+      ],
+      "estudios_solicitados": [
+        {"estudio": "Biopsia renal con SV40 stain", "razon": "Diagnóstico definitivo — SV40+ confirma nefropatía"},
+        {"estudio": "BK PCR orina cuantitativa", "razon": "Soporte (>10⁷ cp/mL es típico)"},
+        {"estudio": "DSA (descartar AMR concomitante)", "razon": "BK + rechazo es trampa diagnóstica"},
+        {"estudio": "Función basal completa", "razon": "Baseline"}
+      ],
+      "diagnostico_final": "Biopsia: SV40 positivo en epitelio tubular, infiltrado intersticial con células plasmáticas, atrofia tubular focal — Nefropatía BK Clase A (Banff BKVAN).",
+      "fisiopatologia": "BK virus (poliomavirus) coloniza tracto urinario en >80% de adultos pero permanece latente. Con inmunosupresión, especialmente CNI + MMF, reactiva. Replicación inicial en uroepitelio (vejiga, uréter, pelvis) → viruria. Posteriormente viremia y nefropatía si replica en epitelio tubular renal. SV40 large T antigen es marcador inmunohistoquímico. Causa daño tubular directo + fibrosis intersticial. Si no se controla, progresa a pérdida del injerto en 30-60% de los casos.",
+      "manejo": [
+        "REDUCIR IS — base del tratamiento (no hay antiviral efectivo)",
+        "Reducir Tac C0 objetivo a 4-6 ng/mL (era 8-12)",
+        "Reducir MMF 50% (1g c/12h → 500mg c/12h)",
+        "Mantener prednisona (NO suspender, riesgo de rechazo)",
+        "Algunos centros: cambiar Tac a CsA (menos asociado a BK) o conversión a mTOR",
+        "Considerar adyuvantes (evidencia débil): leflunomida, cidofovir, IVIG",
+        "Cidofovir 0.25-1 mg/kg c/2 semanas SIN probenecid (nefrotóxico, evitar TFG<30)",
+        "Monitoreo BK PCR plasma c/2 semanas hasta declinación >1 log",
+        "Biopsia control 6-12 semanas"
+      ],
+      "evolucion": "Reducción de IS: BK PCR 50,000 → 8,000 → 1,200 → no detectable en 4 meses. Cr estabiliza en 1.6 mg/dL. Biopsia control: SV40 negativo, leve fibrosis residual. Pérdida funcional ~10% pero injerto preservado.",
+      "pearls": [
+        "BK NO causa fiebre típicamente (a diferencia de CMV)",
+        "Si baja BK PCR pero sube Cr, BUSCAR RECHAZO — la reducción de IS puede desenmascararlo",
+        "Distinguir BK de rechazo requiere SV40 stain — TUBULITIS con BK NO es rechazo",
+        "Cidofovir es NEFROTÓXICO — pesar riesgo/beneficio",
+        "Resistencia: no hay antiviral con buena evidencia, todo se basa en reducir IS",
+        "Profilaxis no existe — screening es la clave (PCR plasma rutina mensual primer año)"
+      ],
+      "referencias": [
+        "Hirsch HH et al. BK polyomavirus in solid organ transplantation. Am J Transplant 2013;13(Suppl 4):179-88",
+        "AST IDC: Hirsch HH et al. The American Society of Transplantation Infectious Diseases Community of Practice. Clin Transplant 2019",
+        "Kotton CN et al. The Transplantation Society International Consensus Guidelines on the Management of BK Polyomavirus. Transplantation 2024"
+      ]
+    },
+    {
+      "id": "caso_04",
+      "titulo": "Glucosa 280 mg/dL en consulta del mes 2 post-TR",
+      "categoria": "NODAT (Diabetes Mellitus de novo post-trasplante)",
+      "nivel": "Fellow",
+      "presentacion": "Mujer 51 años, BMI 31, sin diabetes previa documentada (HbA1c pre-TR 5.6%, glucosa ayuno 95), recibió TR vivo hace 2 meses con basiliximab+Tac+MMF+prednisona 15 mg/día. Cr basal 1.1 mg/dL. En control rutinario: glucosa ayuno 180 mg/dL, postprandial 280 mg/dL, HbA1c 7.2%. Tac C0 11 ng/mL.",
+      "datos_clave": {
+        "edad": 51,
+        "bmi": 31,
+        "dpt": 60,
+        "hba1c_pretx": 5.6,
+        "hba1c_actual": 7.2,
+        "glucosa_ayuno": 180,
+        "glucosa_pp": 280,
+        "tac_c0": 11,
+        "prednisona": "15 mg/día"
+      },
+      "ddx_priorizado": [
+        {
+          "diagnostico": "NODAT (Diabetes de novo post-trasplante)",
+          "probabilidad": "Confirmado",
+          "razon": "Sin DM previa (HbA1c 5.6%), ahora HbA1c >6.5% + glucosa elevada"
+        },
+        {
+          "diagnostico": "DM previa no diagnosticada (prediabetes preexistente)",
+          "probabilidad": "Posible",
+          "razon": "BMI elevado, edad, prediabetes pre-TR pudo no estar identificada"
+        }
+      ],
+      "factores_riesgo_identificados": [
+        "Edad >40 años",
+        "BMI elevado (31)",
+        "Tacrolimus (más diabetogénico que CsA)",
+        "Esteroides (15 mg/día — todavía dosis significativa al mes 2)",
+        "Predisposición genética (no evaluable sin historia familiar)"
+      ],
+      "estudios_solicitados": [
+        {"estudio": "Glucosa ayuno + postprandial repetida", "razon": "Confirmar diagnóstico"},
+        {"estudio": "HbA1c trimestral", "razon": "Monitoreo control"},
+        {"estudio": "Perfil lipídico", "razon": "Síndrome metabólico frecuente con NODAT"},
+        {"estudio": "Microalbuminuria", "razon": "Detección temprana de nefropatía diabética del injerto"},
+        {"estudio": "Evaluación oftalmológica anual", "razon": "Retinopatía diabética"},
+        {"estudio": "Confirmar adherencia y dosis prednisona", "razon": "Esteroides son fuente prevenible"}
+      ],
+      "diagnostico_final": "NODAT (Diabetes Mellitus de Novo Post-Trasplante) — diagnóstico por HbA1c >6.5% + criterios glucémicos en paciente sin DM previa.",
+      "fisiopatologia": "NODAT tiene fisiopatología multifactorial: 1) Tacrolimus inhibe calcineurina en células β pancreáticas → disminución de transcripción de insulina (efecto más marcado con Tac que CsA — la curva de presión-glucosa de Tac es ~2x más diabetogénica). 2) Esteroides causan resistencia a insulina periférica + estimulan gluconeogénesis hepática + reducen captación de glucosa muscular. 3) MMF tiene efecto menor sobre células β. 4) mTOR inhibitors (siro/everolimus) también causan resistencia + alteran señalización de insulina. Hay genes de riesgo (TCF7L2 SNPs).",
+      "manejo": [
+        "Reducir esteroides al mínimo posible (objetivo prednisona 5 mg/día si tolerable, evaluar steroid withdrawal protocols)",
+        "Considerar cambio Tac → CsA si NODAT severo y no responde (menos diabetogénica)",
+        "NO suspender Tac de entrada — riesgo de rechazo mayor que beneficio metabólico",
+        "Cambios estilo de vida: dieta DM2, ejercicio, control de peso",
+        "Antidiabéticos orales: metformina es preferida (segura post-TR, vigilar TFG)",
+        "Inhibidores DPP-4 (sitagliptina, linagliptina): seguros, sin ajuste por TFG (linagliptina)",
+        "iSGLT2 (empagliflozin, dapagliflozin): SEGUROS post-TR según evidencia reciente, además renoprotectores",
+        "Insulina: cuando otros agentes insuficientes, glargina + análogos rápidos",
+        "Evitar pioglitazona (retención hídrica), sulfonilureas (hipoglucemia)",
+        "GLP-1 RA (semaglutida): seguros, ayudan con peso, considerar"
+      ],
+      "evolucion": "Reducción prednisona a 5 mg/día (semana 8), metformina 850 mg c/12h, empagliflozin 10 mg/día. HbA1c a 3 meses 6.4%. Glucosa ayuno 110-130 mg/dL. Función renal estable, Cr 1.1 mg/dL. Sin hipoglucemia.",
+      "pearls": [
+        "NODAT diagnosticado en ~20-30% de TRs en primer año",
+        "Tacrolimus es 2x más diabetogénico que CsA — convertir si NODAT no controlable",
+        "iSGLT2 son SEGUROS post-TR (estudios DAPA-CKD, EMPA-KIDNEY incluyeron pacientes con TR)",
+        "Metformina es PRIMERA LÍNEA si TFG >30",
+        "Steroid minimization/withdrawal mejora NODAT pero requiere protocolo cuidadoso (evitar en alto riesgo de rechazo)",
+        "NODAT independiente predice mortalidad cardiovascular post-TR — no es benigno",
+        "HbA1c puede ser MENOS confiable post-TR (anemia, transfusiones, eritropoyesis cambiante)",
+        "Glucosa postprandial es más sensible que ayuno para NODAT temprano"
+      ],
+      "referencias": [
+        "Sharif A et al. Proceedings from an International Consensus Meeting on PTDM. Am J Transplant 2014;14:1992-2000",
+        "Jenssen T, Hartmann A. PTDM and metabolic disease after kidney transplantation. Nat Rev Endocrinol 2019",
+        "KDIGO 2020 Transplant Recipient — NODAT section",
+        "DAPA-CKD investigators. NEJM 2020 — incluía pacientes post-TR"
+      ]
+    },
+    {
+      "id": "caso_05",
+      "titulo": "FSGS recurrente al mes 1 con proteinuria nefrótica",
+      "categoria": "Recurrencia de glomerulopatía primaria",
+      "nivel": "Fellow avanzado",
+      "presentacion": "Mujer 28 años, ERC por FSGS primaria (biopsia nativa con colapso glomerular, proteinuria nefrótica resistente a esteroides), llegó a diálisis a los 22 años. TR vivo HLA-idéntico hace 4 semanas. Función inmediata, Cr nadir 0.8 mg/dL día 5. Día 30: Cr 1.1 mg/dL (estable), pero PROTEINURIA 6 g/día (nueva, antes <100 mg). Edema leve.",
+      "datos_clave": {
+        "edad": 28,
+        "edad_diagnostico_fsgs": "Antes de 22",
+        "fsgs_caracteristicas": "Primaria, resistente esteroides, progresión rápida",
+        "dpt": 30,
+        "cr_actual": 1.1,
+        "proteinuria_g_dia": 6,
+        "edema": "Leve"
+      },
+      "ddx_priorizado": [
+        {
+          "diagnostico": "FSGS recurrente",
+          "probabilidad": "MUY ALTA",
+          "razon": "FSGS primaria con progresión rápida tiene 30-40% de recurrencia post-TR, generalmente en primeras semanas-meses, proteinuria nefrótica es la presentación clásica"
+        },
+        {
+          "diagnostico": "Rechazo agudo (poco probable con esta presentación)",
+          "probabilidad": "Baja",
+          "razon": "Cr estable, sin DSA, no es presentación típica"
+        },
+        {
+          "diagnostico": "Nefropatía membranosa recurrente",
+          "probabilidad": "Baja",
+          "razon": "Anti-PLA2R+ pre-TR sería pista, pero historia es de FSGS"
+        }
+      ],
+      "estudios_solicitados": [
+        {"estudio": "Biopsia renal con microscopía electrónica", "razon": "Foot process effacement difuso confirma FSGS recurrente"},
+        {"estudio": "Proteinuria 24h cuantificada", "razon": "Cuantificar y monitorizar"},
+        {"estudio": "suPAR sérico (si disponible)", "razon": "Biomarcador asociado, no obligatorio para diagnóstico"},
+        {"estudio": "Albúmina sérica, perfil lipídico", "razon": "Síndrome nefrótico"},
+        {"estudio": "DSA (descartar AMR concomitante)", "razon": "DDx"}
+      ],
+      "diagnostico_final": "Biopsia con MICROSCOPÍA ELECTRÓNICA: borramiento difuso de pies podocitarios (foot process effacement), sin hallazgos de rechazo. Diagnóstico: FSGS recurrente.",
+      "fisiopatologia": "La FSGS primaria está asociada a un FACTOR CIRCULANTE no identificado completamente, candidatos incluyen suPAR (urokinase plasminogen activator receptor soluble), anti-nefrin antibodies, otros. Este factor causa disfunción podocitaria con borramiento de pies podocitarios → barrera de filtración alterada → proteinuria masiva. La recurrencia post-TR es porque el factor circulante sigue en el receptor. Por eso plasmaféresis es efectiva: remueve el factor. FSGS secundaria (HTA, obesidad, reflujo, drogas) NO recurre porque depende del trigger original.",
+      "manejo": [
+        "Plasmaféresis (TPE) — pilar del tratamiento",
+        "Protocolo: 5-7 sesiones, c/48h, reemplazo 1.5 volúmenes con albúmina 5%",
+        "Si responde → continuar con sesiones de mantenimiento c/semana × varias semanas hasta proteinuria <1g/d",
+        "Rituximab 375 mg/m² × 1-4 dosis (mecanismo no claro pero efectivo en algunos casos)",
+        "Ciclofosfamida 2 mg/kg/día × 8-12 semanas (terapia adyuvante)",
+        "IECA/ARA II: bloqueo del sistema renina-angiotensina para reducir proteinuria",
+        "Atorvastatina: complicaciones lipídicas del sindrome nefrótico",
+        "Anticoagulación profiláctica si albúmina <2.5",
+        "Mantener IS estándar (Tac + MMF + prednisona) — algunos centros aumentan ciclosporina por su efecto antiproteinúrico"
+      ],
+      "evolucion": "Post-TPE×7 + rituximab×2: proteinuria 6g → 2g → 0.8g/día en 8 semanas. Mantenimiento con TPE semanal × 4 semanas más. Albúmina normaliza. Cr 1.0 mg/dL estable a 6 meses.",
+      "pearls": [
+        "FSGS primaria con progresión rápida (<3 años a diálisis) = ALTO RIESGO recurrencia (50%)",
+        "FSGS secundaria NO recurre — preguntar HISTORIA CUIDADOSAMENTE pre-TR",
+        "Iniciar TPE TEMPRANO — antes del daño glomerular irreversible",
+        "Biopsia temprana es FUNDAMENTAL — esperar agrava pronóstico",
+        "Rituximab funciona en ~50% — no es 100%",
+        "El factor circulante no está completamente caracterizado — investigación activa",
+        "FSGS de novo (no recurrente) post-TR puede ser por CNI o hipertensión — diferente DDx",
+        "Algunos pacientes con FSGS de alto riesgo deben recibir TPE profiláctico peri-TR"
+      ],
+      "referencias": [
+        "Wei C et al. Modification of kidney barrier function by the urokinase receptor. Nat Med 2008",
+        "Canaud G et al. Recurrent FSGS After Kidney Transplantation. Transpl Int 2017",
+        "Watts AJB et al. Discovery of Autoantibodies Targeting Nephrin in Minimal Change Disease. JASN 2022 — relevante también para FSGS"
+      ]
+    },
+    {
+      "id": "caso_06",
+      "titulo": "Fiebre 39°C y diarrea al mes 4 post-TR — paciente D+/R- para CMV",
+      "categoria": "Enfermedad CMV (colitis)",
+      "nivel": "Fellow",
+      "presentacion": "Hombre 49 años, TR fallecido hace 4 meses, D+/R- para CMV. Recibió profilaxis con valganciclovir 900 mg/día × 90 días (suspendido hace 2 semanas según protocolo). Llega con fiebre 39°C, diarrea acuosa 6 evacuaciones/día × 3 días, dolor abdominal cólico, sin sangre. Cr 1.3 (basal 1.1). BH: leucocitos 3.5, plaquetas 110.",
+      "datos_clave": {
+        "edad": 49,
+        "dpt": 120,
+        "cmv_d_r": "D+/R- (alto riesgo)",
+        "profilaxis_terminada_hace": "2 semanas",
+        "fiebre": 39.0,
+        "diarrea": "Acuosa 6/día x 3 días",
+        "leucocitos": 3.5,
+        "plaquetas": 110,
+        "cr": 1.3
+      },
+      "ddx_priorizado": [
+        {
+          "diagnostico": "Enfermedad CMV (colitis)",
+          "probabilidad": "MUY ALTA",
+          "razon": "D+/R- alto riesgo + profilaxis terminada + síntomas GI + citopenia = clásico"
+        },
+        {
+          "diagnostico": "C. difficile (frecuente post-TR por antibióticos y profilaxis)",
+          "probabilidad": "Alta",
+          "razon": "Buscar siempre con diarrea + hospitalización reciente o antibióticos"
+        },
+        {
+          "diagnostico": "Bacteriana (Salmonella, Campylobacter, Yersinia)",
+          "probabilidad": "Media",
+          "razon": "Inmunosuprimido"
+        },
+        {
+          "diagnostico": "Cryptosporidium, Cyclospora, Microsporidium",
+          "probabilidad": "Media",
+          "razon": "Causa frecuente en inmunosuprimidos"
+        },
+        {
+          "diagnostico": "MMF-inducida (enteritis por MMF)",
+          "probabilidad": "Posible",
+          "razon": "Causa frecuente de diarrea post-TR, pero sin fiebre alta típicamente"
+        }
+      ],
+      "estudios_solicitados": [
+        {"estudio": "PCR CMV cuantitativa en plasma", "razon": "DIAGNÓSTICO clave"},
+        {"estudio": "Coprocultivo + toxinas C. difficile", "razon": "Bacterianas"},
+        {"estudio": "Parasitológico de heces + cryptosporidium", "razon": "Parasitarias"},
+        {"estudio": "Endoscopia (colonoscopia con biopsia)", "razon": "Si CMV: úlceras + inclusiones intranucleares, IHQ CMV+"},
+        {"estudio": "BH, función renal/hepática completas", "razon": "Citopenias, hepatitis CMV"},
+        {"estudio": "Hemocultivos x2", "razon": "Sepsis"}
+      ],
+      "diagnostico_final": "PCR CMV plasma: 250,000 UI/mL. Colonoscopia: úlceras profundas en colon transverso y descendente. Biopsia: inclusiones intranucleares 'ojo de búho', IHQ CMV positivo. DIAGNÓSTICO: ENFERMEDAD CMV (colitis severa).",
+      "fisiopatologia": "CMV (Citomegalovirus, HHV-5) es un virus β-herpesvirus que coloniza >70% adultos. Permanece latente en monocitos/macrófagos. Bajo inmunosupresión (especialmente induccion con timoglobulina, MMF, esteroides altos), reactiva o, en D+/R-, ocurre infección primaria con curso más severo. Causa enfermedad por: 1) Replicación en endotelio (vasculopatía), 2) Replicación en epitelio (GI: colitis, esofagitis; pulmonar: neumonitis; ocular: retinitis), 3) Mielosupresión, 4) Síndrome inflamatorio sistémico (fiebre, citopenias). Histología: 'células citomegálicas' con inclusiones nucleares ojo de búho ± inclusiones citoplásmicas.",
+      "manejo": [
+        "INTERNAR — colitis CMV es enfermedad severa",
+        "Ganciclovir IV 5 mg/kg c/12h × 2-3 semanas (preferido en enfermedad severa o GI)",
+        "Alternativa: Valganciclovir 900 mg c/12h VO si tolera oral y enfermedad NO severa",
+        "Ajustar por TFG (Cr 1.3 mg/dL → ~60 mL/min → dosis estándar)",
+        "REDUCIR MMF 50% o suspender temporalmente",
+        "MANTENER Tac y prednisona (no suspender por riesgo de rechazo)",
+        "Hidratación IV adecuada, corregir electrolitos",
+        "Monitorización: PCR CMV semanal — debe declinar >1 log en 2 semanas",
+        "Duración mínima: 2-3 semanas IV Y hasta PCR no detectable × 2 semanas consecutivas",
+        "Transición a valganciclovir oral cuando GI resuelva y PCR baje",
+        "Profilaxis secundaria: valganciclovir 900 mg/día × 1-3 meses post-tratamiento"
+      ],
+      "evolucion": "Día 3: fiebre cede, diarrea disminuye. Día 7: PCR 250k → 30k. Día 14: PCR 30k → 2k. Día 21: PCR no detectable, paciente egresa con valganciclovir oral. Profilaxis secundaria × 2 meses. Sin recaída.",
+      "pearls": [
+        "D+/R- es el escenario MÁS RIESGOSO para CMV (R nunca tuvo respuesta inmune)",
+        "Enfermedad CMV puede aparecer hasta 6 meses post-suspensión de profilaxis",
+        "DIAGNÓSTICO de enfermedad invasiva requiere SÍNTOMAS + PCR+/biopsia (no solo PCR+)",
+        "Colitis CMV puede ser PCR plasma negativa en ~20% — biopsiar si sospecha clínica fuerte",
+        "Resistencia: sospechar si PCR no baja >1 log en 2 semanas con tratamiento adecuado",
+        "Si resistencia confirmada (test genotípico UL97/UL54): cambiar a foscarnet o maribavir",
+        "Letermovir es PROFILÁCTICO, NO TRATAMIENTO (KDIGO 2024)",
+        "MMF DEBE reducirse en enfermedad CMV — sinergiza con replicación viral"
+      ],
+      "referencias": [
+        "Kotton CN et al. The Third International Consensus Guidelines on the Management of CMV in Solid-organ Transplantation. Transplantation 2018",
+        "Ljungman P et al. Definitions of CMV infection and disease in transplant patients for use in clinical trials. Clin Infect Dis 2017",
+        "AST IDC: Razonable HE et al. Cytomegalovirus in solid organ transplant recipients. Clin Transplant 2019"
+      ]
+    }
+  ]
+}
