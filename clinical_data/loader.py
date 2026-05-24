@@ -90,8 +90,15 @@ def format_revision_caption(tema: str) -> str:
     if not meta:
         return ""
     parts = []
+    # Soportar tanto "referencia" (singular string) como "referencias" (lista)
     if meta.get("referencia"):
         parts.append(meta["referencia"])
+    elif meta.get("referencias"):
+        refs = meta["referencias"]
+        if isinstance(refs, list):
+            parts.append(" · ".join(refs))
+        else:
+            parts.append(str(refs))
     if meta.get("fecha_revision"):
         parts.append(f"Revisado {meta['fecha_revision']}")
     return " · ".join(parts) if parts else ""
