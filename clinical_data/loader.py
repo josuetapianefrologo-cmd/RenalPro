@@ -28,7 +28,10 @@ _DATA_DIR = Path(__file__).resolve().parent
 
 @lru_cache(maxsize=None)
 def _load_json(filename: str) -> dict:
-    """Carga un JSON con cache para evitar relecturas en cada interacción."""
+    """
+    Carga un JSON con cache para evitar relecturas en cada interacción.
+    Soporta subdirectorios: pasar 'educacion/casos_clinicos.json'.
+    """
     path = _DATA_DIR / filename
     if not path.exists():
         return {}
@@ -157,3 +160,75 @@ def tac_c0_evaluar(c0: float, dias_post_tx: int = 30) -> dict:
         "color": color,
         "recomendacion": rec,
     }
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# EDUCACIÓN TR — Contenido pedagógico para fellow de trasplante
+# ════════════════════════════════════════════════════════════════════════════
+
+def get_casos_clinicos() -> dict:
+    """Casos clínicos didácticos con razonamiento paso a paso."""
+    return _load_json("educacion/casos_clinicos.json")
+
+
+def get_banco_preguntas() -> dict:
+    """Banco de preguntas tipo board con explicación."""
+    return _load_json("educacion/banco_preguntas.json")
+
+
+def get_fisiopatologia() -> dict:
+    """Fisiopatología expandida — el porqué de cada tema clave."""
+    return _load_json("educacion/fisiopatologia.json")
+
+
+def get_tablas_comparativas() -> dict:
+    """Tablas comparativas para diferenciar entidades similares."""
+    return _load_json("educacion/tablas_comparativas.json")
+
+
+def get_referencias_clave() -> dict:
+    """Referencias clave — RCTs históricos y modernos."""
+    return _load_json("educacion/referencias_clave.json")
+
+
+def get_controversias() -> dict:
+    """Controversias en TR — donde no hay consenso pleno."""
+    return _load_json("educacion/controversias.json")
+
+
+# ── Atajos de acceso rápido a contenido educativo ────────────────────────────
+
+def get_lista_casos() -> list:
+    """Lista de casos clínicos disponibles (solo metadata para selector UI)."""
+    data = get_casos_clinicos()
+    return data.get("casos", [])
+
+
+def get_lista_preguntas() -> list:
+    """Lista de preguntas del banco (para selector y autoevaluación)."""
+    data = get_banco_preguntas()
+    return data.get("preguntas", [])
+
+
+def get_lista_temas_fisiopatologia() -> list:
+    """Lista de temas de fisiopatología expandida."""
+    data = get_fisiopatologia()
+    return data.get("temas", [])
+
+
+def get_lista_tablas() -> list:
+    """Lista de tablas comparativas."""
+    data = get_tablas_comparativas()
+    return data.get("tablas", [])
+
+
+def get_lista_referencias() -> list:
+    """Lista de categorías de referencias clave."""
+    data = get_referencias_clave()
+    return data.get("categorias", [])
+
+
+def get_lista_controversias() -> list:
+    """Lista de controversias en TR."""
+    data = get_controversias()
+    return data.get("controversias", [])
