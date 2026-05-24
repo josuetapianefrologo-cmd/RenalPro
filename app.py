@@ -16180,49 +16180,61 @@ elif nav == "hipocalcemia_iv":
     CA_CLORURO_AMP = 136.0   # mg Ca elemental por ámpula de CaCl2 10% (10 mL)
 
     # ── PROTOCOLO CMN BAJÍO ────────────────────────────────────────────────────
-    st.markdown("### 💉 Protocolo CMN Bajío — Gluconato de Calcio IV")
+    st.markdown("### 💉 Gluconato de Calcio IV")
 
     prot1, prot2 = st.columns(2)
     with prot1:
         n_amp  = st.number_input("N° de ámpulas de gluconato Ca 10%",
                                  1, 20, 11, 1, key="hipo_namp",
-                                 help="Protocolo CMN Bajío: 11 ámpulas")
+                                 help="Cada ámpula: 10 mL · 1 g de gluconato Ca · 90 mg de Ca elemental")
         vol_sf = st.number_input("Volumen NaCl 0.9% (mL)",
                                  50, 500, 250, 50, key="hipo_vol",
                                  help="Aforadas en esta cantidad de NaCl 0.9%")
     with prot2:
-        vel_h  = st.number_input("Tasa de infusión deseada (mL/h)",
-                                 10, 250, 50, 5, key="hipo_vel",
-                                 help="50–100 mL/h habitual. Más rápido si síntomas graves.")
+        dosis_mg_kg_h = st.number_input("Dosis objetivo (mg/kg/h)",
+                                         0.5, 2.0, 1.0, 0.1, key="hipo_dosis",
+                                         help="Mantenimiento: 0.5–1.5 mg/kg/h · Casos graves: 1.5–2.0 mg/kg/h · "
+                                              "NUNCA exceder 2 mg/kg/h (riesgo hipercalcemia aguda)")
         via_h  = st.selectbox("Vía de acceso", [
             "Vena central (preferida — menos irritante)",
             "Vena periférica gruesa (antecubital)",
             "Catéter de HD (si en sesión)",
         ], key="hipo_via")
 
-    # Cálculos del protocolo
+    # Cálculos del protocolo (nuevo flujo: dosis → tasa)
     ca_total_mg  = n_amp * CA_POR_AMP_MG        # mg Ca elemental total
     ca_total_meq = n_amp * CA_POR_AMP_MEQ        # mEq total
     vol_total_ml = vol_sf                         # aforado = volumen final ≈ vol_sf
     conc_mg_ml   = ca_total_mg / vol_total_ml    # mg Ca/mL
     conc_meq_ml  = ca_total_meq / vol_total_ml   # mEq Ca/mL
-    duracion_h   = vol_total_ml / vel_h           # horas para pasar toda la bolsa
-    vel_ca_mg_h  = conc_mg_ml * vel_h            # mg Ca elemental por hora
-    vel_ca_meq_h = conc_meq_ml * vel_h           # mEq Ca por hora
+    # NUEVO: la dosis manda y se calcula la tasa
+    vel_ca_mg_h  = dosis_mg_kg_h * peso_h         # mg Ca elemental/h objetivo
+    vel_h        = vel_ca_mg_h / conc_mg_ml if conc_mg_ml > 0 else 0   # mL/h calculados
+    vel_ca_meq_h = conc_meq_ml * vel_h            # mEq Ca por hora
+    duracion_h   = vol_total_ml / vel_h if vel_h > 0 else 0
 
     # Mostrar resultados
-    r1, r2, r3, r4 = st.columns(4)
+    r1, r2, r3, r4, r5 = st.columns(5)
     r1.metric("Ca elemental total", f"{ca_total_mg:.0f} mg")
     r2.metric("Concentración", f"{conc_mg_ml:.1f} mg/mL")
     r3.metric("Velocidad Ca", f"{vel_ca_mg_h:.0f} mg/h")
-    r4.metric("Duración de la bolsa", f"{duracion_h:.1f} h")
+    r4.metric("Tasa calculada", f"{vel_h:.1f} mL/h",
+              help="Ajusta la dosis objetivo (mg/kg/h) para cambiar esta tasa")
+    r5.metric("Duración bolsa", f"{duracion_h:.1f} h")
 
-    st.success(f"""
-**🏥 Preparación — Protocolo CMN Bajío IMSS:**
+    # Validación de rango
+    if 0.5 <= dosis_mg_kg_h <= 2.0:
+        st.success(f"🟢 Dosis **{dosis_mg_kg_h} mg/kg/h** dentro del rango terapéutico (0.5–2.0 mg/kg/h)")
+    else:
+        st.error(f"🔴 Dosis **{dosis_mg_kg_h} mg/kg/h** FUERA del rango terapéutico (0.5–2.0 mg/kg/h)")
+
+    st.info(f"""
+**🏥 Preparación y administración:**
 - **{n_amp} ámpulas** de Gluconato de Ca 10% (10 mL c/u) → aforadas en **{vol_sf} mL** de NaCl 0.9%
 - **Ca elemental total:** {ca_total_mg:.0f} mg ({ca_total_meq:.1f} mEq)
 - **Concentración:** {conc_mg_ml:.2f} mg/mL ({conc_meq_ml:.3f} mEq/mL)
-- **Pasar a:** {vel_h} mL/h → aporta **{vel_ca_mg_h:.0f} mg/h** de Ca elemental
+- **Dosis objetivo:** {dosis_mg_kg_h} mg/kg/h × {peso_h:.0f} kg = **{vel_ca_mg_h:.0f} mg/h** de Ca elemental
+- **Pasar a:** **{vel_h:.1f} mL/h** (calculado automáticamente)
 - **Duración total de la bolsa:** {duracion_h:.1f} horas
 - **Vía:** {via_h}
     """)
