@@ -1,0 +1,133 @@
+{
+  "_meta": {
+    "tema": "Tablas comparativas — Diferencial en Trasplante Renal",
+    "fecha_revision": "2026-05-24"
+  },
+  "tablas": [
+    {
+      "id": "tabla_rechazo_celular_vs_humoral",
+      "titulo": "Rechazo Agudo Celular (TCMR) vs Mediado por Anticuerpos (AMR)",
+      "columnas": ["Característica", "TCMR (Celular)", "AMR (Humoral)"],
+      "filas": [
+        ["Mediadores principales", "Linfocitos T CD4+/CD8+", "Anticuerpos DSA + complemento"],
+        ["Tiempo típico", "Cualquier momento (peak 1-3 meses)", "Temprano (DSA preformados) o tardío (DSA de novo, año 1-2+)"],
+        ["Factores riesgo", "Mismatch HLA, infraIS, infección viral", "DSA preformados, no adherencia, mismatch DR/DQ"],
+        ["Tubulitis", "Sí (i+t lesiones)", "Mínima"],
+        ["Arteritis intimal (v)", "Posible en categorías II-III", "Rara"],
+        ["Glomerulitis (g)", "No", "Sí (marca distintiva)"],
+        ["Capilaritis peritubular (ptc)", "No", "Sí"],
+        ["C4d en CPT", "Negativo", "Frecuentemente positivo (no obligatorio Banff 2017+)"],
+        ["DSA detectables", "No requeridos", "REQUERIDOS para diagnóstico"],
+        ["Función al diagnóstico", "Cr en ascenso, generalmente sin proteinuria nueva", "Cr ascenso + proteinuria frecuente"],
+        ["Respuesta a esteroides", "Buena (80-90% en Banff I)", "Mínima"],
+        ["Tratamiento primario", "Bolos MP 500 mg × 3", "Plasmaféresis + IVIG + Rituximab"],
+        ["Bolos MP solos suficientes", "Sí en Banff IA, IB", "NUNCA"],
+        ["ATG indicado", "Banff IIA-III o refractario", "Casos refractarios"],
+        ["Pronóstico", "Bueno con tratamiento (80%+ recuperación)", "Más reservado (50% recuperan completamente)"],
+        ["Riesgo de pérdida tardía", "Bajo si responde", "ALTO (AMR crónico es principal causa pérdida tardía)"]
+      ]
+    },
+    {
+      "id": "tabla_cmv_vs_bk",
+      "titulo": "Enfermedad CMV vs Nefropatía BK",
+      "columnas": ["Característica", "CMV", "BK virus"],
+      "filas": [
+        ["Tipo de virus", "β-herpesvirus (HHV-5), DNA envuelto", "Polyomavirus, DNA no envuelto pequeño"],
+        ["Reservorio latente", "Monocitos/macrófagos", "Epitelio urotelial"],
+        ["Tiempo típico", "1-6 meses post-TR (mayoría)", "3-12 meses post-TR (peak ~6m)"],
+        ["Síntomas sistémicos", "Fiebre, fatiga, mialgia frecuentes", "Asintomático (mayoría)"],
+        ["Afectación GI", "Sí (colitis, esofagitis)", "No"],
+        ["Afectación pulmonar", "Sí (neumonitis)", "No"],
+        ["Citopenias", "Sí (leucopenia, trombocitopenia)", "Raras"],
+        ["Afecta función renal", "A veces (hepatitis CMV indirecta)", "SÍ — daño tubular directo"],
+        ["Diagnóstico", "PCR plasma + síntomas/biopsia", "PCR plasma + biopsia (SV40+)"],
+        ["Histología", "'Ojo de búho' (inclusiones intranucleares)", "Inclusiones intranucleares + SV40+"],
+        ["Tratamiento principal", "Valganciclovir / ganciclovir IV", "REDUCIR INMUNOSUPRESIÓN"],
+        ["Antiviral efectivo", "Sí (ganciclovir, foscarnet, maribavir)", "Limitado (cidofovir nefrotóxico)"],
+        ["Profilaxis efectiva", "Sí (valganciclovir según D/R)", "No existe efectiva — screening es la clave"],
+        ["Riesgo pérdida injerto", "Bajo si tratamiento oportuno", "30-60% si nefropatía no controlada"],
+        ["Reducir IS", "Sí (especialmente MMF)", "PILAR del manejo"]
+      ]
+    },
+    {
+      "id": "tabla_nodat_vs_dm_previa",
+      "titulo": "NODAT vs DM Previa al Trasplante",
+      "columnas": ["Característica", "NODAT", "DM previa al TR"],
+      "filas": [
+        ["Diagnóstico previo", "HbA1c <6.5% pre-TR", "DM ya conocida o HbA1c >6.5%"],
+        ["Tiempo de aparición", "Generalmente primeros 3-6 meses post-TR", "Persiste desde antes"],
+        ["Fisiopatología principal", "Disfunción de células β por Tac + resistencia por esteroides", "DM1: autoinmune; DM2: resistencia + déficit β"],
+        ["Tac vs CsA", "Tac es 2x más diabetogénico — considerar cambio a CsA si severo", "Mismo efecto pero menos relevante (ya tiene DM)"],
+        ["Esteroides", "Causa principal modificable — minimizar", "Empeoran control pero no son la causa"],
+        ["BMI alto", "Factor de riesgo", "Frecuentemente coexiste"],
+        ["Edad", ">40-50 años aumenta riesgo", "Cualquier edad según tipo"],
+        ["Manejo inicial", "Dieta + ejercicio + metformina si HbA1c >7%", "Continuar régimen previo, ajustar por TFG"],
+        ["iSGLT2 segura", "Sí (EMPA-KIDNEY, DAPA-CKD)", "Sí, mismo perfil"],
+        ["DPP-4 (linagliptina)", "Sí, segura, no requiere ajuste TFG", "Sí"],
+        ["Sulfonilureas", "Evitar (hipoglucemia, ganancia peso)", "Evitar"],
+        ["Pioglitazona", "Evitar (retención hídrica)", "Evitar"],
+        ["Insulina", "Si no responde a orales", "Frecuente uso"],
+        ["Pronóstico", "Manejable si se interviene temprano; pérdida del control si tardía", "Variable según control"],
+        ["Mortalidad CV", "Aumentada (3x población general)", "Aumentada (similar)"]
+      ]
+    },
+    {
+      "id": "tabla_fsgs_recurrente_vs_de_novo",
+      "titulo": "FSGS Recurrente vs FSGS De Novo Post-TR",
+      "columnas": ["Característica", "FSGS Recurrente", "FSGS De Novo"],
+      "filas": [
+        ["Enfermedad nativa", "FSGS primaria (idiopática)", "Cualquier causa que no sea FSGS primaria"],
+        ["Tiempo de aparición", "Frecuentemente <1 mes post-TR (días-meses)", "Generalmente >1-2 años post-TR"],
+        ["Riesgo", "30-50% si FSGS primaria con progresión rápida", "5-10% en TR de larga evolución"],
+        ["Proteinuria al inicio", "Nefrótica (>3.5 g/día), masiva", "Sub-nefrótica progresiva"],
+        ["Mecanismo", "Factor circulante (suPAR, anti-nephrin, otros)", "Hiperfiltración del injerto único, CNI tóxico, HTA, obesidad"],
+        ["Foot process effacement", "DIFUSO (microscopía electrónica)", "Focal/segmentario"],
+        ["C4d", "Negativo", "Negativo"],
+        ["DSA", "Generalmente negativos", "Generalmente negativos"],
+        ["Tratamiento", "PLASMAFÉRESIS + Rituximab + IECA/ARA II", "IECA/ARA II + control HTA + reducción IS (CNI)"],
+        ["Respuesta a plasmaféresis", "Buena (60-80%)", "No respuesta (no es factor circulante)"],
+        ["Profilaxis pre-TR", "TPE peri-TR si FSGS primaria de alto riesgo", "No aplica"],
+        ["Pronóstico", "Variable — 30% remisión completa, 30% parcial, 30% pérdida del injerto", "Progresiva pero más lenta"],
+        ["Reaparición en re-TR", "Riesgo 50-90% (alto)", "Variable"]
+      ]
+    },
+    {
+      "id": "tabla_anticoagulacion_crrt",
+      "titulo": "Opciones de anticoagulación en CRRT — Citrato vs Heparina vs Ninguna",
+      "columnas": ["Característica", "Citrato regional", "Heparina sistémica", "Sin anticoagulación"],
+      "filas": [
+        ["Mecanismo", "Quela Ca²⁺ en circuito → bloquea coagulación", "Inhibe trombina y factor Xa via antitrombina", "Confianza en flow rates altos + hemodilución"],
+        ["Localización del efecto", "REGIONAL (solo circuito)", "Sistémica (paciente + circuito)", "Ninguno"],
+        ["Vida útil del filtro", "Larga (50-80h promedio)", "Media (24-48h)", "Corta (12-24h)"],
+        ["Riesgo de sangrado paciente", "Mínimo (efecto local)", "Significativo (sangrado mayor 10-20%)", "Mínimo"],
+        ["Toxicidad por citrato", "Acumulación si insuficiencia hepática severa → acidosis metabólica + hipocalcemia iónica", "No aplica", "No aplica"],
+        ["Alteraciones del Ca²⁺", "Hipocalcemia iónica (que reponer)", "Sin efecto sobre Ca²⁺", "Sin efecto sobre Ca²⁺"],
+        ["Alteraciones del Na+", "Frecuente hipernatremia (citrato trisódico)", "Sin efecto", "Sin efecto"],
+        ["Alkalosis metabólica", "Sí (citrato se metaboliza a HCO3 en hígado)", "No", "No"],
+        ["Monitoreo necesario", "Ca²⁺ iónico c/6h, gasometría c/6-12h, calcio total", "TTPa cada 4-6h, plaquetas diarias", "Visual (presiones del circuito)"],
+        ["Contraindicación absoluta", "Insuficiencia hepática grave (Child C, MELD >30, lactato >8)", "Sangrado activo, HIT, plaquetas <20-50K", "Estado pro-trombótico, sepsis"],
+        ["Preferencia KDIGO", "Primera opción en mayoría de casos (Grade 2C)", "Segunda opción", "Si contraindicaciones a anticoagulación"],
+        ["Costo / disponibilidad", "Mayor costo, requiere protocolo más complejo", "Bajo costo, ampliamente disponible", "Sin costo adicional"],
+        ["Adecuación de la dosis", "Mantenida (no afectada por filtros que se cierran)", "Variable", "Variable (filtros frecuentes)"]
+      ]
+    },
+    {
+      "id": "tabla_calculadora_kdpi_epts",
+      "titulo": "KDPI vs EPTS — Matching de donador y receptor",
+      "columnas": ["Variable", "KDPI (Donador)", "EPTS (Receptor)"],
+      "filas": [
+        ["Significado", "Kidney Donor Profile Index", "Estimated Post-Transplant Survival"],
+        ["Rango", "0-100% (MENOR = MEJOR riñón)", "0-100% (MENOR = MEJOR pronóstico receptor)"],
+        ["Variables incluidas", "Edad, raza, talla, peso, HTA, DM, Cr terminal, causa muerte, VHC, DCD", "Edad, tiempo en diálisis, DM, TR previo"],
+        ["Interpretación", "0-20%: kidney óptimo (top 20% calidad)\n21-85%: aceptable\n>85%: ECD/marginal", "0-20%: receptor con expectativa alta\n21-80%: intermedio\n>80%: expectativa baja"],
+        ["Uso clínico", "Decidir si aceptar kidney offered, predecir DGF, comparar opciones", "Priorización en lista, decidir agresividad de IS, expectativas"],
+        ["Asignación UNOS", "KDPI <20% se asigna preferentemente a EPTS <20% (top 20% receptors)", "Idem"],
+        ["Predictores de DGF", "KDPI alto, DCD, isquemia fría prolongada", "EPTS alto, tiempo en diálisis prolongado"],
+        ["Estrategia ECD", "KDPI >85%: considerar dual transplant o receptor mayor", "Receptor con EPTS alto puede aceptar KDPI alto razonablemente"],
+        ["Limitaciones", "No incluye anatomía renal, biopsia pre-TR, perfusión", "No predice complicaciones específicas"],
+        ["Validación", "USA basado en data UNOS", "Validado en cohortes USA"],
+        ["Aplicable en LatAm", "Sí, pero ajustar prevalencias (HTA, DM diferentes)", "Sí"]
+      ]
+    }
+  ]
+}
