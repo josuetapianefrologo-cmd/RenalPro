@@ -1,0 +1,235 @@
+{
+  "_meta": {
+    "tema": "Banco de preguntas — Trasplante Renal (tipo board/ENARM)",
+    "fecha_revision": "2026-05-24",
+    "nivel": "Fellow de nefrología / Examen de certificación",
+    "instrucciones": "Razona antes de ver la respuesta. Las explicaciones son tan importantes como acertar."
+  },
+  "preguntas": [
+    {
+      "id": "q01",
+      "categoria": "Inducción IS",
+      "pregunta": "Una paciente de 35 años va a recibir TR de donador vivo HLA 4/6 mismatch, PRA actual 0%. ¿Cuál es la inducción más apropiada?",
+      "opciones": ["Timoglobulina 4.5 mg/kg total", "Basiliximab 40 mg total (días 0 y 4)", "Alemtuzumab dosis única", "Sin inducción", "Rituximab 375 mg/m²"],
+      "correcta": "Basiliximab 40 mg total (días 0 y 4)",
+      "explicacion": "En receptores de RIESGO INMUNOLÓGICO BAJO (PRA bajo, primer TR, sin DSA, donador vivo), KDIGO recomienda BASILIXIMAB como inducción de elección. La timoglobulina se reserva para riesgo INMUNOLÓGICO ALTO: PRA >50%, retrasplante, DSA positivos, o DGF esperada. Alemtuzumab tiene perfil más profundo de inmunosupresión pero su uso es controvertido. Rituximab es para AMR o ABO-incompatible, no inducción rutinaria.",
+      "referencia": "KDIGO 2020 Transplant Recipient, Sec 5.1"
+    },
+    {
+      "id": "q02",
+      "categoria": "Tacrolimus farmacocinética",
+      "pregunta": "Un paciente post-TR día 30 tiene Tac C0 de 11 ng/mL pero Cr ascendió de 1.2 a 1.5 mg/dL. ¿Cuál es la mejor conducta?",
+      "opciones": ["Reducir Tac inmediatamente 50%", "Repetir Tac C0 mismo día confirmando técnica", "Biopsiar inmediatamente", "Aumentar prednisona", "Hidratación + observación"],
+      "correcta": "Repetir Tac C0 mismo día confirmando técnica",
+      "explicacion": "Antes de tomar decisiones drásticas, CONFIRMAR el nivel — pueden haber errores de medición, tiempo desde toma vs muestra (deben ser >12h desde dosis), interferencias del laboratorio. Si el nivel se confirma alto pero está en META (8-12 primer mes), la causa del ascenso de Cr probablemente NO es toxicidad por Tac. Reducir empíricamente sin confirmar puede llevar a rechazo. La biopsia se considera si Cr no responde a medidas iniciales.",
+      "referencia": "Brunet M et al. Therapeutic Drug Monitoring of Tacrolimus. Ther Drug Monit 2019"
+    },
+    {
+      "id": "q03",
+      "categoria": "Interacciones farmacológicas",
+      "pregunta": "Un paciente en Tac C0 8 ng/mL desarrolla candidiasis oral severa. Se va a iniciar fluconazol. ¿Qué espera del Tac C0 a la semana?",
+      "opciones": ["Disminuirá ~50%", "Sin cambio significativo", "Aumentará 2-3 veces", "Solo afecta la depuración renal", "Aumentará si TFG <60"],
+      "correcta": "Aumentará 2-3 veces",
+      "explicacion": "Fluconazol es un INHIBIDOR POTENTE de CYP3A4, la enzima que metaboliza tacrolimus (>95% via CYP3A4). Al inhibirla, los niveles de Tac aumentan dramáticamente — típicamente 2-3 veces en la primera semana, mayor con dosis altas (>200 mg/d) de fluconazol. Se debe REDUCIR Tac 50-75% al iniciar fluconazol y monitorizar niveles. Lo mismo aplica para: voriconazol, posaconazol, itraconazol, claritromicina, eritromicina, ritonavir, diltiazem, verapamilo, amiodarona, jugo de toronja. INDUCTORES de CYP3A4 (rifampicina, fenitoína, hipérico) hacen lo opuesto: niveles caen.",
+      "referencia": "Christians U et al. Mechanisms of clinically relevant drug interactions associated with tacrolimus. Clin Pharmacokinet 2002"
+    },
+    {
+      "id": "q04",
+      "categoria": "Rechazo agudo Banff",
+      "pregunta": "Una biopsia muestra: i3 t3 v1 g0 ptc0 C4d0. ¿Cuál es la clasificación Banff?",
+      "opciones": ["Borderline", "Rechazo agudo celular IA", "Rechazo agudo celular IB", "Rechazo agudo celular IIA", "Rechazo mediado por anticuerpos"],
+      "correcta": "Rechazo agudo celular IIA",
+      "explicacion": "Banff Categorías de Rechazo Celular Agudo (TCMR):\n- IA: i2-3 + t2 (tubulitis moderada en >25% intersticio inflamado)\n- IB: i2-3 + t3 (tubulitis severa >10 cel/sección tubular)\n- IIA: arteritis intimal con <25% pérdida luminal (v1) ± i+t\n- IIB: arteritis intimal con >25% pérdida luminal (v2) ± i+t\n- III: arteritis transmural (v3)\n\nEn este caso: i3 (inflamación intersticial difusa) + t3 (tubulitis severa) + v1 (arteritis intimal leve) = IIA. La PRESENCIA DE v1+ asciende a categoría II independientemente del grado de i/t. Sin C4d, glomerulitis, capilaritis (g0, ptc0, C4d0), no es AMR.",
+      "referencia": "Loupy A et al. Banff 2019 Kidney Meeting Report. Am J Transplant 2020"
+    },
+    {
+      "id": "q05",
+      "categoria": "Rechazo mediado por anticuerpos",
+      "pregunta": "¿Cuál de los siguientes NO es criterio para diagnóstico de AMR activo según Banff 2017?",
+      "opciones": ["Evidencia histológica de daño tisular agudo (g, ptc, TMA, ATN)", "Evidencia de interacción Ac-endotelio (C4d+ o ECRG positivo o ptc/g lesions)", "Presencia de DSA", "Glomerulopatía de trasplante (cg)", "Microcirculación inflamada con MFI bajo"],
+      "correcta": "Glomerulopatía de trasplante (cg)",
+      "explicacion": "Banff 2017 (actualizado 2019) clasifica AMR como:\n1. AMR ACTIVO (los 3 criterios): a) Histología daño agudo, b) Interacción Ac-endotelio (C4d+, ECRG o microvascular inflammation g>0/ptc>0), c) DSA+\n2. AMR CRÓNICO ACTIVO: cg + criterios b y c\n3. AMR CRÓNICO (sin actividad): cg + DSA+ (sin daño agudo)\n\nLa cg (glomerulopatía de trasplante con doble contorno) es marcador de CRONICIDAD, no de actividad. El AMR activo se diagnostica con lesiones AGUDAS (glomerulitis g, capilaritis ptc, trombosis, MAT). La presencia de g+ptc>0 sin C4d puede ser suficiente para diagnóstico (C4d-negative AMR).",
+      "referencia": "Haas M et al. Banff 2017 Meeting Report. Am J Transplant 2018"
+    },
+    {
+      "id": "q06",
+      "categoria": "Profilaxis CMV",
+      "pregunta": "Receptor de TR con D+/R-. ¿Cuál es la profilaxis recomendada (KDIGO 2020 y AST 2019)?",
+      "opciones": ["Valganciclovir 450 mg/día × 3 meses", "Valganciclovir 900 mg/día × 6 meses (extender a 12 si alto riesgo)", "Letermovir 480 mg/día × 12 meses", "Ganciclovir IV semanal × 3 meses", "TMP-SMX sola (cubre CMV)"],
+      "correcta": "Valganciclovir 900 mg/día × 6 meses (extender a 12 si alto riesgo)",
+      "explicacion": "D+/R- es el escenario de MAYOR RIESGO (receptor nunca expuesto, recibe virus del donador). KDIGO 2020 y AST IDC 2019 recomiendan valganciclovir 900 mg/día (ajustado por TFG) por MÍNIMO 6 MESES, con consideración de extender a 12 meses si: a) recibió timoglobulina, b) episodios de rechazo tratados con bolos MP o ATG, c) factores adicionales de inmunosupresión. Estudios IMPACT mostraron que extender de 100 a 200 días en D+/R- reduce significativamente la incidencia de enfermedad CMV tardía. Letermovir es alternativa en casos de toxicidad pero NO se usa como tratamiento de enfermedad activa.",
+      "referencia": "Razonable HE et al. AST IDC: CMV in solid organ transplant. Clin Transplant 2019"
+    },
+    {
+      "id": "q07",
+      "categoria": "BK virus",
+      "pregunta": "Paciente post-TR mes 5 tiene BK PCR plasma 8,000 cp/mL, Cr estable. ¿Conducta más adecuada?",
+      "opciones": ["No hacer nada — viremia baja", "Biopsia renal inmediata", "Reducir Tac C0 a 4-6 y MMF 50%, monitorizar c/2 semanas", "Iniciar cidofovir 0.5 mg/kg/semana", "Suspender toda inmunosupresión"],
+      "correcta": "Reducir Tac C0 a 4-6 y MMF 50%, monitorizar c/2 semanas",
+      "explicacion": "BK viremia >1,000 cp/mL (algunos cortes a 10,000) requiere intervención. El pilar del manejo es REDUCCIÓN DE IS — NO hay antiviral efectivo. Estrategia escalonada:\n- BK plasma 1,000-10,000: reducir Tac a 5-7 ng/mL, MMF 25-50%\n- BK plasma >10,000: reducir Tac 4-6 ng/mL, MMF 50%, considerar biopsia\n- BK nefropatía confirmada: reducción agresiva + adyuvantes\n\nBiopsiar antes de reducir IS no es necesario en viremia 8,000 sin Cr elevada (no cumple criterios de nefropatía probable que requeriría >10,000). Cidofovir es nefrotóxico y se reserva para casos refractarios con función adecuada. NUNCA suspender toda IS — riesgo de rechazo agudo es mayor.",
+      "referencia": "Hirsch HH et al. AST IDC: BK polyomavirus. Clin Transplant 2019"
+    },
+    {
+      "id": "q08",
+      "categoria": "MMF efectos adversos",
+      "pregunta": "Paciente con MMF 1g c/12h desarrolla diarrea acuosa sin fiebre, sin pus, hemograma con leucos 7,000 y plaquetas normales. ¿Próximo paso?",
+      "opciones": ["Suspender MMF inmediatamente", "Reducir dosis a 500 mg c/12h", "Cambiar a MFS (Myfortic) misma equivalencia", "Iniciar metronidazol empíricamente", "Estudio de heces (C. diff, parásitos) primero"],
+      "correcta": "Estudio de heces (C. diff, parásitos) primero",
+      "explicacion": "Aunque MMF puede causar diarrea (efecto secundario en 30%), SIEMPRE descartar causa infecciosa antes de atribuir a IS:\n- C. difficile (especialmente si antibióticos recientes)\n- CMV (PCR plasma + biopsia si severo)\n- Parásitos (Cryptosporidium, microsporidios)\n- Bacterianas (Salmonella, Campylobacter)\n\nDespués de descartar infección, si MMF es culpable, conducta escalonada:\n1. Reducir dosis (1g c/12h → 750 mg c/12h)\n2. Cambiar a MFS (180mg de MFS = 250mg MMF; 360mg = 500mg MMF; 720mg = 1g MMF). MFS tiene MENOS diarrea por liberación entérica.\n3. Considerar conversión a azatioprina si intolerable\n\nNO suspender MMF inmediatamente — riesgo de rechazo. NO iniciar metronidazol empírico sin diagnóstico.",
+      "referencia": "Bunnapradist S, Lentine KL, Burroughs TE et al. Mycophenolate mofetil dose reductions and discontinuations after gastrointestinal complications are associated with renal transplant graft failure. Transplantation 2006"
+    },
+    {
+      "id": "q09",
+      "categoria": "NODAT",
+      "pregunta": "Paciente mes 3 post-TR con NODAT en metformina + dieta, HbA1c 7.8%. ¿Cuál es la mejor adición a su tratamiento?",
+      "opciones": ["Pioglitazona 30 mg/día", "Glibenclamida 5 mg/día", "Empagliflozin 10 mg/día", "Insulina NPH bedtime", "Linagliptina 5 mg/día"],
+      "correcta": "Empagliflozin 10 mg/día",
+      "explicacion": "iSGLT2 (empagliflozin, dapagliflozin) tienen evidencia creciente de SEGURIDAD Y EFICACIA en TR. EMPA-KIDNEY y DAPA-CKD incluyeron pacientes con trasplante. Beneficios:\n- Renoprotección (reduce hiperfiltración del injerto único)\n- Cardioprotección (mortalidad CV reducida)\n- Pérdida de peso (problema común post-TR)\n- Reduce HbA1c 0.5-0.8%\n- Reduce TA modestamente\n\nPrecauciones: hipovolemia, riesgo de IVU/genitales (vigilar especialmente en IS), cetoacidosis euglucémica (rara). Funcionan con TFG >20.\n\nPioglitazona: retención hídrica, NO en TR.\nSulfonilureas: hipoglucemia, ganancia peso.\nInsulina: válida pero no primera línea para HbA1c 7.8%.\nLinagliptina (iDPP4): segura pero solo baja HbA1c 0.4-0.6%, sin beneficios CV o renales claros.",
+      "referencia": "EMPA-KIDNEY Collaborative Group. Empagliflozin in patients with chronic kidney disease. NEJM 2023"
+    },
+    {
+      "id": "q10",
+      "categoria": "Conversión IS",
+      "pregunta": "Paciente con TFG estable de 55 mL/min post-TR año 2, sin DSA, sin rechazo previo, en Tac+MMF+pred. Está desarrollando hirsutismo y temblor severo por Tac. ¿Mejor estrategia?",
+      "opciones": ["Reducir Tac y agregar mTOR (sirolimus o everolimus) a dosis bajas", "Sustituir Tac por CsA", "Sustituir Tac por belatacept (si EBV+)", "Suspender Tac, dejar solo MMF+pred", "Aumentar prednisona para reducir Tac"],
+      "correcta": "Sustituir Tac por belatacept (si EBV+)",
+      "explicacion": "Belatacept es inhibidor de coestimulación (CTLA4-Ig que bloquea CD80/86-CD28). Indicaciones:\n- TFG declinante por toxicidad CNI\n- Efectos adversos de CNI (NODAT, HTA, hirsutismo, temblor, neurotoxicidad)\n- Estudios BENEFIT/BENEFIT-EXT mostraron MEJOR TFG a largo plazo vs CsA (NO comparado directamente con Tac)\n\nREQUISITO ABSOLUTO: EBV+ del receptor (en EBV- hay riesgo aumentado de PTLD). Administración IV mensual. Más rechazo agudo en primer año pero compensado por mejor función a largo plazo.\n\nmTOR: alternativa válida pero puede causar proteinuria, dislipidemia, problemas cicatrización. CsA tiene perfil similar de toxicidad a Tac. Suspender IS = rechazo seguro. Aumentar pred no resuelve el problema.",
+      "referencia": "Vincenti F et al. Belatacept-Based Maintenance Therapy in Renal Transplantation. NEJM 2016 (BENEFIT trial)"
+    },
+    {
+      "id": "q11",
+      "categoria": "Embarazo en TR",
+      "pregunta": "Paciente TR estable 18 meses, Cr 1.1, sin proteinuria, sin DSA, Tac+MMF+pred. Desea embarazo. ¿Qué cambio es MANDATORIO antes de concepción?",
+      "opciones": ["Suspender Tac", "Suspender MMF 6 semanas antes y cambiar a azatioprina", "Reducir prednisona a 0", "Cambiar Tac a CsA", "Suspender todos los IS"],
+      "correcta": "Suspender MMF 6 semanas antes y cambiar a azatioprina",
+      "explicacion": "MMF es CATEGORÍA D (FDA) — TERATÓGENO confirmado. Asociado con:\n- Aborto espontáneo aumentado (50%)\n- Malformaciones: labio leporino, fisura palatina, micrognatia, atresia auditiva, cardiopatías congénitas, hipoplasia ungueal\n\nDebe suspenderse MÍNIMO 6 SEMANAS antes de concepción planeada. Reemplazo: AZATIOPRINA (categoría D pero datos extensos de seguridad) 1-2 mg/kg/día. Aza atraviesa placenta pero el feto carece de inosin pirofosforilasa que la activa, por lo que está protegido relativamente.\n\nIS seguros en embarazo:\n- Tacrolimus (categoría C) — CONTINUAR, ajustar dosis (volumen distribución cambia)\n- Ciclosporina (C) — segura\n- Prednisona ≤10 mg/día (C) — segura\n- Azatioprina (D) — segura\n\nTERATÓGENOS: MMF/MFS, sirolimus/everolimus, belatacept (datos limitados)",
+      "referencia": "Cabiddu G et al. A best practice position statement on pregnancy in chronic kidney disease. J Nephrol 2018"
+    },
+    {
+      "id": "q12",
+      "categoria": "HLA",
+      "pregunta": "¿Cuál de los siguientes locus HLA tiene mayor impacto en supervivencia del injerto renal?",
+      "opciones": ["HLA-A", "HLA-B", "HLA-C", "HLA-DR", "HLA-DP"],
+      "correcta": "HLA-DR",
+      "explicacion": "Importancia jerárquica HLA en TR: DR > B > A >> C, DQ, DP.\n\nHLA-DR (clase II) tiene MAYOR IMPACTO porque:\n- Se expresa en APCs y endotelio activado (vs A/B que están en todas las células nucleadas)\n- Presenta antígenos exógenos a T CD4+ (helper)\n- Mismatches en DR predicen rechazo agudo y crónico mejor\n\nUNOS y la mayoría de algoritmos de asignación PRIORIZAN match en DR. La PUNTUACIÓN tradicional es '0 mismatch' (cero diferencias entre 6 antígenos: 2A, 2B, 2DR). HLA-C y HLA-DQ se consideran ahora secundariamente. HLA-DP raramente clínicamente relevante.\n\nNota: con desensibilización moderna y mejores IS, el impacto de mismatch HLA en supervivencia a corto plazo se ha reducido, pero a largo plazo (>10 años) sigue siendo significativo.",
+      "referencia": "Williams RC et al. The risk of transplant failure with HLA mismatch in first adult kidney allografts from deceased donors. Transplantation 2016"
+    },
+    {
+      "id": "q13",
+      "categoria": "Complicaciones quirúrgicas",
+      "pregunta": "Día 14 post-TR aparece colección perirenal 8x6 cm en USG, asintomática, sin afectación funcional. Más probable es:",
+      "opciones": ["Hematoma post-quirúrgico", "Linfocele", "Absceso", "Fístula urinaria (urinoma)", "Pseudoaneurisma"],
+      "correcta": "Linfocele",
+      "explicacion": "Linfocele: colección de líquido linfático en lecho del injerto.\n- Aparece típicamente 2-6 SEMANAS post-TR (más tardío que hematoma)\n- Frecuencia: 5-20% post-TR\n- Causa: linfangitis pélvica disecada durante cx no ligada adecuadamente\n- Asintomático en mayoría (descubrimiento incidental en USG)\n- Si grande: comprime uréter (hidronefrosis, ↑Cr), edema MI por compresión venosa\n\nTratamiento:\n- Asintomático y pequeño: observación\n- Sintomático o >5 cm con compresión: drenaje (percutáneo + escleroterapia con etanol/povidona, o quirúrgico)\n- Marsupialización intraperitoneal laparoscópica es definitivo\n\nDDx:\n- Hematoma: primeras 24-48h, dolor, anemia\n- Urinoma: ↑Cr en líquido (descomprima → relación Cr líquido/Cr sérica >1.5)\n- Absceso: fiebre, leucocitosis, dolor\n- Pseudoaneurisma: USG Doppler con flujo turbulento",
+      "referencia": "Atray NK et al. Post-transplant lymphocele: a single centre experience. Clin Transplant 2014"
+    },
+    {
+      "id": "q14",
+      "categoria": "Recurrencia",
+      "pregunta": "¿Cuál de las siguientes glomerulopatías tiene MAYOR riesgo de recurrencia post-TR (>30%)?",
+      "opciones": ["Nefropatía membranosa primaria", "FSGS primaria con progresión rápida a diálisis", "Nefropatía IgA", "Lupus en remisión >1 año", "Microangiopatía trombótica atípica (aHUS sin tratamiento eculizumab)"],
+      "correcta": "Microangiopatía trombótica atípica (aHUS sin tratamiento eculizumab)",
+      "explicacion": "Riesgo de recurrencia (sin profilaxis específica):\n- aHUS por mutaciones de complemento (CFH, CFI, MCP, C3, factor B): 50-100% sin eculizumab. CON eculizumab profiláctico: <5%\n- FSGS primaria con progresión rápida (<3 años a diálisis): 30-50%\n- Nefropatía membranosa primaria (anti-PLA2R+): 30-40%\n- Glomerulonefritis C3 (C3GN/DDD): 50-70%, evolución variable\n- IgA: 30-50% por histología, pero clínicamente significativa solo en 10-20%\n- MPGN tipo I (postinfecciosa): <20%\n- Lupus en remisión: <10% si serología negativa al TR\n- ANCA vasculitis en remisión: <10%\n\nLas glomerulopatías mediadas por complemento (aHUS, C3GN, DDD) tienen las tasas más altas. Profilaxis con eculizumab pre-TR ha revolucionado el aHUS.",
+      "referencia": "Goodship THJ et al. Atypical hemolytic uremic syndrome and C3 glomerulopathy: conclusions from a KDIGO Controversies Conference. Kidney Int 2017"
+    },
+    {
+      "id": "q15",
+      "categoria": "Vacunación",
+      "pregunta": "Receptor de TR año 1, asintomático, completó esquema básico de vacunación pre-TR. Acude para vacunarse. ¿Cuál NO debería recibir post-TR?",
+      "opciones": ["Influenza inactivada anual", "Neumocócica conjugada PCV13", "Vacuna contra herpes zóster recombinante (Shingrix)", "MMR (Sarampión-Paperas-Rubéola)", "Hepatitis B refuerzo"],
+      "correcta": "MMR (Sarampión-Paperas-Rubéola)",
+      "explicacion": "Vacunas en TR — REGLA DE ORO: VACUNAS VIVAS ATENUADAS están CONTRAINDICADAS post-TR.\n\nVACUNAS VIVAS (NO POST-TR):\n- MMR (Sarampión, paperas, rubéola)\n- Varicela\n- Zoster vivo (Zostavax) — pero Shingrix es RECOMBINANTE, sí permitido\n- BCG\n- Fiebre amarilla\n- Polio oral (Sabin)\n- Rotavirus\n- Influenza intranasal (FluMist)\n- Tifoidea oral\n\nVACUNAS PERMITIDAS POST-TR:\n- Influenza inactivada anual (IM) — TODA temporada\n- Neumocócica PCV13 + PPSV23 (≥8 sem entre ambas)\n- Hepatitis B (refuerzos para anti-HBs >10)\n- Hepatitis A si viajero o factores riesgo\n- Tétanos-difteria-pertusis (Tdap)\n- VPH si elegible\n- Shingrix (recombinante, segura post-TR)\n- COVID-19 mRNA/protein (segura post-TR)\n- Meningocócica si esplenectomía o complemento alterado\n\nVacunas vivas deben darse PRE-TR (idealmente ≥4 semanas antes). Si por error se administra post-TR: vigilancia clínica, en ocasiones tratamiento antiviral según vacuna.",
+      "referencia": "Danziger-Isakov L et al. Vaccination in solid organ transplantation. Am J Transplant 2019"
+    },
+    {
+      "id": "q16",
+      "categoria": "Donador vivo",
+      "pregunta": "Donador vivo potencial de 45 años con TFG estimada 88 mL/min/1.73m², HTA controlada con un antihipertensivo, sin proteinuria. ¿Es candidato?",
+      "opciones": ["No, HTA descarta", "No, TFG <90 descarta", "Sí, pero con monitoreo más estrecho post-donación", "No, edad >40 con HTA descarta", "Sí, sin restricciones"],
+      "correcta": "Sí, pero con monitoreo más estrecho post-donación",
+      "explicacion": "Criterios actualizados (KDIGO 2017 Donador Vivo + OPTN guidelines):\n\nTFG aceptable: ≥90 mL/min/1.73m² es ideal, pero rangos de 80-90 pueden considerarse según edad (la TFG declina ~1 mL/min/año después de 40). Una TFG de 88 es ACEPTABLE para 45 años. Lo importante es la TFG ESPERADA POST-DONACIÓN >40-45 mL/min en proyección de 10 años.\n\nHTA controlada NO es contraindicación absoluta:\n- Aceptable si: 1 medicamento, sin daño a órgano blanco, sin albuminuria, sin enfermedad CV avanzada\n- Contraindicada si: HTA refractaria (>3 medicamentos), HTA secundaria no resuelta, daño en órgano blanco\n\nMonitoreo post-donación:\n- Anual de por vida\n- TA, función renal, proteinuria\n- Educar sobre AINEs, hidratación, estilo de vida\n\nContraindicaciones absolutas para donación:\n- ERC, proteinuria significativa, hematuria glomerular\n- Diabetes mellitus (relativa según consenso reciente)\n- HTA refractaria o complicada\n- Cardiopatía CV avanzada\n- Cáncer activo o reciente (algunas excepciones)\n- Embarazo\n- BMI >35 (relativa)\n- Trombofilia activa",
+      "referencia": "Lentine KL et al. KDIGO Clinical Practice Guideline on the Evaluation and Care of Living Kidney Donors. Transplantation 2017"
+    },
+    {
+      "id": "q17",
+      "categoria": "ABO incompatibilidad",
+      "pregunta": "¿Cuál NO es parte del protocolo de desensibilización para TR ABO-incompatible?",
+      "opciones": ["Rituximab 375 mg/m² × 1-2 dosis pre-TR", "Plasmaféresis o inmunoadsorción específica anti-A/B", "IVIG en dosis moderada", "Eculizumab profiláctico", "Esplenectomía"],
+      "correcta": "Esplenectomía",
+      "explicacion": "Protocolo ABO-incompatible MODERNO ya NO incluye esplenectomía (era común en los 80s).\n\nPROTOCOLO ACTUAL:\n1. Rituximab 375 mg/m² × 1-2 dosis pre-TR (depleta células B productoras de Ac anti-A/B)\n2. Plasmaféresis o inmunoadsorción específica para reducir títulos anti-A/B a <1:8 al momento de TR\n3. IVIG post-cada sesión TPE (repleta inmunoglobulinas)\n4. IS de inducción: basiliximab (algunos centros) o timoglobulina\n5. IS mantenimiento: Tac + MMF + prednisona (a veces dosis altas)\n6. NO se da eculizumab profiláctico de rutina (solo en casos específicos)\n7. Monitoreo postoperatorio de títulos anti-A/B\n\nResultados actuales: supervivencia del injerto a 5 años comparable a ABO-compatible (>80%). Riesgo aumentado de rechazo humoral durante primeras 2 semanas (período sensible) y de infecciones.\n\nEsplenectomía se evita por morbilidad asociada y mejor entendimiento del papel de complemento y rituximab.",
+      "referencia": "Tanabe K et al. ABO-incompatible kidney transplantation: long-term outcomes. Clin Transplant 2014"
+    },
+    {
+      "id": "q18",
+      "categoria": "Cardiovascular",
+      "pregunta": "Paciente TR en Tac+MMF+pred con LDL 130 mg/dL. ¿Qué estatina es PRIMERA ELECCIÓN?",
+      "opciones": ["Simvastatina 40 mg", "Atorvastatina 20 mg", "Rosuvastatina 10 mg", "Pravastatina 40 mg", "Fluvastatina 80 mg"],
+      "correcta": "Pravastatina 40 mg",
+      "explicacion": "Estatinas y CNI (Tac/CsA) — INTERACCIÓN IMPORTANTE:\n\nLa mayoría de estatinas se metabolizan vía CYP3A4 (igual que Tac/CsA). CNI INHIBEN CYP3A4, aumentando niveles de estatinas → riesgo de MIOPATÍA y rabdomiólisis.\n\nESTATINAS SEGURAS en TR (sin interacción mayor con CYP3A4):\n- Pravastatina (metabolismo no CYP3A4) — PRIMERA OPCIÓN\n- Fluvastatina (metabolismo CYP2C9, no CYP3A4)\n- Rosuvastatina (metabolismo mínimo CYP, pero precaución con CsA — aumenta niveles 7x; Tac menos interacción)\n\nESTATINAS PROBLEMÁTICAS:\n- Simvastatina + Tac/CsA: niveles aumentan 8-20x — EVITAR\n- Atorvastatina + Tac/CsA: aumenta 3-7x — usar dosis bajas (10-20 mg máx)\n- Lovastatina: evitar\n\nMonitoreo: CPK basal y a las 4-6 semanas, después si síntomas musculares. Ezetimiba puede combinarse con dosis bajas de estatina si necesario.\n\nKDIGO 2014 Lipid recomienda iniciar estatina en TODOS los TR adultos, independiente de LDL.",
+      "referencia": "KDIGO Clinical Practice Guideline for Lipid Management in CKD. Kidney Int Suppl 2013"
+    },
+    {
+      "id": "q19",
+      "categoria": "Antibióticos post-TR",
+      "pregunta": "Paciente TR con IVU recurrente (3 episodios en 6 meses) por E. coli sensible a fluoroquinolonas. Después de la 3ª recurrencia, ¿conducta?",
+      "opciones": ["Iniciar profilaxis con ciprofloxacino diario", "Iniciar profilaxis con TMP-SMX (si no la tiene)", "Evaluación urológica con USG renal y cistoureterografía", "Aumentar inmunosupresión", "Aumentar volumen urinario solamente"],
+      "correcta": "Evaluación urológica con USG renal y cistoureterografía",
+      "explicacion": "IVU RECURRENTE en TR (≥3 en 1 año o ≥2 en 6 meses) requiere INVESTIGACIÓN URÓLOGICA antes de profilaxis.\n\nEvaluación:\n1. USG renal y vesical: dilatación, cálculos, residuo urinario post-miccional, estenosis ureteral\n2. Cistouretrografía: descartar reflujo vesicoureteral al injerto, divertículos, vejiga neurogénica\n3. Cistoscopia: cuerpos extraños (suturas migradas, tornillos de stent), estenosis, cáncer\n4. Urodinamia: si sospecha vejiga neurogénica (frecuente en pacientes con DM o ERC larga)\n5. Cultivos: confirmar erradicación entre episodios, descartar persistencia\n\nCausas estructurales frecuentes en TR:\n- Reflujo al injerto (anastomosis ureterovesical defectuosa)\n- Estenosis ureteral del injerto\n- Cálculos en injerto\n- Vejiga neurogénica (DM)\n- Residuo postmiccional aumentado\n- Estasis de orina\n\nPROFILAXIS antibiótica solo después de descartar causa estructural corregible. Opciones:\n- TMP-SMX (si no tiene profilaxis PJP ya)\n- Nitrofurantoína 100 mg/día (precaución TFG <30)\n- Profilaxis postcoital, postsupresión, etc.\n\nNO aumentar IS — no resuelve el problema y aumenta riesgo.",
+      "referencia": "Coussement J et al. Antibiotics for asymptomatic bacteriuria in kidney transplant recipients. Cochrane 2018"
+    },
+    {
+      "id": "q20",
+      "categoria": "Calculadora KDPI",
+      "pregunta": "Donador fallecido: 62 años, raza no afroamericana, talla 170 cm, peso 75 kg, HTA tratada 15 años, Cr terminal 1.4 mg/dL, sin DM, sin DCD, no muerte por ACV, sin VHC. Su KDPI estimado es:",
+      "opciones": ["<35% (kidney óptimo)", "35-65% (kidney aceptable)", "66-85% (kidney marginal)", ">85% (KDPI alto, ECD)", "No calculable con estos datos"],
+      "correcta": "66-85% (kidney marginal)",
+      "explicacion": "KDPI (Kidney Donor Profile Index) — escala 0-100% donde MENOR es MEJOR.\n\nVariables que considera:\n- Edad (mayor edad → mayor KDPI)\n- Talla y peso\n- Raza (afroamericano aumenta KDPI ~10-15%)\n- HTA y años\n- Diabetes Mellitus\n- Causa muerte (ACV aumenta)\n- Cr al deceso\n- VHC (aumenta significativamente)\n- DCD (donor after circulatory death, aumenta)\n\nEn este caso:\n- Edad 62 (significativo, +)\n- HTA 15 años (significativo, +)\n- Cr 1.4 (moderado, +)\n- No DM, no VHC, no ACV, no DCD (neutros o favorables)\n\nKDPI estimado: ~70-80% (marginal/borderline ECD)\n\nINTERPRETACIÓN:\n- KDPI 0-20%: óptimo, mejor pronóstico\n- KDPI 21-85%: aceptable, rango normal\n- KDPI >85%: ECD (Extended Criteria Donor), aumento de riesgo DGF, NPF, pérdida temprana\n\nDEL LADO DEL RECEPTOR: el EPTS (Estimated Post-Transplant Survival) ayuda a hacer match: KDPI bajo → receptor con EPTS bajo (mejor expectativa de vida); KDPI alto → considerar para receptor mayor o con menor expectativa.",
+      "referencia": "Rao PS et al. A comprehensive risk quantification score for deceased donor kidneys: the kidney donor risk index. Transplantation 2009"
+    },
+    {
+      "id": "q21",
+      "categoria": "Función retardada del injerto",
+      "pregunta": "¿Cuál de los siguientes NO es factor de riesgo para DGF (Función Retardada del Injerto)?",
+      "opciones": ["DCD (Donor after Circulatory Death)", "Isquemia fría >24 horas", "Donador con BMI >30", "Donador joven (<20 años)", "KDPI alto"],
+      "correcta": "Donador joven (<20 años)",
+      "explicacion": "DGF: necesidad de ≥1 sesión de TRR en la primera semana post-TR. Incidencia: 20-40% en donadores fallecidos, <5% en vivos.\n\nFACTORES DE RIESGO PARA DGF (donador):\n- DCD (después de paro circulatorio): 50%+ DGF (vs 20-25% DBD)\n- Edad avanzada del donador (>50 años)\n- HTA, DM en donador\n- KDPI alto\n- Causa de muerte: ACV (especialmente hemorrágico)\n- Isquemia fría prolongada (>18-24h)\n- Cr terminal elevada en donador\n- Hipotensión/inestabilidad pre-extracción\n- Dosis de catecolaminas elevadas\n- BMI elevado del donador\n\nFACTORES DE RIESGO (receptor):\n- Edad avanzada\n- Diabetes\n- Tiempo en diálisis prolongado\n- PRA elevado\n- Trasplante previo\n- IMC alto\n\nDonadores JÓVENES (<35 años) tienen MENOR riesgo de DGF — sus riñones son más resistentes a injury isquémico.\n\nCONSECUENCIAS DGF:\n- Mayor riesgo de rechazo agudo (1.5-2x)\n- Mayor estadía hospitalaria\n- Mayor costo\n- Pérdida del injerto en 1er año: 8% vs 3% sin DGF\n- Supervivencia a largo plazo modestamente reducida\n\nDDx con NO función primaria: si DGF >2-3 semanas sin recuperación, considerar PNF, biopsiar.",
+      "referencia": "Yarlagadda SG et al. Delayed graft function in kidney transplantation. Clin J Am Soc Nephrol 2008"
+    },
+    {
+      "id": "q22",
+      "categoria": "Cáncer post-TR",
+      "pregunta": "Riesgo de cáncer post-TR está aumentado para todos los siguientes EXCEPTO:",
+      "opciones": ["Sarcoma de Kaposi", "Cáncer de piel no melanoma (escamoso, basocelular)", "PTLD (Post-transplant lymphoproliferative disorder)", "Cáncer de mama", "Cáncer cervical"],
+      "correcta": "Cáncer de mama",
+      "explicacion": "Riesgo aumentado de cáncer post-TR (vs población general):\n\nMUY AUMENTADO (>3-100x):\n- Cáncer de piel NO melanoma (escamoso 65x, basocelular 10x — RELACIÓN CON HPV cutáneo y sol)\n- Sarcoma de Kaposi (200x, HHV-8)\n- PTLD/linfomas (EBV-asociado, 7-10x)\n- Cáncer anogenital (HPV-asociado, 10-100x)\n- Cáncer cervical, vulvar, peneano, anal\n- Carcinoma de Merkel (poliomavirus)\n- Hepatocarcinoma (si VHB/VHC)\n- Tiroides, riñón nativo\n\nMODESTAMENTE AUMENTADO (2-5x):\n- Pulmón\n- Riñón nativo\n- Tiroides\n- Cabeza y cuello\n\nNO AUMENTADO O CONTROVERSIAL:\n- Cáncer de mama (similar a población general)\n- Cáncer de próstata\n- Cáncer de ovario\n\nMECANISMOS:\n- Inmunosupresión crónica → reducción de vigilancia inmunológica\n- Reactivación viral (HPV, EBV, HHV-8, BK, Merkel polyomavirus)\n- Efecto directo de algunos IS (CsA pro-oncogénica, MMF inmunomodulador)\n- mTOR inhibitors son ANTI-tumorales (paradójicamente reducen cáncer de piel y Kaposi)\n\nSCREENING POST-TR:\n- Dermatología anual (toda la vida)\n- Mamografía estándar (no más frecuente)\n- Cervical (Papanicolaou anual primer 3 años, luego según guidelines)\n- Colonoscopia: 50 años o según riesgo\n- USG renal de riñones nativos (cáncer células renales nativo)",
+      "referencia": "Engels EA et al. Spectrum of cancer risk among US solid organ transplant recipients. JAMA 2011"
+    },
+    {
+      "id": "q23",
+      "categoria": "Hueso post-TR",
+      "pregunta": "Paciente post-TR año 3 con osteoporosis (T-score columna -2.5). Está en Tac+MMF+pred 5 mg/día. PTH 350 pg/mL, Ca 9.8, P 2.8, 25OH-vit D 18 ng/mL. ¿Mejor tratamiento?",
+      "opciones": ["Bisfosfonatos IV (ácido zoledrónico)", "Calcio + vitamina D + cinacalcet", "Denosumab cada 6 meses", "Vitamina D 50,000 UI semanal + calcio + bisfosfonato oral", "Paratiroidectomía"],
+      "correcta": "Vitamina D 50,000 UI semanal + calcio + bisfosfonato oral",
+      "explicacion": "Enfermedad ósea post-TR es compleja. Patrones:\n1. Osteoporosis (pérdida rápida primer año por esteroides)\n2. Hiperparatiroidismo persistente (de ERC, requiere tiempo para corregirse)\n3. Osteomalacia (deficiencia vit D, hipofosfatemia post-TR)\n4. Adynamic bone disease (raro)\n\nMANEJO ESCALONADO:\n1. FUNDAMENTAL: corregir deficiencia de vitamina D 25-OH (objetivo >30 ng/mL)\n   - Colecalciferol 50,000 UI semanal × 8 semanas, luego 2,000 UI/día\n2. Calcio elemental 1,000-1,200 mg/día (si bajo en dieta)\n3. Reducir esteroides al mínimo (<5 mg/día ideal)\n4. Si hiperPTH persistente con PTH >300 pese a vit D normal:\n   - Cinacalcet (calcimimético) — pero CONTROVERSIAL post-TR (puede aumentar Ca riñón)\n   - Paratiroidectomía si refractario\n5. BISFOSFONATOS:\n   - Indicados si T-score <-2.0 o fractura\n   - Oral (alendronato 70 mg/semana, risedronato) — primera línea si TFG >35\n   - IV (ácido zoledrónico) — eficaz pero precaución TFG <35 y nefrotoxicidad aguda\n6. Denosumab (anti-RANKL):\n   - Alternativa si bisfosfonatos contraindicados (TFG baja)\n   - No nefrotóxico\n   - PRECAUCIÓN: hipocalcemia severa si vit D no suplementada (chequear antes)\n   - Efecto rebote al suspender (continuar indefinidamente)\n\nEn este caso, lo PRIMERO es corregir vit D, suplementar calcio y agregar bisfosfonato oral.",
+      "referencia": "KDIGO Clinical Practice Guideline for Bone in CKD-MBD. Kidney Int Suppl 2009/2017 update"
+    },
+    {
+      "id": "q24",
+      "categoria": "Anestesia y peri-operatorio",
+      "pregunta": "Durante cirugía de TR, la presión arterial sistólica del receptor es de 100 mmHg. ¿Cuál es la conducta más importante para optimizar perfusión del injerto al destornillar?",
+      "opciones": ["Mantener PVC >12 mmHg", "TA media >85 mmHg al desclampar", "Hiperhidratar con 5 L cristaloides", "Albúmina 20% 100 mL pre-desclampar", "Norepinefrina infusión a dosis bajas"],
+      "correcta": "TA media >85 mmHg al desclampar",
+      "explicacion": "OPTIMIZACIÓN HEMODINÁMICA al desclampar la arteria renal es CRUCIAL para función inmediata del injerto:\n\nOBJETIVOS:\n- TA media >85-95 mmHg al momento del desclampaje\n- PVC ~10-12 mmHg (no muy bajo, hipovolemia → AKI; no muy alto, congestión)\n- Mantener gasto cardíaco adecuado\n- Hb >9-10 g/dL\n\nESTRATEGIAS:\n- Fluido: cristaloides según pérdidas + ~10-20 mL/kg en pre-desclampaje\n- Albúmina 5% si hipoalbuminemia severa\n- VASOPRESORES: NORADRENALINA en dosis bajas si TA media <80 a pesar de fluido\n  - Mito antiguo decía que vasopresores 'apretaban arteria renal' — HOY SABEMOS que mantener perfusión es mejor que hipotensión\n  - Dopamina renal: NO recomendada (DESCARTADA por estudios, no mejora pronóstico)\n- Manitol 0.5 g/kg IV (algunos centros, evidencia controvertida)\n- Furosemide 250 mg IV pre-desclampaje (en algunos centros para diuresis temprana)\n\nMECANISMO: la presión de perfusión adecuada al desclampaje permite:\n1. Buena distribución de flujo en microvasculatura del injerto\n2. Menor daño endotelial isquémico-reperfusión\n3. Mejor recuperación tubular\n\nKDIGO recomienda evitar TANTO la hipotensión COMO la sobrecarga hídrica (que puede causar edema pulmonar y empeoramiento de DGF).",
+      "referencia": "Aulakh NK et al. Influence of hemodynamics and intraoperative hydration on biochemical outcome of renal transplant recipients. J Anaesthesiol Clin Pharmacol 2015"
+    },
+    {
+      "id": "q25",
+      "categoria": "PTLD",
+      "pregunta": "Paciente TR año 2, EBV+, presenta adenopatías cervicales múltiples, fiebre 38.5°C, fatiga. PCR EBV plasma 50,000 copias/mL. Más probable:",
+      "opciones": ["Mononucleosis infecciosa recurrente", "PTLD (Post-transplant lymphoproliferative disorder)", "Linfoma no Hodgkin no relacionado a TR", "Tuberculosis ganglionar", "Reacción a IS"],
+      "correcta": "PTLD (Post-transplant lymphoproliferative disorder)",
+      "explicacion": "PTLD: trastorno linfoproliferativo asociado a TR, casi siempre vinculado a EBV (>90% en niños, ~50% en adultos).\n\nCATEGORÍAS (clasificación WHO):\n1. Lesiones tempranas (hiperplasia plasmacítica, mononucleosis-like) — reversibles\n2. PTLD POLIMORFA — heterogénea, variable malignidad\n3. PTLD MONOMORFA — equivalente a linfoma (DLBCL, Burkitt, etc.)\n4. Linfoma Hodgkin-like PTLD\n\nFACTORES DE RIESGO:\n- Discrepancia EBV D+/R- (riesgo 10-50x, especialmente pediátricos)\n- Inmunosupresión INTENSA (timoglobulina, alemtuzumab, OKT3)\n- Tac más asociado que CsA\n- Cierto polimorfismos HLA\n- Tiempo post-TR (puede ocurrir desde meses hasta años)\n\nPRESENTACIÓN:\n- Adenopatías (cervicales, mediastinales, abdominales)\n- Síntomas B (fiebre, sudoración nocturna, pérdida de peso)\n- Compromiso extranodal (intestino, SNC, pulmón, renal del injerto)\n- Síndrome mononucleosis-like\n- Pancitopenia\n\nDIAGNÓSTICO:\n- PCR EBV elevado en plasma (>10,000 copias/mL es sugerente)\n- BIOPSIA es gold standard (clasificación WHO + EBER stain)\n- TAC/PET total body para staging\n- LDH elevado\n\nMANEJO:\n1. REDUCCIÓN DE IS (primera medida) — algunas lesiones tempranas resuelven solo con esto\n2. RITUXIMAB monoterapia (anti-CD20, para tumores CD20+)\n3. QUIMIO + rituximab (CHOP-R, R-CHOP) si no responde a 1+2 o monomorfa agresiva\n4. Radioterapia local si masa específica\n5. Terapia celular EBV-específica (en centros especializados, casos refractarios)\n6. Monitoreo EBV PCR mensual post-TR en alto riesgo (D+/R-)\n\nPRONÓSTICO: depende de tipo histológico, response a RIS, edad. Mortalidad puede llegar a 50% en casos avanzados.",
+      "referencia": "Dierickx D, Habermann TM. Post-Transplantation Lymphoproliferative Disorders. NEJM 2018;378:549-562"
+    }
+  ]
+}
