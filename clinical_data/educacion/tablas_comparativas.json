@@ -1,132 +1,984 @@
 {
   "_meta": {
     "tema": "Tablas comparativas — Diferencial en Trasplante Renal",
-    "fecha_revision": "2026-05-24"
+    "fecha_revision": "2026-05-24",
+    "version": "2.0 - Expansión avanzada"
   },
   "tablas": [
     {
       "id": "tabla_rechazo_celular_vs_humoral",
       "titulo": "Rechazo Agudo Celular (TCMR) vs Mediado por Anticuerpos (AMR)",
-      "columnas": ["Característica", "TCMR (Celular)", "AMR (Humoral)"],
+      "columnas": [
+        "Característica",
+        "TCMR (Celular)",
+        "AMR (Humoral)"
+      ],
       "filas": [
-        ["Mediadores principales", "Linfocitos T CD4+/CD8+", "Anticuerpos DSA + complemento"],
-        ["Tiempo típico", "Cualquier momento (peak 1-3 meses)", "Temprano (DSA preformados) o tardío (DSA de novo, año 1-2+)"],
-        ["Factores riesgo", "Mismatch HLA, infraIS, infección viral", "DSA preformados, no adherencia, mismatch DR/DQ"],
-        ["Tubulitis", "Sí (i+t lesiones)", "Mínima"],
-        ["Arteritis intimal (v)", "Posible en categorías II-III", "Rara"],
-        ["Glomerulitis (g)", "No", "Sí (marca distintiva)"],
-        ["Capilaritis peritubular (ptc)", "No", "Sí"],
-        ["C4d en CPT", "Negativo", "Frecuentemente positivo (no obligatorio Banff 2017+)"],
-        ["DSA detectables", "No requeridos", "REQUERIDOS para diagnóstico"],
-        ["Función al diagnóstico", "Cr en ascenso, generalmente sin proteinuria nueva", "Cr ascenso + proteinuria frecuente"],
-        ["Respuesta a esteroides", "Buena (80-90% en Banff I)", "Mínima"],
-        ["Tratamiento primario", "Bolos MP 500 mg × 3", "Plasmaféresis + IVIG + Rituximab"],
-        ["Bolos MP solos suficientes", "Sí en Banff IA, IB", "NUNCA"],
-        ["ATG indicado", "Banff IIA-III o refractario", "Casos refractarios"],
-        ["Pronóstico", "Bueno con tratamiento (80%+ recuperación)", "Más reservado (50% recuperan completamente)"],
-        ["Riesgo de pérdida tardía", "Bajo si responde", "ALTO (AMR crónico es principal causa pérdida tardía)"]
+        [
+          "Mediadores principales",
+          "Linfocitos T CD4+/CD8+",
+          "Anticuerpos DSA + complemento"
+        ],
+        [
+          "Tiempo típico",
+          "Cualquier momento (peak 1-3 meses)",
+          "Temprano (DSA preformados) o tardío (DSA de novo, año 1-2+)"
+        ],
+        [
+          "Factores riesgo",
+          "Mismatch HLA, infraIS, infección viral",
+          "DSA preformados, no adherencia, mismatch DR/DQ"
+        ],
+        [
+          "Tubulitis",
+          "Sí (i+t lesiones)",
+          "Mínima"
+        ],
+        [
+          "Arteritis intimal (v)",
+          "Posible en categorías II-III",
+          "Rara"
+        ],
+        [
+          "Glomerulitis (g)",
+          "No",
+          "Sí (marca distintiva)"
+        ],
+        [
+          "Capilaritis peritubular (ptc)",
+          "No",
+          "Sí"
+        ],
+        [
+          "C4d en CPT",
+          "Negativo",
+          "Frecuentemente positivo (no obligatorio Banff 2017+)"
+        ],
+        [
+          "DSA detectables",
+          "No requeridos",
+          "REQUERIDOS para diagnóstico"
+        ],
+        [
+          "Función al diagnóstico",
+          "Cr en ascenso, generalmente sin proteinuria nueva",
+          "Cr ascenso + proteinuria frecuente"
+        ],
+        [
+          "Respuesta a esteroides",
+          "Buena (80-90% en Banff I)",
+          "Mínima"
+        ],
+        [
+          "Tratamiento primario",
+          "Bolos MP 500 mg × 3",
+          "Plasmaféresis + IVIG + Rituximab"
+        ],
+        [
+          "Bolos MP solos suficientes",
+          "Sí en Banff IA, IB",
+          "NUNCA"
+        ],
+        [
+          "ATG indicado",
+          "Banff IIA-III o refractario",
+          "Casos refractarios"
+        ],
+        [
+          "Pronóstico",
+          "Bueno con tratamiento (80%+ recuperación)",
+          "Más reservado (50% recuperan completamente)"
+        ],
+        [
+          "Riesgo de pérdida tardía",
+          "Bajo si responde",
+          "ALTO (AMR crónico es principal causa pérdida tardía)"
+        ]
       ]
     },
     {
       "id": "tabla_cmv_vs_bk",
       "titulo": "Enfermedad CMV vs Nefropatía BK",
-      "columnas": ["Característica", "CMV", "BK virus"],
+      "columnas": [
+        "Característica",
+        "CMV",
+        "BK virus"
+      ],
       "filas": [
-        ["Tipo de virus", "β-herpesvirus (HHV-5), DNA envuelto", "Polyomavirus, DNA no envuelto pequeño"],
-        ["Reservorio latente", "Monocitos/macrófagos", "Epitelio urotelial"],
-        ["Tiempo típico", "1-6 meses post-TR (mayoría)", "3-12 meses post-TR (peak ~6m)"],
-        ["Síntomas sistémicos", "Fiebre, fatiga, mialgia frecuentes", "Asintomático (mayoría)"],
-        ["Afectación GI", "Sí (colitis, esofagitis)", "No"],
-        ["Afectación pulmonar", "Sí (neumonitis)", "No"],
-        ["Citopenias", "Sí (leucopenia, trombocitopenia)", "Raras"],
-        ["Afecta función renal", "A veces (hepatitis CMV indirecta)", "SÍ — daño tubular directo"],
-        ["Diagnóstico", "PCR plasma + síntomas/biopsia", "PCR plasma + biopsia (SV40+)"],
-        ["Histología", "'Ojo de búho' (inclusiones intranucleares)", "Inclusiones intranucleares + SV40+"],
-        ["Tratamiento principal", "Valganciclovir / ganciclovir IV", "REDUCIR INMUNOSUPRESIÓN"],
-        ["Antiviral efectivo", "Sí (ganciclovir, foscarnet, maribavir)", "Limitado (cidofovir nefrotóxico)"],
-        ["Profilaxis efectiva", "Sí (valganciclovir según D/R)", "No existe efectiva — screening es la clave"],
-        ["Riesgo pérdida injerto", "Bajo si tratamiento oportuno", "30-60% si nefropatía no controlada"],
-        ["Reducir IS", "Sí (especialmente MMF)", "PILAR del manejo"]
+        [
+          "Tipo de virus",
+          "β-herpesvirus (HHV-5), DNA envuelto",
+          "Polyomavirus, DNA no envuelto pequeño"
+        ],
+        [
+          "Reservorio latente",
+          "Monocitos/macrófagos",
+          "Epitelio urotelial"
+        ],
+        [
+          "Tiempo típico",
+          "1-6 meses post-TR (mayoría)",
+          "3-12 meses post-TR (peak ~6m)"
+        ],
+        [
+          "Síntomas sistémicos",
+          "Fiebre, fatiga, mialgia frecuentes",
+          "Asintomático (mayoría)"
+        ],
+        [
+          "Afectación GI",
+          "Sí (colitis, esofagitis)",
+          "No"
+        ],
+        [
+          "Afectación pulmonar",
+          "Sí (neumonitis)",
+          "No"
+        ],
+        [
+          "Citopenias",
+          "Sí (leucopenia, trombocitopenia)",
+          "Raras"
+        ],
+        [
+          "Afecta función renal",
+          "A veces (hepatitis CMV indirecta)",
+          "SÍ — daño tubular directo"
+        ],
+        [
+          "Diagnóstico",
+          "PCR plasma + síntomas/biopsia",
+          "PCR plasma + biopsia (SV40+)"
+        ],
+        [
+          "Histología",
+          "'Ojo de búho' (inclusiones intranucleares)",
+          "Inclusiones intranucleares + SV40+"
+        ],
+        [
+          "Tratamiento principal",
+          "Valganciclovir / ganciclovir IV",
+          "REDUCIR INMUNOSUPRESIÓN"
+        ],
+        [
+          "Antiviral efectivo",
+          "Sí (ganciclovir, foscarnet, maribavir)",
+          "Limitado (cidofovir nefrotóxico)"
+        ],
+        [
+          "Profilaxis efectiva",
+          "Sí (valganciclovir según D/R)",
+          "No existe efectiva — screening es la clave"
+        ],
+        [
+          "Riesgo pérdida injerto",
+          "Bajo si tratamiento oportuno",
+          "30-60% si nefropatía no controlada"
+        ],
+        [
+          "Reducir IS",
+          "Sí (especialmente MMF)",
+          "PILAR del manejo"
+        ]
       ]
     },
     {
       "id": "tabla_nodat_vs_dm_previa",
       "titulo": "NODAT vs DM Previa al Trasplante",
-      "columnas": ["Característica", "NODAT", "DM previa al TR"],
+      "columnas": [
+        "Característica",
+        "NODAT",
+        "DM previa al TR"
+      ],
       "filas": [
-        ["Diagnóstico previo", "HbA1c <6.5% pre-TR", "DM ya conocida o HbA1c >6.5%"],
-        ["Tiempo de aparición", "Generalmente primeros 3-6 meses post-TR", "Persiste desde antes"],
-        ["Fisiopatología principal", "Disfunción de células β por Tac + resistencia por esteroides", "DM1: autoinmune; DM2: resistencia + déficit β"],
-        ["Tac vs CsA", "Tac es 2x más diabetogénico — considerar cambio a CsA si severo", "Mismo efecto pero menos relevante (ya tiene DM)"],
-        ["Esteroides", "Causa principal modificable — minimizar", "Empeoran control pero no son la causa"],
-        ["BMI alto", "Factor de riesgo", "Frecuentemente coexiste"],
-        ["Edad", ">40-50 años aumenta riesgo", "Cualquier edad según tipo"],
-        ["Manejo inicial", "Dieta + ejercicio + metformina si HbA1c >7%", "Continuar régimen previo, ajustar por TFG"],
-        ["iSGLT2 segura", "Sí (EMPA-KIDNEY, DAPA-CKD)", "Sí, mismo perfil"],
-        ["DPP-4 (linagliptina)", "Sí, segura, no requiere ajuste TFG", "Sí"],
-        ["Sulfonilureas", "Evitar (hipoglucemia, ganancia peso)", "Evitar"],
-        ["Pioglitazona", "Evitar (retención hídrica)", "Evitar"],
-        ["Insulina", "Si no responde a orales", "Frecuente uso"],
-        ["Pronóstico", "Manejable si se interviene temprano; pérdida del control si tardía", "Variable según control"],
-        ["Mortalidad CV", "Aumentada (3x población general)", "Aumentada (similar)"]
+        [
+          "Diagnóstico previo",
+          "HbA1c <6.5% pre-TR",
+          "DM ya conocida o HbA1c >6.5%"
+        ],
+        [
+          "Tiempo de aparición",
+          "Generalmente primeros 3-6 meses post-TR",
+          "Persiste desde antes"
+        ],
+        [
+          "Fisiopatología principal",
+          "Disfunción de células β por Tac + resistencia por esteroides",
+          "DM1: autoinmune; DM2: resistencia + déficit β"
+        ],
+        [
+          "Tac vs CsA",
+          "Tac es 2x más diabetogénico — considerar cambio a CsA si severo",
+          "Mismo efecto pero menos relevante (ya tiene DM)"
+        ],
+        [
+          "Esteroides",
+          "Causa principal modificable — minimizar",
+          "Empeoran control pero no son la causa"
+        ],
+        [
+          "BMI alto",
+          "Factor de riesgo",
+          "Frecuentemente coexiste"
+        ],
+        [
+          "Edad",
+          ">40-50 años aumenta riesgo",
+          "Cualquier edad según tipo"
+        ],
+        [
+          "Manejo inicial",
+          "Dieta + ejercicio + metformina si HbA1c >7%",
+          "Continuar régimen previo, ajustar por TFG"
+        ],
+        [
+          "iSGLT2 segura",
+          "Sí (EMPA-KIDNEY, DAPA-CKD)",
+          "Sí, mismo perfil"
+        ],
+        [
+          "DPP-4 (linagliptina)",
+          "Sí, segura, no requiere ajuste TFG",
+          "Sí"
+        ],
+        [
+          "Sulfonilureas",
+          "Evitar (hipoglucemia, ganancia peso)",
+          "Evitar"
+        ],
+        [
+          "Pioglitazona",
+          "Evitar (retención hídrica)",
+          "Evitar"
+        ],
+        [
+          "Insulina",
+          "Si no responde a orales",
+          "Frecuente uso"
+        ],
+        [
+          "Pronóstico",
+          "Manejable si se interviene temprano; pérdida del control si tardía",
+          "Variable según control"
+        ],
+        [
+          "Mortalidad CV",
+          "Aumentada (3x población general)",
+          "Aumentada (similar)"
+        ]
       ]
     },
     {
       "id": "tabla_fsgs_recurrente_vs_de_novo",
       "titulo": "FSGS Recurrente vs FSGS De Novo Post-TR",
-      "columnas": ["Característica", "FSGS Recurrente", "FSGS De Novo"],
+      "columnas": [
+        "Característica",
+        "FSGS Recurrente",
+        "FSGS De Novo"
+      ],
       "filas": [
-        ["Enfermedad nativa", "FSGS primaria (idiopática)", "Cualquier causa que no sea FSGS primaria"],
-        ["Tiempo de aparición", "Frecuentemente <1 mes post-TR (días-meses)", "Generalmente >1-2 años post-TR"],
-        ["Riesgo", "30-50% si FSGS primaria con progresión rápida", "5-10% en TR de larga evolución"],
-        ["Proteinuria al inicio", "Nefrótica (>3.5 g/día), masiva", "Sub-nefrótica progresiva"],
-        ["Mecanismo", "Factor circulante (suPAR, anti-nephrin, otros)", "Hiperfiltración del injerto único, CNI tóxico, HTA, obesidad"],
-        ["Foot process effacement", "DIFUSO (microscopía electrónica)", "Focal/segmentario"],
-        ["C4d", "Negativo", "Negativo"],
-        ["DSA", "Generalmente negativos", "Generalmente negativos"],
-        ["Tratamiento", "PLASMAFÉRESIS + Rituximab + IECA/ARA II", "IECA/ARA II + control HTA + reducción IS (CNI)"],
-        ["Respuesta a plasmaféresis", "Buena (60-80%)", "No respuesta (no es factor circulante)"],
-        ["Profilaxis pre-TR", "TPE peri-TR si FSGS primaria de alto riesgo", "No aplica"],
-        ["Pronóstico", "Variable — 30% remisión completa, 30% parcial, 30% pérdida del injerto", "Progresiva pero más lenta"],
-        ["Reaparición en re-TR", "Riesgo 50-90% (alto)", "Variable"]
+        [
+          "Enfermedad nativa",
+          "FSGS primaria (idiopática)",
+          "Cualquier causa que no sea FSGS primaria"
+        ],
+        [
+          "Tiempo de aparición",
+          "Frecuentemente <1 mes post-TR (días-meses)",
+          "Generalmente >1-2 años post-TR"
+        ],
+        [
+          "Riesgo",
+          "30-50% si FSGS primaria con progresión rápida",
+          "5-10% en TR de larga evolución"
+        ],
+        [
+          "Proteinuria al inicio",
+          "Nefrótica (>3.5 g/día), masiva",
+          "Sub-nefrótica progresiva"
+        ],
+        [
+          "Mecanismo",
+          "Factor circulante (suPAR, anti-nephrin, otros)",
+          "Hiperfiltración del injerto único, CNI tóxico, HTA, obesidad"
+        ],
+        [
+          "Foot process effacement",
+          "DIFUSO (microscopía electrónica)",
+          "Focal/segmentario"
+        ],
+        [
+          "C4d",
+          "Negativo",
+          "Negativo"
+        ],
+        [
+          "DSA",
+          "Generalmente negativos",
+          "Generalmente negativos"
+        ],
+        [
+          "Tratamiento",
+          "PLASMAFÉRESIS + Rituximab + IECA/ARA II",
+          "IECA/ARA II + control HTA + reducción IS (CNI)"
+        ],
+        [
+          "Respuesta a plasmaféresis",
+          "Buena (60-80%)",
+          "No respuesta (no es factor circulante)"
+        ],
+        [
+          "Profilaxis pre-TR",
+          "TPE peri-TR si FSGS primaria de alto riesgo",
+          "No aplica"
+        ],
+        [
+          "Pronóstico",
+          "Variable — 30% remisión completa, 30% parcial, 30% pérdida del injerto",
+          "Progresiva pero más lenta"
+        ],
+        [
+          "Reaparición en re-TR",
+          "Riesgo 50-90% (alto)",
+          "Variable"
+        ]
       ]
     },
     {
       "id": "tabla_anticoagulacion_crrt",
       "titulo": "Opciones de anticoagulación en CRRT — Citrato vs Heparina vs Ninguna",
-      "columnas": ["Característica", "Citrato regional", "Heparina sistémica", "Sin anticoagulación"],
+      "columnas": [
+        "Característica",
+        "Citrato regional",
+        "Heparina sistémica",
+        "Sin anticoagulación"
+      ],
       "filas": [
-        ["Mecanismo", "Quela Ca²⁺ en circuito → bloquea coagulación", "Inhibe trombina y factor Xa via antitrombina", "Confianza en flow rates altos + hemodilución"],
-        ["Localización del efecto", "REGIONAL (solo circuito)", "Sistémica (paciente + circuito)", "Ninguno"],
-        ["Vida útil del filtro", "Larga (50-80h promedio)", "Media (24-48h)", "Corta (12-24h)"],
-        ["Riesgo de sangrado paciente", "Mínimo (efecto local)", "Significativo (sangrado mayor 10-20%)", "Mínimo"],
-        ["Toxicidad por citrato", "Acumulación si insuficiencia hepática severa → acidosis metabólica + hipocalcemia iónica", "No aplica", "No aplica"],
-        ["Alteraciones del Ca²⁺", "Hipocalcemia iónica (que reponer)", "Sin efecto sobre Ca²⁺", "Sin efecto sobre Ca²⁺"],
-        ["Alteraciones del Na+", "Frecuente hipernatremia (citrato trisódico)", "Sin efecto", "Sin efecto"],
-        ["Alkalosis metabólica", "Sí (citrato se metaboliza a HCO3 en hígado)", "No", "No"],
-        ["Monitoreo necesario", "Ca²⁺ iónico c/6h, gasometría c/6-12h, calcio total", "TTPa cada 4-6h, plaquetas diarias", "Visual (presiones del circuito)"],
-        ["Contraindicación absoluta", "Insuficiencia hepática grave (Child C, MELD >30, lactato >8)", "Sangrado activo, HIT, plaquetas <20-50K", "Estado pro-trombótico, sepsis"],
-        ["Preferencia KDIGO", "Primera opción en mayoría de casos (Grade 2C)", "Segunda opción", "Si contraindicaciones a anticoagulación"],
-        ["Costo / disponibilidad", "Mayor costo, requiere protocolo más complejo", "Bajo costo, ampliamente disponible", "Sin costo adicional"],
-        ["Adecuación de la dosis", "Mantenida (no afectada por filtros que se cierran)", "Variable", "Variable (filtros frecuentes)"]
+        [
+          "Mecanismo",
+          "Quela Ca²⁺ en circuito → bloquea coagulación",
+          "Inhibe trombina y factor Xa via antitrombina",
+          "Confianza en flow rates altos + hemodilución"
+        ],
+        [
+          "Localización del efecto",
+          "REGIONAL (solo circuito)",
+          "Sistémica (paciente + circuito)",
+          "Ninguno"
+        ],
+        [
+          "Vida útil del filtro",
+          "Larga (50-80h promedio)",
+          "Media (24-48h)",
+          "Corta (12-24h)"
+        ],
+        [
+          "Riesgo de sangrado paciente",
+          "Mínimo (efecto local)",
+          "Significativo (sangrado mayor 10-20%)",
+          "Mínimo"
+        ],
+        [
+          "Toxicidad por citrato",
+          "Acumulación si insuficiencia hepática severa → acidosis metabólica + hipocalcemia iónica",
+          "No aplica",
+          "No aplica"
+        ],
+        [
+          "Alteraciones del Ca²⁺",
+          "Hipocalcemia iónica (que reponer)",
+          "Sin efecto sobre Ca²⁺",
+          "Sin efecto sobre Ca²⁺"
+        ],
+        [
+          "Alteraciones del Na+",
+          "Frecuente hipernatremia (citrato trisódico)",
+          "Sin efecto",
+          "Sin efecto"
+        ],
+        [
+          "Alkalosis metabólica",
+          "Sí (citrato se metaboliza a HCO3 en hígado)",
+          "No",
+          "No"
+        ],
+        [
+          "Monitoreo necesario",
+          "Ca²⁺ iónico c/6h, gasometría c/6-12h, calcio total",
+          "TTPa cada 4-6h, plaquetas diarias",
+          "Visual (presiones del circuito)"
+        ],
+        [
+          "Contraindicación absoluta",
+          "Insuficiencia hepática grave (Child C, MELD >30, lactato >8)",
+          "Sangrado activo, HIT, plaquetas <20-50K",
+          "Estado pro-trombótico, sepsis"
+        ],
+        [
+          "Preferencia KDIGO",
+          "Primera opción en mayoría de casos (Grade 2C)",
+          "Segunda opción",
+          "Si contraindicaciones a anticoagulación"
+        ],
+        [
+          "Costo / disponibilidad",
+          "Mayor costo, requiere protocolo más complejo",
+          "Bajo costo, ampliamente disponible",
+          "Sin costo adicional"
+        ],
+        [
+          "Adecuación de la dosis",
+          "Mantenida (no afectada por filtros que se cierran)",
+          "Variable",
+          "Variable (filtros frecuentes)"
+        ]
       ]
     },
     {
       "id": "tabla_calculadora_kdpi_epts",
       "titulo": "KDPI vs EPTS — Matching de donador y receptor",
-      "columnas": ["Variable", "KDPI (Donador)", "EPTS (Receptor)"],
+      "columnas": [
+        "Variable",
+        "KDPI (Donador)",
+        "EPTS (Receptor)"
+      ],
       "filas": [
-        ["Significado", "Kidney Donor Profile Index", "Estimated Post-Transplant Survival"],
-        ["Rango", "0-100% (MENOR = MEJOR riñón)", "0-100% (MENOR = MEJOR pronóstico receptor)"],
-        ["Variables incluidas", "Edad, raza, talla, peso, HTA, DM, Cr terminal, causa muerte, VHC, DCD", "Edad, tiempo en diálisis, DM, TR previo"],
-        ["Interpretación", "0-20%: kidney óptimo (top 20% calidad)\n21-85%: aceptable\n>85%: ECD/marginal", "0-20%: receptor con expectativa alta\n21-80%: intermedio\n>80%: expectativa baja"],
-        ["Uso clínico", "Decidir si aceptar kidney offered, predecir DGF, comparar opciones", "Priorización en lista, decidir agresividad de IS, expectativas"],
-        ["Asignación UNOS", "KDPI <20% se asigna preferentemente a EPTS <20% (top 20% receptors)", "Idem"],
-        ["Predictores de DGF", "KDPI alto, DCD, isquemia fría prolongada", "EPTS alto, tiempo en diálisis prolongado"],
-        ["Estrategia ECD", "KDPI >85%: considerar dual transplant o receptor mayor", "Receptor con EPTS alto puede aceptar KDPI alto razonablemente"],
-        ["Limitaciones", "No incluye anatomía renal, biopsia pre-TR, perfusión", "No predice complicaciones específicas"],
-        ["Validación", "USA basado en data UNOS", "Validado en cohortes USA"],
-        ["Aplicable en LatAm", "Sí, pero ajustar prevalencias (HTA, DM diferentes)", "Sí"]
+        [
+          "Significado",
+          "Kidney Donor Profile Index",
+          "Estimated Post-Transplant Survival"
+        ],
+        [
+          "Rango",
+          "0-100% (MENOR = MEJOR riñón)",
+          "0-100% (MENOR = MEJOR pronóstico receptor)"
+        ],
+        [
+          "Variables incluidas",
+          "Edad, raza, talla, peso, HTA, DM, Cr terminal, causa muerte, VHC, DCD",
+          "Edad, tiempo en diálisis, DM, TR previo"
+        ],
+        [
+          "Interpretación",
+          "0-20%: kidney óptimo (top 20% calidad)\n21-85%: aceptable\n>85%: ECD/marginal",
+          "0-20%: receptor con expectativa alta\n21-80%: intermedio\n>80%: expectativa baja"
+        ],
+        [
+          "Uso clínico",
+          "Decidir si aceptar kidney offered, predecir DGF, comparar opciones",
+          "Priorización en lista, decidir agresividad de IS, expectativas"
+        ],
+        [
+          "Asignación UNOS",
+          "KDPI <20% se asigna preferentemente a EPTS <20% (top 20% receptors)",
+          "Idem"
+        ],
+        [
+          "Predictores de DGF",
+          "KDPI alto, DCD, isquemia fría prolongada",
+          "EPTS alto, tiempo en diálisis prolongado"
+        ],
+        [
+          "Estrategia ECD",
+          "KDPI >85%: considerar dual transplant o receptor mayor",
+          "Receptor con EPTS alto puede aceptar KDPI alto razonablemente"
+        ],
+        [
+          "Limitaciones",
+          "No incluye anatomía renal, biopsia pre-TR, perfusión",
+          "No predice complicaciones específicas"
+        ],
+        [
+          "Validación",
+          "USA basado en data UNOS",
+          "Validado en cohortes USA"
+        ],
+        [
+          "Aplicable en LatAm",
+          "Sí, pero ajustar prevalencias (HTA, DM diferentes)",
+          "Sí"
+        ]
+      ]
+    },
+    {
+      "id": "tabla_induccion_comparada",
+      "titulo": "Inducción IS comparada: ATG vs Basiliximab vs Alemtuzumab vs sin inducción",
+      "columnas": [
+        "Característica",
+        "ATG (Timoglobulina)",
+        "Basiliximab",
+        "Alemtuzumab",
+        "Sin inducción"
+      ],
+      "filas": [
+        [
+          "Mecanismo",
+          "Anti-linfocitario policlonal de conejo (depleta T, B, NK)",
+          "Anti-CD25 monoclonal (bloquea IL-2R alpha sin depletar)",
+          "Anti-CD52 monoclonal (depleta T, B, NK, monocitos)",
+          "—"
+        ],
+        [
+          "Tipo de efecto",
+          "Depletor profundo",
+          "No depletor (bloqueante)",
+          "Depletor profundo y prolongado",
+          "—"
+        ],
+        [
+          "Dosis estándar",
+          "1.5 mg/kg/día × 3-7 días (4.5-7.5 mg/kg total)",
+          "20 mg días 0 y 4 (40 mg total)",
+          "30 mg dosis única SC o IV",
+          "—"
+        ],
+        [
+          "Duración del efecto",
+          "Linfopenia 1-3 meses",
+          "Días-semanas",
+          "Linfopenia 6-12 meses",
+          "—"
+        ],
+        [
+          "Indicaciones principales",
+          "Alto riesgo inmunológico (PRA>50%, DSA+, retrasplante, mismatch HLA alto, DGF anticipada)",
+          "Riesgo bajo-intermedio (PRA bajo, primer TR, donador vivo)",
+          "Alto riesgo + protocolo steroid-free + algunos centros uso rutinario",
+          "Donador vivo HLA-idéntico hermano (raro)"
+        ],
+        [
+          "Eficacia reducción rechazo agudo",
+          "75-80% reducción vs sin inducción",
+          "60-70% reducción vs sin inducción",
+          "80-85% reducción vs sin inducción",
+          "Referencia (baseline)"
+        ],
+        [
+          "Riesgo infecciones (CMV, BK)",
+          "ALTO (especialmente CMV, BK, otras virales)",
+          "BAJO (similar a sin inducción)",
+          "MUY ALTO (prolongado por linfopenia)",
+          "Bajo"
+        ],
+        [
+          "Riesgo PTLD",
+          "Aumentado (dosis >7 mg/kg total)",
+          "No aumentado",
+          "Aumentado",
+          "Bajo"
+        ],
+        [
+          "Citopenias / reacciones infusionales",
+          "Frecuentes: trombocitopenia, leucopenia, fiebre, escalofríos",
+          "Mínimas",
+          "Reacciones infusionales (premedicar)",
+          "—"
+        ],
+        [
+          "Costo aproximado USD (curso completo)",
+          "$5,000-15,000",
+          "$3,000-6,000",
+          "$3,000-8,000",
+          "$0"
+        ],
+        [
+          "Disponibilidad en LatAm/MX",
+          "Disponible (caro)",
+          "Disponible y más usado",
+          "Disponible pero menos común",
+          "—"
+        ],
+        [
+          "Profilaxis CMV requerida",
+          "Sí, valganciclovir × 6 m (extender en D+/R-)",
+          "Sí, valganciclovir × 3 m (según D/R)",
+          "Sí, prolongada",
+          "Según D/R status"
+        ],
+        [
+          "Profilaxis PJP requerida",
+          "Sí, TMP-SMX × 6-12 m",
+          "Sí, TMP-SMX × 3-6 m",
+          "Sí, TMP-SMX prolongada",
+          "Sí, TMP-SMX 6 m"
+        ],
+        [
+          "Posición KDIGO 2020",
+          "Recomendada en ALTO riesgo (1A)",
+          "Recomendada en BAJO riesgo (1A)",
+          "Mencionada como alternativa",
+          "No recomendada de rutina"
+        ],
+        [
+          "Pearl clínico",
+          "Premedicar con MP + difenhidramina + acetaminofén. Vigilar plaquetas y BH diaria",
+          "Sin necesidad de premedicación. Perfil de seguridad excelente",
+          "Vigilar linfopenia prolongada → screening BK/CMV agresivo",
+          "Solo en escenarios muy específicos de bajo riesgo absoluto"
+        ]
+      ]
+    },
+    {
+      "id": "tabla_banff_tcmr_clases",
+      "titulo": "Clasificación Banff de TCMR (Rechazo Agudo Celular) — versión 2019",
+      "columnas": [
+        "Categoría Banff",
+        "Lesiones histológicas",
+        "Definición",
+        "Manejo de primera línea",
+        "Tasa de respuesta a esteroides"
+      ],
+      "filas": [
+        [
+          "Borderline",
+          "i1 + t1-3 (o i2-3 + t1)",
+          "Inflamación intersticial leve (<25%) con tubulitis leve a moderada. No cumple criterios de Banff I",
+          "Discutido — algunos centros tratan con MP bolo, otros optimizan IS basal",
+          "70-80% (cuando se trata)"
+        ],
+        [
+          "Banff IA",
+          "i2-3 + t2",
+          "Inflamación intersticial moderada-severa (>25%) + tubulitis MODERADA (5-10 cél T/sección tubular)",
+          "Bolos metilprednisolona 250-500 mg IV × 3 días + optimizar Tac",
+          "85-90%"
+        ],
+        [
+          "Banff IB",
+          "i2-3 + t3",
+          "Inflamación intersticial moderada-severa + tubulitis SEVERA (>10 cél T/sección tubular)",
+          "Bolos MP 500 mg IV × 3 días + optimizar Tac",
+          "70-80%"
+        ],
+        [
+          "Banff IIA",
+          "v1 (± i+t)",
+          "Arteritis intimal LEVE (linfocitos en íntima, <25% pérdida luminal)",
+          "MP bolos + considerar ATG 1.5 mg/kg × 3-5 días si no responde",
+          "50-60% solo esteroides, mayoría requiere ATG"
+        ],
+        [
+          "Banff IIB",
+          "v2 (± i+t)",
+          "Arteritis intimal SEVERA (>25% pérdida luminal)",
+          "ATG 1.5 mg/kg/día × 5-7 días + bolos MP",
+          "ATG primera línea (esteroides solos <30% respuesta)"
+        ],
+        [
+          "Banff III",
+          "v3",
+          "Arteritis TRANSMURAL (necrosis fibrinoide de pared arterial)",
+          "ATG agresivo + optimizar IS + considerar plasmaféresis si DSA+",
+          "Pronóstico reservado (20-40% pérdida del injerto a 1 año)"
+        ]
+      ]
+    },
+    {
+      "id": "tabla_soluciones_preservacion",
+      "titulo": "Soluciones de preservación de órganos: UW vs HTK vs Celsior",
+      "columnas": [
+        "Característica",
+        "UW (Belzer)",
+        "HTK (Custodiol / Bretschneider)",
+        "Celsior"
+      ],
+      "filas": [
+        [
+          "Composición básica",
+          "Alta K+, lactobionato, rafinosa, alopurinol, glutatión, adenosina, HES",
+          "Baja K+, histidina (buffer), triptófano, manitol, ketoglutarato",
+          "Mixta: baja K+, lactobionato, manitol, glutatión"
+        ],
+        [
+          "Osmolaridad",
+          "320 mOsm/L (alta)",
+          "310 mOsm/L (intermedia)",
+          "320 mOsm/L (alta)"
+        ],
+        [
+          "Viscosidad",
+          "Alta (HES polímero)",
+          "Baja",
+          "Intermedia"
+        ],
+        [
+          "Mecanismo principal",
+          "Impermeantes (lactobionato, rafinosa) + antioxidantes (glutatión, alopurinol) → prevenir edema celular",
+          "Buffer histidínico potente + manitol antioxidante + triptófano estabilizador",
+          "Combina principios UW y HTK: impermeante + antioxidantes"
+        ],
+        [
+          "Tiempo de isquemia fría máximo",
+          "24-30 horas",
+          "12-24 horas (mejor en <12h)",
+          "24 horas"
+        ],
+        [
+          "Uso preferido",
+          "Riñón, hígado, páncreas (estándar internacional histórico)",
+          "Corazón, hígado pediátrico, riñón (Europa preferido)",
+          "Corazón principalmente, riñón en algunos centros"
+        ],
+        [
+          "Costo aproximado USD",
+          "$$$ (alto)",
+          "$$ (intermedio)",
+          "$$ (intermedio)"
+        ],
+        [
+          "DGF asociado vs UW",
+          "Referencia",
+          "Similar a UW en RCTs (Mosconi 2015)",
+          "Similar a UW en estudios"
+        ],
+        [
+          "Disponibilidad LatAm/MX",
+          "Disponible",
+          "Disponible (común en Europa, creciente uso aquí)",
+          "Menos disponible"
+        ],
+        [
+          "Volumen típico para perfusión renal",
+          "1-2 L por riñón",
+          "2-3 L (mayor por baja viscosidad)",
+          "1-2 L"
+        ],
+        [
+          "Pearl clínico",
+          "Hiperkalemia paradójica al desclampar (K+ del líquido) — lavar bien antes de implantar. Estándar histórico",
+          "Mejor para perfusión rápida y completa por baja viscosidad. Buena en pediatría",
+          "Combina ventajas pero menos validada en riñón específicamente"
+        ]
+      ]
+    },
+    {
+      "id": "tabla_inhibidores_complemento",
+      "titulo": "Inhibidores del complemento — opciones terapéuticas actuales y emergentes",
+      "columnas": [
+        "Fármaco",
+        "Target",
+        "Vía",
+        "Indicaciones aprobadas",
+        "Uso emergente / off-label",
+        "Dosificación"
+      ],
+      "filas": [
+        [
+          "Eculizumab (Soliris)",
+          "C5 (anti-C5 mAb humanizado)",
+          "IV cada 2 semanas",
+          "aHUS, PNH, MG generalizada, NMOSD",
+          "AMR refractario, profilaxis aHUS post-TR, sensibilización pre-TR",
+          "900 mg sem 1-4, 1200 mg sem 5+, c/2 sem"
+        ],
+        [
+          "Ravulizumab (Ultomiris)",
+          "C5 (anti-C5 mAb, larga acción)",
+          "IV cada 8 semanas",
+          "aHUS, PNH, MG generalizada",
+          "AMR refractario, alternativa más cómoda a eculizumab",
+          "Por peso: 2400-3600 mg c/8 sem"
+        ],
+        [
+          "Crovalimab (PiaSky)",
+          "C5 (anti-C5 SubQ)",
+          "SC mensual",
+          "PNH (FDA 2024)",
+          "Potencial en otros, en estudios",
+          "Carga IV, luego SC mensual"
+        ],
+        [
+          "Iptacopan (Fabhalta)",
+          "Factor B (vía alternativa)",
+          "Oral c/12h",
+          "PNH (FDA 2023), C3GN (FDA 2025)",
+          "IgA nefropatía (estudios), aHUS, post-TR recurrencia C3GN",
+          "200 mg c/12h VO"
+        ],
+        [
+          "Pegcetacoplan (Empaveli)",
+          "C3 (péptido cíclico)",
+          "SC 2x/semana",
+          "PNH, GA seca (oftalmología)",
+          "C3GN, ICOM nefritis, post-TR",
+          "1080 mg SC c/3-4 días"
+        ],
+        [
+          "Avacopan (Tavneos)",
+          "C5aR1 (receptor de C5a)",
+          "Oral c/12h",
+          "ANCA vasculitis (FDA 2021)",
+          "Post-TR rechazo crónico, glomerulopatías post-TR (estudios)",
+          "30 mg c/12h VO"
+        ],
+        [
+          "Danicopan (Voydeya)",
+          "Factor D (vía alternativa)",
+          "Oral c/8h",
+          "PNH (adyuvante a anti-C5)",
+          "En estudios C3GN, otros",
+          "150 mg c/8h VO"
+        ],
+        [
+          "Sutimlimab (Enjaymo)",
+          "C1s (vía clásica)",
+          "IV cada 2 sem",
+          "Enfermedad por crioaglutininas",
+          "Potencial en AMR (estudios)",
+          "Por peso, c/2 sem"
+        ]
+      ]
+    },
+    {
+      "id": "tabla_anticuerpos_no_hla",
+      "titulo": "Anticuerpos no-HLA en trasplante renal — relevancia emergente",
+      "columnas": [
+        "Anticuerpo",
+        "Antígeno diana",
+        "Asociación clínica",
+        "Cómo se mide",
+        "Tratamiento específico"
+      ],
+      "filas": [
+        [
+          "Anti-MICA",
+          "MHC class I-related chain A (en endotelio y epitelio activado)",
+          "Peor supervivencia del injerto independiente de DSA HLA · AMR-like injury · presente en 10-20% de TR pre-TX",
+          "Luminex específico MICA (disponible en centros especializados)",
+          "Optimizar IS · Plasmaféresis + IVIG si AMR concomitante · No hay terapia dirigida"
+        ],
+        [
+          "Anti-AT1R",
+          "Angiotensin II Type 1 Receptor (autoanticuerpo agonístico)",
+          "HTA maligna post-TR · AMR refractario · TMA-like injury · rechazo vascular acelerado",
+          "ELISA específico (Berlin assay, disponible en pocos centros)",
+          "Losartán (antagonista AT1R, lógica mecanística directa) · plasmaféresis · IVIG"
+        ],
+        [
+          "Anti-vimentina",
+          "Vimentina (proteína de filamento intermedio, expuesta tras lesión endotelial/IRI)",
+          "Vasculopatía crónica del injerto · IF/TA acelerada · cardiopatía pos-TR",
+          "ELISA (no estandarizado clínicamente)",
+          "Optimizar IS · estatinas · IECA"
+        ],
+        [
+          "Anti-LG3",
+          "Perlecan LG3 fragment (extracelular matrix, expuesto en daño endotelial)",
+          "AMR refractario · TMA · vasculopatía",
+          "ELISA experimental",
+          "No hay terapia dirigida · soporte"
+        ],
+        [
+          "Anti-Perlecan",
+          "Perlecan (heparan sulfate proteoglycan en matriz)",
+          "AMR · daño microvascular",
+          "ELISA experimental",
+          "Investigación"
+        ],
+        [
+          "Anti-Colágeno IV (alpha-3)",
+          "Cadena alpha-3 del colágeno tipo IV (igual que en Goodpasture)",
+          "Recurrencia de Síndrome de Alport en TR · AMR-like en algunos casos",
+          "ELISA específico",
+          "Reducir IS no ayuda · plasmaféresis si síntomas activos"
+        ],
+        [
+          "Anti-Tubulina-α",
+          "Tubulina alpha (citoesqueleto)",
+          "Rechazo refractario · biomarcador emergente",
+          "ELISA experimental",
+          "Investigación"
+        ],
+        [
+          "Anti-NKG2D ligands (MICA, ULBPs)",
+          "Stress-induced ligands en epitelio dañado",
+          "Activación de NK → AMR sin DSA HLA · daño tubular",
+          "Pruebas experimentales",
+          "Reducir IRI · investigación"
+        ]
+      ]
+    },
+    {
+      "id": "tabla_inmunosupresores_embarazo",
+      "titulo": "Inmunosupresores en embarazo: categorías FDA y manejo",
+      "columnas": [
+        "Fármaco",
+        "Categoría FDA",
+        "Riesgo teratogénico",
+        "Manejo en embarazo",
+        "Lactancia"
+      ],
+      "filas": [
+        [
+          "Tacrolimus",
+          "C",
+          "Bajo (datos extensos en TR)",
+          "CONTINUAR. Volumen distribución aumenta — vigilar niveles c/2-4 semanas, ajustar dosis. C0 meta 5-10 ng/mL",
+          "Compatible (niveles bajos en leche)"
+        ],
+        [
+          "Ciclosporina A",
+          "C",
+          "Bajo (datos extensos)",
+          "CONTINUAR. Ajustes similares a Tac",
+          "Compatible"
+        ],
+        [
+          "Prednisona",
+          "C (D si >20 mg/día prolongado)",
+          "Bajo a dosis ≤10 mg/día",
+          "MANTENER mínima dosis efectiva (≤10 mg/día). Vigilar: NODAT gestacional, HTA, hueso",
+          "Compatible (dosis bajas)"
+        ],
+        [
+          "Azatioprina",
+          "D",
+          "Bajo (datos extensos en LES, IBD, TR)",
+          "PRIMERA OPCIÓN como antimetabolito. Dosis 1-2 mg/kg/día. Feto carece de inosin pirofosforilasa → relativa protección",
+          "Compatible (cantidades mínimas)"
+        ],
+        [
+          "MMF / MFS",
+          "D",
+          "ALTO — TERATÓGENO confirmado: labio leporino, fisura palatina, atresia auditiva, microtia, cardiopatías, hipoplasia ungueal. Aborto 50%",
+          "SUSPENDER MÍNIMO 6 SEMANAS antes de concepción. Cambiar a azatioprina",
+          "CONTRAINDICADO"
+        ],
+        [
+          "Sirolimus / Everolimus",
+          "C (datos limitados, sospecha de teratogenicidad)",
+          "Probable teratogénico (datos animales)",
+          "EVITAR. Suspender 12 semanas antes de concepción. Cambiar a Tac o azatioprina",
+          "Datos insuficientes — evitar"
+        ],
+        [
+          "Belatacept",
+          "C (datos limitados)",
+          "Datos insuficientes en humanos",
+          "EVITAR. No hay datos suficientes de seguridad. Alternativa: regreso a Tac antes de concepción",
+          "Datos insuficientes"
+        ],
+        [
+          "Rituximab",
+          "C (datos limitados)",
+          "Depleción de B fetales si 2do-3er trimestre",
+          "EVITAR si posible. Si necesario (AMR severo), administrar antes de 22 SDG",
+          "Compatible (no se absorbe en leche)"
+        ],
+        [
+          "Eculizumab",
+          "C",
+          "Datos extensos en aHUS — relativamente seguro",
+          "CONTINUAR si indicación clara (aHUS, AMR refractario). Niveles aumentan en 3er trimestre — pueden requerir ajuste",
+          "Compatible"
+        ],
+        [
+          "Inducción ATG",
+          "C",
+          "Datos limitados",
+          "No aplica (inducción es peri-TR, no en embarazo)",
+          "—"
+        ]
       ]
     }
   ]
