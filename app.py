@@ -11545,7 +11545,16 @@ elif nav == "eval_candidato":
     def _ec(k, default=""):
         return st.session_state.get(f"ec_{k}", default)
     def _ecs(k, v):
-        st.session_state[f"ec_{k}"] = v
+        target_key = f"ec_{k}"
+        # Si el widget tiene la misma key, Streamlit ya guardó el valor —
+        # evitamos colisión "value cannot be modified after widget instantiated".
+        if st.session_state.get(target_key) == v:
+            return
+        try:
+            st.session_state[target_key] = v
+        except Exception:
+            # Widget con la misma key — el valor ya está en session_state
+            pass
 
     if "👤" in ec_tab:
         st.markdown("### 👤 Datos del paciente candidato")
