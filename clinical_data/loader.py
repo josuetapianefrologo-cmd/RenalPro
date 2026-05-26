@@ -232,3 +232,105 @@ def get_lista_controversias() -> list:
     """Lista de controversias en TR."""
     data = get_controversias()
     return data.get("controversias", [])
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# DASHBOARD TR — Configuración editable (umbrales, sedes, mensajes)
+# ════════════════════════════════════════════════════════════════════════════
+
+# Valores por defecto (fallback si el JSON falla o falta una clave)
+_DASHBOARD_TR_DEFAULTS = {
+    "tr_note_types": [
+        "Nota evolución Post-TR",
+        "Trasplante / Nota inicial post-TR",
+    ],
+    "tac_metas_por_dpt": [
+        {"dpt_min": 0, "dpt_max": 30, "meta_min": 8, "meta_max": 12, "label": "Primer mes"},
+        {"dpt_min": 31, "dpt_max": 180, "meta_min": 6, "meta_max": 10, "label": "1-6 meses"},
+        {"dpt_min": 181, "dpt_max": 99999, "meta_min": 5, "meta_max": 8, "label": ">6 meses"},
+    ],
+    "umbrales_cr": {"critico_delta_pct": 25, "alerta_delta_pct": 15},
+    "tac_alto_margen_extra": 3,
+    "umbrales_sin_nota": {"primer_6m_dias": 30, "despues_6m_dias": 60},
+    "sedes": [
+        "UMAE Bajío N1", "Hospital General León",
+        "Clínica Alba Diálisis y Trasplantes", "Clínica San Juan Diego", "Otra",
+    ],
+    "donadores": ["Vivo relacionado", "Vivo no relacionado", "Fallecido DBD", "Fallecido DCD"],
+    "grupos_sanguineos": ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"],
+    "tiempo_post_tr_categorias": [
+        {"label": "≤30 días", "min": 0, "max": 30},
+        {"label": "31-180 días", "min": 31, "max": 180},
+        {"label": "181-365 días", "min": 181, "max": 365},
+        {"label": ">1 año", "min": 366, "max": 99999},
+    ],
+    "alertas_mensajes": {
+        "cr_critico": "🔴 Cr ↑{delta:.0f}% (sospechar rechazo/CNI/BK/obstrucción)",
+        "cr_alerta": "🟠 Cr ↑{delta:.0f}% (vigilar)",
+        "tac_bajo": "🟠 Tac C0 {tac} ng/mL <meta ({min}-{max})",
+        "tac_alto": "🟠 Tac C0 {tac} ng/mL >>meta ({min}-{max})",
+        "sin_nota_largo": "🟡 Sin nota desde hace {dias} días",
+        "sin_nota_primer_6m": "🟡 Sin nota reciente ({dias}d) — primer 6 meses requiere seguimiento más estrecho",
+        "marcado_sin_nota": "🔵 Marcado como TR pero sin notas — pre-TR o pendiente nota inicial",
+    },
+}
+
+
+def _validar_dashboard_config(cfg: dict) -> dict:
+    """
+    Valida config del dashboard y rellena con defaults las claves faltantes.
+    Garantiza que el dashboard NUNCA se rompa por un JSON mal formado.
+    """
+    if not isinstance(cfg, dict):
+        return _DASHBOARD_TR_DEFAULTS.copy()
+    out = {}
+    # Para cada clave en defaults, usar la del usuario si existe Y es válida
+    for k, default_val in _DASHBOARD_TR_DEFAULTS.items():
+        user_val = cfg.get(k)
+        if user_val is None:
+            out[k] = default_val
+        elif isinstance(default_val, list) and not isinstance(user_val, list):
+            out[k] = default_val
+        elif isinstance(default_val, dict) and not isinstance(user_val, dict):
+            out[k] = default_val
+        else:
+            out[k] = user_val
+    # Validación adicional: tac_metas debe tener al menos un rango
+    if not out.get("tac_metas_por_dpt"):
+        out["tac_metas_por_dpt"] = _DASHBOARD_TR_DEFAULTS["tac_metas_por_dpt"]
+    return out
+
+
+def get_dashboard_tr_config() -> dict:
+    """
+    Configuración del Dashboard TR (umbrales, sedes, mensajes).
+    Lee de dashboard_tr_config.json con fallback defensivo a defaults.
+    """
+    raw = _load_json("dashboard_tr_config.json")
+    return _validar_dashboard_config(raw)
+
+
+def tac_meta_por_dpt(dpt: int) -> tuple:
+    """
+    Devuelve (meta_min, meta_max, label) para un DPT dado.
+    Lee config del JSON. Si no hay match, devuelve último rango configurado.
+    """
+    cfg = get_dashboard_tr_config()
+    metas = cfg.get("tac_metas_por_dpt") or _DASHBOARD_TR_DEFAULTS["tac_metas_por_dpt"]
+    for rango in metas:
+        try:
+            if int(rango.get("dpt_min", 0)) <= int(dpt) <= int(rango.get("dpt_max", 99999)):
+                return (
+                    float(rango.get("meta_min", 5)),
+                    float(rango.get("meta_max", 10)),
+                    str(rango.get("label", "")),
+                )
+        except (ValueError, TypeError):
+            continue
+    # Fallback: último rango
+    ultimo = metas[-1]
+    return (
+        float(ultimo.get("meta_min", 5)),
+        float(ultimo.get("meta_max", 10)),
+        str(ultimo.get("label", "")),
+    )
