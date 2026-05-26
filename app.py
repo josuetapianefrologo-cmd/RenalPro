@@ -2184,6 +2184,7 @@ with st.sidebar:
     _navbtn("📚 Fundamento", "fund")
     _navbtn("📖 Referencias", "refs")
     _navbtn("🎓 Aprendizaje TR", "aprendizaje")
+    _navbtn("📊 Dashboard TR", "dashboard_tr")
 
     _navsec("CUENTA")
     _navbtn("👤 Mi Cuenta", "micuenta")
@@ -19894,6 +19895,305 @@ elif nav == "algo_bk":
 - Uso de timoglobulina (induce mayor inmunosupresión)
 - Esquemas con MMF en dosis altas
     """)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 📊 DASHBOARD TR — Cohorte de pacientes trasplantados con alertas automáticas
+# Auto-detección: paciente con nota Post-TR + marcado manual opcional
+# Multi-sede: UMAE Bajío, Hospital General, clínicas — filtrable
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "dashboard_tr":
+    st.subheader("📊 Dashboard TR — Cohorte de pacientes trasplantados")
+    st.caption("Auto-alimentado por tus notas Post-TR. Marca manualmente candidatos pre-TR o sin nota inicial.")
+
+    if not _DB_ON or not _db.db_ok():
+        st.warning("⚠️ Base de datos no disponible. El dashboard requiere conexión a BD.")
+    else:
+        _uid_dash = _user_id()
+        if not _uid_dash:
+            st.info("Inicia sesión para ver tu cohorte TR.")
+        else:
+            # Refresh manual
+            col_h1, col_h2, col_h3 = st.columns([4, 1, 1])
+            with col_h1:
+                st.caption(f"Usuario: {st.session_state.get('username', '—')}")
+            with col_h2:
+                if st.button("🔄 Refresh", key="dash_refresh", use_container_width=True):
+                    _clear_cache()
+                    st.rerun()
+            with col_h3:
+                _show_agregar = st.button("➕ Marcar TR", key="dash_add",
+                                            use_container_width=True)
+
+            # ── Cargar cohorte y estadísticas ──────────────────────────────
+            try:
+                _cohorte = _db.get_cohorte_tr(_uid_dash)
+                _stats = _db.estadisticas_cohorte_tr(_uid_dash)
+            except AttributeError:
+                st.error("⚠️ db.py desactualizado — actualiza el archivo del repositorio. "
+                         "Las funciones del dashboard requieren la versión nueva de db.py.")
+                _cohorte = []
+                _stats = {}
+
+            # ── MARCAR PACIENTE MANUAL como TR ────────────────────────────
+            if _show_agregar or st.session_state.get("dash_modal_add"):
+                st.session_state["dash_modal_add"] = True
+                with st.container(border=True):
+                    st.markdown("##### ➕ Marcar paciente como Trasplantado")
+                    st.caption("Útil para candidatos pre-TR o pacientes sin nota inicial.")
+                    # Buscar pacientes disponibles
+                    try:
+                        _todos_pac = _db.get_patients(_uid_dash) or []
+                    except Exception:
+                        _todos_pac = []
+                    # Filtrar los que NO están marcados
+                    _no_marcados = [p for p in _todos_pac if not p.get("es_trasplantado")]
+                    if not _no_marcados:
+                        st.info("Todos tus pacientes ya están marcados como TR (o no tienes pacientes).")
+                    else:
+                        def _nom(p):
+                            return " ".join(filter(None, [
+                                (p.get("nombres") or "").strip(),
+                                (p.get("apellido_paterno") or "").strip(),
+                                (p.get("apellido_materno") or "").strip(),
+                            ])).strip() or f"Paciente #{p['id']}"
+                        _opciones = {_nom(p): p["id"] for p in _no_marcados}
+                        _sel_nom = st.selectbox("Paciente:", options=list(_opciones.keys()),
+                                                  key="dash_add_pac")
+                        col_a1, col_a2 = st.columns(2)
+                        with col_a1:
+                            _add_fecha_tx = st.date_input("Fecha de TR (opcional):", value=None,
+                                                            key="dash_add_fecha")
+                            _add_donador = st.selectbox("Donador:",
+                                                         ["—", "Vivo relacionado", "Vivo no relacionado",
+                                                          "Fallecido DBD", "Fallecido DCD"],
+                                                         key="dash_add_donador")
+                        with col_a2:
+                            _add_etio = st.text_input("Etiología ERC:", key="dash_add_etio",
+                                                       placeholder="Ej: Nefropatía diabética")
+                            _add_grupo = st.selectbox("Grupo sanguíneo:",
+                                                       ["—", "O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"],
+                                                       key="dash_add_grupo")
+                        _add_sede = st.selectbox("Sede principal:",
+                                                  ["—", "UMAE Bajío N1", "Hospital General León",
+                                                   "Clínica Alba Diálisis y Trasplantes",
+                                                   "Clínica San Juan Diego", "Otra"],
+                                                  key="dash_add_sede")
+
+                        col_b1, col_b2 = st.columns(2)
+                        with col_b1:
+                            if st.button("✅ Marcar como TR", key="dash_add_confirm",
+                                         use_container_width=True, type="primary"):
+                                _pid = _opciones[_sel_nom]
+                                _ok = _db.marcar_paciente_tr(_pid, _uid_dash, {
+                                    "fecha_tx": _add_fecha_tx if _add_fecha_tx else None,
+                                    "donador": None if _add_donador == "—" else _add_donador,
+                                    "etiologia_erc": _add_etio or None,
+                                    "grupo_sang": None if _add_grupo == "—" else _add_grupo,
+                                    "sede_principal": None if _add_sede == "—" else _add_sede,
+                                })
+                                if _ok:
+                                    st.success(f"✅ {_sel_nom} marcado como TR.")
+                                    st.session_state.pop("dash_modal_add", None)
+                                    _clear_cache()
+                                    st.rerun()
+                                else:
+                                    st.error("⚠️ Error al marcar. Verifica conexión a BD.")
+                        with col_b2:
+                            if st.button("❌ Cancelar", key="dash_add_cancel",
+                                         use_container_width=True):
+                                st.session_state.pop("dash_modal_add", None)
+                                st.rerun()
+                    st.markdown("---")
+
+            # ── Si NO hay cohorte ─────────────────────────────────────────
+            if not _cohorte:
+                st.info("**No hay pacientes en tu cohorte TR aún.**\n\n"
+                        "Pueden entrar de dos formas:\n"
+                        "1. **Automáticamente** — cualquier paciente con una Nota Evolución Post-TR "
+                        "guardada aparece aquí.\n"
+                        "2. **Manualmente** — usa el botón '➕ Marcar TR' arriba para candidatos pre-TR "
+                        "o pacientes sin nota inicial todavía.")
+            else:
+                # ── KPIs / Métricas globales ─────────────────────────────
+                _t = _stats.get("total", 0)
+                _crit = _stats.get("criticos", 0)
+                _alert = _stats.get("alertas", 0)
+                _vigi = _stats.get("vigilar", 0)
+                _est = _stats.get("estables", 0)
+
+                col_k1, col_k2, col_k3, col_k4, col_k5 = st.columns(5)
+                with col_k1: st.metric("Total", _t)
+                with col_k2: st.metric("🔴 Críticos", _crit)
+                with col_k3: st.metric("🟠 Alertas", _alert)
+                with col_k4: st.metric("🟡 Vigilar", _vigi)
+                with col_k5: st.metric("🟢 Estables", _est)
+
+                # ── Filtros ──────────────────────────────────────────────
+                with st.expander("🔍 Filtros", expanded=False):
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    with col_f1:
+                        _sedes_disp = sorted(set(c.get("sede_principal", "—") for c in _cohorte))
+                        _f_sede = st.multiselect("Sede:", options=_sedes_disp,
+                                                   default=_sedes_disp, key="dash_f_sede")
+                    with col_f2:
+                        _f_tiempo = st.selectbox("Tiempo post-TR:",
+                                                   ["Todos", "≤30 días (primer mes)",
+                                                    "31-180 días (1-6m)", "181-365 días (6-12m)",
+                                                    ">1 año", "Sin fecha"],
+                                                   key="dash_f_tiempo")
+                    with col_f3:
+                        _f_estado = st.selectbox("Estado:",
+                                                   ["Todos", "🔴 Críticos", "🟠 Alertas",
+                                                    "🟡 Vigilar", "🟢 Estables"],
+                                                   key="dash_f_estado")
+
+                # Aplicar filtros
+                _filtrado = list(_cohorte)
+                if _f_sede:
+                    _filtrado = [c for c in _filtrado if c.get("sede_principal", "—") in _f_sede]
+                if _f_tiempo != "Todos":
+                    def _en_rango(c):
+                        dpt = c.get("dpt")
+                        if _f_tiempo == "Sin fecha":
+                            return dpt is None
+                        if dpt is None:
+                            return False
+                        if _f_tiempo == "≤30 días (primer mes)":
+                            return dpt <= 30
+                        if _f_tiempo == "31-180 días (1-6m)":
+                            return 30 < dpt <= 180
+                        if _f_tiempo == "181-365 días (6-12m)":
+                            return 180 < dpt <= 365
+                        if _f_tiempo == ">1 año":
+                            return dpt > 365
+                        return True
+                    _filtrado = [c for c in _filtrado if _en_rango(c)]
+                if _f_estado != "Todos":
+                    _est_map = {"🔴 Críticos": "critico", "🟠 Alertas": "alerta",
+                                "🟡 Vigilar": "vigilar", "🟢 Estables": "estable"}
+                    _filtrado = [c for c in _filtrado
+                                  if c.get("estado") == _est_map.get(_f_estado)]
+
+                st.caption(f"Mostrando {len(_filtrado)} de {_t} pacientes")
+                st.divider()
+
+                # ── Vista de cohorte (cards) ──────────────────────────────
+                if not _filtrado:
+                    st.info("Ningún paciente cumple los filtros seleccionados.")
+                else:
+                    for c in _filtrado:
+                        _est = c.get("estado", "estable")
+                        _emoji = {"critico": "🔴", "alerta": "🟠",
+                                   "vigilar": "🟡", "estable": "🟢"}.get(_est, "⚪")
+
+                        with st.container(border=True):
+                            # Header del paciente
+                            col_h1, col_h2 = st.columns([4, 1])
+                            with col_h1:
+                                _edad = f"{c['edad']}a" if c.get("edad") else "?a"
+                                _sx = c.get("sexo") or "?"
+                                _dpt = c.get("dpt")
+                                _dpt_str = f"Día {_dpt} post-TR" if _dpt is not None else "Sin DPT"
+                                _don = c.get("tr_donador") or "—"
+                                st.markdown(f"### {_emoji} {c['nombre']}")
+                                st.caption(f"{_edad} {_sx} · {_dpt_str} · {_don} · "
+                                            f"{c.get('tr_grupo_sang', '—')} · {c.get('sede_principal', '—')}")
+                            with col_h2:
+                                if c.get("dias_desde_ultima_nota") is not None:
+                                    st.caption(f"📅 Hace {c['dias_desde_ultima_nota']}d")
+
+                            # Métricas en columnas
+                            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+                            with col_m1:
+                                _cr = c.get("cr_hoy")
+                                _dcr = c.get("delta_cr_pct")
+                                _delta = f"{_dcr:+.0f}%" if _dcr is not None else None
+                                st.metric("Cr (mg/dL)", _cr if _cr is not None else "—",
+                                            delta=_delta)
+                            with col_m2:
+                                _tac = c.get("tac_c0")
+                                st.metric("Tac C0", _tac if _tac is not None else "—")
+                            with col_m3:
+                                st.metric("Diuresis", c.get("diuresis_24h") or "—")
+                            with col_m4:
+                                _pf = c.get("patron_func") or "—"
+                                st.metric("Patrón", _pf[:18] if _pf else "—")
+
+                            # Etiología ERC
+                            if c.get("tr_etiologia_erc") and c["tr_etiologia_erc"] != "—":
+                                st.caption(f"**Etiología ERC:** {c['tr_etiologia_erc']}")
+
+                            # Alertas
+                            if c.get("alertas"):
+                                for a in c["alertas"]:
+                                    st.markdown(a)
+
+                            # Última nota (resumen)
+                            if c.get("ultima_nota_resumen"):
+                                with st.expander("📋 Último resumen clínico", expanded=False):
+                                    st.caption(c["ultima_nota_resumen"])
+
+                            # Tendencia (mini-chart si hay datos)
+                            _tend = c.get("tendencia_5_notas", [])
+                            if len(_tend) >= 2:
+                                with st.expander("📈 Tendencia (últimas notas)", expanded=False):
+                                    try:
+                                        import pandas as pd
+                                        _df_t = pd.DataFrame(_tend)
+                                        _df_t = _df_t.dropna(subset=["cr"])
+                                        if not _df_t.empty:
+                                            _df_t["cr"] = pd.to_numeric(_df_t["cr"], errors="coerce")
+                                            _df_t["tac"] = pd.to_numeric(_df_t["tac"], errors="coerce")
+                                            st.line_chart(_df_t.set_index("fecha")[["cr", "tac"]],
+                                                            height=200)
+                                    except Exception:
+                                        st.caption("Tendencia no disponible (datos insuficientes)")
+
+                            # Botones de acción
+                            col_b1, col_b2, col_b3 = st.columns(3)
+                            with col_b1:
+                                if st.button("✅ Revisado hoy", key=f"dash_rev_{c['id']}",
+                                              use_container_width=True):
+                                    if _db.marcar_visita_revisada(c["id"], _uid_dash):
+                                        st.success("Marcado como revisado.")
+                                        _clear_cache()
+                                        st.rerun()
+                            with col_b2:
+                                # Botón para ir a generar nota evolución
+                                if st.button("📝 Nota evolución", key=f"dash_note_{c['id']}",
+                                              use_container_width=True):
+                                    st.session_state["_ne_paciente_preseleccionado"] = c["id"]
+                                    st.session_state["nav"] = "nota_evolucion_post_tr"
+                                    st.rerun()
+                            with col_b3:
+                                # Desmarcar (solo si manual)
+                                if c.get("es_trasplantado_manual"):
+                                    if st.button("🚫 Quitar marca", key=f"dash_unmark_{c['id']}",
+                                                  use_container_width=True):
+                                        if _db.desmarcar_paciente_tr(c["id"], _uid_dash):
+                                            st.info("Marca manual quitada (puede seguir apareciendo si tiene notas Post-TR).")
+                                            _clear_cache()
+                                            st.rerun()
+                                else:
+                                    st.caption("📋 Auto (por notas)")
+
+                # ── Estadísticas agregadas ────────────────────────────────
+                with st.expander("📈 Estadísticas de cohorte", expanded=False):
+                    col_s1, col_s2, col_s3 = st.columns(3)
+                    with col_s1:
+                        st.markdown("**Por sede**")
+                        for k, v in (_stats.get("por_sede", {}) or {}).items():
+                            st.markdown(f"- {k}: **{v}**")
+                    with col_s2:
+                        st.markdown("**Por tiempo post-TR**")
+                        for k, v in (_stats.get("por_tiempo_post_tr", {}) or {}).items():
+                            if v > 0:
+                                st.markdown(f"- {k}: **{v}**")
+                    with col_s3:
+                        st.markdown("**Por donador**")
+                        for k, v in (_stats.get("por_donador", {}) or {}).items():
+                            st.markdown(f"- {k}: **{v}**")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
