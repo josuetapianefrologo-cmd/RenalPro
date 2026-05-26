@@ -1,0 +1,98 @@
+{
+  "_meta": {
+    "tema": "Configuración del Dashboard TR",
+    "fecha_revision": "2026-05-26",
+    "responsable_medico": "Dr. Josué Wigberto Tapia López",
+    "version": "1.0",
+    "descripcion": "Configuración editable del módulo Dashboard TR. Modifica este archivo en lugar de tocar el código.",
+    "notas_importantes": [
+      "Todos los umbrales son editables.",
+      "Si una clave falta, el sistema usa valores por defecto (defensivo).",
+      "Los mensajes de alertas usan formato Python: {variable} se reemplaza.",
+      "Cambios en este archivo NO requieren reiniciar el servidor (solo reload de página)."
+    ]
+  },
+
+  "tr_note_types": [
+    "Nota evolución Post-TR",
+    "Trasplante / Nota inicial post-TR"
+  ],
+
+  "tac_metas_por_dpt": [
+    {
+      "dpt_min": 0,
+      "dpt_max": 30,
+      "meta_min": 8,
+      "meta_max": 12,
+      "label": "Primer mes post-TR",
+      "_doc": "Período de máximo riesgo de rechazo agudo — niveles altos justificados"
+    },
+    {
+      "dpt_min": 31,
+      "dpt_max": 180,
+      "meta_min": 6,
+      "meta_max": 10,
+      "label": "1-6 meses post-TR",
+      "_doc": "Estabilización progresiva, riesgo de rechazo desciende"
+    },
+    {
+      "dpt_min": 181,
+      "dpt_max": 99999,
+      "meta_min": 5,
+      "meta_max": 8,
+      "label": ">6 meses post-TR",
+      "_doc": "Mantenimiento crónico — balance toxicidad vs eficacia"
+    }
+  ],
+
+  "umbrales_cr": {
+    "critico_delta_pct": 25,
+    "alerta_delta_pct": 15,
+    "_doc": "% de aumento sobre Cr basal del paciente. >25% es crítico (rechazo/CNI/BK/obstrucción), 15-25% requiere vigilancia"
+  },
+
+  "tac_alto_margen_extra": 3,
+  "_doc_tac_margen": "Si Tac C0 > (meta_max + este margen), genera alerta de Tac alto. Default: 3 ng/mL",
+
+  "umbrales_sin_nota": {
+    "primer_6m_dias": 30,
+    "despues_6m_dias": 60,
+    "_doc": "Días sin nota que disparan alerta amarilla. Primer 6 meses post-TR requiere control más estrecho"
+  },
+
+  "sedes": [
+    "UMAE Bajío N1",
+    "Hospital General León",
+    "Clínica Alba Diálisis y Trasplantes",
+    "Clínica San Juan Diego",
+    "Otra"
+  ],
+
+  "donadores": [
+    "Vivo relacionado",
+    "Vivo no relacionado",
+    "Fallecido DBD",
+    "Fallecido DCD"
+  ],
+
+  "grupos_sanguineos": [
+    "O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"
+  ],
+
+  "tiempo_post_tr_categorias": [
+    {"label": "≤30 días", "min": 0, "max": 30},
+    {"label": "31-180 días", "min": 31, "max": 180},
+    {"label": "181-365 días", "min": 181, "max": 365},
+    {"label": ">1 año", "min": 366, "max": 99999}
+  ],
+
+  "alertas_mensajes": {
+    "cr_critico": "🔴 Cr ↑{delta:.0f}% (sospechar rechazo/CNI/BK/obstrucción)",
+    "cr_alerta": "🟠 Cr ↑{delta:.0f}% (vigilar)",
+    "tac_bajo": "🟠 Tac C0 {tac} ng/mL <meta ({min}-{max})",
+    "tac_alto": "🟠 Tac C0 {tac} ng/mL >>meta ({min}-{max})",
+    "sin_nota_largo": "🟡 Sin nota desde hace {dias} días",
+    "sin_nota_primer_6m": "🟡 Sin nota reciente ({dias}d) — primer 6 meses requiere seguimiento más estrecho",
+    "marcado_sin_nota": "🔵 Marcado como TR pero sin notas — pre-TR o pendiente nota inicial"
+  }
+}
