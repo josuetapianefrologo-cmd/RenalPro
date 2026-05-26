@@ -232,6 +232,14 @@ def init_tables() -> bool:
             "ALTER TABLE patients ADD COLUMN IF NOT EXISTS talla FLOAT",
             "ALTER TABLE patients ADD COLUMN IF NOT EXISTS historia_clinica JSONB",
             "ALTER TABLE patients ADD COLUMN IF NOT EXISTS historia_clinica_fecha TIMESTAMP",
+            # ── Dashboard TR — marcas manuales y metadata ─────────────────
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS es_trasplantado BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS sede_principal VARCHAR(100)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS tr_fecha_tx DATE",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS tr_donador VARCHAR(50)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS tr_etiologia_erc VARCHAR(200)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS tr_grupo_sang VARCHAR(10)",
+            "ALTER TABLE patients ADD COLUMN IF NOT EXISTS tr_ultima_revision TIMESTAMP",
         ]:
             try:
                 cur.execute(alter_pac)
@@ -1117,3 +1125,402 @@ def delete_session(session_id: int, user_id: int) -> bool:
         except Exception:
             pass
         return False
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DASHBOARD TR — Cohorte de pacientes trasplantados
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Tipos de nota considerados "evidencia de trasplante"
+TR_NOTE_TYPES = (
+    "Nota evolución Post-TR",
+    "Trasplante / Nota inicial post-TR",
+)
+
+
+def get_cohorte_tr(user_id: int) -> List[Dict]:
+    """
+    Devuelve la cohorte de pacientes TR de un médico.
+
+    Un paciente entra a la cohorte si CUALQUIERA de:
+      a) Tiene es_trasplantado = TRUE (marca manual)
+      b) Tiene al menos una nota de tipo Post-TR (auto-detección)
+
+    Para cada paciente devuelve:
+      - id, nombre, edad, sexo, sede_principal
+      - es_trasplantado_manual (bool)
+      - tr_fecha_tx, tr_donador, tr_etiologia_erc, tr_grupo_sang
+      - ultima_nota_post_tr (dict con datos_json de la última nota)
+      - dias_desde_ultima_nota
+      - alertas (list de strings)
+    """
+    conn = get_conn()
+    if not conn:
+        return []
+    try:
+        cur = conn.cursor()
+        # Pacientes del médico, no borrados, que son TR (auto OR manual)
+        cur.execute("""
+            SELECT DISTINCT p.id
+            FROM patients p
+            LEFT JOIN clinical_records cr
+              ON cr.patient_id = p.id AND cr.tipo IN %s
+            WHERE p.user_id = %s
+              AND p.is_deleted = FALSE
+              AND (p.es_trasplantado = TRUE OR cr.id IS NOT NULL)
+        """, (TR_NOTE_TYPES, user_id))
+        ids = [r["id"] for r in cur.fetchall()]
+        cur.close()
+
+        if not ids:
+            return []
+
+        cohorte = []
+        for pid in ids:
+            datos = _build_cohorte_row(pid)
+            if datos:
+                cohorte.append(datos)
+
+        # Ordenar por urgencia: alertas primero, después por días desde última nota
+        def _orden_key(r):
+            n_alertas = len(r.get("alertas", []))
+            dias = r.get("dias_desde_ultima_nota") or 999
+            return (-n_alertas, -dias)
+        cohorte.sort(key=_orden_key)
+        return cohorte
+    except Exception as e:
+        print(f"[db_v2] get_cohorte_tr error: {e}")
+        return []
+
+
+def _build_cohorte_row(patient_id: int) -> Optional[Dict]:
+    """Arma un row del dashboard para un paciente específico."""
+    conn = get_conn()
+    if not conn:
+        return None
+    try:
+        cur = conn.cursor()
+        # Datos demográficos básicos
+        cur.execute("""
+            SELECT id, apellido_paterno, apellido_materno, nombres,
+                   fecha_nacimiento, sexo, sede_principal,
+                   es_trasplantado, tr_fecha_tx, tr_donador,
+                   tr_etiologia_erc, tr_grupo_sang, tr_ultima_revision,
+                   id_externo
+            FROM patients WHERE id = %s
+        """, (patient_id,))
+        pac = cur.fetchone()
+        if not pac:
+            cur.close()
+            return None
+
+        # Última nota Post-TR
+        cur.execute("""
+            SELECT id, tipo, fecha_consulta, datos_json, resumen, created_at
+            FROM clinical_records
+            WHERE patient_id = %s AND tipo IN %s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (patient_id, TR_NOTE_TYPES))
+        ult_nota = cur.fetchone()
+
+        # Para tendencias: últimas 5 notas Post-TR
+        cur.execute("""
+            SELECT fecha_consulta, datos_json
+            FROM clinical_records
+            WHERE patient_id = %s AND tipo IN %s
+            ORDER BY created_at DESC
+            LIMIT 5
+        """, (patient_id, TR_NOTE_TYPES))
+        ult_5_notas = cur.fetchall()
+        cur.close()
+
+        # Parsear datos_json de la última nota
+        datos = {}
+        if ult_nota and ult_nota.get("datos_json"):
+            try:
+                datos = json.loads(ult_nota["datos_json"])
+            except Exception:
+                datos = {}
+
+        # Calcular edad
+        from datetime import date as _date
+        edad = None
+        if pac.get("fecha_nacimiento"):
+            try:
+                hoy = _date.today()
+                fn = pac["fecha_nacimiento"]
+                edad = hoy.year - fn.year - ((hoy.month, hoy.day) < (fn.month, fn.day))
+            except Exception:
+                pass
+
+        # Nombre completo
+        nombre = " ".join(filter(None, [
+            (pac.get("nombres") or "").strip(),
+            (pac.get("apellido_paterno") or "").strip(),
+            (pac.get("apellido_materno") or "").strip(),
+        ])).strip() or f"Paciente #{patient_id}"
+
+        # Días desde última nota
+        dias_ult = None
+        if ult_nota and ult_nota.get("created_at"):
+            try:
+                from datetime import datetime as _dt
+                ult = ult_nota["created_at"]
+                if isinstance(ult, _dt):
+                    dias_ult = (_dt.now() - ult).days
+            except Exception:
+                pass
+
+        # DPT (días post-trasplante) — preferir el de la nota si existe
+        dpt = datos.get("dpt")
+        if not dpt and pac.get("tr_fecha_tx"):
+            try:
+                hoy = _date.today()
+                fx = pac["tr_fecha_tx"]
+                dpt = (hoy - fx).days
+            except Exception:
+                pass
+
+        # ── ALERTAS automáticas ─────────────────────────────────────────
+        alertas = []
+
+        # 1. Cr ascendente >25%
+        delta_cr = datos.get("delta_cr_pct")
+        if delta_cr is not None:
+            try:
+                d_val = float(delta_cr)
+                if d_val > 25:
+                    alertas.append(f"🔴 Cr ↑{d_val:.0f}% (sospechar rechazo/CNI/BK/obstrucción)")
+                elif d_val > 15:
+                    alertas.append(f"🟠 Cr ↑{d_val:.0f}% (vigilar)")
+            except Exception:
+                pass
+
+        # 2. Tac C0 fuera de meta según DPT
+        tac_c0 = datos.get("tac_c0")
+        if tac_c0 is not None and dpt is not None:
+            try:
+                tac_val = float(tac_c0)
+                dpt_val = int(dpt)
+                # Metas por tiempo (KDIGO simplificadas)
+                if dpt_val <= 30:
+                    meta_min, meta_max = 8, 12
+                elif dpt_val <= 180:
+                    meta_min, meta_max = 6, 10
+                else:
+                    meta_min, meta_max = 5, 8
+                if tac_val < meta_min:
+                    alertas.append(f"🟠 Tac C0 {tac_val} ng/mL <meta ({meta_min}-{meta_max})")
+                elif tac_val > meta_max + 3:
+                    alertas.append(f"🟠 Tac C0 {tac_val} ng/mL >>meta ({meta_min}-{meta_max})")
+            except Exception:
+                pass
+
+        # 3. Sin nota reciente
+        if dias_ult is not None:
+            if dias_ult > 60:
+                alertas.append(f"🟡 Sin nota desde hace {dias_ult} días")
+            elif dias_ult > 30 and dpt and dpt < 180:
+                alertas.append(f"🟡 Sin nota reciente ({dias_ult}d) — primer 6 meses requiere seguimiento más estrecho")
+
+        # 4. Sin nota Post-TR pero marcado manual
+        if pac.get("es_trasplantado") and not ult_nota:
+            alertas.append("🔵 Marcado como TR pero sin notas — pre-TR o pendiente nota inicial")
+
+        # Estado global
+        if any(a.startswith("🔴") for a in alertas):
+            estado = "critico"
+        elif any(a.startswith("🟠") for a in alertas):
+            estado = "alerta"
+        elif any(a.startswith("🟡") for a in alertas):
+            estado = "vigilar"
+        else:
+            estado = "estable"
+
+        return {
+            "id": patient_id,
+            "nombre": nombre,
+            "edad": edad,
+            "sexo": pac.get("sexo"),
+            "sede_principal": pac.get("sede_principal") or "—",
+            "expediente": pac.get("id_externo") or "",
+            "es_trasplantado_manual": bool(pac.get("es_trasplantado")),
+            "tr_fecha_tx": pac.get("tr_fecha_tx") or datos.get("fecha_tx"),
+            "tr_donador": pac.get("tr_donador") or datos.get("donador") or "—",
+            "tr_etiologia_erc": pac.get("tr_etiologia_erc") or "—",
+            "tr_grupo_sang": pac.get("tr_grupo_sang") or "—",
+            "dpt": dpt,
+            "cr_hoy": datos.get("cr_hoy"),
+            "delta_cr_pct": delta_cr,
+            "tac_c0": tac_c0,
+            "patron_func": datos.get("patron_func"),
+            "diuresis_24h": datos.get("diuresis_24h"),
+            "area": datos.get("area"),
+            "ultima_nota_id": ult_nota.get("id") if ult_nota else None,
+            "ultima_nota_fecha": ult_nota.get("fecha_consulta") if ult_nota else None,
+            "ultima_nota_resumen": (ult_nota.get("resumen") or "")[:200] if ult_nota else "",
+            "dias_desde_ultima_nota": dias_ult,
+            "ultima_revision_marcada": pac.get("tr_ultima_revision"),
+            "alertas": alertas,
+            "estado": estado,
+            "tendencia_5_notas": _parse_tendencia(ult_5_notas),
+        }
+    except Exception as e:
+        print(f"[db_v2] _build_cohorte_row error pid={patient_id}: {e}")
+        return None
+
+
+def _parse_tendencia(notas_rows) -> List[Dict]:
+    """Parsea últimas 5 notas para gráficas de tendencia."""
+    out = []
+    for r in (notas_rows or []):
+        try:
+            datos = json.loads(r["datos_json"]) if r.get("datos_json") else {}
+            out.append({
+                "fecha": r.get("fecha_consulta"),
+                "cr": datos.get("cr_hoy"),
+                "tac": datos.get("tac_c0"),
+                "dpt": datos.get("dpt"),
+            })
+        except Exception:
+            continue
+    return list(reversed(out))  # cronológico ascendente
+
+
+def marcar_paciente_tr(patient_id: int, user_id: int, datos: Dict) -> bool:
+    """Marca un paciente como trasplantado manualmente con metadata opcional."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE patients SET
+              es_trasplantado = TRUE,
+              tr_fecha_tx = COALESCE(%s, tr_fecha_tx),
+              tr_donador = COALESCE(%s, tr_donador),
+              tr_etiologia_erc = COALESCE(%s, tr_etiologia_erc),
+              tr_grupo_sang = COALESCE(%s, tr_grupo_sang),
+              sede_principal = COALESCE(%s, sede_principal)
+            WHERE id = %s AND user_id = %s
+        """, (
+            datos.get("fecha_tx"),
+            datos.get("donador"),
+            datos.get("etiologia_erc"),
+            datos.get("grupo_sang"),
+            datos.get("sede_principal"),
+            patient_id, user_id,
+        ))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception as e:
+        print(f"[db_v2] marcar_paciente_tr error: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+
+def desmarcar_paciente_tr(patient_id: int, user_id: int) -> bool:
+    """Quita la marca manual de TR (auto-detección sigue funcionando si tiene notas)."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE patients SET es_trasplantado = FALSE
+            WHERE id = %s AND user_id = %s
+        """, (patient_id, user_id))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+
+def marcar_visita_revisada(patient_id: int, user_id: int) -> bool:
+    """Marca el paciente como revisado HOY (para el dashboard)."""
+    conn = get_conn()
+    if not conn:
+        return False
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE patients SET tr_ultima_revision = NOW()
+            WHERE id = %s AND user_id = %s
+        """, (patient_id, user_id))
+        conn.commit()
+        cur.close()
+        return True
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return False
+
+
+def estadisticas_cohorte_tr(user_id: int) -> Dict:
+    """Estadísticas agregadas de la cohorte TR de un médico."""
+    cohorte = get_cohorte_tr(user_id)
+    total = len(cohorte)
+    if total == 0:
+        return {"total": 0, "criticos": 0, "alertas": 0, "vigilar": 0, "estables": 0,
+                "por_sede": {}, "por_tiempo_post_tr": {}, "por_donador": {}}
+
+    criticos = sum(1 for c in cohorte if c["estado"] == "critico")
+    alertas = sum(1 for c in cohorte if c["estado"] == "alerta")
+    vigilar = sum(1 for c in cohorte if c["estado"] == "vigilar")
+    estables = sum(1 for c in cohorte if c["estado"] == "estable")
+
+    # Por sede
+    por_sede = {}
+    for c in cohorte:
+        s = c.get("sede_principal") or "—"
+        por_sede[s] = por_sede.get(s, 0) + 1
+
+    # Por tiempo post-TR
+    por_tiempo = {"≤30 días": 0, "31-180 días": 0, "181-365 días": 0, ">1 año": 0, "Sin fecha": 0}
+    for c in cohorte:
+        dpt = c.get("dpt")
+        if dpt is None:
+            por_tiempo["Sin fecha"] += 1
+        elif dpt <= 30:
+            por_tiempo["≤30 días"] += 1
+        elif dpt <= 180:
+            por_tiempo["31-180 días"] += 1
+        elif dpt <= 365:
+            por_tiempo["181-365 días"] += 1
+        else:
+            por_tiempo[">1 año"] += 1
+
+    # Por donador
+    por_donador = {}
+    for c in cohorte:
+        d = (c.get("tr_donador") or "—").lower()
+        if "vivo" in d:
+            key = "Vivo"
+        elif "cad" in d or "fallec" in d:
+            key = "Fallecido"
+        else:
+            key = "Sin clasificar"
+        por_donador[key] = por_donador.get(key, 0) + 1
+
+    return {
+        "total": total,
+        "criticos": criticos,
+        "alertas": alertas,
+        "vigilar": vigilar,
+        "estables": estables,
+        "por_sede": por_sede,
+        "por_tiempo_post_tr": por_tiempo,
+        "por_donador": por_donador,
+    }
