@@ -2907,6 +2907,9 @@ elif nav == "presc":
         # No hay ajuste de QrPre con HNF
         ff_efectiva = ff
         qr_pre_efectivo = qr_pre
+        # Citrato = 0 con HNF — para balance de sodio integrado
+        st.session_state["rca_citrato_ml_h"] = 0.0
+        st.session_state["cit_na_mmol_L"]    = 0.0
 
     else:
         # ── CITRATO RCA ───────────────────────────────────────────────────────
@@ -3129,90 +3132,6 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
             """)
 
 
-        # ── BALANCE DE SODIO INTEGRADO ───────────────────────────────────────────
-        with st.expander("🧂 Balance de sodio — integrado con los flujos prescritos", expanded=False):
-            na_rep = st.number_input("Na en solución de reposición (mEq/L)",
-                                     100.0, 160.0, 140.0, 1.0,
-                                     key="presc_na_rep",
-                                     help="Solución estándar: 140 mEq/L. Ajustar si hay hipo/hipernatremia.")
-            na_dial = st.number_input("Na en dializante (mEq/L)",
-                                      100.0, 160.0, 140.0, 1.0,
-                                      key="presc_na_dial",
-                                      help="Prismosol/dializante estándar: 140 mEq/L")
-
-            # Na aportado por cada fuente (mEq/hr)
-            na_de_citrato   = cit_inf_presc * na_in_cit_presc / 1000
-            na_de_rep_pre   = qr_pre_efectivo * na_rep / 1000
-            na_de_rep_post  = qr_post * na_rep / 1000
-            na_de_dializado = qd * na_dial / 1000
-            na_total_in     = na_de_citrato + na_de_rep_pre + na_de_rep_post + na_de_dializado
-
-            # Na eliminado por efluente (sale a concentración sérica)
-            na_out_efluente = efluente_total_int * na / 1000
-
-            # Balance neto
-            na_balance = na_total_in - na_out_efluente
-
-            # Na efectivo aportado (promedio ponderado de todas las soluciones)
-            flujo_in_total = cit_inf_presc + qr_pre_efectivo + qr_post + qd
-            na_efectivo = na_total_in / flujo_in_total * 1000 if flujo_in_total > 0 else 0
-
-            # Proyección 24h
-            tbw = peso * 0.6
-            delta_na_24h = (na_balance * 24) / tbw if tbw > 0 else 0
-
-            sna1, sna2, sna3, sna4 = st.columns(4)
-            sna1.metric("Na aportado/hr", f"{na_total_in:.1f} mEq/hr",
-                        help="Suma de citrato + reposición + dializante")
-            sna2.metric("Na eliminado/hr", f"{na_out_efluente:.1f} mEq/hr",
-                        help=f"Efluente {efluente_total_int:.0f} mL × Na sérico {na} mEq/L")
-            sna3.metric("Balance neto Na", f"{na_balance:+.1f} mEq/hr",
-                        delta="↑ Na tiende a subir" if na_balance > 2 else
-                              ("↓ Na tiende a bajar" if na_balance < -2 else "→ Na estable"),
-                        delta_color="inverse")
-            sna4.metric("ΔNa proyectado/24h", f"{delta_na_24h:+.1f} mEq/L",
-                        help=f"Si todo se mantiene igual | TBW estimado: {tbw:.0f} L")
-
-            # Tabla de fuentes
-            st.markdown("**Desglose por fuente:**")
-            st.table({
-                "Fuente": [
-                    f"Citrato ({na_in_cit_presc:.0f} mEq/L)",
-                    f"Rep. PRE ({na_rep:.0f} mEq/L)",
-                    f"Rep. POST ({na_rep:.0f} mEq/L)",
-                    f"Dializante ({na_dial:.0f} mEq/L)",
-                    "↓ Efluente (Na sérico)",
-                    "BALANCE",
-                ],
-                "Flujo (mL/hr)": [
-                    f"{cit_inf_presc:.0f}", f"{qr_pre_efectivo:.0f}",
-                    f"{qr_post:.0f}", f"{qd:.0f}",
-                    f"{efluente_total_int:.0f}", "—",
-                ],
-                "Na (mEq/hr)": [
-                    f"+{na_de_citrato:.1f}", f"+{na_de_rep_pre:.1f}",
-                    f"+{na_de_rep_post:.1f}", f"+{na_de_dializado:.1f}",
-                    f"−{na_out_efluente:.1f}",
-                    f"**{na_balance:+.1f}**",
-                ],
-            })
-
-            # Recomendación automática
-            if na < 130 and delta_na_24h < 0:
-                st.error(f"⚠️ Hiponatremia ({na} mEq/L) + balance negativo de Na "
-                         f"({na_balance:+.1f} mEq/hr). Subir Na en solución de reposición "
-                         f"a ≥{na+5:.0f} mEq/L o reducir velocidad de corrección.")
-            elif na > 150 and delta_na_24h > 0:
-                st.error(f"⚠️ Hipernatremia ({na} mEq/L) + balance positivo de Na "
-                         f"({na_balance:+.1f} mEq/hr). Bajar Na en solución de reposición "
-                         f"a ≤{na-5:.0f} mEq/L.")
-            elif abs(delta_na_24h) > 10:
-                st.warning(f"🟡 Cambio proyectado de {delta_na_24h:+.1f} mEq/L en 24h — "
-                           f"excede el límite seguro (8-10 mEq/L/día). Ajustar Na en soluciones.")
-            else:
-                st.success(f"✅ Balance de sodio dentro de rango seguro. "
-                           f"Na efectivo aportado: {na_efectivo:.1f} mEq/L vs sérico: {na:.1f} mEq/L.")
-
         # ── MANEJO DE ALCALOSIS METABÓLICA EN CRRT CON CITRATO ─────────────────
         with st.expander("⚗️ Alcalosis metabólica — árbol de decisión", expanded=False):
             st.markdown("**Ingresa los valores actuales del paciente:**")
@@ -3265,6 +3184,89 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
                     if st.session_state.get("hco3_main", 24) < 28:
                         st.caption("💡 Tip: ajusta el HCO₃⁻ de la prescripción en el módulo "
                                    "⚗️ Electrolitos & Bolsas para calcular la nueva composición.")
+
+
+    # ── BALANCE DE SODIO — aplica a HNF y Citrato RCA ─────────────────────────
+    st.divider()
+    with st.expander("🧂 Balance de sodio — HNF y Citrato RCA", expanded=False):
+        na_rep  = st.number_input("Na en solución de reposición (mEq/L)",
+                                  100.0, 160.0, 140.0, 1.0, key="presc_na_rep",
+                                  help="Estándar: 140 mEq/L. Ajustar si hay hipo/hipernatremia.")
+        na_dial = st.number_input("Na en dializante (mEq/L)",
+                                  100.0, 160.0, 140.0, 1.0, key="presc_na_dial",
+                                  help="Prismosol/dializante estándar: 140 mEq/L")
+
+        # Leer citrato desde session_state (0 si HNF, calculado si RCA)
+        _cit_flow = float(st.session_state.get("rca_citrato_ml_h", 0))
+        _na_cit   = float(st.session_state.get("cit_na_mmol_L", 0))
+        _anticoag = st.session_state.get("anticoagulacion_tipo", "HNF")
+        _efluente_na = dosis_mlkg * peso  # mL/hr
+
+        # Na aportado por cada fuente (mEq/hr)
+        na_de_citrato   = _cit_flow * _na_cit / 1000
+        na_de_rep_pre   = qr_pre_efectivo * na_rep / 1000
+        na_de_rep_post  = qr_post * na_rep / 1000
+        na_de_dializado = qd * na_dial / 1000
+        na_total_in     = na_de_citrato + na_de_rep_pre + na_de_rep_post + na_de_dializado
+
+        # Na eliminado por efluente
+        na_out_efluente = _efluente_na * na / 1000
+        na_balance      = na_total_in - na_out_efluente
+
+        # Na efectivo ponderado
+        flujo_in_total  = _cit_flow + qr_pre_efectivo + qr_post + qd
+        na_efectivo_pond = na_total_in / flujo_in_total * 1000 if flujo_in_total > 0 else na
+
+        # Proyección 24h
+        tbw          = peso * 0.6
+        delta_na_24h = (na_balance * 24) / tbw if tbw > 0 else 0
+
+        if _anticoag == "HNF":
+            st.info("🩸 Anticoagulación: **HNF** — citrato = 0 mEq/hr Na. "
+                    "Solo reposición y dializante contribuyen al balance de sodio.")
+        else:
+            st.info(f"🧪 Anticoagulación: **Citrato RCA** — "
+                    f"citrato aporta {na_de_citrato:.1f} mEq/hr de Na "
+                    f"({_cit_flow:.0f} mL/hr × {_na_cit:.0f} mEq/L).")
+
+        sna1, sna2, sna3, sna4 = st.columns(4)
+        sna1.metric("Na aportado/hr", f"{na_total_in:.1f} mEq/hr")
+        sna2.metric("Na eliminado/hr", f"{na_out_efluente:.1f} mEq/hr",
+                    help=f"Efluente {_efluente_na:.0f} mL × Na sérico {na} mEq/L")
+        sna3.metric("Balance neto Na", f"{na_balance:+.1f} mEq/hr",
+                    delta="↑ tiende a subir" if na_balance > 2
+                    else ("↓ tiende a bajar" if na_balance < -2 else "→ estable"),
+                    delta_color="inverse")
+        sna4.metric("ΔNa proyectado/24h", f"{delta_na_24h:+.1f} mEq/L",
+                    help=f"TBW estimado: {tbw:.0f} L")
+
+        cit_label = f"Citrato ({_na_cit:.0f} mEq/L)" if _anticoag == "RCA" else "Citrato (HNF=0)"
+        st.table({
+            "Fuente": [cit_label,
+                       f"Rep. PRE ({na_rep:.0f} mEq/L)",
+                       f"Rep. POST ({na_rep:.0f} mEq/L)",
+                       f"Dializante ({na_dial:.0f} mEq/L)",
+                       "↓ Efluente (Na sérico)", "BALANCE"],
+            "Flujo (mL/hr)": [f"{_cit_flow:.0f}", f"{qr_pre_efectivo:.0f}",
+                               f"{qr_post:.0f}", f"{qd:.0f}",
+                               f"{_efluente_na:.0f}", "—"],
+            "Na (mEq/hr)":   [f"+{na_de_citrato:.1f}", f"+{na_de_rep_pre:.1f}",
+                               f"+{na_de_rep_post:.1f}", f"+{na_de_dializado:.1f}",
+                               f"−{na_out_efluente:.1f}", f"**{na_balance:+.1f}**"],
+        })
+
+        if na < 130 and delta_na_24h < 0:
+            st.error(f"⚠️ Hiponatremia ({na} mEq/L) + balance negativo. "
+                     f"Subir Na en reposición a ≥{na+5:.0f} mEq/L.")
+        elif na > 150 and delta_na_24h > 0:
+            st.error(f"⚠️ Hipernatremia ({na} mEq/L) + balance positivo. "
+                     f"Bajar Na en reposición a ≤{na-5:.0f} mEq/L.")
+        elif abs(delta_na_24h) > 10:
+            st.warning(f"🟡 ΔNa proyectado {delta_na_24h:+.1f} mEq/L/24h — "
+                       f"supera límite seguro. Ajustar Na en soluciones.")
+        else:
+            st.success(f"✅ Balance Na seguro. Na efectivo aportado: "
+                       f"{na_efectivo_pond:.1f} mEq/L vs sérico: {na:.1f} mEq/L.")
 
     # ── Semáforo FF (usa FF efectiva según anticoagulación elegida) ───────────
     st.markdown("#### Estado del filtro (FF efectiva)")
