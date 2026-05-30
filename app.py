@@ -21838,6 +21838,29 @@ elif nav == "nota_evol_tx":
         st.divider()
 
         # ── GENERAR PDF ──────────────────────────────────────────────────────
+        # ── Institución emisora de la nota ───────────────────────────────────
+        st.markdown("#### 🏥 Institución emisora")
+        INSTITUCIONES_MAP = {
+            "Renalmedic (Consulta privada)":
+                ("Renalmedic", "Av. México 719, Col. Los Paraísos, León, Gto. CP 37328"),
+            "Hospital General de León":
+                ("Hospital General de León", "Blvd. Milenio 1002, Fracciones de los Aguirre, 37672 León de los Aldama, Gto."),
+            "IMSS — CMN del Bajío / UMAE No. 1":
+                ("IMSS — UMAE No. 1 / Centro Médico Nacional del Bajío", "León, Gto."),
+            "Clínica Alba":
+                ("Clínica Alba Diálisis & Trasplantes", "León, Gto."),
+            "Otra (escribir abajo)": ("", ""),
+        }
+        ne_inst_sel = st.selectbox("Institución donde se emite la nota",
+                                    list(INSTITUCIONES_MAP.keys()),
+                                    key="ne_inst_sel")
+        if ne_inst_sel == "Otra (escribir abajo)":
+            _inst_nombre = st.text_input("Nombre de la institución", key="ne_inst_custom")
+            _inst_dir    = st.text_input("Dirección", key="ne_inst_dir_custom")
+        else:
+            _inst_nombre, _inst_dir = INSTITUCIONES_MAP[ne_inst_sel]
+
+        st.divider()
         # ── Opciones de guardado ─────────────────────────────────────────────
         ne_borrador = st.checkbox(
             "💾 Guardar como borrador (nota incompleta — labs/datos pendientes)",
@@ -21947,9 +21970,10 @@ elif nav == "nota_evol_tx":
                     dr_u  = st.session_state.get("sess_universidad","")
                     dr_cons = st.session_state.get("sess_consejo_nombre","")
                     dr_cn   = st.session_state.get("sess_consejo_num","")
-                    dr_inst = st.session_state.get("sess_institucion","")
-                    dr_dom  = st.session_state.get("sess_domicilio","")
-                    dr_tel  = st.session_state.get("sess_telefono","")
+                    # Institución seleccionada en la nota (override del perfil)
+                    dr_inst = _inst_nombre or st.session_state.get("sess_institucion","")
+                    dr_dom  = _inst_dir    or st.session_state.get("sess_domicilio","")
+                    dr_tel  = ""  # Teléfono removido del PDF por privacidad
                     logo_b64 = st.session_state.get("sess_logo_b64","")
 
                     if logo_b64:
@@ -21964,7 +21988,7 @@ elif nav == "nota_evol_tx":
                     _hdr_txt = [
                         _P(dr_inst or "Servicio de Trasplante Renal", 11, True, AZ1, sp=1),
                         _P(dr_dom or "—", 8, color=GR, sp=1),
-                        _P(f"Tel: {dr_tel}" if dr_tel else "", 8, color=GR, sp=1),
+                        # Teléfono removido del PDF
                         _P(f"DPT {int(ne_dpt)} · {ne_fecha}", 9, color=AZ2, align=_TR_ev, sp=0),
                     ]
                     _th = _Tbl_ev([[_logo_cell, _hdr_txt]], colWidths=[2.2*_cm_ev, 15.8*_cm_ev])
@@ -22200,10 +22224,15 @@ elif nav == "nota_evol_tx":
 
                     # ── LABORATORIOS (3 columnas) ───────────────────────────
                     # Badge Tac C0
-                    if 8 <= ne_tac_c0 <= 12: _tac_color = VRD; _tac_emoji = "🟢"
-                    elif ne_tac_c0 > 15:     _tac_color = ROJ; _tac_emoji = "🔴"
-                    elif ne_tac_c0 < 6:      _tac_color = AMA; _tac_emoji = "🟡"
-                    else:                     _tac_color = AMA; _tac_emoji = "🟡"
+                    _tac_no_disp_pdf = st.session_state.get("ne_tac_no_disp", False)
+                    if _tac_no_disp_pdf or ne_tac_c0 == 0.0:
+                        _tac_color = GR; _tac_emoji = "⏳"; _tac_display_pdf = "Pendiente"
+                    elif 8 <= ne_tac_c0 <= 12:
+                        _tac_color = VRD; _tac_emoji = "🟢"; _tac_display_pdf = f"{ne_tac_c0:.1f} ng/mL"
+                    elif ne_tac_c0 > 15:
+                        _tac_color = ROJ; _tac_emoji = "🔴"; _tac_display_pdf = f"{ne_tac_c0:.1f} ng/mL"
+                    else:
+                        _tac_color = AMA; _tac_emoji = "🟡"; _tac_display_pdf = f"{ne_tac_c0:.1f} ng/mL"
                     _t_lab = _Tbl_ev([
                         [_P("LABORATORIOS", 9, True, _wh_ev), _P("", 8), _P("", 8)],
                         [_P("<b>BH / Hematológico</b>", 9, color=AZ1),
@@ -22216,7 +22245,7 @@ elif nav == "nota_evol_tx":
                             f"Ca: {ne_ca:.1f} · P: {ne_p:.1f}<br/>"
                             f"Mg: {ne_mg:.1f}", 9),
                          _P(f"<b>Tac C0: <font color='#{_tac_color.hexval()[2:]}'>"
-                            f"{ne_tac_c0:.1f}</font> ng/mL</b><br/>"
+                            f"{_tac_display_pdf}</font></b><br/>"
                             f"CMV: {ne_cmv or 'ND'}<br/>"
                             f"BK: {ne_bk or 'ND'} · PCR: {ne_pcr or '—'}", 9)],
                     ], colWidths=[6*_cm_ev]*3)
@@ -22315,8 +22344,7 @@ elif nav == "nota_evol_tx":
                     _story.append(_t_firma)
                     _story.append(_Sp_ev(1, 0.2*_cm_ev))
                     _story.append(_HR_ev(width="100%", thickness=0.5, color=AZM))
-                    _story.append(_P(f"RenalPro {VERSION} · Nota de evolución post-TR · "
-                                     f"NOM-004-SSA3-2012 · COFEPRIS · {dr_inst} · Tel: {dr_tel}",
+                    _story.append(_P(f"NOM-004-SSA3-2012 · Nota de evolución post-TR · {dr_inst}",
                                      7, color=GR, align=_TC_ev))
 
                     # Numeración Página X de Y
