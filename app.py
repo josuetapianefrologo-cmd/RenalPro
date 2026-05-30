@@ -21195,8 +21195,13 @@ elif nav == "nota_evol_tx":
                                       key="ne_fecha")
             ne_hora  = st.time_input("Hora", value=_dt_evo.now().time().replace(microsecond=0),
                                       key="ne_hora")
-            ne_dpt   = st.number_input("Día post-TR (DPT) *", 0, 60, 1, 1, key="ne_dpt",
-                                        help="Días desde el trasplante · Se auto-incrementa con notas previas")
+            # DPT se calcula desde la fecha de trasplante (abajo en datos del trasplante)
+            # Este campo se usa como display y puede sobreescribirse si es necesario
+            ne_dpt = st.number_input("Día post-TR (DPT)",
+                                     min_value=0, max_value=180,
+                                     value=int(st.session_state.get("ne_dpt", 1)),
+                                     step=1, key="ne_dpt",
+                                     help="Auto-calculado desde fecha de trasplante. Ajusta si hay discrepancia.")
 
         st.divider()
 
@@ -21220,8 +21225,30 @@ elif nav == "nota_evol_tx":
         st.markdown("#### 🫘 Datos del Trasplante")
         c4, c5 = st.columns(2)
         with c4:
-            ne_fecha_tx = st.text_input("Fecha del TR", key="ne_fecha_tx",
-                                         placeholder="2026-05-19")
+            # ── Fecha trasplante con calendario ──────────────────────────────
+            from datetime import date as _d_ne
+            _fe_tx_default = _d_ne.today()
+            _fe_tx_ss = st.session_state.get("ne_fecha_tx", "")
+            if _fe_tx_ss:
+                try:
+                    from datetime import datetime as _dt_ne2
+                    _fe_tx_default = _dt_ne2.strptime(str(_fe_tx_ss)[:10], "%Y-%m-%d").date()
+                except Exception:
+                    _fe_tx_default = _d_ne.today()
+            ne_fecha_tx_date = st.date_input(
+                "📅 Fecha del trasplante",
+                value=_fe_tx_default,
+                max_value=_d_ne.today(),
+                format="DD/MM/YYYY",
+                key="ne_fecha_tx_cal",
+                help="Selecciona en el calendario — el DPT se calcula automáticamente"
+            )
+            ne_fecha_tx = str(ne_fecha_tx_date)
+            # ── DPT automático ────────────────────────────────────────────────
+            _dpt_calculado = (_d_ne.today() - ne_fecha_tx_date).days
+            st.session_state["ne_dpt"] = _dpt_calculado
+            st.caption(f"📆 **DPT {_dpt_calculado}** "
+                       f"({ne_fecha_tx_date.strftime('%d/%m/%Y')} → hoy)")
             ne_donador  = st.selectbox("Tipo de donador",
                 ["Vivo relacionado","Vivo no relacionado","Fallecido (DBD)","Fallecido (DCD)"],
                 key="ne_donador")
