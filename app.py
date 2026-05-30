@@ -21193,7 +21193,20 @@ elif nav == "nota_evol_tx":
             key="ne_subj", placeholder="Estado general, síntomas, dolor, apetito, evacuaciones, sueño...")
         cv1, cv2, cv3, cv4 = st.columns(4)
         with cv1:
-            ne_ta  = st.text_input("TA (mmHg)", key="ne_ta", placeholder="120/80")
+            _ne_ta_c1, _ne_ta_sep, _ne_ta_c2 = st.columns([5, 1, 5])
+            _ne_ta_s = _ne_ta_c1.number_input("TA Sist.", 60, 250, 130, 1,
+                                               key="ne_ta_sist", help="mmHg")
+            _ne_ta_sep.markdown("<br><div style='text-align:center;font-weight:bold'>/</div>",
+                                unsafe_allow_html=True)
+            _ne_ta_d = _ne_ta_c2.number_input("TA Diast.", 40, 150, 80, 1,
+                                               key="ne_ta_diast", help="mmHg")
+            ne_ta = f"{_ne_ta_s}/{_ne_ta_d}"
+            if _ne_ta_s >= 160 or _ne_ta_d >= 100:
+                st.caption("🔴 HTA severa")
+            elif _ne_ta_s >= 140 or _ne_ta_d >= 90:
+                st.caption("🟡 HTA")
+            elif _ne_ta_s < 90:
+                st.caption("🔴 Hipotensión")
             ne_fc  = st.text_input("FC (lpm)", key="ne_fc", placeholder="80")
         with cv2:
             ne_fr   = st.text_input("FR (rpm)", key="ne_fr", placeholder="16")
@@ -21204,8 +21217,14 @@ elif nav == "nota_evol_tx":
         with cv4:
             ne_diuresis_24h = st.number_input("Diuresis 24h (mL)", 0, 10000, 1500, 50,
                                                key="ne_diur24")
-            ne_diuresis_h = st.number_input("Diuresis horaria (mL/h)", 0.0, 1000.0, 60.0, 1.0,
-                                             key="ne_diur_h")
+            _peso_ne = float(_ne_pac.get("peso") or 70)
+            ne_diuresis_h  = round(ne_diuresis_24h / 24, 1)
+            _ne_ur_kg      = round(ne_diuresis_h / _peso_ne, 2) if _peso_ne > 0 else 0
+            _ne_ur_emoji   = "🟢" if _ne_ur_kg >= 1.0 else ("🟡" if _ne_ur_kg >= 0.5 else "🔴")
+            st.caption(f"⏱️ **{ne_diuresis_h} mL/hr** · "
+                       f"{_ne_ur_emoji} **{_ne_ur_kg} mL/kg/hr**"
+                       + (" — Oliguria" if _ne_ur_kg < 0.5 else
+                          " — Adecuada" if _ne_ur_kg >= 1.0 else " — Límite"))
         # Balance hídrico con Blake
         st.markdown("**⚖️ Balance hídrico 24h**")
         _bh1, _bh2, _bh3 = st.columns(3)
@@ -21278,6 +21297,13 @@ elif nav == "nota_evol_tx":
 
         # ── LABORATORIOS ─────────────────────────────────────────────────────
         st.markdown("#### 🧪 Laboratorios del día")
+        _ne_labs_col, _ne_labs_info = st.columns([3, 2])
+        ne_labs_pend = _ne_labs_col.checkbox(
+            "📋 Labs no disponibles aún (guardar sin resultados)",
+            key="ne_labs_pend",
+            help="Puedes guardar la nota ahora y completar labs cuando estén listos")
+        if ne_labs_pend:
+            _ne_labs_info.info("ℹ️ Nota se guardará con labs pendientes")
         cl1, cl2, cl3 = st.columns(3)
         with cl1:
             st.markdown("**BH / Hematológico**")
@@ -21293,17 +21319,25 @@ elif nav == "nota_evol_tx":
             ne_mg   = st.number_input("Mg (mg/dL)", 0.0, 5.0, 1.8, 0.1, key="ne_mg_tx")
         with cl3:
             st.markdown("**IS / Virales**")
-            ne_tac_c0 = st.number_input("Tacrolimus C0 (ng/mL)", 0.0, 50.0, 9.0, 0.1, key="ne_tac",
-                help="Meta primer mes: 8–12 ng/mL · Mes 2–6: 6–10 · >6m: 5–8")
-            # Badge visual del Tac
-            if 8 <= ne_tac_c0 <= 12:
-                st.caption("🟢 En meta primer mes")
-            elif 6 <= ne_tac_c0 < 8 or 12 < ne_tac_c0 <= 15:
-                st.caption("🟡 Fuera de meta — considerar ajuste")
-            elif ne_tac_c0 > 15:
-                st.caption("🔴 Nivel tóxico — reducir dosis")
+            ne_tac_no_disp = st.checkbox("Nivel no disponible / no tomado aún",
+                                           key="ne_tac_no_disp")
+            if ne_tac_no_disp:
+                ne_tac_c0 = 0.0
+                st.caption("⏳ Tac C0 pendiente — se registrará cuando esté disponible")
             else:
-                st.caption("🟡 Subterapéutico — considerar aumentar")
+                ne_tac_c0 = st.number_input("Tacrolimus C0 (ng/mL)", 0.0, 50.0, 9.0, 0.1,
+                    key="ne_tac",
+                    help="Meta primer mes: 8–12 ng/mL · Mes 2–6: 6–10 · >6m: 5–8")
+                if ne_tac_c0 == 0.0:
+                    st.caption("⚪ Sin nivel registrado")
+                elif 8 <= ne_tac_c0 <= 12:
+                    st.caption("🟢 En meta primer mes")
+                elif 6 <= ne_tac_c0 < 8 or 12 < ne_tac_c0 <= 15:
+                    st.caption("🟡 Fuera de meta — considerar ajuste")
+                elif ne_tac_c0 > 15:
+                    st.caption("🔴 Nivel tóxico — reducir dosis")
+                else:
+                    st.caption("🟡 Subterapéutico — considerar aumentar")
             ne_cmv  = st.text_input("CMV PCR", key="ne_cmv", placeholder="ej. ND · 250 cp/mL")
             ne_bk   = st.text_input("BK PCR (>día 14)", key="ne_bk", placeholder="ej. ND · 2000 cp/mL")
             ne_pcr  = st.text_input("PCR (mg/L)", key="ne_pcr_lab", placeholder="ej. 12")
@@ -21313,6 +21347,124 @@ elif nav == "nota_evol_tx":
                                     key="ne_uricult")
         ne_otros_labs = st.text_area("Otros laboratorios", height=50, key="ne_otros_labs",
             placeholder="Glucosa, función hepática, gasometría, ácido úrico, lactato, troponina...")
+
+        # ── ALARMAS AUTOMÁTICAS ──────────────────────────────────────────────
+        _alarmas = []
+        # Timoglobulina: contraindicaciones por labs
+        if ne_plt < 75:
+            _alarmas.append(("error", f"🚨 Plaquetas {ne_plt}k/µL < 75k — "
+                             "CONTRAINDICACIÓN de Timoglobulina. Reducir dosis o suspender."))
+        elif ne_plt < 100:
+            _alarmas.append(("warning", f"⚠️ Plaquetas {ne_plt}k/µL < 100k — "
+                             "Reducir dosis ATG al 50% según protocolo."))
+        if ne_leu < 3.0:
+            _alarmas.append(("error", f"🚨 Leucocitos {ne_leu}k/µL < 3k — "
+                             "CONTRAINDICACIÓN de Timoglobulina. Suspender dosis."))
+        elif ne_leu < 4.0:
+            _alarmas.append(("warning", f"⚠️ Leucocitos {ne_leu}k/µL < 4k — Vigilar toxicidad ATG."))
+        # Basiliximab día 4
+        _tx_fecha_pac = _ne_pac.get("fecha_tx") or _ne_pac.get("cir_fecha")
+        if _tx_fecha_pac:
+            try:
+                from datetime import date as _dt_date, datetime as _dt_dt
+                if isinstance(_tx_fecha_pac, str):
+                    _tx_fecha_pac = _dt_dt.strptime(_tx_fecha_pac[:10], "%Y-%m-%d").date()
+                _dias_post_tx = (_dt_date.today() - _tx_fecha_pac).days
+                if _dias_post_tx == 3:
+                    _alarmas.append(("error", f"🔔 DÍA 4 POST-TRASPLANTE — "
+                                    "Verificar si se indicó Basiliximab: pendiente 2ª dosis hoy."))
+                elif _dias_post_tx == 4:
+                    _alarmas.append(("warning", "⏰ Día 5 post-TX — "
+                                    "Confirmar que se administró 2ª dosis de Basiliximab ayer."))
+            except Exception:
+                pass
+        # Tacrolimus
+        if not st.session_state.get("ne_tac_no_disp", False):
+            _tac_val = st.session_state.get("ne_tac", 9.0)
+            if _tac_val > 15:
+                _alarmas.append(("error", f"🔴 Tacrolimus C0 {_tac_val} ng/mL — "
+                                "NIVEL TÓXICO. Reducir dosis y monitorear función renal."))
+        # Mostrar alarmas
+        if _alarmas:
+            st.markdown("---")
+            st.markdown("#### 🚨 Alertas clínicas automáticas")
+            for _nivel, _msg in _alarmas:
+                getattr(st, _nivel)(_msg)
+
+        st.divider()
+
+        # ── DOSIS ACUMULADA DE INDUCCIÓN ─────────────────────────────────────
+        with st.expander("💉 Dosis acumulada de inducción (Timoglobulina / Basiliximab)",
+                         expanded=False):
+            _ind_agente = st.selectbox("Agente de inducción usado",
+                ["Timoglobulina (ATG-r)", "Basiliximab", "Sin inducción biológica"],
+                key="ne_ind_agente")
+
+            if "Timoglobulina" in _ind_agente:
+                st.caption("Registro día a día — agrega las dosis administradas "
+                           "(omite los días en que se suspendió)")
+                if "ne_atg_dosis_list" not in st.session_state:
+                    st.session_state["ne_atg_dosis_list"] = []
+                _atg_list = st.session_state["ne_atg_dosis_list"]
+
+                _ad1, _ad2, _ad3, _ad4 = st.columns([1.5, 2, 2.5, 1])
+                _atg_dia_inp   = _ad1.number_input("Día post-Tx", 0, 30, 1, 1, key="ne_atg_dia")
+                _atg_dosis_inp = _ad2.number_input("Dosis (mg/kg)", 0.25, 3.0, 1.5, 0.25, key="ne_atg_dosis")
+                _atg_estado    = _ad3.selectbox("Estado", ["Administrada",
+                    "Suspendida — Plaquetas <75k", "Suspendida — Leucos <3k",
+                    "Suspendida — Infección activa", "Suspendida — Otra razón"],
+                    key="ne_atg_estado")
+                with _ad4:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.button("➕", key="ne_atg_add"):
+                        _atg_list.append({
+                            "dia": _atg_dia_inp,
+                            "dosis": _atg_dosis_inp,
+                            "estado": _atg_estado,
+                        })
+                        st.session_state["ne_atg_dosis_list"] = _atg_list
+                        st.rerun()
+
+                # Tabla de dosis
+                if _atg_list:
+                    _atg_sorted = sorted(_atg_list, key=lambda x: x["dia"])
+                    _total_atg  = sum(d["dosis"] for d in _atg_sorted
+                                      if "Administrada" in d["estado"])
+                    _peso_atg   = float(_ne_pac.get("peso") or 70)
+                    _total_mg   = _total_atg * _peso_atg
+                    _viales     = -(-int(_total_mg) // 25)
+
+                    st.table({
+                        "Día": [f"Día {d['dia']}" for d in _atg_sorted],
+                        "Dosis": [f"{d['dosis']} mg/kg" for d in _atg_sorted],
+                        "Estado": [d["estado"] for d in _atg_sorted],
+                    })
+                    st.success(f"📊 **Total acumulado:** {_total_atg:.2f} mg/kg "
+                               f"= **{_total_mg:.0f} mg** ({_viales} viales 25mg) "
+                               f"con peso {_peso_atg:.0f} kg")
+
+                    if st.button("🗑️ Limpiar lista", key="ne_atg_clear"):
+                        st.session_state["ne_atg_dosis_list"] = []
+                        st.rerun()
+
+            elif "Basiliximab" in _ind_agente:
+                _bsxm_d0 = st.checkbox("✅ Dosis día 0 administrada (20 mg IV)", key="ne_bsx_d0")
+                _bsxm_d4 = st.checkbox("✅ Dosis día 4 administrada (20 mg IV)", key="ne_bsx_d4")
+                _tx_f = _ne_pac.get("fecha_tx") or _ne_pac.get("cir_fecha")
+                if _tx_f:
+                    try:
+                        from datetime import date as _d2, datetime as _dt2
+                        if isinstance(_tx_f, str):
+                            _tx_f = _dt2.strptime(_tx_f[:10], "%Y-%m-%d").date()
+                        _dias = (_d2.today() - _tx_f).days
+                        if _dias >= 3 and not _bsxm_d4:
+                            st.error(f"🔔 Día {_dias+1} post-Tx — 2ª dosis de Basiliximab pendiente.")
+                        elif _bsxm_d0 and _bsxm_d4:
+                            st.success("✅ Inducción con Basiliximab completa (2/2 dosis)")
+                        elif _bsxm_d0:
+                            st.info(f"1/2 dosis. Día 4 post-Tx: {(_tx_f + __import__('datetime').timedelta(days=3)).strftime('%d/%m/%Y')}")
+                    except Exception:
+                        pass
 
         st.divider()
 
@@ -21343,15 +21495,61 @@ elif nav == "nota_evol_tx":
 
         # ── PROFILAXIS ───────────────────────────────────────────────────────
         st.markdown("#### 💊 Profilaxis activas")
-        cp1, cp2 = st.columns(2)
-        with cp1:
-            ne_pf_cmv = st.text_input("Valganciclovir (CMV)", key="ne_pf_cmv",
-                placeholder="ej. 450 mg/día x 3-6 meses según D/R")
-            ne_pf_pjp = st.text_input("TMP-SMX (Pneumocystis)", key="ne_pf_pjp",
-                placeholder="ej. 80/400 mg c/24h x 6 meses")
-        with cp2:
-            ne_pf_otros = st.text_area("Otras profilaxis", height=60, key="ne_pf_otros",
-                placeholder="Nistatina, IBP, HBPM/ASA, antifúngico, fluconazol...")
+        st.caption("Usa los botones de un clic para pre-llenar las profilaxis estándar")
+
+        # ── Quick fill CMV ────────────────────────────────────────────────────
+        st.markdown("**CMV:**")
+        _pf_b1, _pf_b2, _pf_b3 = st.columns(3)
+        if _pf_b1.button("D+/R⁻ → 900mg/día × 6m", key="pf_cmv1", use_container_width=True):
+            st.session_state["ne_pf_cmv"] = "Valganciclovir 900 mg c/24h VO × 6 meses (D+/R-)"
+            st.rerun()
+        if _pf_b2.button("R⁺ → 450mg/día × 3m", key="pf_cmv2", use_container_width=True):
+            st.session_state["ne_pf_cmv"] = "Valganciclovir 450 mg c/24h VO × 3 meses (R+)"
+            st.rerun()
+        if _pf_b3.button("D⁻/R⁻ → sin profilaxis", key="pf_cmv3", use_container_width=True):
+            st.session_state["ne_pf_cmv"] = "Sin profilaxis CMV (D-/R-) — vigilancia con PCR"
+            st.rerun()
+        ne_pf_cmv = st.text_input("Valganciclovir (CMV)", key="ne_pf_cmv",
+            placeholder="ej. 450 mg/día x 3-6 meses según D/R")
+
+        # ── Quick fill PJP ────────────────────────────────────────────────────
+        st.markdown("**PJP / Pneumocystis:**")
+        _pjp_b1, _pjp_b2 = st.columns(2)
+        if _pjp_b1.button("TMP-SMX estándar × 6m", key="pf_pjp1", use_container_width=True):
+            st.session_state["ne_pf_pjp"] = "TMP-SMX 80/400 mg c/24h VO × 6 meses"
+            st.rerun()
+        if _pjp_b2.button("TMP-SMX × 12m (alto riesgo)", key="pf_pjp2", use_container_width=True):
+            st.session_state["ne_pf_pjp"] = "TMP-SMX 80/400 mg c/24h VO × 12 meses (alto riesgo inmune)"
+            st.rerun()
+        ne_pf_pjp = st.text_input("TMP-SMX (Pneumocystis)", key="ne_pf_pjp",
+            placeholder="ej. 80/400 mg c/24h x 6 meses")
+
+        # ── Quick fill Otras ─────────────────────────────────────────────────
+        st.markdown("**Otras profilaxis:**")
+        _op_b1, _op_b2, _op_b3, _op_b4 = st.columns(4)
+        _pf_otros_add = []
+        if _op_b1.button("+ Fluconazol", key="pf_fluco", use_container_width=True):
+            _cur = st.session_state.get("ne_pf_otros", "")
+            _sep = "\n" if _cur else ""
+            st.session_state["ne_pf_otros"] = _cur + _sep + "Fluconazol 100 mg c/24h VO × 1 mes"
+            st.rerun()
+        if _op_b2.button("+ Isoniazida (TB)", key="pf_inh", use_container_width=True):
+            _cur = st.session_state.get("ne_pf_otros", "")
+            _sep = "\n" if _cur else ""
+            st.session_state["ne_pf_otros"] = _cur + _sep + "Isoniazida 300 mg c/24h VO × 9 meses + Piridoxina 50 mg c/24h"
+            st.rerun()
+        if _op_b3.button("+ IBP", key="pf_ibp", use_container_width=True):
+            _cur = st.session_state.get("ne_pf_otros", "")
+            _sep = "\n" if _cur else ""
+            st.session_state["ne_pf_otros"] = _cur + _sep + "Pantoprazol 40 mg c/24h VO"
+            st.rerun()
+        if _op_b4.button("+ Nistatina", key="pf_nist", use_container_width=True):
+            _cur = st.session_state.get("ne_pf_otros", "")
+            _sep = "\n" if _cur else ""
+            st.session_state["ne_pf_otros"] = _cur + _sep + "Nistatina 500,000 UI enjuague bucal c/8h × 1 mes"
+            st.rerun()
+        ne_pf_otros = st.text_area("Otras profilaxis", height=80, key="ne_pf_otros",
+            placeholder="Fluconazol, Isoniazida, IBP, Nistatina, HBPM/ASA...")
 
         # Profilaxis antibiótica perioperatoria
         st.markdown("**🦠 Profilaxis antibiótica perioperatoria**")
@@ -21408,7 +21606,18 @@ elif nav == "nota_evol_tx":
         st.divider()
 
         # ── GENERAR PDF ──────────────────────────────────────────────────────
-        _btn_label = "💾 Actualizar nota" if _edit_data else "📄 Generar nota PDF"
+        # ── Opciones de guardado ─────────────────────────────────────────────
+        ne_borrador = st.checkbox(
+            "💾 Guardar como borrador (nota incompleta — labs/datos pendientes)",
+            key="ne_borrador",
+            help="La nota quedará marcada como BORRADOR. Puedes editarla después.")
+        if ne_borrador:
+            st.info("ℹ️ Se guardará como **BORRADOR** — visible para edición posterior.")
+
+        _btn_label = ("💾 Actualizar borrador" if ne_borrador and _edit_data
+                      else "💾 Guardar borrador" if ne_borrador
+                      else "💾 Actualizar nota" if _edit_data
+                      else "📄 Generar nota PDF")
         if st.button(_btn_label, type="primary", use_container_width=True,
                       key="btn_gen_evol_tx"):
             if not ne_nombre:
