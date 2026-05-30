@@ -2166,6 +2166,7 @@ with st.sidebar:
     _navbtn("💊 Diuréticos", "diureticos")
     _navbtn("🔬 AKI por Contraste", "contraste")
     _navbtn("💊 Antibióticos CRRT", "antibioticos_crrt")
+    _navbtn("🫀 Síndrome Hepatorrenal", "shr")
 
     _navsec("NEFROLOGÍA")
     _navbtn("🔢 Calculadoras Nefro", "nefro")
@@ -11279,6 +11280,1019 @@ el antibiótico se elimina ~75% más → ajustar dosis.
                "Trotman et al. Pharmacotherapy 2005, ASHP Guidelines 2020, "
                "Murray et al. Antimicrob Agents Chemother 2022.")
 
+elif nav == "shr":
+    st.title("🫀 Síndrome Hepatorrenal (SHR)")
+    st.caption("Diagnóstico, vasoconstrictores, albúmina y monitoreo.")
+
+    shr_tab = st.tabs([
+        "🔀 Algoritmo", "📋 Diagnóstico", "💊 Terlipresina", "💉 Norepinefrina",
+        "🧪 Albúmina", "📊 Monitoreo / Respuesta", "🎓 Mecanismo y contexto"
+    ])
+
+    # ── TAB 0: ALGORITMO INTERACTIVO ───────────────────────────────────────
+    with shr_tab[0]:
+        from io import BytesIO
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.units import cm
+        from reportlab.lib import colors
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+
+        # ── State ───────────────────────────────────────────────────────────
+        if "shr_paso" not in st.session_state:
+            st.session_state["shr_paso"] = 0
+        if "shr_rsp" not in st.session_state:
+            st.session_state["shr_rsp"] = {}
+
+        paso = st.session_state["shr_paso"]
+        rsp  = st.session_state["shr_rsp"]
+
+        def _ir(n, **kwargs):
+            st.session_state["shr_paso"] = n
+            st.session_state["shr_rsp"] = {**st.session_state["shr_rsp"], **kwargs}
+            st.rerun()
+
+        def _razon(texto):
+            st.info(f"🧠 **¿Por qué preguntamos esto?** {texto}")
+
+        def _atras(n):
+            if st.button("← Atrás", key=f"shr_back_{n}"):
+                st.session_state["shr_paso"] = n - 1
+                st.rerun()
+
+        # Barra de progreso
+        total_pasos = 9
+        st.progress(min(paso / total_pasos, 1.0),
+                    text=f"Paso {min(paso+1, total_pasos+1)} de {total_pasos+1}")
+
+        if st.button("🔄 Reiniciar algoritmo", key="shr_reset"):
+            st.session_state["shr_paso"] = 0
+            st.session_state["shr_rsp"] = {}
+            st.rerun()
+
+        st.markdown("---")
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 0 — Datos del paciente
+        # ══════════════════════════════════════════════════════════════════
+        if paso == 0:
+            st.markdown("## Paso 1 — Datos del paciente")
+            _razon("Necesitamos la creatinina basal y actual para clasificar el AKI según KDIGO "
+                   "y determinar si el cambio es suficiente para iniciar el algoritmo diagnóstico.")
+
+            p0c1, p0c2 = st.columns(2)
+            cr_bas = p0c1.number_input("Creatinina basal (mg/dL)", 0.3, 15.0, 1.0, 0.1, key="shr_p0_crb")
+            cr_act = p0c2.number_input("Creatinina actual (mg/dL)", 0.3, 15.0, 3.5, 0.1, key="shr_p0_cra")
+            dias_ev = st.number_input("Días desde inicio de elevación de Cr", 0, 180, 5, 1, key="shr_p0_dias")
+
+            delta_cr  = cr_act - cr_bas
+            pct_cr    = (delta_cr / cr_bas * 100) if cr_bas > 0 else 0
+            aki_kdigo = delta_cr >= 0.3 or pct_cr >= 50
+
+            st.markdown("---")
+            if aki_kdigo:
+                st.success(f"✅ **AKI confirmado por KDIGO** — Cr ↑ {delta_cr:.2f} mg/dL "
+                           f"({pct_cr:.0f}%) en {dias_ev} días")
+            else:
+                st.warning(f"⚠️ Cr ↑ {delta_cr:.2f} mg/dL ({pct_cr:.0f}%) — "
+                           "No cumple criterios KDIGO de AKI (↑ ≥0.3 mg/dL o ≥50%). "
+                           "Continuar si hay sospecha clínica de SHR-CKD (Cr ≥1.5 crónica).")
+
+            tiene_cirrosis = st.checkbox("Paciente con cirrosis hepática y ascitis confirmadas",
+                                          key="shr_p0_cirr")
+
+            if tiene_cirrosis:
+                if st.button("→ Siguiente: Manejo inicial", key="shr_next_0", type="primary"):
+                    _ir(1, cr_bas=cr_bas, cr_act=cr_act, dias_ev=dias_ev,
+                        delta_cr=delta_cr, pct_cr=pct_cr, aki_kdigo=aki_kdigo)
+            else:
+                st.error("El SHR requiere cirrosis con ascitis (o falla hepática aguda). "
+                         "Confirma el diagnóstico antes de continuar.")
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 1 — Manejo inicial: 48 horas
+        # ══════════════════════════════════════════════════════════════════
+        elif paso == 1:
+            _atras(1)
+            st.markdown("## Paso 2 — Manejo inicial: primeras 48 horas")
+            _razon("Antes de diagnosticar SHR, debemos excluir AKI prerrenal corrigiendo "
+                   "la hipovolemia con albúmina. Si la Cr mejora, el diagnóstico es prerrenal "
+                   "— no SHR. Esta prueba terapéutica es parte del criterio diagnóstico.")
+
+            st.markdown("""
+**Indicaciones inmediatas (hacer ahora):**
+1. ⛔ **Suspender todos los diuréticos**
+2. ⛔ **Retirar AINEs, aminoglucósidos, contraste yodado**
+3. 💉 **Albúmina 1 g/kg/día IV × 2 días** (máximo 100 g/día)
+4. 🩸 **Paracentesis diagnóstica** si no se ha hecho (buscar SBP)
+5. 📊 **Medir Cr a las 48h**
+            """)
+
+            peso_p1 = st.number_input("Peso (kg) para calcular dosis albúmina",
+                                       30.0, 150.0, 70.0, 0.5, key="shr_p1_peso")
+            dosis_alb_p1 = min(peso_p1, 100.0)
+            st.success(f"💉 Albúmina: **{dosis_alb_p1:.0f} g/día** IV × 2 días "
+                       f"(Albúmina 20%: {dosis_alb_p1/0.20/10:.0f} frascos de 50 mL/día)")
+
+            st.markdown("---")
+            st.markdown("**Después de 48 horas de albúmina:**")
+            col_r1, col_r2 = st.columns(2)
+            with col_r1:
+                if st.button("✅ Cr mejoró (↓ ≥25%) o volvió al basal", key="shr_p1_si",
+                              use_container_width=True):
+                    _ir(10, respuesta_albumina="mejoro", peso=peso_p1,
+                        diagnostico="AKI prerrenal — No SHR")
+            with col_r2:
+                if st.button("❌ Cr sin mejora o empeoró", key="shr_p1_no",
+                              use_container_width=True, type="primary"):
+                    _ir(2, respuesta_albumina="no_mejoro", peso=peso_p1)
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 2 — ¿Peritonitis bacteriana espontánea?
+        # ══════════════════════════════════════════════════════════════════
+        elif paso == 2:
+            _atras(2)
+            st.markdown("## Paso 3 — ¿Hay peritonitis bacteriana espontánea (PBE/SBP)?")
+            _razon("La SBP es la causa más frecuente de SHR en cirrosis. El 30% de los "
+                   "pacientes con SBP desarrollan AKI. Si hay SBP, el tratamiento es diferente "
+                   "— antibiótico + albúmina en esquema específico — antes de pensar en vasoconstrictores.")
+
+            st.markdown("**¿Se realizó paracentesis diagnóstica?**")
+            paracentesis = st.radio("", ["Sí, se hizo", "No se ha hecho"], key="shr_p2_para")
+
+            if "No" in paracentesis:
+                st.warning("⚠️ Realizar paracentesis diagnóstica ahora. "
+                           "Enviar líquido para conteo celular, cultivo y proteínas.")
+                st.stop()
+
+            pmn = st.number_input("PMN en líquido ascítico (/mm³)", 0, 5000, 100, 10, key="shr_p2_pmn")
+
+            st.markdown("---")
+            if pmn >= 250:
+                st.error(f"🚨 **SBP CONFIRMADA** (PMN {pmn}/mm³ ≥ 250)")
+                st.markdown("""
+**Tratamiento SBP con prevención de SHR:**
+- Cefotaxima 2g IV c/8h × 5 días (o amoxicilina-clavulanato si adquirida en comunidad)
+- Albúmina **1.5 g/kg día 1** + **1 g/kg día 3**
+- Este protocolo reduce el riesgo de SHR en ~60%
+                """)
+                if st.button("→ Ver resultado", key="shr_p2_sbp", type="primary"):
+                    _ir(10, sbp=True, pmn=pmn,
+                        diagnostico="SBP con riesgo de SHR — Tratar SBP primero",
+                        tratamiento="Cefotaxima 2g IV c/8h + Albúmina 1.5 g/kg día 1 y 1 g/kg día 3")
+            else:
+                st.success(f"✅ Sin SBP (PMN {pmn}/mm³ < 250) — Continuar algoritmo")
+                if st.button("→ Siguiente: Excluir otras causas", key="shr_p2_no_sbp",
+                              type="primary"):
+                    _ir(3, sbp=False, pmn=pmn)
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 3 — Excluir otras causas de AKI
+        # ══════════════════════════════════════════════════════════════════
+        elif paso == 3:
+            _atras(3)
+            st.markdown("## Paso 4 — Excluir otras causas de AKI")
+            _razon("El SHR es diagnóstico de exclusión. Hay que descartar sistemáticamente "
+                   "shock, nefrotóxicos, y enfermedad renal estructural antes de confirmar SHR. "
+                   "Cada causa tiene manejo diferente y tratar como SHR si no lo es puede ser perjudicial.")
+
+            p3c1, p3c2 = st.columns(2)
+            with p3c1:
+                shock = st.checkbox("⚠️ Hay shock (MAP <65 o vasopresores activos)", key="shr_p3_shock")
+                nefrotox = st.checkbox("⚠️ Uso reciente de AINEs, aminoglucósidos o contraste IV",
+                                       key="shr_p3_nefro")
+                proteinuria = st.checkbox("⚠️ Proteinuria >500 mg/día", key="shr_p3_prot")
+            with p3c2:
+                hematuria = st.checkbox("⚠️ Hematuria >50 eritrocitos/campo", key="shr_p3_hem")
+                obs_us = st.checkbox("⚠️ Obstrucción o cambios parenquimatosos en USG renal",
+                                     key="shr_p3_us")
+
+            st.markdown("---")
+            causas_alt = [shock, nefrotox, proteinuria, hematuria, obs_us]
+            labels_alt = ["Shock", "Nefrotóxicos", "Proteinuria", "Hematuria", "Cambios en USG"]
+
+            if shock:
+                st.error("🚨 **SHOCK PRESENTE** — Tratar el shock primero. "
+                         "El SHR no puede diagnosticarse en presencia de shock. "
+                         "Una vez corregido, reevaluar Cr.")
+            if nefrotox:
+                st.warning("🟡 **NEFROTÓXICOS** — Retirar el agente y reevaluar en 48-72h. "
+                           "Muchos casos de 'SHR' son en realidad NTA por nefrotóxicos.")
+            if proteinuria or hematuria:
+                st.warning("🟡 **DATOS DE NEFROPATÍA ESTRUCTURAL** — Considerar glomerulopatía "
+                           "asociada a cirrosis (IgA, MPGN) o NTA. Valorar biopsia renal.")
+            if obs_us:
+                st.warning("🟡 **USG ANORMAL** — Descartar uropatía obstructiva o NTA isquémica.")
+
+            causas_presentes = [l for c, l in zip(causas_alt, labels_alt) if c]
+
+            if not any(causas_alt):
+                st.success("✅ Sin causas alternativas identificadas — "
+                           "El AKI no es explicado por shock, nefrotóxicos ni enfermedad estructural.")
+                if st.button("→ Siguiente: Confirmar SHR", key="shr_p3_ok", type="primary"):
+                    _ir(4, causas_alt=[])
+            else:
+                st.info("Maneja las causas identificadas. Cuando estén resueltas, "
+                        "si persiste el AKI, continúa el algoritmo.")
+                if st.button("→ Continuar de todas formas (causas en manejo)",
+                              key="shr_p3_cont"):
+                    _ir(4, causas_alt=causas_presentes)
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 4 — SHR Confirmado: Tipo
+        # ══════════════════════════════════════════════════════════════════
+        elif paso == 4:
+            _atras(4)
+            st.markdown("## Paso 5 — ✅ SHR Confirmado — ¿Qué tipo?")
+            _razon("El tipo de SHR determina la urgencia del tratamiento y el pronóstico. "
+                   "SHR-AKI (antes tipo 1) es rapidamente progresivo con alta mortalidad a corto plazo. "
+                   "SHR-CKD (antes tipo 2) es más crónico y con mejor pronóstico inmediato "
+                   "aunque requiere trasplante a mediano plazo.")
+
+            dias_ev = rsp.get("dias_ev", 7)
+            cr_act  = rsp.get("cr_act", 3.5)
+            cr_bas  = rsp.get("cr_bas", 1.0)
+
+            if dias_ev <= 14 and rsp.get("pct_cr", 0) >= 50:
+                tipo_shr_det = "SHR-AKI"
+                st.error(f"""
+🔴 **SHR-AKI (antes Tipo 1)**
+Cr duplicó en <14 días ({cr_bas:.1f} → {cr_act:.1f} mg/dL en {dias_ev} días)
+
+**Pronóstico sin tratamiento:** Mortalidad ~80% a 30 días
+**Urgencia:** INMEDIATA — iniciar vasoconstrictores hoy
+**Trasplante:** Evaluar urgentemente (MELD probablemente alto)
+                """)
+            else:
+                tipo_shr_det = "SHR-CKD"
+                st.warning(f"""
+🟡 **SHR-CKD (antes Tipo 2)**
+Cr ≥1.5 mg/dL estable o lentamente progresiva ({cr_bas:.1f} → {cr_act:.1f} en {dias_ev} días)
+
+**Pronóstico:** Mejor que SHR-AKI pero mortalidad a 6 meses ~50%
+**Urgencia:** Moderada — iniciar tratamiento en 24-48h
+**Ascitis refractaria:** Frecuentemente asociada → considerar TIPS
+                """)
+
+            if st.button(f"→ Siguiente: Evaluar gravedad (MELD)", key="shr_p4_next",
+                          type="primary"):
+                _ir(5, tipo_shr=tipo_shr_det)
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 5 — MELD y gravedad
+        # ══════════════════════════════════════════════════════════════════
+        elif paso == 5:
+            _atras(5)
+            st.markdown("## Paso 6 — Gravedad: MELD-Na y predicción de respuesta")
+            _razon("El MELD-Na es el mejor predictor de respuesta a vasoconstrictores y de necesidad "
+                   "urgente de trasplante. Con MELD >20 la terlipresina tiene <50% de respuesta "
+                   "completa. Con MELD >30, la mayoría de los pacientes necesitarán trasplante "
+                   "independientemente de la respuesta al vasoconstrictor.")
+
+            meld = st.number_input("MELD-Na del paciente", 6, 40, 22, 1, key="shr_p5_meld")
+
+            st.markdown("---")
+            if meld < 20:
+                st.success(f"MELD {meld}: Respuesta a vasoconstrictores ~60-70%. "
+                           f"Trasplante electivo — listar según criterios locales.")
+                resp_esperada = "buena"
+            elif meld < 30:
+                st.warning(f"MELD {meld}: Respuesta a vasoconstrictores ~30-45%. "
+                           f"Evaluar TIPS si no hay respuesta. Listar para trasplante con prioridad.")
+                resp_esperada = "moderada"
+            else:
+                st.error(f"MELD {meld}: Respuesta a vasoconstrictores <20%. "
+                         f"Evaluar trasplante hepático urgente (± renal si SHR >4-8 sem). "
+                         f"CRRT como puente si hay indicación.")
+                resp_esperada = "baja"
+
+            if st.button("→ Siguiente: Elegir vasoconstrictor", key="shr_p5_next",
+                          type="primary"):
+                _ir(6, meld=meld, resp_esperada=resp_esperada)
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 6 — Vasoconstrictor
+        # ══════════════════════════════════════════════════════════════════
+        elif paso == 6:
+            _atras(6)
+            st.markdown("## Paso 7 — Elección de vasoconstrictor")
+            _razon("Los vasoconstrictores esplácnicos redistribuyen el flujo sanguíneo del territorio "
+                   "esplácnico dilatado hacia el riñón, mejorando la perfusión renal. "
+                   "Terlipresina es primera línea por mayor evidencia (CONFIRM trial, NEJM 2021). "
+                   "Norepinefrina requiere UCI pero es igual de efectiva en ese contexto.")
+
+            terli_disp = st.radio("¿Hay terlipresina disponible?",
+                                   ["Sí", "No"], horizontal=True, key="shr_p6_terli")
+            uci_disp   = st.radio("¿El paciente está en UCI o puede trasladarse?",
+                                   ["Sí", "No"], horizontal=True, key="shr_p6_uci")
+
+            contra_terli = False
+            if terli_disp == "Sí":
+                st.markdown("**¿Alguna contraindicación para terlipresina?**")
+                ci1 = st.checkbox("Cardiopatía isquémica activa (angina, IAM reciente)",
+                                   key="shr_p6_ci1")
+                ci2 = st.checkbox("Arteriopatía periférica grave", key="shr_p6_ci2")
+                ci3 = st.checkbox("EVC activo o reciente (<3 meses)", key="shr_p6_ci3")
+                ci4 = st.checkbox("Asma o EPOC severo", key="shr_p6_ci4")
+                contra_terli = any([ci1, ci2, ci3, ci4])
+                if contra_terli:
+                    st.error("Terlipresina contraindicada por los factores marcados.")
+
+            st.markdown("---")
+            if terli_disp == "Sí" and not contra_terli:
+                vasoconstrictor = "Terlipresina"
+                st.success("🎯 **Primera línea: Terlipresina**")
+                st.markdown("""
+**Protocolo:**
+- **Bolos:** 1 mg IV c/6h → escalar a 2 mg c/6h si Cr no ↓ ≥25% en 48h
+- **O infusión continua:** 2 mg/24h → escalar 2 mg/24h c/48h (máx 12 mg/24h)
+- **Siempre con albúmina** 20-40 g/día IV
+- **Duración:** hasta Cr <1.5 mg/dL o máximo 14 días
+                """)
+            elif uci_disp == "Sí":
+                vasoconstrictor = "Norepinefrina"
+                st.success("🎯 **Alternativa UCI: Norepinefrina**")
+                st.markdown("""
+**Protocolo:**
+- **Inicio:** 0.5 mg/hr IV continua
+- **Escalada cada 4h:** +0.5 mg/hr si MAP no ↑ ≥10 mmHg o diuresis <200 mL/4h
+- **Máximo:** 3 mg/hr
+- **Objetivo:** MAP ≥65 mmHg
+- **Siempre con albúmina** 20-40 g/día IV
+                """)
+            else:
+                vasoconstrictor = "Midodrina + Octreotida"
+                st.warning("🎯 **Alternativa oral (menos evidencia): Midodrina + Octreotida**")
+                st.markdown("""
+**Protocolo (solo si no hay UCI ni terlipresina):**
+- Midodrina 7.5–12.5 mg VO c/8h
+- Octreotida 100–200 mcg SC c/8h
+- Albúmina 20-40 g/día IV
+- Menor eficacia — trasladar a UCI en cuanto sea posible
+                """)
+
+            if st.button(f"→ Siguiente: Ver protocolo completo", key="shr_p6_next",
+                          type="primary"):
+                _ir(7, vasoconstrictor=vasoconstrictor)
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 7 — Protocolo completo y prescripción
+        # ══════════════════════════════════════════════════════════════════
+        elif paso == 7:
+            _atras(7)
+            st.markdown("## Paso 8 — Protocolo de tratamiento completo")
+
+            peso_p7 = rsp.get("peso", 70.0)
+            vasoconstrictor = rsp.get("vasoconstrictor", "Terlipresina")
+            dosis_alb_p7 = min(peso_p7, 100.0)
+
+            st.success(f"""
+**Diagnóstico:** {rsp.get("tipo_shr", "SHR-AKI")} | MELD-Na: {rsp.get("meld","—")} | 
+Respuesta esperada: {rsp.get("resp_esperada","—")}
+            """)
+
+            pres1, pres2 = st.columns(2)
+            with pres1:
+                st.markdown(f"#### 💊 {vasoconstrictor}")
+                if vasoconstrictor == "Terlipresina":
+                    st.markdown("""
+- **Inicio:** 1 mg IV c/6h (bolos lentos ≥2 min)
+- **48h sin respuesta:** 2 mg IV c/6h
+- **Máximo:** 2 mg c/4h (12 mg/día)
+- **Suspender si:** isquemia (dolor abd, chest pain, cianosis)
+                    """)
+                elif vasoconstrictor == "Norepinefrina":
+                    st.markdown("""
+- **Inicio:** 0.5 mg/hr IV continua
+- **Escalada c/4h:** +0.5 mg/hr si MAP <65
+- **Máximo:** 3 mg/hr
+- **Requiere:** línea arterial + monitoreo ECG
+                    """)
+                else:
+                    st.markdown("""
+- **Midodrina:** 7.5 mg VO c/8h → 12.5 mg si no responde
+- **Octreotida:** 100 mcg SC c/8h → 200 mcg si no responde
+                    """)
+
+            with pres2:
+                st.markdown("#### 🧪 Albúmina IV")
+                st.markdown(f"""
+- **Días 1–2:** {dosis_alb_p7:.0f} g/día (1 g/kg)
+  → Albúmina 20%: {dosis_alb_p7/10:.0f} frascos 50 mL/día
+- **Día 3+:** 20–40 g/día de mantenimiento
+  → Albúmina 20%: 2–4 frascos/día
+- **Siempre** combinada con vasoconstrictor
+                """)
+
+            st.markdown("#### 📊 Monitoreo diario")
+            st.table({
+                "Parámetro": ["Creatinina", "MAP", "Diuresis", "Na sérico", "ECG"],
+                "Frecuencia": ["c/24h (c/12h si inestable)", "Continuo (UCI) / c/4h (sala)",
+                               "Horaria o c/4h", "c/24h", "Diario"],
+                "Meta": ["↓ ≥25% en 48h", "≥65 mmHg", ">0.5 mL/kg/hr", ">130 mEq/L",
+                         "Sin isquemia"],
+            })
+
+            if st.button("→ Siguiente: Evaluar respuesta a 48-72h", key="shr_p7_next",
+                          type="primary"):
+                _ir(8)
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 8 — Respuesta al tratamiento
+        # ══════════════════════════════════════════════════════════════════
+        elif paso == 8:
+            _atras(8)
+            st.markdown("## Paso 9 — Evaluación de respuesta (48–72 horas)")
+            _razon("La respuesta a vasoconstrictores se evalúa a las 48h. Si Cr no cae ≥25%, "
+                   "se escala la dosis. Si a máxima dosis no hay respuesta, hay que cambiar "
+                   "la estrategia hacia TIPS o trasplante urgente.")
+
+            cr_ini = rsp.get("cr_act", 3.5)
+            cr_nueva = st.number_input(f"Creatinina actual (basal al inicio: {cr_ini:.1f} mg/dL)",
+                                        0.3, 15.0, cr_ini, 0.1, key="shr_p8_cr_nueva")
+            dias_tto_p8 = st.number_input("Días de tratamiento", 1, 14, 3, 1, key="shr_p8_dias")
+
+            cambio = cr_ini - cr_nueva
+            pct_cambio = (cambio / cr_ini * 100) if cr_ini > 0 else 0
+
+            st.markdown("---")
+            if cr_nueva < 1.5:
+                st.success(f"""
+✅ **RESPUESTA COMPLETA** — Cr {cr_nueva:.1f} mg/dL (<1.5 mg/dL)
+
+Continuar vasoconstrictor + albúmina hasta completar ciclo o Cr estable.
+Mantener monitoreo. Evaluar lista de trasplante según MELD.
+                """)
+                resp_final = "completa"
+            elif pct_cambio >= 50:
+                st.success(f"""
+🟢 **RESPUESTA PARCIAL MAYOR** — Cr ↓ {pct_cambio:.0f}% ({cr_ini:.1f}→{cr_nueva:.1f})
+
+Continuar tratamiento. Meta: Cr <1.5 mg/dL. Mantener dosis actual.
+                """)
+                resp_final = "parcial_mayor"
+            elif pct_cambio >= 25:
+                st.warning(f"""
+🟡 **RESPUESTA PARCIAL** — Cr ↓ {pct_cambio:.0f}% ({cr_ini:.1f}→{cr_nueva:.1f})
+
+{"Escalar dosis del vasoconstrictor si no está al máximo." if dias_tto_p8 <= 3 else
+"Evaluar en 48h más. Si no progresa: considerar TIPS."}
+                """)
+                resp_final = "parcial"
+            else:
+                st.error(f"""
+❌ **SIN RESPUESTA** — Cr ↓ solo {pct_cambio:.0f}% ({cr_ini:.1f}→{cr_nueva:.1f})
+
+{"↑ Dosis vasoconstrictor al máximo. Continuar 48h más." if dias_tto_p8 <= 3 else
+"Sin respuesta a dosis máxima → Cambiar estrategia: TIPS, trasplante urgente o CRRT como puente."}
+                """)
+                resp_final = "sin_respuesta"
+
+            if st.button("→ Ver resumen y descargar", key="shr_p8_next", type="primary"):
+                _ir(9, cr_nueva=cr_nueva, resp_final=resp_final, dias_tto=dias_tto_p8)
+
+        # ══════════════════════════════════════════════════════════════════
+        # PASO 9 — Resumen final + PDF
+        # ══════════════════════════════════════════════════════════════════
+        elif paso == 9:
+            tipo_shr   = rsp.get("tipo_shr", "SHR-AKI")
+            vasocon    = rsp.get("vasoconstrictor", "Terlipresina")
+            meld_v     = rsp.get("meld", "—")
+            cr_bas_v   = rsp.get("cr_bas", "—")
+            cr_act_v   = rsp.get("cr_act", "—")
+            cr_nueva_v = rsp.get("cr_nueva", "—")
+            resp_v     = rsp.get("resp_final", "—")
+            peso_v     = rsp.get("peso", 70.0)
+            diasev_v   = rsp.get("dias_ev", "—")
+            diast_v    = rsp.get("dias_tto", "—")
+            sbp_v      = rsp.get("sbp", False)
+
+            resp_labels = {"completa": "✅ Respuesta completa",
+                           "parcial_mayor": "🟢 Respuesta parcial mayor",
+                           "parcial": "🟡 Respuesta parcial",
+                           "sin_respuesta": "❌ Sin respuesta"}
+
+            st.markdown("## ✅ Resumen del algoritmo")
+            st.success(f"""
+**Diagnóstico final:** {tipo_shr} {'+ SBP tratada' if sbp_v else ''}
+**Vasoconstrictor elegido:** {vasocon}
+**MELD-Na:** {meld_v} | **Respuesta esperada:** {rsp.get('resp_esperada','—')}
+**Respuesta observada:** {resp_labels.get(resp_v, resp_v)}
+            """)
+
+            st.markdown("#### Cadena de razonamiento")
+            pasos_rsp = [
+                ("Datos AKI", f"Cr {cr_bas_v}→{cr_act_v} mg/dL en {diasev_v} días"),
+                ("Albúmina 48h", "Sin respuesta → se descartó prerrenal"),
+                ("SBP", f"PMN {rsp.get('pmn','—')}/mm³ — {'SBP tratada' if sbp_v else 'Descartada'}"),
+                ("Causas alt.", f"{', '.join(rsp.get('causas_alt',['Ninguna'])) or 'Ninguna'}"),
+                ("Tipo SHR", tipo_shr),
+                ("MELD-Na", f"{meld_v} → respuesta {rsp.get('resp_esperada','—')}"),
+                ("Vasoconstrictor", vasocon),
+                ("Respuesta", f"Cr {cr_act_v}→{cr_nueva_v} en {diast_v} días — {resp_labels.get(resp_v,resp_v)}"),
+            ]
+            for paso_label, val in pasos_rsp:
+                st.markdown(f"- **{paso_label}:** {val}")
+
+            # ── Generar PDF ─────────────────────────────────────────────
+            def generar_pdf_shr():
+                buf = BytesIO()
+                doc = SimpleDocTemplate(buf, pagesize=letter,
+                                        leftMargin=2*cm, rightMargin=2*cm,
+                                        topMargin=2*cm, bottomMargin=2*cm)
+                AZUL = colors.HexColor("#1B4F72")
+                GRIS = colors.HexColor("#EBF5FB")
+                sn = ParagraphStyle("n", fontSize=9, leading=13, fontName="Helvetica")
+                sb = ParagraphStyle("b", fontSize=9, leading=13, fontName="Helvetica-Bold")
+                sh = ParagraphStyle("h", fontSize=10, leading=14,
+                                     fontName="Helvetica-Bold", textColor=AZUL)
+                st_t = ParagraphStyle("t", fontSize=13, leading=17,
+                                       fontName="Helvetica-Bold", alignment=TA_CENTER)
+
+                story = []
+
+                # Header
+                story.append(Paragraph("RESUMEN DE RAZONAMIENTO CLÍNICO", st_t))
+                story.append(Paragraph("Síndrome Hepatorrenal — Algoritmo Diagnóstico-Terapéutico", sh))
+                story.append(Spacer(1, 0.2*cm))
+                story.append(Paragraph(f"Fecha: {__import__('datetime').date.today().strftime('%d/%m/%Y')} | "
+                                       f"Dr. Josué Wigberto Tapia López | Nefrología Cédula 9940966", sn))
+                story.append(HRFlowable(width="100%", thickness=1.5, color=AZUL))
+                story.append(Spacer(1, 0.3*cm))
+
+                def sec(titulo):
+                    t = Table([[Paragraph(titulo, sh)]], colWidths=[17*cm])
+                    t.setStyle(TableStyle([
+                        ("BACKGROUND", (0,0),(-1,-1), GRIS),
+                        ("LINEBELOW", (0,0),(-1,-1), 0.5, AZUL),
+                        ("TOPPADDING",(0,0),(-1,-1),3),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                    ]))
+                    story.append(t)
+                    story.append(Spacer(1, 0.1*cm))
+
+                sec("DATOS CLÍNICOS")
+                data_rows = [
+                    [Paragraph("<b>Creatinina basal:</b>", sb), Paragraph(f"{cr_bas_v} mg/dL", sn),
+                     Paragraph("<b>Creatinina actual:</b>", sb), Paragraph(f"{cr_act_v} mg/dL", sn)],
+                    [Paragraph("<b>Tiempo evolución:</b>", sb), Paragraph(f"{diasev_v} días", sn),
+                     Paragraph("<b>Peso:</b>", sb), Paragraph(f"{peso_v} kg", sn)],
+                    [Paragraph("<b>MELD-Na:</b>", sb), Paragraph(f"{meld_v}", sn),
+                     Paragraph("<b>Resp. esperada:</b>", sb), Paragraph(rsp.get("resp_esperada","—"), sn)],
+                ]
+                t_data = Table(data_rows, colWidths=[4.5*cm, 4*cm, 4.5*cm, 4*cm])
+                t_data.setStyle(TableStyle([
+                    ("GRID",(0,0),(-1,-1),0.3,colors.grey),
+                    ("TOPPADDING",(0,0),(-1,-1),3),
+                    ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                ]))
+                story.append(t_data)
+                story.append(Spacer(1, 0.3*cm))
+
+                sec("CADENA DE RAZONAMIENTO CLÍNICO")
+                razon_data = [
+                    ["Paso", "Pregunta clínica", "Hallazgo", "Por qué importa"],
+                    ["1", "¿AKI por KDIGO?",
+                     f"Cr {cr_bas_v}→{cr_act_v} mg/dL",
+                     "Punto de partida: sin AKI no hay SHR"],
+                    ["2", "¿Responde a albúmina?",
+                     "No mejoró → no prerrenal",
+                     "Excluye causa más tratable y frecuente"],
+                    ["3", "¿SBP?",
+                     f"PMN {rsp.get('pmn','—')}/mm³",
+                     "SBP causa 30% de SHR — manejo distinto"],
+                    ["4", "¿Causas alternativas?",
+                     f"{', '.join(rsp.get('causas_alt',['Ninguna'])) or 'Ninguna'}",
+                     "SHR es diagnóstico de exclusión"],
+                    ["5", "¿Tipo de SHR?",
+                     tipo_shr,
+                     "Determina urgencia y pronóstico"],
+                    ["6", "¿Vasoconstrictor?",
+                     vasocon,
+                     "Revierte vasoconstricción renal"],
+                    ["7", "¿Respuesta?",
+                     f"Cr {cr_act_v}→{cr_nueva_v} en {diast_v}d",
+                     resp_labels.get(resp_v, resp_v)],
+                ]
+                t_razon = Table(razon_data,
+                                colWidths=[1*cm, 4.5*cm, 4.5*cm, 7*cm])
+                t_razon.setStyle(TableStyle([
+                    ("BACKGROUND",(0,0),(-1,0), colors.HexColor("#D5D8DC")),
+                    ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+                    ("FONTSIZE",(0,0),(-1,-1),8),
+                    ("GRID",(0,0),(-1,-1),0.3,colors.grey),
+                    ("VALIGN",(0,0),(-1,-1),"TOP"),
+                    ("TOPPADDING",(0,0),(-1,-1),3),
+                    ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                    ("WORDWRAP",(0,0),(-1,-1),"CJK"),
+                ]))
+                story.append(t_razon)
+                story.append(Spacer(1, 0.3*cm))
+
+                sec("DIAGNÓSTICO Y PLAN")
+                dx_text = (f"<b>Diagnóstico:</b> {tipo_shr}"
+                           f"{'+ SBP tratada' if sbp_v else ''}<br/>"
+                           f"<b>Vasoconstrictor:</b> {vasocon}<br/>"
+                           f"<b>Albúmina:</b> {min(peso_v,100):.0f} g/día (carga) → 20-40 g/día mantenimiento<br/>"
+                           f"<b>Respuesta observada:</b> {resp_labels.get(resp_v, resp_v)}<br/>")
+                story.append(Paragraph(dx_text, sn))
+                story.append(Spacer(1, 0.2*cm))
+
+                if resp_v == "sin_respuesta":
+                    story.append(Paragraph(
+                        "⚠️ <b>Sin respuesta al tratamiento:</b> Considerar TIPS, trasplante urgente "
+                        "o CRRT como puente. Discutir con hepatología y cirugía de trasplante.", sn))
+                elif resp_v == "completa":
+                    story.append(Paragraph(
+                        "✅ <b>Respuesta completa:</b> Continuar vasoconstrictor + albúmina hasta "
+                        "completar ciclo. Evaluar lista de trasplante según MELD.", sn))
+
+                story.append(Spacer(1, 0.5*cm))
+                story.append(Paragraph(
+                    "<font size='6' color='grey'>RenalPro v3.1.0 / TRRC360 — "
+                    "Algoritmo SHR basado en ICA 2015, EASL 2018, CONFIRM Trial NEJM 2021</font>",
+                    ParagraphStyle("foot", fontSize=6, alignment=TA_CENTER,
+                                   textColor=colors.HexColor("#888888"))))
+
+                doc.build(story)
+                buf.seek(0)
+                return buf.read()
+
+            pdf_bytes = generar_pdf_shr()
+            st.download_button(
+                label="⬇️ Descargar resumen PDF",
+                data=pdf_bytes,
+                file_name=f"SHR_razonamiento_{__import__('datetime').date.today().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                type="primary",
+            )
+
+        # ── Rama: no SHR (AKI prerrenal) ────────────────────────────────
+        elif paso == 10:
+            dx_final = rsp.get("diagnostico", "")
+            if "prerrenal" in dx_final.lower():
+                st.success("✅ AKI prerrenal — No SHR")
+                st.markdown("""
+La Cr mejoró con expansión con albúmina → el AKI era prerrenal (hipovolemia efectiva).
+
+**Manejo:**
+- Continuar albúmina si hay indicación (ascitis, SBP)
+- Reintroducir diuréticos con precaución cuando Cr normalice
+- Vigilar recurrencia
+- Evitar nefrotóxicos
+                """)
+            elif "SBP" in dx_final:
+                st.warning("⚠️ SBP — Tratamiento iniciado")
+                st.markdown(f"**Plan:** {rsp.get('tratamiento','')}")
+                st.markdown("Reevaluar Cr en 48-72h una vez tratada la SBP. "
+                            "Si persiste AKI, reiniciar algoritmo desde Paso 3.")
+            if st.button("← Reiniciar algoritmo", key="shr_p10_reiniciar"):
+                st.session_state["shr_paso"] = 0
+                st.session_state["shr_rsp"] = {}
+                st.rerun()
+
+    # ── TAB 1: DIAGNÓSTICO ─────────────────────────────────────────────────
+    with shr_tab[1]:
+        st.markdown("### Criterios diagnósticos ICA 2015 (actualización 2019)")
+        st.info("El SHR es un diagnóstico de exclusión. Todos los criterios deben cumplirse.")
+
+        st.markdown("#### ¿Qué tipo de SHR?")
+        tipo_shr = st.radio("", ["SHR-AKI (antes tipo 1)", "SHR-CKD (antes tipo 2)"],
+                            horizontal=True, key="shr_tipo")
+        if "AKI" in tipo_shr:
+            st.warning("**SHR-AKI:** Cr aumenta ≥0.3 mg/dL en 48h O ≥50% del basal en 7 días. "
+                       "Rápidamente progresivo. Mortalidad sin tratamiento: ~90% a 90 días.")
+        else:
+            st.warning("**SHR-CKD:** Cr ≥1.5 mg/dL por >3 meses. Más indolente. "
+                       "Mejor pronóstico que SHR-AKI pero requiere trasplante.")
+
+        st.markdown("---")
+        st.markdown("#### Checklist diagnóstico (todos requeridos)")
+
+        c1, c2 = st.columns(2)
+        with c1:
+            crit1 = st.checkbox("✅ Cirrosis con ascitis (o falla hepática aguda)", key="shr_c1")
+            crit2 = st.checkbox("✅ Diagnóstico de AKI (criterios KDIGO)", key="shr_c2")
+            crit3 = st.checkbox("✅ Sin respuesta a 2 días de retiro de diuréticos + "
+                                "expansión con albúmina", key="shr_c3")
+            crit4 = st.checkbox("✅ Sin shock (PAS >90 mmHg, MAP >65 mmHg)", key="shr_c4")
+        with c2:
+            crit5 = st.checkbox("✅ Sin agentes nefrotóxicos activos (AINEs, aminoglucósidos, "
+                                "contraste reciente)", key="shr_c5")
+            crit6 = st.checkbox("✅ Sin proteinuria >500 mg/día", key="shr_c6")
+            crit7 = st.checkbox("✅ Sin hematuria >50 eritrocitos/campo", key="shr_c7")
+            crit8 = st.checkbox("✅ USG renal sin obstrucción ni hallazgos parenquimatosos", key="shr_c8")
+
+        criterios_ok = sum([crit1,crit2,crit3,crit4,crit5,crit6,crit7,crit8])
+        if criterios_ok == 8:
+            st.success("✅ Criterios completos — Diagnóstico de SHR probable. "
+                       "Iniciar tratamiento con vasoconstrictor + albúmina.")
+        elif criterios_ok >= 5:
+            st.warning(f"🟡 {criterios_ok}/8 criterios. Verificar los faltantes antes de iniciar tratamiento.")
+        else:
+            st.error(f"❌ {criterios_ok}/8 criterios. Considerar otros diagnósticos de AKI.")
+
+        st.markdown("---")
+        st.markdown("#### Diagnóstico diferencial — causas de AKI en cirrosis")
+        st.table({
+            "Causa": ["Prerrenal (hipovolemia)", "SBP no tratada", "AKI estructural (NTA)",
+                      "Nefrotóxicos", "Glomerulopatía", "SHR"],
+            "Clave diagnóstica": [
+                "Responde a volumen (albumina/SSN)",
+                "Líquido ascítico: PMN >250/mm³",
+                "Sedimento urinario con cilindros granulosos",
+                "Antecedente AINE/aminoglucósido/contraste",
+                "Proteinuria >500 mg/día o hematuria",
+                "Exclusión de todo lo anterior",
+            ],
+        })
+
+    # ── TAB 2: TERLIPRESINA ────────────────────────────────────────────────
+    with shr_tab[1]:
+        st.markdown("### Terlipresina — Primera línea (si disponible)")
+        st.caption("Análogo de vasopresina. Vasoconstricción esplácnica → ↑ perfusión renal.")
+
+        peso_shr = st.number_input("Peso del paciente (kg)", 30.0, 150.0, 70.0, 0.5,
+                                    key="shr_peso")
+
+        modalidad_terli = st.radio("Modalidad de administración",
+                                    ["Bolos IV intermitentes", "Infusión continua IV"],
+                                    horizontal=True, key="shr_terli_modo")
+        st.markdown("---")
+
+        if "Bolos" in modalidad_terli:
+            st.markdown("#### Protocolo en bolos")
+            dose_ini = st.selectbox("Dosis de inicio", ["0.5 mg", "1 mg"],
+                                     index=1, key="shr_terli_dose_ini")
+            st.success(f"""
+**Dosis inicio:** {dose_ini} IV en bolo lento (≥2 min) cada 4–6 horas
+
+**Escalada (si Cr no ↓ ≥25% en 48h):**
+- De 0.5 mg → 1 mg c/4-6h
+- De 1 mg → 2 mg c/4-6h (máximo)
+
+**Dosis máxima:** 2 mg c/4h (= 12 mg/día)
+
+**Duración:** hasta Cr <1.5 mg/dL o máximo 14 días
+            """)
+            st.markdown("**Preparación:** Terlipresina 1 mg/amp — administrar IV directo en 2–3 min. "
+                        "No requiere dilución especial para bolos.")
+
+        else:
+            st.markdown("#### Protocolo en infusión continua")
+            st.success("""
+**Inicio:** 2 mg/24h en infusión IV continua
+
+**Escalada cada 48h si Cr no ↓ ≥25%:**
+- 2 mg/24h → 4 mg/24h → 6 mg/24h → ... → máx **12 mg/24h**
+
+**Preparación:** 6 mg en 60 mL SF → 1 mg/10 mL
+- 2 mg/24h = 0.83 mL/hr
+- 4 mg/24h = 1.67 mL/hr
+- 8 mg/24h = 3.33 mL/hr
+- 12 mg/24h = 5 mL/hr
+
+**Ventaja vs bolos:** menor pico de vasoconstricción → menos isquemia
+            """)
+
+        st.markdown("---")
+        st.markdown("#### ⚠️ Contraindicaciones y vigilancia")
+        col_ci, col_ae = st.columns(2)
+        with col_ci:
+            st.error("""
+**Contraindicaciones absolutas:**
+- Cardiopatía isquémica activa
+- Arteriopatía periférica grave
+- Enfermedad cerebrovascular activa
+- Asma o EPOC severo
+- Epilepsia no controlada
+            """)
+        with col_ae:
+            st.warning("""
+**Efectos adversos a vigilar:**
+- 🫀 Isquemia: dolor abdominal, chest pain, cambios ECG
+- 💧 Hiponatremia dilucional (dilución por retención hídrica)
+- 🌡️ Cianosis o palidez en extremidades
+- 📉 Bradicardia
+→ Si isquemia: **suspender de inmediato**
+            """)
+
+        st.info("""
+**MELD y predicción de respuesta:**
+- MELD <20: mejor respuesta (~50–70%)
+- MELD 20–30: respuesta intermedia (~30–40%)
+- MELD >30: baja respuesta (<20%) — evaluar TIPS o trasplante urgente
+        """)
+
+    # ── TAB 3: NOREPINEFRINA ───────────────────────────────────────────────
+    with shr_tab[2]:
+        st.markdown("### Norepinefrina — Alternativa (UCI)")
+        st.caption("Igual eficacia que terlipresina en algunos estudios. Requiere UCI y línea arterial.")
+
+        peso_nor = st.number_input("Peso (kg)", 30.0, 150.0, 70.0, 0.5, key="shr_peso_nor")
+        map_actual = st.number_input("MAP actual (mmHg)", 40.0, 100.0, 55.0, 1.0, key="shr_map")
+        map_objetivo = 65.0
+
+        st.markdown("---")
+        st.success(f"""
+**Protocolo norepinefrina en SHR:**
+
+**Inicio:** 0.5 mg/hr IV continua (≈ 0.12 mcg/kg/min para {peso_nor:.0f} kg)
+
+**Escalada cada 4h:**
+↑ 0.5 mg/hr si MAP no aumenta ≥10 mmHg O diuresis <200 mL/4h
+
+**Rango usual:** 0.5–3 mg/hr
+**Máximo:** 3 mg/hr (si no hay respuesta → considerar cambio de estrategia)
+
+**Objetivo:** MAP ≥65 mmHg (actual: {map_actual:.0f} → meta: ≥{map_objetivo:.0f} mmHg)
+        """)
+
+        # Tabla de preparación
+        st.markdown("#### Preparación estándar")
+        st.table({
+            "Concentración": ["4 mg en 250 mL SF (16 mcg/mL)", "8 mg en 250 mL SF (32 mcg/mL)"],
+            "0.5 mg/hr":     ["31.3 mL/hr", "15.6 mL/hr"],
+            "1 mg/hr":       ["62.5 mL/hr", "31.3 mL/hr"],
+            "2 mg/hr":       ["125 mL/hr", "62.5 mL/hr"],
+            "3 mg/hr":       ["187.5 mL/hr", "93.8 mL/hr"],
+        })
+
+        st.warning("""
+**Requerimientos:**
+- UCI con monitoreo continuo
+- Línea arterial para MAP continuo
+- Acceso venoso central (periférico tolerable inicio)
+- ECG continuo
+        """)
+
+        st.info("""
+**¿Terlipresina o norepinefrina?**
+
+| | Terlipresina | Norepinefrina |
+|---|---|---|
+| Evidencia | Mayor (CONFIRM trial 2021) | Similar en metaanálisis |
+| Setting | Sala/UCI | UCI obligatorio |
+| Costo | Mayor | Menor |
+| Disponibilidad MX | Variable | Universal |
+| Isquemia | Posible | Posible (menor?) |
+
+→ Si hay terlipresina disponible: **primera línea**.
+→ Si no hay o está contraindicada: **norepinefrina en UCI**.
+        """)
+
+    # ── TAB 4: ALBÚMINA ───────────────────────────────────────────────────
+    with shr_tab[3]:
+        st.markdown("### Albúmina IV — Componente esencial")
+        st.caption("Siempre combinada con vasoconstrictor. No usar sola en SHR establecido.")
+
+        peso_alb = st.number_input("Peso (kg)", 30.0, 150.0, 70.0, 0.5, key="shr_peso_alb")
+        alb_serica = st.number_input("Albúmina sérica (g/dL)", 1.0, 5.0, 2.5, 0.1, key="shr_alb_ser")
+
+        dosis_carga = min(peso_alb * 1.0, 100.0)  # 1 g/kg max 100g
+
+        st.markdown("---")
+        st.success(f"""
+**Protocolo estándar de albúmina en SHR:**
+
+**Expansión inicial (días 1–2):**
+1 g/kg/día IV → **{dosis_carga:.0f} g/día** (máximo 100 g/día)
+→ Albúmina 20%: {dosis_carga/0.20/1000*1000:.0f} mL/día
+→ Albúmina 25%: {dosis_carga/0.25/1000*1000:.0f} mL/día
+
+**Mantenimiento (día 3 en adelante):**
+20–40 g/día IV en combinación con vasoconstrictor
+→ Albúmina 20%: 100–200 mL/día
+→ Albúmina 25%: 80–160 mL/día
+        """)
+
+        st.markdown("#### Presentaciones disponibles en México")
+        st.table({
+            "Presentación": ["Albúmina 20% 50 mL (10 g)", "Albúmina 20% 100 mL (20 g)",
+                             "Albúmina 25% 50 mL (12.5 g)", "Albúmina 25% 100 mL (25 g)"],
+            f"Para {dosis_carga:.0f} g/día (carga)": [
+                f"{dosis_carga/10:.0f} frascos",
+                f"{dosis_carga/20:.0f} frascos",
+                f"{dosis_carga/12.5:.0f} frascos",
+                f"{dosis_carga/25:.0f} frascos",
+            ],
+        })
+
+        st.markdown("#### Albúmina en otros contextos hepatológicos")
+        st.table({
+            "Indicación": ["SBP (peritonitis bacteriana espontánea)",
+                           "Paracentesis de gran volumen (>5L)",
+                           "Prevención SHR en SBP",
+                           "Hiponatremia dilucional en cirrosis"],
+            "Dosis": ["1.5 g/kg día 1 + 1 g/kg día 3",
+                      "6–8 g por litro removido",
+                      "1.5 g/kg día dx + 1 g/kg día 3",
+                      "No indicada sola"],
+        })
+
+    # ── TAB 5: MONITOREO ──────────────────────────────────────────────────
+    with shr_tab[4]:
+        st.markdown("### Monitoreo y criterios de respuesta")
+
+        cr_basal = st.number_input("Creatinina basal (mg/dL)", 0.5, 15.0, 3.5, 0.1, key="shr_cr_bas")
+        cr_actual = st.number_input("Creatinina actual (mg/dL)", 0.5, 15.0, 3.5, 0.1, key="shr_cr_act")
+        dias_tto = st.number_input("Días de tratamiento", 0, 14, 3, 1, key="shr_dias")
+
+        cambio_cr = cr_basal - cr_actual
+        pct_cambio = (cambio_cr / cr_basal * 100) if cr_basal > 0 else 0
+
+        st.markdown("---")
+        if cr_actual < 1.5:
+            st.success(f"✅ **RESPUESTA COMPLETA** — Cr {cr_actual:.1f} mg/dL (<1.5 mg/dL). "
+                       f"Continuar hasta completar ciclo. Mantener albúmina.")
+        elif pct_cambio >= 50:
+            st.success(f"🟢 **RESPUESTA PARCIAL** — Cr ↓ {pct_cambio:.0f}% ({cr_basal:.1f}→{cr_actual:.1f}). "
+                       f"Continuar tratamiento. Meta: Cr <1.5 mg/dL.")
+        elif pct_cambio >= 25:
+            st.warning(f"🟡 **RESPUESTA PARCIAL MENOR** — Cr ↓ {pct_cambio:.0f}%. "
+                       f"{'Escalar dosis vasoconstrictor.' if dias_tto <= 3 else 'Evaluar respuesta en 48h más.'}")
+        else:
+            st.error(f"❌ **SIN RESPUESTA** — Cr {'↑' if cambio_cr < 0 else '↓ solo'} {abs(pct_cambio):.0f}%. "
+                     f"{'Escalar dosis o cambiar estrategia.' if dias_tto <= 3 else 'Considerar TIPS o trasplante urgente.'}")
+
+        st.markdown("---")
+        st.markdown("#### Guía de monitoreo diario")
+        st.table({
+            "Parámetro": ["Creatinina", "MAP", "Diuresis", "Na sérico",
+                          "Bilirrubina", "ECG", "Isquemia clínica"],
+            "Frecuencia": ["Cada 24h (cada 12h si inestable)", "Continuo en UCI / c/4h en sala",
+                           "Horaria o cada 4h", "Cada 24h",
+                           "Cada 48h", "Diario (terlipresina)", "Cada turno"],
+            "Objetivo": ["↓ ≥25% en 48h → respuesta",
+                         "≥65 mmHg", ">0.5 mL/kg/hr",
+                         "Na >130 mEq/L",
+                         "Tendencia (pronóstico)",
+                         "Sin arritmias / cambios isquémicos",
+                         "Dolor abdominal, cianosis → suspender"],
+        })
+
+        st.markdown("---")
+        st.markdown("#### ¿Cuándo considerar CRRT en SHR?")
+        st.warning("""
+La CRRT **no trata** el SHR — es un puente hasta trasplante o TIPS.
+
+**Indicaciones de CRRT en SHR:**
+- Acidosis metabólica refractaria (pH <7.20)
+- Hiperkalemia >6.5 mEq/L con cambios ECG
+- Sobrecarga hídrica con compromiso respiratorio
+- Uremia sintomática (encefalopatía, pericarditis)
+- Como puente a trasplante en paciente deteriorado
+
+**Importante:** CRRT en SHR sin trasplante planificado rara vez cambia el pronóstico.
+Discutir con hepatología y cirugía de trasplante antes de iniciar.
+        """)
+
+    # ── TAB 6: MECANISMO ──────────────────────────────────────────────────
+    with shr_tab[5]:
+        st.markdown("### Mecanismo fisiopatológico")
+        st.markdown("""
+#### El ciclo del SHR en 4 pasos
+
+**1. Hipertensión portal e inflamación sistémica**
+La cirrosis → hipertensión portal → vasodilatación esplácnica (por NO y prostaciclina).
+Endotoxinas bacterianas → inflamación sistémica → mayor vasodilatación.
+
+**2. Hipoperfusión efectiva**
+A pesar de volumen total normal o aumentado, el volumen efectivo arterial ↓
+(sangre "atrapada" en territorio esplácnico) → activa SRAA, SNS y ADH.
+
+**3. Vasoconstricción renal extrema**
+SRAA + SNS + ADH → vasoconstricción renal severa → FG cae.
+El riñón histológicamente es **normal** — el problema es funcional, no estructural.
+
+**4. Por qué funcionan los vasoconstrictores**
+Terlipresina/norepinefrina → vasoconstricción esplácnica → redistribuye sangre
+al riñón → ↑ perfusión renal → ↑ FG → Cr baja.
+La albúmina expande el volumen efectivo arterial → potencia el efecto.
+
+---
+
+#### Puntaje MELD — correlación con pronóstico en SHR
+        """)
+
+        meld_val = st.number_input("MELD-Na del paciente", 6, 40, 20, 1, key="shr_meld")
+        if meld_val < 15:
+            st.success(f"MELD {meld_val}: Mortalidad 90d ~10–20%. Buena respuesta esperada a vasoconstrictores.")
+        elif meld_val < 25:
+            st.warning(f"MELD {meld_val}: Mortalidad 90d ~40–60%. Respuesta moderada. Evaluar TIPS.")
+        elif meld_val < 35:
+            st.error(f"MELD {meld_val}: Mortalidad 90d ~70–80%. Respuesta baja. Trasplante urgente.")
+        else:
+            st.error(f"MELD {meld_val}: Mortalidad 90d >90%. Evaluar candidato a trasplante "
+                     f"o trasplante hepático-renal combinado.")
+
+        st.markdown("---")
+        st.caption("Fuentes: EASL Clinical Practice Guidelines 2018 (Hepatology), "
+                   "ICA Consensus 2015, CONFIRM Trial NEJM 2021 (terlipresina), "
+                   "Angeli et al. J Hepatol 2015, Nadim et al. Liver Transpl 2012.")
+
 elif nav == "contraste":
     st.subheader("🔬 Prevención de AKI por Contraste (CA-AKI)")
     st.caption("Ref: Weisbord SD et al. (PRESERVE trial) NEJM 2018 | Mehran R et al. JACC 2004 | ACR Manual on Contrast Media 2023 | KDIGO AKI 2012")
@@ -12451,7 +13465,9 @@ elif nav == "nota_tx":
     st.markdown("### 🔪 Datos de la Cirugía")
     cir1, cir2, cir3 = st.columns(3)
     with cir1:
-        cir_fecha   = st.date_input("Fecha del trasplante", key="cir_fecha")
+        cir_fecha   = st.date_input("📅 Fecha del trasplante", key="cir_fecha",
+                                    format="DD/MM/YYYY",
+                                    help="Selecciona en el calendario — DD/MM/AAAA")
         cir_isq_fri = st.number_input("Isquemia fría total (horas)", 0.0, 48.0, 16.0, 0.5, key="cir_isq_fri")
         cir_wit2    = st.number_input("Isquemia caliente 2 / WIT2 (min)", 0, 120, 35, 1, key="cir_wit2")
     with cir2:
@@ -12541,13 +13557,58 @@ elif nav == "nota_tx":
              "Timoglobulina (ATG-r) — estándar 4.5 mg/kg",
              "Timoglobulina (ATG-r) — alto riesgo 6 mg/kg",
              "Sin inducción biológica"], key="ntx_ind")
+        # Cálculo automático de Timoglobulina
+        if "Timoglobulina" in ntx_induccion or "ATG" in ntx_induccion:
+            _peso_timo = pac_ntx.get("peso", 70.0) if pac_ntx else 70.0
+            _timo_c1, _timo_c2, _timo_c3 = st.columns(3)
+            _dosis_dia = _timo_c1.number_input("Dosis/día (mg/kg)", 0.5, 3.0, 1.5, 0.25,
+                                               key="timo_dosis_dia",
+                                               help="Estándar: 1.5 mg/kg/día")
+            _n_dias    = _timo_c2.number_input("N° de días", 1, 14, 3, 1, key="timo_dias")
+            _peso_timo_inp = _timo_c3.number_input("Peso (kg)", 20.0, 180.0,
+                                                   float(_peso_timo), 0.5, key="timo_peso")
+            _total_mg  = _dosis_dia * _n_dias * _peso_timo_inp
+            _viales    = -(-int(_total_mg) // 25)  # ceiling division, viales 25 mg c/u
+            st.success(f"💉 **Timoglobulina:** {_dosis_dia} mg/kg/día × {_n_dias} días × "
+                       f"{_peso_timo_inp:.0f} kg = **{_total_mg:.0f} mg totales** "
+                       f"({_dosis_dia * _n_dias:.1f} mg/kg total) → **{_viales} viales de 25 mg**")
         ntx_ind_dosis = st.text_area("Dosis administradas / incidencias",
-                                     height=80, key="ntx_ind_dosis",
+                                     height=70, key="ntx_ind_dosis",
                                      placeholder="Ej: Timoglobulina 1.5 mg/kg/día x 3 dosis = 4.5 mg/kg total. Sin reacciones.")
     with ind2:
-        ntx_is_inicial = st.text_area("Inmunosupresión de mantenimiento inicial",
-                                      height=80, key="ntx_is_ini",
-                                      placeholder="Ej: Tacrolimus 0.1 mg/kg/día c/12h + MMF 1g c/12h + Prednisona 60 mg/día taper")
+        # ── Tacrolimus — opcional por protocolo ───────────────────────────────
+        tac_no_ini = st.checkbox("⚠️ Tacrolimus NO iniciado aún", key="ntx_tac_no_ini",
+                                  help="En trasplante cadavérico u otros protocolos puede diferirse")
+        if tac_no_ini:
+            tac_razon = st.selectbox("Razón para diferir Tacrolimus",
+                ["Donador cadavérico — protocolo institucional (iniciar cuando Cr estabilice)",
+                 "DGF / Función retardada — diferir hasta recuperación",
+                 "Nefrotoxicidad — iniciar Ciclosporina A primero",
+                 "PNF — pendiente decisión del equipo",
+                 "Otra razón (especificar abajo)"],
+                key="ntx_tac_razon")
+            tac_inicio_est = st.text_input("¿Cuándo se planea iniciar?",
+                                            placeholder="Ej: Cuando Cr <3 mg/dL o diuresis >1 L/día",
+                                            key="ntx_tac_inicio_est")
+            ntx_tac_texto = f"Tacrolimus DIFERIDO — {tac_razon}. Inicio estimado: {tac_inicio_est}"
+        else:
+            _is_c1, _is_c2 = st.columns(2)
+            tac_dosis   = _is_c1.number_input("Tacrolimus dosis/toma (mg)", 0.0, 20.0, 3.0, 0.5,
+                                              key="ntx_tac_dosis", help="mg c/12h VO")
+            tac_nivel   = _is_c2.number_input("Nivel C0 Tacrolimus (ng/mL)",
+                                              0.0, 50.0, 0.0, 0.5, key="ntx_tac_nivel",
+                                              help="0 = no disponible aún")
+            tac_no_nivel = st.checkbox("Nivel de Tacrolimus aún no disponible", key="ntx_tac_no_nivel")
+            if tac_dosis > 0:
+                ntx_tac_texto = (f"Tacrolimus {tac_dosis} mg c/12h VO"
+                                 + (f" | C0: {tac_nivel} ng/mL" if tac_nivel > 0 and not tac_no_nivel
+                                    else " | C0: pendiente"))
+            else:
+                ntx_tac_texto = ""
+
+        ntx_is_inicial = st.text_area("Inmunosupresión completa (MMF, Prednisona y otros)",
+                                      height=70, key="ntx_is_ini",
+                                      placeholder="Ej: MMF 1g c/12h VO + Prednisona 60 mg/día taper. Azatioprina si intolerancia MMF.")
         ntx_profilaxis = st.text_area("Profilaxis infecciosa indicada",
                                       height=80, key="ntx_profilaxis",
                                       placeholder="Ej: Valganciclovir 900 mg/día x 6 meses. TMP-SMX 1 tab/día x 12 meses.")
@@ -12564,10 +13625,30 @@ elif nav == "nota_tx":
              "Función retardada (DGF) — requirió diálisis en 1ª semana",
              "No función primaria (PNF) — anuria sin recuperación"], key="ntx_funcion")
         ntx_diuresis_24h = st.number_input("Diuresis primeras 24h (mL)", 0, 20000, 0, 100, key="ntx_diuresis")
+        if ntx_diuresis_24h > 0:
+            _peso_ref = pac_ntx.get("peso", 70.0) if pac_ntx else 70.0
+            _u_hr  = ntx_diuresis_24h / 24
+            _u_kg  = _u_hr / float(_peso_ref) if float(_peso_ref) > 0 else 0
+            _u_c1, _u_c2 = st.columns(2)
+            _u_c1.metric("Uresis horaria", f"{_u_hr:.0f} mL/hr")
+            _u_c2.metric("Uresis por peso", f"{_u_kg:.2f} mL/kg/hr",
+                         delta="✅ Adecuada" if _u_kg >= 1.0 else "⚠️ Oliguria",
+                         delta_color="off")
     with ep2:
         ntx_cr_post = st.number_input("Creatinina post-Tx (mg/dL)", 0.0, 30.0, 0.0, 0.1, key="ntx_cr_post")
         ntx_k_post  = st.number_input("K post-Tx (mEq/L)", 0.0, 10.0, 0.0, 0.1, key="ntx_k_post")
-        ntx_ta_post = st.text_input("TA post-Tx", placeholder="Ej: 140/90", key="ntx_ta_post")
+        _ta_c1, _ta_sep, _ta_c2 = st.columns([5, 1, 5])
+        _ta_sist  = _ta_c1.number_input("TA Sistólica", 60, 250, 130, 1, key="ntx_ta_sist",
+                                         help="mmHg")
+        _ta_sep.markdown("<br><div style='text-align:center;font-size:1.4em;font-weight:bold'>/</div>",
+                          unsafe_allow_html=True)
+        _ta_diast = _ta_c2.number_input("TA Diastólica", 40, 150, 85, 1, key="ntx_ta_diast",
+                                         help="mmHg")
+        ntx_ta_post = f"{_ta_sist}/{_ta_diast}"
+        if _ta_sist >= 160 or _ta_diast >= 100:
+            st.error(f"⚠️ HTA severa: {ntx_ta_post} — evaluar antihipertensivo IV")
+        elif _ta_sist >= 140 or _ta_diast >= 90:
+            st.warning(f"🟡 HTA: {ntx_ta_post} — iniciar o ajustar antihipertensivo")
     with ep3:
         ntx_doppler = st.selectbox("Eco Doppler renal",
             ["Pendiente","Normal — flujo conservado, IR <0.70",
@@ -12584,8 +13665,24 @@ elif nav == "nota_tx":
 
     # ── GUARDAR NOTA ───────────────────────────────────────────────────────────
     st.divider()
-    if st.button("💾 Guardar Nota Post-Trasplante", type="primary",
-                 use_container_width=True, key="btn_save_nota_tx"):
+    # ── Opciones de guardado ──────────────────────────────────────────────────
+    st.markdown("### 💾 Guardar nota")
+    labs_pend = st.checkbox("📋 Laboratorios aún no disponibles (guardar sin labs — completar después)",
+                             key="ntx_labs_pendientes")
+    if labs_pend:
+        st.info("ℹ️ La nota se guardará como **borrador con labs pendientes**. "
+                "Puedes abrirla nuevamente para agregar resultados cuando estén disponibles.")
+
+    _btn_c1, _btn_c2 = st.columns(2)
+    _guardar_borrador = _btn_c1.button("💾 Guardar borrador", key="btn_borrador_ntx",
+                                        use_container_width=True,
+                                        help="Guarda sin marcar como nota final — puedes editar después")
+    _guardar_final    = _btn_c2.button("✅ Guardar nota final", type="primary",
+                                        key="btn_save_nota_tx", use_container_width=True)
+
+    _estado_nota = "borrador" if (_guardar_borrador or labs_pend) else "final"
+
+    if _guardar_borrador or _guardar_final:
 
         if not uid_ntx or not _DB_ON or not _db.db_ok():
             st.error("Sube el db.py actualizado a GitHub.")
@@ -19974,7 +21071,8 @@ elif nav == "nota_evol_tx":
                 if st.button("➕ Agregar", key=f"{list_key}_btn", use_container_width=True):
                     if _new_val.strip():
                         st.session_state[list_key].append(_new_val.strip())
-                        st.session_state[f"{list_key}_input"] = ""
+                        if f"{list_key}_input" in st.session_state:
+                            del st.session_state[f"{list_key}_input"]
                         st.rerun()
             for _i, _item in enumerate(st.session_state[list_key]):
                 _ic1, _ic2 = st.columns([10, 1])
