@@ -20932,6 +20932,115 @@ elif nav == "nota_evol_tx":
                     try: _datos_ed = _json_evo.loads(_datos_ed)
                     except Exception: _datos_ed = {}
 
+                # ── PRE-LLENAR CAMPOS desde el registro guardado ─────────────
+                _edit_load_key = f"_ne_edit_loaded_{_edit_rec_id}"
+                if st.session_state.get(_edit_load_key) != _edit_rec_id and _datos_ed:
+                    # Datos del trasplante
+                    _ss = st.session_state
+                    _ss["ne_dpt"]           = int(_datos_ed.get("dpt", 1))
+                    _ss["_ne_dpt_auto"]     = int(_datos_ed.get("dpt", 1))
+                    _ss["ne_fecha_tx"]      = str(_datos_ed.get("fecha_tx", ""))
+                    _ss["ne_donador"]       = str(_datos_ed.get("donador", "Vivo relacionado"))[:50]
+                    _ss["ne_kdpi"]          = str(_datos_ed.get("kdpi", "") or "")
+                    _ss["ne_induccion"]     = str(_datos_ed.get("induccion", "") or "")
+                    _ss["ne_ind_dosis"]     = str(_datos_ed.get("ind_dosis", "") or "")
+                    _ss["ne_hla"]           = str(_datos_ed.get("hla", "") or "")
+                    _ss["ne_pra_I"]         = str(_datos_ed.get("pra_I", "") or "")
+                    _ss["ne_pra_II"]        = str(_datos_ed.get("pra_II", "") or "")
+                    _ss["ne_dsa"]           = str(_datos_ed.get("dsa", "") or "")
+                    _ss["ne_mica"]          = str(_datos_ed.get("mica", "") or "")
+                    _ss["ne_xmatch"]        = str(_datos_ed.get("xmatch", "Negativo") or "Negativo")[:60]
+                    _ss["ne_isq_fria_h"]    = int(_datos_ed.get("isq_fria_h", 0) or 0)
+                    _ss["ne_isq_fria_m"]    = int(_datos_ed.get("isq_fria_m", 0) or 0)
+                    _ss["ne_isq_cal"]       = int(_datos_ed.get("isq_caliente_min", 0) or 0)
+                    _ss["ne_dur_cx"]        = str(_datos_ed.get("dur_cx", "") or "")
+                    _ss["ne_uresis_temp"]   = str(_datos_ed.get("uresis_temp", "Sí") or "Sí")
+                    _ss["ne_area"]          = str(_datos_ed.get("area", "UCIA (Unidad Cuidados Intensivos Adultos)") or "UCIA (Unidad Cuidados Intensivos Adultos)")
+                    _ss["ne_cama"]          = str(_datos_ed.get("cama", "") or "")
+                    # Estado clínico
+                    _ss["ne_subj"]          = str(_datos_ed.get("ne_subjetivo", "") or _datos_ed.get("subjetivo", "") or "")
+                    _ss["ne_ef_gen"]        = str(_datos_ed.get("ne_ef_gen", "") or _datos_ed.get("ef_gen", "") or "")
+                    _ss["ne_ef_abd"]        = str(_datos_ed.get("ne_ef_abd", "") or _datos_ed.get("ef_abd", "") or "")
+                    _ss["ne_ef_acc"]        = str(_datos_ed.get("ne_ef_acc", "") or _datos_ed.get("ef_acc", "") or "")
+                    # Signos vitales
+                    _ta_ed = str(_datos_ed.get("ta", "") or "")
+                    if "/" in _ta_ed:
+                        _ta_parts = _ta_ed.split("/")
+                        try: _ss["ne_ta_sist"]  = int(_ta_parts[0])
+                        except: pass
+                        try: _ss["ne_ta_diast"] = int(_ta_parts[1])
+                        except: pass
+                    _ss["ne_fc"]            = str(_datos_ed.get("fc", "") or "")
+                    _ss["ne_fr"]            = str(_datos_ed.get("fr", "") or "")
+                    _ss["ne_temp"]          = str(_datos_ed.get("temp", "") or "")
+                    _ss["ne_spo2"]          = str(_datos_ed.get("spo2", "") or "")
+                    _ss["ne_dol"]           = str(_datos_ed.get("dol", "") or "")
+                    # Balance hídrico
+                    _ss["ne_diur24"]        = int(_datos_ed.get("diuresis_24h", 0) or 0)
+                    _ss["ne_ingresos"]      = int(_datos_ed.get("ingresos", 2000) or 2000)
+                    _ss["ne_egresos"]       = int(_datos_ed.get("egresos", 1800) or 1800)
+                    _ss["ne_blake"]         = int(_datos_ed.get("drenaje_blake", 0) or 0)
+                    # Función del injerto
+                    _ss["ne_cr_hoy"]        = float(_datos_ed.get("cr_hoy", 1.5) or 1.5)
+                    _ss["ne_cr_ayer"]       = float(_datos_ed.get("cr_ayer", 1.6) or 1.6)
+                    _ss["ne_bun"]           = int(_datos_ed.get("bun", 30) or 30)
+                    # Labs
+                    _ss["ne_hb"]            = float(_datos_ed.get("hb", 10.5) or 10.5)
+                    _ss["ne_leu"]           = float(_datos_ed.get("leu", 8.0) or 8.0)
+                    _ss["ne_plt"]           = int(_datos_ed.get("plt", 200) or 200)
+                    _ss["ne_na"]            = int(_datos_ed.get("na", 138) or 138)
+                    _ss["ne_k"]             = float(_datos_ed.get("k", 4.2) or 4.2)
+                    _ss["ne_p"]             = float(_datos_ed.get("p", 3.5) or 3.5)
+                    _ss["ne_ca_tx"]         = float(_datos_ed.get("ca", 8.8) or 8.8)
+                    _ss["ne_mg_tx"]         = float(_datos_ed.get("mg", 1.8) or 1.8)
+                    # Tacrolimus
+                    _tac_c0_ed = _datos_ed.get("tac_c0", 0) or 0
+                    _ss["ne_tac"]           = float(_tac_c0_ed)
+                    _ss["ne_tac_no_disp"]   = bool(_datos_ed.get("tac_no_disp", False) or
+                                                    _datos_ed.get("labs_pend", False) and _tac_c0_ed == 0)
+                    _ss["ne_cmv"]           = str(_datos_ed.get("cmv", "") or "")
+                    _ss["ne_bk"]            = str(_datos_ed.get("bk", "") or "")
+                    _ss["ne_pcr_lab"]       = str(_datos_ed.get("pcr_lab", "") or "")
+                    _ss["ne_otros_labs"]    = str(_datos_ed.get("otros_labs", "") or "")
+                    _ss["ne_uricult"]       = str(_datos_ed.get("uricult", "") or "")
+                    # IS
+                    _ss["ne_tac_dosis"]     = str(_datos_ed.get("tac_dosis", "") or "")
+                    _ss["ne_mmf_dosis"]     = str(_datos_ed.get("mmf_dosis", "") or "")
+                    _ss["ne_pred"]          = str(_datos_ed.get("pred", "") or "")
+                    _ss["ne_otros_is"]      = str(_datos_ed.get("otros_is", "") or "")
+                    _ss["ne_mp_bolos"]      = int(_datos_ed.get("mp_bolos", 0) or 0)
+                    _ss["ne_mp_dosis"]      = str(_datos_ed.get("mp_dosis", "") or "")
+                    # Profilaxis
+                    _ss["ne_pf_cmv"]        = str(_datos_ed.get("pf_cmv", "") or "")
+                    _ss["ne_pf_pjp"]        = str(_datos_ed.get("pf_pjp", "") or "")
+                    _ss["ne_pf_otros"]      = str(_datos_ed.get("pf_otros", "") or "")
+                    _ss["ne_atb_esquema"]   = str(_datos_ed.get("atb_esquema", "") or "")
+                    # Diagnósticos (listas dinámicas)
+                    _dx_list_ed = _datos_ed.get("dx_list", [])
+                    if isinstance(_dx_list_ed, list):
+                        _ss["_ne_dx_list"] = list(_dx_list_ed)
+                    _ant_ed = _datos_ed.get("antecedentes", [])
+                    if isinstance(_ant_ed, list):
+                        _ss["_ne_antecedentes_list"] = list(_ant_ed)
+                    # Plan
+                    _plan_ed = _datos_ed.get("plan_rubros", {})
+                    if isinstance(_plan_ed, dict):
+                        for _pk, _pv in _plan_ed.items():
+                            _ss[_pk] = str(_pv or "")
+                    _ss["ne_pend"]          = str(_datos_ed.get("pendientes", "") or "")
+                    _ss["ne_prob"]          = str(_datos_ed.get("problemas", "") or "")
+                    # ATG dosis list
+                    _atg_ed = _datos_ed.get("atg_dosis_list", [])
+                    if isinstance(_atg_ed, list):
+                        _ss["ne_atg_dosis_list"] = list(_atg_ed)
+                    # Doppler / Biopsia
+                    _ss["ne_doppler"]       = str(_datos_ed.get("doppler", "") or "")
+                    _ss["ne_biopsia"]       = str(_datos_ed.get("biopsia", "") or "")
+                    # Sesiones TRR
+                    _ss["ne_ses_acum"]      = int(_datos_ed.get("sesiones_acum", 0) or 0)
+                    # Marcar como cargado para este registro
+                    _ss[_edit_load_key] = _edit_rec_id
+
         # ── IDENTIFICAR PACIENTE Y RECUPERAR NOTAS PREVIAS ───────────────────
         st.markdown("#### 👤 Receptor")
         _ne_pmode = st.radio("", ["🔍 Existente", "✏️ Sin paciente (manual)"],
