@@ -2914,14 +2914,22 @@ elif nav == "presc":
         with rca_c1:
             cit_sol_presc = st.selectbox(
                 "Solución de citrato",
-                ["Citrato trisódico 4% (136 mmol/L)", "Prismocitrate (concentración configurable)"],
+                ["Citrato trisódico 4% (136 mmol/L)", "Prismocitrate 18/0 (18 mmol/L)", "Prismocitrate 10/2 (10 mmol/L)", "Prismocitrate (concentración configurable)"],
                 key="presc_cit_sol_type")
             if "4%" in cit_sol_presc:
                 cit_conc_presc = 136.0
                 na_in_cit_presc = 408.0
+            elif "18/0" in cit_sol_presc:
+                cit_conc_presc = 18.0
+                na_in_cit_presc = 100.0
+                st.info("Prismocitrate 18/0 — 18 mmol/L citrato | Regla rápida: tasa = Qb × 10")
+            elif "10/2" in cit_sol_presc:
+                cit_conc_presc = 10.0
+                na_in_cit_presc = 100.0
+                st.info("Prismocitrate 10/2 — 10 mmol/L citrato | Regla rápida: tasa = Qb × 18")
             else:
                 cit_conc_presc = st.number_input(
-                    "Concentración (mmol/L)", 100.0, 1200.0, 1000.0, 10.0,
+                    "Concentración (mmol/L)", 1.0, 1200.0, 18.0, 1.0,
                     key="presc_cit_conc_custom")
                 na_in_cit_presc = st.number_input(
                     "Na en solución (mmol/L)", 0.0, 500.0, 100.0, 5.0,
@@ -3008,6 +3016,115 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
         st.warning(f"⚠️ **Reposición Ca (sistémica POST-filtro):** "
                    f"{ca_stored if ca_stored > 0 else ca_rate_est:.0f} mL/hr "
                    f"de gluconato Ca 10% — Para preparación exacta → pestaña 🧪 Citrato RCA.")
+
+        # ── PRESCRIPCIÓN INTEGRADA COMPLETA ─────────────────────────────────────
+        st.markdown("---")
+        st.markdown("#### 📋 Prescripción integrada completa")
+        st.caption(
+            "El citrato PRE-filtro **es parte del efluente total** y contribuye a la dosis CRRT. "
+            "El calcio va por línea sistémica POST-filtro separada — no entra al efluente.")
+
+        # Cálculo integrado
+        efluente_total_int = dosis_mlkg * peso          # objetivo en mL/hr
+        dosis_real_int     = efluente_total_int / peso   # debería ser == dosis_mlkg
+        ca_display_int     = ca_stored if ca_stored > 0 else ca_rate_est
+        cit_pct_efluente   = (cit_inf_presc / efluente_total_int * 100) if efluente_total_int > 0 else 0
+
+        # ── Métricas de verificación rápida ──────────────────────────────────
+        vi1, vi2, vi3, vi4 = st.columns(4)
+        vi1.metric("Efluente objetivo", f"{efluente_total_int:.0f} mL/hr",
+                   help=f"= {dosis_mlkg} mL/kg/hr × {peso:.0f} kg")
+        vi2.metric("Citrato / Efluente", f"{cit_pct_efluente:.0f}%",
+                   help="Qué porcentaje del efluente total viene del citrato")
+        vi3.metric("FF efectiva", f"{ff_adj_pct:.1f}%",
+                   delta="✅ OK" if ff_adj_pct <= 25 else "⚠️ Alta",
+                   delta_color="off")
+        vi4.metric("Citrato en sangre", f"{cit_dose_presc:.1f} mmol/L",
+                   help="Variable que configuras en la bomba. Monitorear con iCa postfiltro.")
+
+        # ── Tabla de todos los flujos ─────────────────────────────────────────
+        filas_lugar, filas_fluido, filas_ml, filas_rol = [], [], [], []
+
+        # Citrato PRE
+        filas_lugar.append("🔵 PRE-FILTRO")
+        filas_fluido.append(f"Citrato {cit_conc_presc:.0f} mmol/L")
+        filas_ml.append(f"{cit_inf_presc:.0f} ← BOMBA CITRATO")
+        filas_rol.append(f"Anticoagulación + predilución | = Qb({qb})×60×{cit_dose_presc}/{cit_conc_presc:.0f}")
+
+        # Qr PRE solución adicional (si citrato no cubre toda la predilución)
+        if qr_pre_efectivo > 0:
+            filas_lugar.append("🔵 PRE-FILTRO")
+            filas_fluido.append("Solución de reposición")
+            filas_ml.append(f"{qr_pre_efectivo:.0f}")
+            filas_rol.append("Predilución adicional (Qr_pre reducido por citrato)")
+
+        # Qr POST
+        if qr_post > 0:
+            filas_lugar.append("🟢 POST-FILTRO")
+            filas_fluido.append("Solución de reposición")
+            filas_ml.append(f"{qr_post:.0f}")
+            filas_rol.append("Postdilución (Qr_post)")
+
+        # Dializante
+        if qd > 0:
+            filas_lugar.append("⚙️ FILTRO")
+            filas_fluido.append("Dializante")
+            filas_ml.append(f"{int(qd)}")
+            filas_rol.append(f"Difusión — {mod_final or 'CVVHDF'}")
+
+        # UF neta
+        filas_lugar.append("💧 UF NETA")
+        filas_fluido.append("Retiro al paciente")
+        filas_ml.append(f"{uf}")
+        filas_rol.append(f"Balance negativo = {uf * 24 / 1000:.1f} L/24h")
+
+        # Efluente total
+        filas_lugar.append("↓ EFLUENTE TOTAL")
+        filas_fluido.append("Suma de flujos")
+        filas_ml.append(f"{efluente_total_int:.0f} = {dosis_mlkg} mL/kg/hr")
+        filas_rol.append("Objetivo CRRT | KDIGO: 20-25 mL/kg/hr")
+
+        # Calcio (separado, no cuenta en efluente CRRT)
+        filas_lugar.append("🟡 POST-FILTRO SISTÉMICO")
+        filas_fluido.append("Gluconato Ca 10% (línea SEPARADA)")
+        filas_ml.append(f"{ca_display_int:.0f} ← LÍNEA PROPIA")
+        filas_rol.append("NUNCA mezclar con citrato | Ajustar por iCa sistémico")
+
+        st.table({
+            "📍 Lugar": filas_lugar,
+            "💉 Fluido": filas_fluido,
+            "mL/hr": filas_ml,
+            "Concepto": filas_rol,
+        })
+
+        # ── Box programación en máquina ───────────────────────────────────────
+        st.success(f"""
+**💻 Cómo programar en la máquina (resumen ejecutivo):**
+
+| Parámetro | Valor | Línea |
+|---|---|---|
+| Qb | **{qb} mL/min** | — |
+| 🔵 Bomba Citrato (PRE-filtro) | **{cit_inf_presc:.0f} mL/hr** | Arterial / línea roja |
+| Qr PRE solución | **{qr_pre_efectivo:.0f} mL/hr** | {"(citrato cubre toda la predilución)" if qr_pre_efectivo == 0 else "PRE-filtro adicional"} |
+| Qr POST | **{qr_post:.0f} mL/hr** | POST-filtro |
+| Qd dializante | **{int(qd)} mL/hr** | — |
+| UF neta | **{uf} mL/hr** | — |
+| 🟡 Gluconato Ca 10% | **{ca_display_int:.0f} mL/hr** | Línea sistémica SEPARADA |
+        """)
+
+        # ── Guía de monitoreo iCa ─────────────────────────────────────────────
+        with st.expander("🔬 Guía de ajuste por iCa (monitoreo)", expanded=False):
+            st.markdown("""
+| Medición | Objetivo | Si fuera de rango |
+|---|---|---|
+| **iCa POST-filtro** | 0.25–0.35 mmol/L | >0.35 → ↑ citrato 10-20% · <0.25 → ↓ citrato 10-20% |
+| **iCa sistémico** | 1.0–1.35 mmol/L | <1.0 → ↑ Ca post · >1.35 → ↓ Ca post |
+| **Ratio Ca total/iCa sistémico** | <2.5 | >2.5 = acumulación de citrato (¿falla hepática?) |
+
+**Frecuencia:** cada 6h las primeras 24h → cada 12-24h si estable.
+
+⚠️ **Signos de acumulación:** alcalosis metabólica inexplicable + ratio >2.5 + bajo gasto cardíaco.
+            """)
 
     # ── Semáforo FF (usa FF efectiva según anticoagulación elegida) ───────────
     st.markdown("#### Estado del filtro (FF efectiva)")
