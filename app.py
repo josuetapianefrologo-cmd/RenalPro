@@ -21195,13 +21195,16 @@ elif nav == "nota_evol_tx":
                                       key="ne_fecha")
             ne_hora  = st.time_input("Hora", value=_dt_evo.now().time().replace(microsecond=0),
                                       key="ne_hora")
-            # DPT se calcula desde la fecha de trasplante (abajo en datos del trasplante)
-            # Este campo se usa como display y puede sobreescribirse si es necesario
+            # DPT: usa el cálculo automático del render anterior (via _ne_dpt_auto)
+            # La fecha de trasplante está más abajo y actualiza _ne_dpt_auto en cada render
+            _dpt_default = int(st.session_state.get("_ne_dpt_auto",
+                               st.session_state.get("ne_dpt", 1)))
             ne_dpt = st.number_input("Día post-TR (DPT)",
                                      min_value=0, max_value=180,
-                                     value=int(st.session_state.get("ne_dpt", 1)),
+                                     value=_dpt_default,
                                      step=1, key="ne_dpt",
-                                     help="Auto-calculado desde fecha de trasplante. Ajusta si hay discrepancia.")
+                                     help="Auto-calculado desde fecha de trasplante (sección Datos del TR). "
+                                          "Puedes ajustar manualmente si hay discrepancia.")
 
         st.divider()
 
@@ -21246,7 +21249,8 @@ elif nav == "nota_evol_tx":
             ne_fecha_tx = str(ne_fecha_tx_date)
             # ── DPT automático ────────────────────────────────────────────────
             _dpt_calculado = (_d_ne.today() - ne_fecha_tx_date).days
-            st.session_state["ne_dpt"] = _dpt_calculado
+            # Guardamos en key auxiliar (no conflicta con el widget ne_dpt)
+            st.session_state["_ne_dpt_auto"] = _dpt_calculado
             st.caption(f"📆 **DPT {_dpt_calculado}** "
                        f"({ne_fecha_tx_date.strftime('%d/%m/%Y')} → hoy)")
             ne_donador  = st.selectbox("Tipo de donador",
