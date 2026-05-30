@@ -20970,6 +20970,17 @@ elif nav == "nota_evol_tx":
             except Exception:
                 _ne_prev_notas = []
 
+        # ── Buscar nota inicial post-TR si no hay notas de evolución previas ──
+        _nota_tx_ini = None
+        if not _ne_prev_notas and not _edit_data and _ne_pid and _DB_ON and _db.db_ok():
+            try:
+                for _rr in (_cached_clinical_records(_ne_pid) or []):
+                    if _rr.get("tipo") == "Trasplante / Nota inicial post-TR":
+                        _nota_tx_ini = _rr
+                        break
+            except Exception:
+                _nota_tx_ini = None
+
         # Si hay notas previas Y no estamos editando, ofrecer pre-cargar
         _last_note = None
         if _ne_prev_notas and not _edit_data:
@@ -21018,6 +21029,87 @@ elif nav == "nota_evol_tx":
                 st.session_state[_sig_paciente] = _ne_pid
             st.success(f"📚 **Continuidad activada** · {len(_ne_prev_notas)} nota(s) previa(s) · "
                        f"Última: DPT {_last_dpt} · DPT actual auto-llenado a {st.session_state.get('ne_dpt', _last_dpt)}")
+
+        elif _nota_tx_ini and not _edit_data:
+            # ── PRE-CARGA DESDE NOTA INICIAL POST-TR ─────────────────────────
+            _ntx_datos = _nota_tx_ini.get("datos_json") or _nota_tx_ini.get("datos") or {}
+            if isinstance(_ntx_datos, str):
+                try: _ntx_datos = _json_evo.loads(_ntx_datos)
+                except Exception: _ntx_datos = {}
+
+            _sig_ntx = f"ne_ntx_loaded_{_ne_pid}"
+            if st.session_state.get(_sig_ntx) != _ne_pid:
+                # ── Datos del trasplante ──────────────────────────────────────
+                st.session_state["ne_fecha_tx"]    = _ntx_datos.get("fecha_tx", "")
+                st.session_state["ne_donador"]     = (_ntx_datos.get("donante_tipo","") or "")[:50]
+                st.session_state["ne_kdpi"]        = str(_ntx_datos.get("kdpi","") or "")
+                st.session_state["ne_isq_fria_h"]  = int(_ntx_datos.get("isquemia_fria_h", 0) or 0)
+                st.session_state["ne_isq_fria_m"]  = 0
+                st.session_state["ne_isq_cal"]     = int(_ntx_datos.get("wit2_min", 0) or 0)
+                st.session_state["ne_uresis_temp"] = ("Sí" if "inmediata" in
+                    (_ntx_datos.get("diuresis_intra","") or "") else "No")
+                # ── Inducción ─────────────────────────────────────────────────
+                st.session_state["ne_induccion"]   = _ntx_datos.get("induccion","") or ""
+                st.session_state["ne_ind_dosis"]   = _ntx_datos.get("induccion_dosis","") or ""
+                # ── Inmunología ───────────────────────────────────────────────
+                st.session_state["ne_xmatch"]      = (_ntx_datos.get("xm","Negativo") or "Negativo")[:60]
+                st.session_state["ne_dsa"]         = (_ntx_datos.get("dsa_pre","") or "")[:60]
+                st.session_state["ne_hla"]         = ""
+                _cpra = _ntx_datos.get("cpra", 0) or 0
+                st.session_state["ne_pra_I"]       = f"cPRA {_cpra}%"
+                st.session_state["ne_pra_II"]      = f"MM total: {_ntx_datos.get('mm_total',0)}"
+                # ── Cr basal (post-Tx día 0 como ayer) ───────────────────────
+                _cr_base = _ntx_datos.get("cr", 0) or 0
+                if _cr_base:
+                    try: st.session_state["ne_cr_ayer"] = float(_cr_base)
+                    except Exception: pass
+                # ── Función del injerto ───────────────────────────────────────
+                _func = _ntx_datos.get("funcion_injerto","") or ""
+                if "inmediata" in _func.lower():
+                    st.session_state["ne_patron_func"] = "Función inmediata (Cr↓ desde día 1, sin TRR)"
+                elif "retardada" in _func.lower() or "DGF" in _func:
+                    st.session_state["ne_patron_func"] = "Función retardada (FRI — requiere ≥1 sesión de diálisis en 1ª semana)"
+                elif "lenta" in _func.lower():
+                    st.session_state["ne_patron_func"] = "Función lenta (Cr↓ sin diálisis pero <10%/día)"
+                # ── Inmunosupresión inicial ───────────────────────────────────
+                _is_ini = _ntx_datos.get("is_inicial","") or ""
+                if _is_ini:
+                    # Pre-llenar IS por segmentos del texto
+                    _is_lower = _is_ini.lower()
+                    for _seg in _is_ini.replace("+", "\n").split("\n"):
+                        _sl = _seg.strip().lower()
+                        if ("tac" in _sl or "tacrolimus" in _sl) and "ne_tac_dosis" not in st.session_state:
+                            st.session_state["ne_tac_dosis"] = _seg.strip()[:80]
+                        if ("mmf" in _sl or "micofenolato" in _sl) and "ne_mmf_dosis" not in st.session_state:
+                            st.session_state["ne_mmf_dosis"] = _seg.strip()[:80]
+                        if ("pred" in _sl) and "ne_pred" not in st.session_state:
+                            st.session_state["ne_pred"] = _seg.strip()[:80]
+                # ── Profilaxis ────────────────────────────────────────────────
+                _profilaxis_tx = _ntx_datos.get("profilaxis","") or ""
+                if _profilaxis_tx:
+                    _pf_lower = _profilaxis_tx.lower()
+                    if "valganciclovir" in _pf_lower or "valganc" in _pf_lower:
+                        st.session_state["ne_pf_cmv"] = _profilaxis_tx[:100]
+                    if "tmp" in _pf_lower or "trimetoprim" in _pf_lower or "bactrim" in _pf_lower:
+                        st.session_state["ne_pf_pjp"] = "TMP-SMX 80/400 mg c/24h VO × 6 meses"
+                # DPT = 1 (primera nota)
+                st.session_state["ne_dpt"] = 1
+                st.session_state[_sig_ntx] = _ne_pid
+
+            # Mostrar banner de pre-carga
+            _fecha_tx_disp = _ntx_datos.get("fecha_tx","—")
+            _don_tipo_disp = (_ntx_datos.get("donante_tipo","—") or "—").split("—")[0].strip()
+            _func_disp     = (_ntx_datos.get("funcion_injerto","—") or "—").split("(")[0].strip()
+            st.info(f"""
+🔗 **Datos pre-cargados desde Nota Inicial Post-TR**
+
+📅 Fecha trasplante: **{_fecha_tx_disp}** | Donante: **{_don_tipo_disp}**
+🫘 Función: **{_func_disp}** | Cr basal post-Tx: **{_ntx_datos.get("cr","—")} mg/dL**
+💉 Inducción: **{(_ntx_datos.get("induccion","—") or "—").split("(")[0].strip()}**
+🧬 cPRA: **{_ntx_datos.get("cpra","—")}%** | Crossmatch: **{(_ntx_datos.get("xm","—") or "—")[:40]}**
+
+*IS inicial, profilaxis e isquemias también pre-cargadas. DPT iniciado en 1.*
+            """)
 
         # ── GRÁFICAS DE TENDENCIA (si hay ≥2 notas previas) ──────────────────
         if len(_ne_prev_notas) >= 2:
@@ -21622,6 +21714,57 @@ elif nav == "nota_evol_tx":
                       key="btn_gen_evol_tx"):
             if not ne_nombre:
                 st.warning("El nombre del receptor es obligatorio.")
+            elif ne_borrador:
+                # ── GUARDAR BORRADOR (sin PDF) ───────────────────────────────
+                if _ne_pid and _DB_ON and _db.db_ok():
+                    try:
+                        _datos_borrador = {
+                            "estado": "BORRADOR",
+                            "dpt": int(ne_dpt),
+                            "fecha_tx": ne_fecha_tx,
+                            "donador": ne_donador,
+                            "cr_hoy": ne_cr_hoy, "cr_ayer": ne_cr_ayer,
+                            "tac_c0": ne_tac_c0,
+                            "tac_no_disp": st.session_state.get("ne_tac_no_disp", False),
+                            "labs_pend": st.session_state.get("ne_labs_pend", False),
+                            "patron_func": ne_patron,
+                            "diuresis_24h": ne_diuresis_24h,
+                            "balance_hidrico": ne_balance,
+                            "ne_subjetivo": ne_subjetivo,
+                            "ne_ef_gen": ne_ef_gen,
+                            "tac_dosis": ne_tac_dosis,
+                            "mmf_dosis": ne_mmf_dosis,
+                            "pred": ne_pred,
+                            "pf_cmv": ne_pf_cmv,
+                            "pf_pjp": ne_pf_pjp,
+                            "pf_otros": ne_pf_otros,
+                            "plan_rubros": {k: _ne_plan.get(k,"") for _,k,_ in _pl_keys},
+                            "dx_list": st.session_state.get("_ne_dx_list", []),
+                            "pendientes": ne_pendientes,
+                            "atg_dosis_list": st.session_state.get("ne_atg_dosis_list", []),
+                            "ta": f"{st.session_state.get('ne_ta_sist',130)}/{st.session_state.get('ne_ta_diast',80)}",
+                            "fc": ne_fc, "fr": ne_fr, "temp": ne_temp, "spo2": ne_spo2,
+                            "fecha_guardado": str(__import__("datetime").datetime.now()),
+                        }
+                        if _edit_data:
+                            try: _db.delete_clinical_record(_edit_data["id"], _user_id())
+                            except Exception: pass
+                        _db.add_clinical_record(_ne_pid, _user_id(), {
+                            "tipo": "Nota evolución Post-TR",
+                            "titulo": f"🟡 BORRADOR — DPT {ne_dpt} — {ne_patron[:35]}",
+                            "fecha_consulta": ne_fecha,
+                            "resumen": f"BORRADOR guardado. Cr: {ne_cr_hoy} · Tac: {'pendiente' if st.session_state.get('ne_tac_no_disp') else ne_tac_c0}",
+                            "notas": ne_problemas[:300] if ne_problemas else "",
+                            "datos": _datos_borrador,
+                        })
+                        _clear_cache()
+                        st.success("💾 **Borrador guardado correctamente en el expediente.** "
+                                   "Aparece marcado como 🟡 BORRADOR en los registros. "
+                                   "Puedes editarlo cuando tengas todos los datos.")
+                    except Exception as _e_bor:
+                        st.error(f"Error al guardar borrador: {_e_bor}")
+                else:
+                    st.warning("Selecciona un paciente registrado para guardar el borrador en el expediente.")
             else:
                 try:
                     import io as _io_ev
