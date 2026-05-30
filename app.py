@@ -21038,6 +21038,35 @@ elif nav == "nota_evol_tx":
                     _ss["ne_biopsia"]       = str(_datos_ed.get("biopsia", "") or "")
                     # Sesiones TRR
                     _ss["ne_ses_acum"]      = int(_datos_ed.get("sesiones_acum", 0) or 0)
+                    # TRR hoy
+                    _trr_ed = _datos_ed.get("trr_hoy_sel", "") or _datos_ed.get("trr_hoy","")
+                    if _trr_ed: _ss["ne_trr_hoy"] = str(_trr_ed)
+                    # Vitals adicionales
+                    _ss["ne_dol"]           = str(_datos_ed.get("dol", "") or "")
+                    _ss["ne_bun"]           = int(_datos_ed.get("bun", 30) or 30)
+                    # Balance adicional
+                    _ss["ne_egresos"]       = int(_datos_ed.get("egresos", 1800) or 1800)
+                    _ss["ne_ingresos"]      = int(_datos_ed.get("ingresos", 2000) or 2000)
+                    _ss["ne_blake"]         = int(_datos_ed.get("drenaje_blake", 0) or 0)
+                    # Labs virales
+                    _ss["ne_cmv"]           = str(_datos_ed.get("cmv", "") or "")
+                    _ss["ne_bk"]            = str(_datos_ed.get("bk", "") or "")
+                    _ss["ne_pcr_lab"]       = str(_datos_ed.get("pcr_lab", "") or "")
+                    _ss["ne_otros_labs"]    = str(_datos_ed.get("otros_labs", "") or "")
+                    _ss["ne_uricult"]       = str(_datos_ed.get("uricult", "") or "")
+                    # IS adicional
+                    _ss["ne_otros_is"]      = str(_datos_ed.get("otros_is", "") or "")
+                    _ss["ne_mp_bolos"]      = int(_datos_ed.get("mp_bolos", 0) or 0)
+                    _ss["ne_mp_dosis"]      = str(_datos_ed.get("mp_dosis", "") or "")
+                    # ATB periop
+                    _ss["ne_atb_pre"]       = str(_datos_ed.get("atb_pre", "Sí") or "Sí")
+                    _ss["ne_atb_esquema"]   = str(_datos_ed.get("atb_esquema", "") or "")
+                    _ss["ne_atb_continua"]  = str(_datos_ed.get("atb_continua", "No") or "No")
+                    # Exploración
+                    _ss["ne_ef_abd"]        = str(_datos_ed.get("ef_abd", "") or "")
+                    _ss["ne_ef_acc"]        = str(_datos_ed.get("ef_acc", "") or "")
+                    # Eventos/problemas
+                    _ss["ne_prob"]          = str(_datos_ed.get("problemas", "") or "")
                     # Marcar como cargado para este registro
                     _ss[_edit_load_key] = _edit_rec_id
 
@@ -21883,30 +21912,44 @@ elif nav == "nota_evol_tx":
                     try:
                         _datos_borrador = {
                             "estado": "BORRADOR",
-                            "dpt": int(ne_dpt),
-                            "fecha_tx": ne_fecha_tx,
-                            "donador": ne_donador,
+                            "dpt": int(ne_dpt), "fecha_tx": ne_fecha_tx,
+                            "donador": ne_donador, "kdpi": ne_kdpi,
+                            "induccion": ne_induccion, "ind_dosis": ne_ind_dosis,
+                            "hla": ne_hla, "pra_I": ne_pra_I, "pra_II": ne_pra_II,
+                            "dsa": ne_dsa, "mica": ne_mica, "xmatch": ne_xmatch,
+                            "isq_fria_h": ne_isq_fria_h, "isq_fria_m": ne_isq_fria_m,
+                            "isq_caliente_min": ne_isq_cal, "dur_cx": ne_dur_cx,
+                            "uresis_temp": ne_uresis_temp, "area": ne_area, "cama": ne_cama,
+                            "subjetivo": ne_subjetivo,
+                            "ta": ne_ta, "fc": ne_fc, "fr": ne_fr,
+                            "temp": ne_temp, "spo2": ne_spo2, "dol": ne_dol,
+                            "ingresos": ne_ingresos, "egresos": ne_egresos,
+                            "drenaje_blake": ne_drenaje_blake,
+                            "diuresis_24h": ne_diuresis_24h, "balance_hidrico": ne_balance,
+                            "ef_gen": ne_ef_gen, "ef_abd": ne_ef_abd, "ef_acc": ne_ef_acc,
                             "cr_hoy": ne_cr_hoy, "cr_ayer": ne_cr_ayer,
+                            "bun": ne_bun, "patron_func": ne_patron,
+                            "trr_hoy_sel": ne_trr_hoy, "sesiones_acum": ne_sesiones_total,
+                            "doppler": ne_doppler, "biopsia": ne_biopsia,
+                            "hb": ne_hb, "leu": ne_leu, "plt": ne_plt,
+                            "na": ne_na, "k": ne_k, "p": ne_p,
+                            "ca": ne_ca_tx, "mg": ne_mg_tx,
                             "tac_c0": ne_tac_c0,
                             "tac_no_disp": st.session_state.get("ne_tac_no_disp", False),
                             "labs_pend": st.session_state.get("ne_labs_pend", False),
-                            "patron_func": ne_patron,
-                            "diuresis_24h": ne_diuresis_24h,
-                            "balance_hidrico": ne_balance,
-                            "ne_subjetivo": ne_subjetivo,
-                            "ne_ef_gen": ne_ef_gen,
-                            "tac_dosis": ne_tac_dosis,
-                            "mmf_dosis": ne_mmf_dosis,
-                            "pred": ne_pred,
-                            "pf_cmv": ne_pf_cmv,
-                            "pf_pjp": ne_pf_pjp,
-                            "pf_otros": ne_pf_otros,
+                            "cmv": ne_cmv, "bk": ne_bk, "pcr_lab": ne_pcr_lab,
+                            "otros_labs": ne_otros_labs, "uricult": ne_uricult,
+                            "tac_dosis": ne_tac_dosis, "mmf_dosis": ne_mmf_dosis,
+                            "pred": ne_pred, "otros_is": ne_otros_is,
+                            "mp_bolos": ne_mp_bolos, "mp_dosis": ne_mp_dosis,
+                            "atb_pre": ne_atb_pre, "atb_esquema": ne_atb_esquema,
+                            "atb_continua": ne_atb_continua,
+                            "pf_cmv": ne_pf_cmv, "pf_pjp": ne_pf_pjp, "pf_otros": ne_pf_otros,
                             "plan_rubros": {k: _ne_plan.get(k,"") for _,k,_ in _pl_keys},
                             "dx_list": st.session_state.get("_ne_dx_list", []),
-                            "pendientes": ne_pendientes,
+                            "antecedentes": st.session_state.get("_ne_antecedentes_list", []),
                             "atg_dosis_list": st.session_state.get("ne_atg_dosis_list", []),
-                            "ta": f"{st.session_state.get('ne_ta_sist',130)}/{st.session_state.get('ne_ta_diast',80)}",
-                            "fc": ne_fc, "fr": ne_fr, "temp": ne_temp, "spo2": ne_spo2,
+                            "pendientes": ne_pendientes, "problemas": ne_problemas,
                             "fecha_guardado": str(__import__("datetime").datetime.now()),
                         }
                         if _edit_data:
@@ -22313,10 +22356,15 @@ elif nav == "nota_evol_tx":
                     # ── P: PLAN POR RUBROS ──────────────────────────────────
                     _story.append(_P("P — PLAN TERAPÉUTICO DEL DÍA", 10, True, AZ1))
                     _plan_rows = []
+                    # Strip emojis del label para PDF (no soportados por fuentes estándar)
+                    import re as _re_plan
+                    def _strip_emoji(s):
+                        return _re_plan.sub(r'[^\x00-\x7F\xC0-\xFF\u00C0-\u024F]', '', s).strip()
                     for _lbl, _key, _ph in _pl_keys:
                         _val = _ne_plan.get(_key, "").strip()
                         if _val:
-                            _plan_rows.append([_P(_lbl, 8, True, color=AZ1),
+                            _lbl_clean = _strip_emoji(_lbl)
+                            _plan_rows.append([_P(_lbl_clean, 8, True, color=AZ1),
                                                 _P(_val.replace("\n","<br/>"), 9)])
                     if _plan_rows:
                         _t_plan = _Tbl_ev(_plan_rows, colWidths=[4.5*_cm_ev, 13.5*_cm_ev])
@@ -22408,6 +22456,27 @@ elif nav == "nota_evol_tx":
                                 "atb_continua": ne_atb_continua,
                                 "plan_rubros": {k: _ne_plan.get(k,"") for _,k,_ in _pl_keys},
                                 "pdf_b64": _b64ev.b64encode(_pdf_ev).decode("ascii"),
+                                # ── Campos adicionales para restaurar en edición ──
+                                "subjetivo": ne_subjetivo,
+                                "ta": ne_ta, "fc": ne_fc, "fr": ne_fr,
+                                "temp": ne_temp, "spo2": ne_spo2, "dol": ne_dol,
+                                "ingresos": ne_ingresos, "egresos": ne_egresos,
+                                "ef_gen": ne_ef_gen, "ef_abd": ne_ef_abd, "ef_acc": ne_ef_acc,
+                                "hb": ne_hb, "leu": ne_leu, "plt": ne_plt,
+                                "na": ne_na, "k": ne_k, "p": ne_p,
+                                "ca": ne_ca_tx, "mg": ne_mg_tx, "bun": ne_bun,
+                                "tac_no_disp": st.session_state.get("ne_tac_no_disp", False),
+                                "labs_pend": st.session_state.get("ne_labs_pend", False),
+                                "tac_dosis": ne_tac_dosis, "mmf_dosis": ne_mmf_dosis,
+                                "pred": ne_pred, "otros_is": ne_otros_is,
+                                "pf_cmv": ne_pf_cmv, "pf_pjp": ne_pf_pjp, "pf_otros": ne_pf_otros,
+                                "cmv": ne_cmv, "bk": ne_bk, "pcr_lab": ne_pcr_lab,
+                                "otros_labs": ne_otros_labs, "uricult": ne_uricult,
+                                "doppler": ne_doppler, "biopsia": ne_biopsia,
+                                "problemas": ne_problemas, "pendientes": ne_pendientes,
+                                "atg_dosis_list": st.session_state.get("ne_atg_dosis_list", []),
+                                "patron_func_sel": ne_patron,
+                                "trr_hoy_sel": ne_trr_hoy,
                             }
                             _resumen = "; ".join([f"{i+1}. {d}" for i,d in
                                                    enumerate(st.session_state.get("_ne_dx_list", []))])[:500]
