@@ -2198,6 +2198,7 @@ with st.sidebar:
     _navbtn("📋 Resumen / PDF", "resumen")
     _navbtn("📚 Fundamento", "fund")
     _navbtn("📖 Referencias", "refs")
+    _navbtn("🎓 Guía Clínica", "guia")
     _navbtn("🎓 Aprendizaje TR", "aprendizaje")
     _navbtn("📊 Dashboard TR", "dashboard_tr")
 
@@ -5554,6 +5555,582 @@ elif nav == "refs":
                         f"[🔗 Ver fuente]({r['url']})")
             st.markdown("---")
     st.caption("Las referencias se actualizan al cambiar escenarios o anticoagulación.")
+
+elif nav == "guia":
+    st.title("🎓 Guía Clínica — Marco Teórico y Parámetros")
+    st.caption("Explica el porqué de cada parámetro en la app. Organizado por módulo.")
+
+    tema = st.selectbox("📂 Seleccionar tema", [
+        "🩺 Prescripción CRRT — todos los parámetros",
+        "🧪 Citrato RCA — mecanismo y cálculos",
+        "⚖️ Fracción de filtración (FF)",
+        "💧 Balance hídrico en CRRT",
+        "💊 Anticoagulación — HNF vs Citrato",
+        "📊 Dosis CRRT — evidencia KDIGO",
+        "🔬 Monitoreo iCa en Citrato RCA",
+        "🧂 Electrolitos en CRRT",
+        "🏥 Indicaciones de CRRT / TCRR",
+        "🔴 Acumulación de citrato — diagnóstico y manejo",
+    ], key="guia_tema")
+
+    st.markdown("---")
+
+    if "Prescripción CRRT" in tema:
+        st.markdown("## 🩺 Prescripción CRRT — Parámetros y razonamiento")
+        tabs = st.tabs(["Qb (Flujo sanguíneo)", "Dosis mL/kg/hr", "Modalidad", "UF neta", "Hematocrito"])
+
+        with tabs[0]:
+            st.markdown("""
+### Qb — Flujo sanguíneo (mL/min)
+**¿Qué es?**
+El volumen de sangre que pasa por el circuito extracorpóreo por minuto.
+
+**¿Por qué importa?**
+- Determina cuánta sangre se "procesa" por unidad de tiempo
+- Afecta directamente la **Fracción de Filtración (FF)**
+- Con citrato RCA: Qb determina la tasa de citrato (Qs × 10 con Prismocitrate 18/0)
+
+**Rango típico:** 150–250 mL/min (adulto)
+- **<100 mL/min:** riesgo de coagulación del circuito por bajo flujo
+- **>250 mL/min:** mayor trauma a glóbulos rojos; raro que aporte beneficio adicional
+
+**Evidencia:**
+KDIGO 2012 no especifica Qb óptimo. El consenso ADQI recomienda ≥150 mL/min para CVVHDF.
+En contexto de citrato: Qb más alto = más citrato = más carga hepática para metabolizarlo.
+
+**Regla práctica:** 150–200 mL/min para la mayoría de pacientes adultos.
+            """)
+
+        with tabs[1]:
+            st.markdown("""
+### Dosis CRRT — mL/kg/hr
+**¿Qué es?**
+El volumen de efluente (ultrafiltrado + dializante) generado por kilogramo de peso por hora.
+Es la medida estándar de "intensidad" de la terapia.
+
+**¿Por qué importa?**
+- Determina la **depuración de solutos** (urea, creatinina, electrolitos, mediadores inflamatorios)
+- Más dosis ≠ necesariamente mejor resultado (ver ATN y RENAL trials)
+
+**Evidencia clave:**
+| Estudio | Dosis | Resultado |
+|---|---|---|
+| **ATN Trial** (VA/NIH, 2008) | 20 vs 35 mL/kg/hr | Sin diferencia en mortalidad |
+| **RENAL Trial** (ANZICS, 2009) | 25 vs 40 mL/kg/hr | Sin diferencia en mortalidad |
+| **KDIGO 2012** | ≥20-25 mL/kg/hr | Recomendación clase 1A |
+
+**Rango recomendado:** 20–25 mL/kg/hr mantenimiento
+- **Inicio/sepsis:** puede usarse 25–30 mL/kg/hr las primeras 24-48h
+- **>35 mL/kg/hr:** sin beneficio demostrado; aumenta complicaciones
+
+**Clave:** La dosis **prescrita** vs **entregada** difiere ~15-20% por interrupciones.
+Prescribir 25-30 para entregar realmente ~20-25 mL/kg/hr.
+            """)
+
+        with tabs[2]:
+            st.markdown("""
+### Modalidad — CVVH / CVVHD / CVVHDF
+**¿Qué diferencia hay?**
+
+| Modalidad | Mecanismo principal | Cuándo usarla |
+|---|---|---|
+| **CVVH** | Convección (ultrafiltración) | Mediadores inflamatorios grandes, sobrecarga hídrica |
+| **CVVHD** | Difusión (dializante) | Depuración rápida K, urea, amonio |
+| **CVVHDF** | Convección + difusión | La mayoría de pacientes; más versátil |
+
+**Pre vs postdilución en CVVH/CVVHDF:**
+- **Predilución (PRE):** solución va ANTES del filtro → diluye sangre → protege filtro (↓FF)
+- **Postdilución (POST):** solución va DESPUÉS → mayor depuración por aclaramiento
+- **Con citrato:** citrato ya actúa como predilución PRE → reduce necesidad de solución PRE adicional
+
+**Evidencia:** No hay diferencia clara en outcomes entre modalidades.
+CVVHDF es la más usada en UCI por versatilidad.
+            """)
+
+        with tabs[3]:
+            st.markdown("""
+### UF neta — Retiro de líquido al paciente (mL/hr)
+**¿Qué es?**
+El volumen neto que se elimina del paciente (no del circuito). Es la diferencia entre
+todo lo que sale (efluente) y todo lo que entra (soluciones de reposición + citrato + calcio).
+
+**¿Por qué importa?**
+La sobrecarga hídrica (>10% del peso corporal) en AKI se asocia a:
+- Mayor mortalidad (PICARD study, FACTT trial)
+- Peor función pulmonar (ARDS)
+- Retraso en recuperación renal
+
+**Cómo elegir:**
+| Situación clínica | UF sugerida |
+|---|---|
+| PAM <60 o vasopresor aumentando | 0–50 mL/hr (mínima) |
+| PAM estable (65-70) + lactato en descenso | 100–200 mL/hr |
+| Sobrecarga hídrica severa + PAM estable | 200–300 mL/hr |
+| Anasarca + buena tolerancia hemodinámica | Hasta 500 mL/hr |
+
+**Regla:** La tolerancia a la UF depende más de la **estabilidad hemodinámica** que de la volemia.
+            """)
+
+        with tabs[4]:
+            st.markdown("""
+### Hematocrito (fracción)
+**¿Por qué entra en el cálculo?**
+La CRRT filtra el plasma, no los elementos formes. El **flujo de plasma** (Qp) se calcula como:
+
+```
+Qp = Qb × (1 − Hto)
+```
+
+**Efecto en la FF:**
+- Hto alto → menos plasma disponible → FF más alta para el mismo efluente
+- Hto bajo → más plasma → FF más baja → circuito más seguro
+
+**Implicación práctica:**
+Un paciente con Hto 40% (0.40) y Qb 200 mL/min tiene:
+- Qp = 200 × (1 − 0.40) = 120 mL/min de plasma
+
+El mismo Qb con Hto 25%:
+- Qp = 200 × 0.75 = 150 mL/min → circuito más seguro para el mismo efluente
+
+**Rango habitual en UCI:** 0.25–0.35 (pacientes críticos con anemia)
+            """)
+
+    elif "Citrato RCA" in tema:
+        st.markdown("## 🧪 Citrato RCA — Mecanismo y Parámetros")
+        tabs = st.tabs(["Mecanismo de acción", "Concentración solución", "Target en sangre", "Cálculo de tasa", "Calcio reposición"])
+
+        with tabs[0]:
+            st.markdown("""
+### ¿Cómo funciona el citrato como anticoagulante?
+
+**Mecanismo:**
+El citrato **quela (atrapa) el calcio ionizado (Ca²⁺)** en el circuito extracorpóreo.
+Como la coagulación depende del calcio en múltiples pasos (factores II, VII, IX, X, proteína C),
+sin Ca²⁺ **el circuito no coagula**.
+
+```
+Circuito:  Sangre + Citrato → iCa²⁺ 0.25–0.35 → NO coagula en el filtro
+Paciente:  Citrato llega al hígado → metabolizado → HCO₃⁻ (bicarbonato)
+           iCa sistémico se restaura con infusión de Ca post-filtro
+```
+
+**Ventajas vs heparina (HNF):**
+- Sin anticoagulación sistémica → menos sangrado
+- Mayor vida útil del circuito
+- Sin riesgo de HIT (trombocitopenia inducida por heparina)
+- Primera línea según KDIGO 2012 si no hay contraindicaciones
+
+**Contraindicaciones:**
+- Insuficiencia hepática grave (no metaboliza citrato → acumulación)
+- Alcalosis metabólica severa (citrato → HCO₃⁻ → empeora)
+- Shock severo con bajo gasto hepático
+- No es contraindicación: insuficiencia hepática leve-moderada (con monitoreo)
+            """)
+
+        with tabs[1]:
+            st.markdown("""
+### Soluciones de citrato — ¿cuál usar?
+
+| Solución | Concentración | Regla rápida | Sodio aportado |
+|---|---|---|---|
+| **Prismocitrate 18/0** | 18 mmol/L | Tasa = Qb × **10** | ~100 mEq/L |
+| **Prismocitrate 10/2** | 10 mmol/L | Tasa = Qb × **18** | ~100 mEq/L |
+| **Citrato trisódico 4%** | 136 mmol/L | Tasa = Qb × **1.3** | 408 mEq/L ⚠️ |
+| **ACD-A** | 113 mmol/L | Tasa = Qb × **1.6** | — |
+
+**¿Por qué Prismocitrate 18/0?**
+- Solución lista para usar (no requiere preparación)
+- Concentración baja → flujos altos → mejor predilución → protege el filtro
+- Na similar al plasma → no altera natremia
+- La más usada en protocolos modernos de CKRT
+
+**⚠️ Citrato 4%:** Aporta mucho sodio (408 mEq/L) → vigilar hipernatremia.
+Requiere ajuste del sodio en la solución de reposición y dializante.
+
+**La fórmula universal:**
+```
+Tasa citrato (mL/hr) = Qb (mL/min) × 60 × Target (mmol/L) ÷ Concentración (mmol/L)
+```
+Para Prismocitrate 18 y target 3 mmol/L:
+= Qb × 60 × 3 ÷ 18 = Qb × 10
+            """)
+
+        with tabs[2]:
+            st.markdown("""
+### Target de citrato en sangre — ¿por qué 3 mmol/L?
+
+**El target NO se mide directamente en sangre.**
+Lo que se mide es el **iCa post-filtro** (proxy de la anticoagulación del circuito).
+
+**Relación:**
+```
+Target citrato 3 mmol/L en sangre → iCa post-filtro 0.25–0.35 mmol/L
+```
+
+**¿Por qué 2.5–4 mmol/L?**
+- <2.5 mmol/L: anticoagulación insuficiente → coagulación del filtro
+- 3 mmol/L: dosis estándar de inicio; balance eficacia/seguridad óptimo
+- >4 mmol/L: riesgo de acumulación sistémica si hay disfunción hepática
+
+**Ajuste por iCa post-filtro:**
+| iCa post-filtro | Interpretación | Acción |
+|---|---|---|
+| <0.25 mmol/L | Exceso de citrato | ↓ tasa 10–20% |
+| 0.25–0.35 mmol/L | ✅ Óptimo | Mantener |
+| 0.35–0.45 mmol/L | Anticoagulación límite | ↑ tasa 10% |
+| >0.45 mmol/L | Anticoagulación insuficiente | ↑ tasa 20% + revisar flujos |
+
+**Frecuencia de medición:** cada 6h las primeras 24h → cada 12–24h si estable.
+            """)
+
+        with tabs[3]:
+            st.markdown("""
+### Cálculo de la tasa de citrato — paso a paso
+
+**Fórmula:**
+```
+Tasa citrato (mL/hr) = Qb (mL/min) × 60 min/hr × Target (mmol/L sangre)
+                       ────────────────────────────────────────────────────
+                       Concentración de la solución (mmol/L)
+```
+
+**Ejemplo con tu caso de guardia:**
+- Qb = 120 mL/min
+- Target = 3 mmol/L
+- Solución = Prismocitrate 18/0 → 18 mmol/L
+
+```
+= 120 × 60 × 3 ÷ 18
+= 7,200 × 3 ÷ 18
+= 21,600 ÷ 18
+= 1,200 mL/hr ✅
+```
+
+**Regla de cabecera (solo para Prismocitrate 18/0 + target 3):**
+```
+Tasa (mL/hr) = Qb (mL/min) × 10
+```
+→ 120 × 10 = **1,200 mL/hr**
+
+**¿Por qué el citrato va PRE-filtro?**
+Porque necesita quelar el Ca²⁺ ANTES de que la sangre llegue al filtro.
+Si fuera post-filtro, la sangre ya habría coagulado dentro.
+
+El citrato PRE-filtro actúa como **predilución simultánea**: diluye la sangre
+y anticoagula en un solo flujo → doble función → protege el filtro.
+            """)
+
+        with tabs[4]:
+            st.markdown("""
+### Calcio post-filtro — ¿cuánto reponer?
+
+**¿Por qué reponer calcio?**
+El citrato quelado pasa parcialmente al paciente (el resto es eliminado en el efluente).
+El hígado metaboliza el citrato → HCO₃⁻, pero libera el Ca²⁺ de vuelta.
+Sin embargo, hay pérdida neta de Ca²⁺ que debe reponerse para mantener iCa sistémico normal.
+
+**Fórmula estándar:**
+```
+Ca a reponer (mmol/hr) = Citrato infundido (mmol/hr) × 0.5
+```
+El factor 0.5 representa que aproximadamente el 50% del calcio quelado
+llega al paciente y necesita ser repuesto (el resto se elimina en el efluente).
+
+**Ejemplo:**
+- Citrato infundido = 1,200 mL/hr × 18 mmol/L ÷ 1,000 = 21.6 mmol/hr
+- Ca a reponer = 21.6 × 0.5 = **10.8 mmol/hr**
+- Gluconato Ca 10% = 0.225 mmol/mL
+- Tasa = 10.8 ÷ 0.225 = **~48 mL/hr**
+
+**Ajuste por iCa sistémico:**
+| iCa sistémico | Acción |
+|---|---|
+| <1.0 mmol/L | ↑ infusión de Ca post-filtro |
+| 1.0–1.35 mmol/L | ✅ Mantener |
+| >1.35 mmol/L | ↓ infusión de Ca post-filtro |
+
+**⚠️ CRÍTICO:** El calcio va por una línea **sistémica completamente separada**.
+NUNCA en la misma línea del citrato → precipitación → pérdida del circuito.
+            """)
+
+    elif "Fracción de filtración" in tema:
+        st.markdown("""
+## ⚖️ Fracción de Filtración (FF)
+
+### Definición
+```
+FF = Efluente total / Flujo de plasma = Qe / Qp
+```
+Con predilución (pre-filter replacement):
+```
+FF = Qe / (Qp + Qr_pre)
+```
+
+### ¿Por qué <25–30%?
+Cuando FF es alta, la sangre se **hemoconcentra** dentro del filtro:
+- Proteínas y células se concentran en la salida del filtro
+- Viscosidad aumenta → flujo se vuelve laminar → trombosis del filtro
+- Vida útil del circuito cae de 72h a <24h
+
+**Analogía:** Es como exprimir un limón. Si exprimes demasiado (FF alta),
+el residuo se compacta y obstruye. Si exprimes moderadamente (FF baja),
+el flujo se mantiene fluido.
+
+### Cómo reducir la FF
+| Estrategia | Efecto |
+|---|---|
+| ↑ Qb (flujo sanguíneo) | ↑ denominador → ↓ FF |
+| ↑ Qr_pre (predilución) | ↑ denominador → ↓ FF |
+| ↓ Qe (efluente / dosis) | ↓ numerador → ↓ FF |
+| ↓ UF neta | ↓ numerador → ↓ FF |
+| Citrato como predilución | ↑ denominador → ↓ FF |
+
+### FF con citrato RCA
+El citrato va PRE-filtro y actúa como predilución:
+```
+FF_efectiva = Qe / (Qp + Qr_pre_solución + Qcitrato)
+```
+→ El citrato **reduce** la FF efectiva: doble ventaja (anticoagula + protege filtro)
+        """)
+
+    elif "Balance hídrico" in tema:
+        st.markdown("""
+## 💧 Balance hídrico en CRRT
+
+### ¿Qué es la UF neta?
+UF neta = Volumen que **realmente se retira al paciente**.
+No confundir con el efluente total (que incluye la reposición).
+
+```
+UF neta = Efluente total − Soluciones de reposición − Citrato − Calcio
+```
+
+### Evidencia de daño por sobrecarga hídrica
+- **Sobrecarga >10% peso corporal:** mortalidad x2 en AKI (PICARD)
+- **Cada 1% aumento de sobrecarga:** +3% mortalidad en UCI pediátrica
+- **FACTT trial:** balance neutro/negativo mejor que balance positivo en ARDS + AKI
+
+### Guía de descongestión progresiva
+```
+Día 1-2 (fase resucitación): UF mínima o 0. Prioridad: estabilidad HD
+Día 3-5 (fase optimización): UF 100-200 mL/hr si PAM >65 + lactato ↓
+Día 5+ (fase desescalada): UF agresiva si tolerancia HD. Meta: -1 a -2 L/día
+```
+
+### ¿Cuándo NO retirar líquido?
+- PAM <60 mmHg
+- Vasopresor en aumento (norepinefrina >0.3 mcg/kg/min)
+- Lactato en ascenso
+- Evidencia de compromiso de perfusión de órgano
+        """)
+
+    elif "Anticoagulación" in tema:
+        st.markdown("""
+## 💊 Anticoagulación — HNF vs Citrato
+
+### Comparación directa
+
+| Parámetro | HNF | Citrato RCA |
+|---|---|---|
+| Mecanismo | Inhibe trombina sistémica | Quela Ca²⁺ en circuito |
+| Efecto sistémico | Sí → riesgo sangrado | No → anticoagulación local |
+| Monitoreo | aPTT cada 4–6h | iCa post-filtro cada 6–12h |
+| Contraindicación | Sangrado activo, HIT | Insuf. hepática grave, alcalosis |
+| Vida del circuito | 24–48h | 48–72h (mayor) |
+| Recomendación KDIGO | 2ª línea | **1ª línea** si no contraindicado |
+
+### ¿Cuándo usar HNF?
+- Contraindicación de citrato
+- Sin disponibilidad de citrato
+- Necesidad de anticoagulación sistémica simultánea (TEP, FA)
+- Shock hepático grave
+
+### Dosis HNF en CRRT
+- Inicio: 5–10 UI/kg/hr (sin bolo en críticos)
+- Objetivo aPTT: 45–70 s (1.5–2× normal)
+- Ajustar cada 4–6h hasta aPTT estable → cada 12h
+        """)
+
+    elif "Dosis CRRT" in tema:
+        st.markdown("""
+## 📊 Dosis CRRT — Evidencia y recomendaciones
+
+### Los dos grandes estudios
+**ATN Trial (VA/NIH, NEJM 2008)**
+- 1,124 pacientes, UCI, AKI
+- Dosis intensiva: 35 mL/kg/hr vs convencional: 20 mL/kg/hr
+- **Resultado: Sin diferencia** en mortalidad (53.6% vs 51.5%, p=0.47)
+
+**RENAL Trial (ANZICS, NEJM 2009)**
+- 1,508 pacientes, AUS/NZ
+- Dosis alta: 40 mL/kg/hr vs dosis menor: 25 mL/kg/hr
+- **Resultado: Sin diferencia** en mortalidad (44.7% vs 44.7%)
+
+### ¿Por qué entonces no más dosis?
+La dosis entregada siempre es menor que la prescrita (interrupciones, coágulos, cambios de filtro).
+Con 35 prescrito → se entrega ~27–28 mL/kg/hr real.
+Con 25 prescrito → se entrega ~20 mL/kg/hr real.
+
+**KDIGO 2012 (grado 1A):** ≥20–25 mL/kg/hr de dosis entregada.
+Prescribir 25–30 mL/kg/hr para asegurar 20–25 reales.
+
+### Situaciones que requieren dosis más alta
+- Hiperamonemia (IEM, falla hepática aguda): 50–70+ mL/kg/hr
+- Rabdomiólisis severa: 35–40 mL/kg/hr
+- Síndrome de liberación de citocinas: 35 mL/kg/hr puede considerarse
+        """)
+
+    elif "Monitoreo iCa" in tema:
+        st.markdown("""
+## 🔬 Monitoreo iCa en Citrato RCA
+
+### Dos sitios, dos objetivos distintos
+
+| Muestra | Objetivo | Qué indica |
+|---|---|---|
+| **POST-FILTRO** (línea venosa del circuito) | **0.25–0.35 mmol/L** | Anticoagulación del circuito |
+| **Sistémico** (gasometría arterial/venosa periférica) | **1.0–1.35 mmol/L** | Calcio del paciente |
+
+### Protocolo de medición
+```
+Primeras 24h: cada 6 horas
+24h–72h estable: cada 12 horas
+>72h estable: cada 24 horas
+```
+
+### Algoritmo de ajuste (simplificado)
+```
+iCa post-filtro < 0.25 → ↓ Citrato 10–20% (demasiada anticoagulación)
+iCa post-filtro 0.25–0.35 → ✅ Sin cambios
+iCa post-filtro > 0.35 → ↑ Citrato 10–20% (anticoagulación insuficiente)
+
+iCa sistémico < 1.0 → ↑ Gluconato Ca post-filtro
+iCa sistémico 1.0–1.35 → ✅ Sin cambios
+iCa sistémico > 1.35 → ↓ Gluconato Ca post-filtro
+```
+
+### ⚠️ Acumulación de citrato — detectarla
+```
+Ratio = Ca total sérico / iCa sistémico
+```
+- Normal: <2.5
+- >2.5: ACUMULACIÓN → citrato no se está metabolizando
+
+**Causas:**
+- Insuficiencia hepática (hepatocitos no metabolizan citrato)
+- Bajo gasto cardíaco (hipoperfusión hepática)
+- Dosis de citrato excesiva
+
+**Manejo:**
+1. Reducir tasa de citrato 30–50%
+2. Si grave: cambiar a HNF
+3. Investigar causa (función hepática, gasto cardíaco)
+        """)
+
+    elif "Acumulación de citrato" in tema:
+        st.markdown("""
+## 🔴 Acumulación de citrato — Diagnóstico y manejo
+
+### ¿Qué es?
+El hígado metaboliza el citrato a HCO₃⁻ liberando el Ca²⁺. Si el hígado no puede
+hacerlo (falla hepática, bajo gasto cardíaco), el citrato se acumula sistémicamente.
+
+### Tríada diagnóstica
+```
+1. Ratio Ca total / iCa sistémico > 2.5
+2. Alcalosis metabólica inexplicable (citrato → HCO₃⁻ en exceso)
+3. Hipocalcemia sistémica (iCa sistémico <1.0 a pesar de ↑ infusión Ca)
+```
+
+### Fisiopatología
+```
+Citrato normal → Hígado → HCO₃⁻ + Ca²⁺ libre → iCa sistémico normal
+Citrato acumulado → Quela Ca sistémico → iCa sistémico ↓ → hipocalcemia
+                  → Ca total SUBE (Ca-citrato unido) → ratio Ca/iCa SUBE
+```
+
+**Analogía:** Es como tener dinero bloqueado en una cuenta (Ca unido a citrato)
+vs dinero disponible (Ca iónico libre). El ratio te dice si hay mucho bloqueado.
+
+### Manejo
+| Severidad | Acción |
+|---|---|
+| Ratio 2.5–3.0 | ↓ Tasa citrato 20–30%, vigilar estrechamente |
+| Ratio >3.0 + síntomas | Cambiar a HNF de inmediato |
+| Falla hepática aguda | Citrato contraindicado desde inicio |
+
+### Prevención
+- No usar citrato en CHB aguda, síndrome de Budd-Chiari agudo, shock hepático
+- Monitorear ratio con cada gasometría en pacientes de riesgo
+        """)
+
+    elif "Electrolitos" in tema:
+        st.markdown("""
+## 🧂 Electrolitos en CRRT
+
+### Potasio (K)
+- CRRT elimina K eficientemente → riesgo de hipokalemia
+- Dializantes estándar: K 2–4 mEq/L
+- Si K sérico <3.5: usar dializante K 3–4 mEq/L o suplementar
+- Si K >5.5 (hiperkalemia): dializante K 0–2 mEq/L; ↑ Qd
+
+### Sodio (Na)
+- La corrección de hiponatremia/hipernatremia debe ser GRADUAL
+- Hiponatremia: máximo 8–10 mmol/L/24h (riesgo ODS si más rápido)
+- Ajustar Na en dializante/reposición para controlar velocidad de corrección
+
+### Fósforo (P)
+- CRRT elimina P eficientemente → hipofosfatemia frecuente
+- Monitorear P cada 12–24h
+- Suplementar si P <1.0 mg/dL
+
+### Magnesio (Mg)
+- También se elimina → monitorear
+- Objetivo Mg: 1.7–2.4 mg/dL
+
+### Con citrato RCA — considerar:
+- Citrato 4% aporta Na 408 mEq/L → ajustar Na en soluciones
+- Prismocitrate 18/0: Na ~100 mEq/L → menor impacto en natremia
+- Citrato → HCO₃⁻ → vigilar alcalosis metabólica
+        """)
+
+    elif "Indicaciones" in tema:
+        st.markdown("""
+## 🏥 Indicaciones de CRRT/TCRR
+
+### Indicaciones absolutas (emergentes)
+| Indicación | Umbral / Criterio |
+|---|---|
+| Hiperkalemia grave | K >6.5 con cambios ECG o refractaria a médico |
+| Acidosis metabólica grave | pH <7.15 refractaria a corrección |
+| Sobrecarga hídrica grave | Sin respuesta a diuréticos; SpO₂ comprometida |
+| Uremia sintomática | Encefalopatía, pericarditis, sangrado urémico |
+| Intoxicaciones dializables | Metanol, etilenglicol, litio, salicilatos |
+| Hiperamonemia | Amonio >300 µmol/L (especialmente neonatos/niños) |
+
+### AKI — criterios KDIGO para inicio
+- **Estadio 2–3:** Cr ×2 basal o UO <0.5 mL/kg/hr ×12h (estadio 2)
+- No hay Cr específica que obligue; depende del contexto clínico
+
+### ¿CRRT vs HD intermitente?
+| Parámetro | CRRT | HDI |
+|---|---|---|
+| Estabilidad hemodinámica | Superior (gradual) | Inferior (hipotensión intradialítica) |
+| Control de volumen | Preciso y continuo | Episódico |
+| Depuración de solutos | Continua pero menor por sesión | Alta por sesión |
+| Indicación preferente | Hemodinámicamente inestable | Hemodinámicamente estable |
+| Costo/recurso | Mayor | Menor |
+
+### ¿Cuándo hacer CRRT en vez de HDI?
+- PAM <65 o requiere vasopresores
+- Inestabilidad hemodinámica durante diálisis previa
+- Necesidad de corrección muy gradual (hipernatremia, OHD severa)
+- IRA + sepsis (más difusión de mediadores con CVVHDF)
+        """)
+
+    st.markdown("---")
+    st.caption("Guía basada en: KDIGO AKI 2012, ATN Trial (NEJM 2008), RENAL Trial (NEJM 2009), "
+               "ADQI Consensus, SCCM/ESICM CRRT Guidelines 2016, Kidney International 2019.")
 
 elif nav == "electrolitos":
     st.subheader("⚗️ Electrolitos en CRRT & Cálculo de Bolsas")
