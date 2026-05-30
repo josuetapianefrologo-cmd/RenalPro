@@ -21848,9 +21848,9 @@ elif nav == "nota_evol_tx":
                             _logo_cell = _Img_ev(_io_ev.BytesIO(_b64ev.b64decode(logo_b64)),
                                                   width=1.8*_cm_ev, height=1.8*_cm_ev, kind="proportional")
                         except Exception:
-                            _logo_cell = _P("☤", 24, True, AZ1, _TC_ev)
+                            _logo_cell = _P("Rx", 24, True, AZ1, _TC_ev)
                     else:
-                        _logo_cell = _P("☤", 24, True, AZ1, _TC_ev)
+                        _logo_cell = _P("Rx", 24, True, AZ1, _TC_ev)
 
                     _hdr_txt = [
                         _P(dr_inst or "Servicio de Trasplante Renal", 11, True, AZ1, sp=1),
@@ -21972,7 +21972,7 @@ elif nav == "nota_evol_tx":
                     if _ant_list:
                         _story.append(_P("ANTECEDENTES DEL RECEPTOR", 10, True, AZ1))
                         for _a in _ant_list:
-                            _story.append(_P(f"• {_a}", 9))
+                            _story.append(_P(f"- {_a}", 9))
                         _story.append(_Sp_ev(1, 0.2*_cm_ev))
 
                     # ── ESTADO CLÍNICO ──────────────────────────────────────
@@ -21989,7 +21989,7 @@ elif nav == "nota_evol_tx":
                          _P("FC", 7, True, color=GR, align=_TC_ev),
                          _P("FR", 7, True, color=GR, align=_TC_ev),
                          _P("T°", 7, True, color=GR, align=_TC_ev),
-                         _P("SpO₂", 7, True, color=GR, align=_TC_ev),
+                         _P("SpO2", 7, True, color=GR, align=_TC_ev),
                          _P("EVA", 7, True, color=GR, align=_TC_ev)],
                         [_P(ne_ta or "—", 10, True, align=_TC_ev),
                          _P(f"{ne_fc}" if ne_fc else "—", 10, True, align=_TC_ev),
@@ -22057,7 +22057,7 @@ elif nav == "nota_evol_tx":
                          _P("", 8), _P("", 8), _P("", 8)],
                         [_P("Cr hoy", 8, True, color=GR, align=_TC_ev),
                          _P("Cr ayer", 8, True, color=GR, align=_TC_ev),
-                         _P("ΔCr", 8, True, color=GR, align=_TC_ev),
+                         _P("dCr", 8, True, color=GR, align=_TC_ev),
                          _P("BUN", 8, True, color=GR, align=_TC_ev)],
                         [_P(f"{ne_cr_hoy:.2f}", 11, True, align=_TC_ev),
                          _P(f"{ne_cr_ayer:.2f}", 11, True, align=_TC_ev),
@@ -22101,12 +22101,12 @@ elif nav == "nota_evol_tx":
                          _P("<b>QS / Electrolitos</b>", 9, color=AZ1),
                          _P("<b>IS / Virales</b>", 9, color=AZ1)],
                         [_P(f"Hb: <b>{ne_hb:.1f}</b> g/dL<br/>"
-                            f"Leu: {ne_leu:.1f} ×10³<br/>"
-                            f"Plt: {ne_plt} ×10³", 9),
+                            f"Leu: {ne_leu:.1f} x10^3<br/>"
+                            f"Plt: {ne_plt} x10^3", 9),
                          _P(f"Na: <b>{ne_na}</b> · K: <b>{ne_k:.1f}</b><br/>"
                             f"Ca: {ne_ca:.1f} · P: {ne_p:.1f}<br/>"
                             f"Mg: {ne_mg:.1f}", 9),
-                         _P(f"<b>Tac C0: <font color='{_tac_color.hexval()[2:]}'>"
+                         _P(f"<b>Tac C0: <font color='#{_tac_color.hexval()[2:]}'>"
                             f"{ne_tac_c0:.1f}</font> ng/mL</b><br/>"
                             f"CMV: {ne_cmv or 'ND'}<br/>"
                             f"BK: {ne_bk or 'ND'} · PCR: {ne_pcr or '—'}", 9)],
@@ -22143,8 +22143,8 @@ elif nav == "nota_evol_tx":
                     _pf_txt.append(f"<b>Profilaxis ATB perioperatoria:</b> {ne_atb_pre} · "
                                     f"{ne_atb_esquema or '—'} · ¿Continúa? {ne_atb_continua}")
                     _t_isp = _Tbl_ev([
-                        [_P("🛡️ INMUNOSUPRESIÓN", 9, True, _wh_ev),
-                         _P("💊 PROFILAXIS", 9, True, _wh_ev)],
+                        [_P("INMUNOSUPRESION", 9, True, _wh_ev),
+                         _P("PROFILAXIS", 9, True, _wh_ev)],
                         [_P("<br/>".join(_is_txt) if _is_txt else "—", 9),
                          _P("<br/>".join(_pf_txt) if _pf_txt else "—", 9)],
                     ], colWidths=[9*_cm_ev, 9*_cm_ev])
