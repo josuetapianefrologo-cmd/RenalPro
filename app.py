@@ -2165,6 +2165,7 @@ with st.sidebar:
     _navbtn("🦴 Hipocalcemia IV", "hipocalcemia_iv")
     _navbtn("💊 Diuréticos", "diureticos")
     _navbtn("🔬 AKI por Contraste", "contraste")
+    _navbtn("💊 Antibióticos CRRT", "antibioticos_crrt")
 
     _navsec("NEFROLOGÍA")
     _navbtn("🔢 Calculadoras Nefro", "nefro")
@@ -3126,6 +3127,144 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
 
 ⚠️ **Signos de acumulación:** alcalosis metabólica inexplicable + ratio >2.5 + bajo gasto cardíaco.
             """)
+
+
+        # ── BALANCE DE SODIO INTEGRADO ───────────────────────────────────────────
+        with st.expander("🧂 Balance de sodio — integrado con los flujos prescritos", expanded=False):
+            na_rep = st.number_input("Na en solución de reposición (mEq/L)",
+                                     100.0, 160.0, 140.0, 1.0,
+                                     key="presc_na_rep",
+                                     help="Solución estándar: 140 mEq/L. Ajustar si hay hipo/hipernatremia.")
+            na_dial = st.number_input("Na en dializante (mEq/L)",
+                                      100.0, 160.0, 140.0, 1.0,
+                                      key="presc_na_dial",
+                                      help="Prismosol/dializante estándar: 140 mEq/L")
+
+            # Na aportado por cada fuente (mEq/hr)
+            na_de_citrato   = cit_inf_presc * na_in_cit_presc / 1000
+            na_de_rep_pre   = qr_pre_efectivo * na_rep / 1000
+            na_de_rep_post  = qr_post * na_rep / 1000
+            na_de_dializado = qd * na_dial / 1000
+            na_total_in     = na_de_citrato + na_de_rep_pre + na_de_rep_post + na_de_dializado
+
+            # Na eliminado por efluente (sale a concentración sérica)
+            na_out_efluente = efluente_total_int * na / 1000
+
+            # Balance neto
+            na_balance = na_total_in - na_out_efluente
+
+            # Na efectivo aportado (promedio ponderado de todas las soluciones)
+            flujo_in_total = cit_inf_presc + qr_pre_efectivo + qr_post + qd
+            na_efectivo = na_total_in / flujo_in_total * 1000 if flujo_in_total > 0 else 0
+
+            # Proyección 24h
+            tbw = peso * 0.6
+            delta_na_24h = (na_balance * 24) / tbw if tbw > 0 else 0
+
+            sna1, sna2, sna3, sna4 = st.columns(4)
+            sna1.metric("Na aportado/hr", f"{na_total_in:.1f} mEq/hr",
+                        help="Suma de citrato + reposición + dializante")
+            sna2.metric("Na eliminado/hr", f"{na_out_efluente:.1f} mEq/hr",
+                        help=f"Efluente {efluente_total_int:.0f} mL × Na sérico {na} mEq/L")
+            sna3.metric("Balance neto Na", f"{na_balance:+.1f} mEq/hr",
+                        delta="↑ Na tiende a subir" if na_balance > 2 else
+                              ("↓ Na tiende a bajar" if na_balance < -2 else "→ Na estable"),
+                        delta_color="inverse")
+            sna4.metric("ΔNa proyectado/24h", f"{delta_na_24h:+.1f} mEq/L",
+                        help=f"Si todo se mantiene igual | TBW estimado: {tbw:.0f} L")
+
+            # Tabla de fuentes
+            st.markdown("**Desglose por fuente:**")
+            st.table({
+                "Fuente": [
+                    f"Citrato ({na_in_cit_presc:.0f} mEq/L)",
+                    f"Rep. PRE ({na_rep:.0f} mEq/L)",
+                    f"Rep. POST ({na_rep:.0f} mEq/L)",
+                    f"Dializante ({na_dial:.0f} mEq/L)",
+                    "↓ Efluente (Na sérico)",
+                    "BALANCE",
+                ],
+                "Flujo (mL/hr)": [
+                    f"{cit_inf_presc:.0f}", f"{qr_pre_efectivo:.0f}",
+                    f"{qr_post:.0f}", f"{qd:.0f}",
+                    f"{efluente_total_int:.0f}", "—",
+                ],
+                "Na (mEq/hr)": [
+                    f"+{na_de_citrato:.1f}", f"+{na_de_rep_pre:.1f}",
+                    f"+{na_de_rep_post:.1f}", f"+{na_de_dializado:.1f}",
+                    f"−{na_out_efluente:.1f}",
+                    f"**{na_balance:+.1f}**",
+                ],
+            })
+
+            # Recomendación automática
+            if na < 130 and delta_na_24h < 0:
+                st.error(f"⚠️ Hiponatremia ({na} mEq/L) + balance negativo de Na "
+                         f"({na_balance:+.1f} mEq/hr). Subir Na en solución de reposición "
+                         f"a ≥{na+5:.0f} mEq/L o reducir velocidad de corrección.")
+            elif na > 150 and delta_na_24h > 0:
+                st.error(f"⚠️ Hipernatremia ({na} mEq/L) + balance positivo de Na "
+                         f"({na_balance:+.1f} mEq/hr). Bajar Na en solución de reposición "
+                         f"a ≤{na-5:.0f} mEq/L.")
+            elif abs(delta_na_24h) > 10:
+                st.warning(f"🟡 Cambio proyectado de {delta_na_24h:+.1f} mEq/L en 24h — "
+                           f"excede el límite seguro (8-10 mEq/L/día). Ajustar Na en soluciones.")
+            else:
+                st.success(f"✅ Balance de sodio dentro de rango seguro. "
+                           f"Na efectivo aportado: {na_efectivo:.1f} mEq/L vs sérico: {na:.1f} mEq/L.")
+
+        # ── MANEJO DE ALCALOSIS METABÓLICA EN CRRT CON CITRATO ─────────────────
+        with st.expander("⚗️ Alcalosis metabólica — árbol de decisión", expanded=False):
+            st.markdown("**Ingresa los valores actuales del paciente:**")
+            alc1, alc2, alc3 = st.columns(3)
+            hco3_actual = alc1.number_input("HCO₃⁻ actual (mEq/L)", 10.0, 50.0,
+                                             float(st.session_state.get("hco3_main", 24.0)),
+                                             0.5, key="alc_hco3")
+            ca_total_alc = alc2.number_input("Ca total sérico (mg/dL)", 4.0, 15.0,
+                                              8.5, 0.1, key="alc_ca_total")
+            ica_sist_alc = alc3.number_input("iCa sistémico (mmol/L)", 0.5, 2.0,
+                                              1.1, 0.01, key="alc_ica_sist")
+
+            ratio_alc = (ca_total_alc / 4) / ica_sist_alc if ica_sist_alc > 0 else 0
+
+            st.markdown("---")
+            if hco3_actual <= 28:
+                st.success(f"✅ HCO₃⁻ {hco3_actual} mEq/L — Sin alcalosis significativa.")
+            else:
+                st.warning(f"🟡 HCO₃⁻ {hco3_actual} mEq/L — Alcalosis metabólica. "
+                           f"Ratio Ca/iCa = {ratio_alc:.2f}")
+
+                if ratio_alc > 2.5:
+                    st.error(f"""
+🚨 **ACUMULACIÓN DE CITRATO** (ratio {ratio_alc:.2f} > 2.5)
+
+La alcalosis NO es por exceso de HCO₃⁻ del buffer — es porque el citrato
+acumulado sigue generando HCO₃⁻ sin poderse metabolizar.
+
+**Manejo:**
+1. ↓ Tasa de citrato 30–50% de inmediato
+2. Si ratio >3.5 o inestabilidad: cambiar a HNF
+3. Investigar causa: función hepática, gasto cardíaco bajo
+4. NO reducir HCO₃⁻ del buffer como primera medida
+                    """)
+                else:
+                    st.info(f"""
+**Alcalosis por citrato — metabolismo normal** (ratio {ratio_alc:.2f} < 2.5)
+
+Cada mmol de citrato que llega al hígado genera 3 mmol de HCO₃⁻.
+Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * cit_conc_presc / 1000:.1f} mmol/hr citrato
+→ ~{cit_inf_presc * cit_conc_presc / 1000 * 0.22 * 3:.1f} mmol/hr HCO₃⁻ neto generado (estimado)
+
+**Plan escalonado:**
+                    """)
+                    paso1, paso2, paso3 = st.columns(3)
+                    paso1.info("**Paso 1** (primero): Reducir HCO₃⁻ en solución de reposición/dializante: 35 → 28–30 mEq/L")
+                    paso2.warning("**Paso 2** (si persiste): Reducir citrato 10–20% solo si iCa post-filtro <0.30")
+                    paso3.error("**Paso 3** (buscar causas externas): Diuréticos · SNG a succión · Hipokalemia · Esteroides")
+
+                    if st.session_state.get("hco3_main", 24) < 28:
+                        st.caption("💡 Tip: ajusta el HCO₃⁻ de la prescripción en el módulo "
+                                   "⚗️ Electrolitos & Bolsas para calcular la nueva composición.")
 
     # ── Semáforo FF (usa FF efectiva según anticoagulación elegida) ───────────
     st.markdown("#### Estado del filtro (FF efectiva)")
@@ -10683,6 +10822,460 @@ Evidencia del DOSE trial (NEJM 2011): infusión continua = bolos intermitentes e
 6. **Activación neurohumoral** → añadir espironolactona / sacubitril-valsartán
 7. **AINES / contrastes** → revisar medicación concomitante
         """)
+
+elif nav == "antibioticos_crrt":
+    st.title("💊 Antibióticos en CRRT")
+    st.caption("Dosificación ajustada para CVVH / CVVHD / CVVHDF. "
+               "La dosis varía principalmente con el efluente total, no la modalidad.")
+
+    # ── Configuración clínica ─────────────────────────────────────────────────
+    ab1, ab2, ab3 = st.columns(3)
+    peso_ab   = ab1.number_input("Peso (kg)", 30.0, 200.0,
+                                  float(st.session_state.get("sb_peso", 70.0)), 0.5,
+                                  key="ab_peso")
+    efluente_ab = ab2.slider("Efluente total (mL/kg/hr)", 10, 45,
+                              int(st.session_state.get("sb_dosis", 25)),
+                              key="ab_efluente",
+                              help="Dosis CRRT. Impacta directamente la eliminación del antibiótico.")
+    modalidad_ab = ab3.selectbox("Modalidad", ["CVVHDF", "CVVH", "CVVHD"],
+                                  key="ab_modalidad")
+
+    efluente_total_ab = efluente_ab * peso_ab  # mL/hr
+
+    st.info(f"📐 Efluente total: **{efluente_total_ab:.0f} mL/hr** "
+            f"({efluente_ab} mL/kg/hr × {peso_ab:.0f} kg) — {modalidad_ab}")
+
+    if efluente_ab < 20:
+        st.warning("🟡 Efluente <20 mL/kg/hr — usar dosis del extremo inferior.")
+    elif efluente_ab > 35:
+        st.warning("🟡 Efluente >35 mL/kg/hr — usar dosis del extremo superior o considerar "
+                   "monitoreo de niveles.")
+
+    st.markdown("---")
+
+    # ── Búsqueda ──────────────────────────────────────────────────────────────
+    col_bus, col_clase = st.columns([2, 2])
+    buscar_ab = col_bus.text_input("🔍 Buscar antibiótico", key="ab_buscar",
+                                    placeholder="Vancomicina, meropenem, pip-tazo...").lower()
+    clase_filter = col_clase.selectbox("Clase", [
+        "Todos", "Beta-lactámicos", "Glucopéptidos", "Aminoglucósidos",
+        "Fluoroquinolonas", "Oxazolidinonas", "Lipopéptidos",
+        "Polimixinas", "Antifúngicos", "Antivirales",
+    ], key="ab_clase")
+
+    # ── Base de datos ─────────────────────────────────────────────────────────
+    ANTIBIOTICOS = [
+        # ── Beta-lactámicos ───────────────────────────────────────────────────
+        {
+            "nombre": "Meropenem", "clase": "Beta-lactámicos",
+            "sc": 0.98, "pb": 2, "vd": 0.35,
+            "dosis_normal": "1–2 g c/8h",
+            "dosis_crrt_std": "1 g c/12h",
+            "dosis_crrt_rango": "0.5–2 g c/8–12h",
+            "carga": "No requiere",
+            "monitoreo": "Niveles valle >4× MIC para infecciones graves",
+            "notas": "Infusión extendida 3–4h optimiza tiempo sobre MIC (T>MIC). "
+                     "↑ dosis si efluente >30 mL/kg/hr o MIC alto (BLEE/Pseudomonas). "
+                     "Riesgo de epilepsia en dosis altas con insuficiencia renal.",
+        },
+        {
+            "nombre": "Imipenem-Cilastatina", "clase": "Beta-lactámicos",
+            "sc": 0.78, "pb": 20, "vd": 0.30,
+            "dosis_normal": "500 mg c/6h",
+            "dosis_crrt_std": "500 mg c/8h",
+            "dosis_crrt_rango": "250–500 mg c/6–8h",
+            "carga": "No requiere",
+            "monitoreo": "Clínico. Niveles si disponibles.",
+            "notas": "⚠️ Mayor riesgo de convulsiones que meropenem en ERC. "
+                     "Evitar en meningitis. Cilastina inhibida → imipenem acumulado.",
+        },
+        {
+            "nombre": "Piperacilina-Tazobactam", "clase": "Beta-lactámicos",
+            "sc": 0.68, "pb": 30, "vd": 0.30,
+            "dosis_normal": "4.5 g c/6h",
+            "dosis_crrt_std": "3.375 g c/6h",
+            "dosis_crrt_rango": "3.375 g c/6h o 4.5 g c/8h",
+            "carga": "No requiere",
+            "monitoreo": "Clínico",
+            "notas": "Infusión extendida 4h preferible (T>MIC). "
+                     "Con efluente alto (>30 mL/kg/hr) → 4.5 g c/6h. "
+                     "CRRT no elimina suficiente para gérmenes con MIC ≥16.",
+        },
+        {
+            "nombre": "Cefepime", "clase": "Beta-lactámicos",
+            "sc": 0.82, "pb": 19, "vd": 0.30,
+            "dosis_normal": "2 g c/8h",
+            "dosis_crrt_std": "1–2 g c/12h",
+            "dosis_crrt_rango": "1–2 g c/8–12h",
+            "carga": "No requiere",
+            "monitoreo": "⚠️ Vigilar neurotoxicidad (encefalopatía, mioclonías)",
+            "notas": "Neurotoxicidad subestimada en CRRT. Niveles elevados → confusión, "
+                     "mioclonías, coma. Con efluente alto usar extremo superior.",
+        },
+        {
+            "nombre": "Ceftazidima", "clase": "Beta-lactámicos",
+            "sc": 0.90, "pb": 10, "vd": 0.28,
+            "dosis_normal": "2 g c/8h",
+            "dosis_crrt_std": "2 g c/12h",
+            "dosis_crrt_rango": "1–2 g c/8–12h",
+            "carga": "No requiere",
+            "monitoreo": "Clínico",
+            "notas": "Alta eliminación por CRRT (SC 0.90). "
+                     "Infusión extendida recomendada para Pseudomonas.",
+        },
+        {
+            "nombre": "Ceftriaxona", "clase": "Beta-lactámicos",
+            "sc": 0.10, "pb": 95, "vd": 0.14,
+            "dosis_normal": "2 g c/24h",
+            "dosis_crrt_std": "2 g c/24h (sin cambio)",
+            "dosis_crrt_rango": "1–2 g c/24h",
+            "carga": "No requiere",
+            "monitoreo": "No requiere",
+            "notas": "Alta unión a proteínas (95%) → SC muy bajo → CRRT elimina poco. "
+                     "No requiere ajuste. Útil cuando no se quiere afectar por CRRT.",
+        },
+        {
+            "nombre": "Ampicilina-Sulbactam", "clase": "Beta-lactámicos",
+            "sc": 0.83, "pb": 28, "vd": 0.30,
+            "dosis_normal": "3 g c/6h",
+            "dosis_crrt_std": "3 g c/8h",
+            "dosis_crrt_rango": "1.5–3 g c/6–8h",
+            "carga": "No requiere",
+            "monitoreo": "Clínico",
+            "notas": "Sulbactam tiene actividad propia contra Acinetobacter. "
+                     "Infusión extendida 3h para T>MIC.",
+        },
+        {
+            "nombre": "Aztreonam", "clase": "Beta-lactámicos",
+            "sc": 0.86, "pb": 56, "vd": 0.20,
+            "dosis_normal": "2 g c/8h",
+            "dosis_crrt_std": "2 g c/12h",
+            "dosis_crrt_rango": "1–2 g c/8–12h",
+            "carga": "No requiere",
+            "monitoreo": "Clínico",
+            "notas": "Alternativa en alergia a betalactámicos (no reactividad cruzada). "
+                     "Solo Gram negativo.",
+        },
+        # ── Glucopéptidos ─────────────────────────────────────────────────────
+        {
+            "nombre": "Vancomicina", "clase": "Glucopéptidos",
+            "sc": 0.55, "pb": 50, "vd": 0.70,
+            "dosis_normal": "15–20 mg/kg c/8–12h",
+            "dosis_crrt_std": "15–20 mg/kg c/24–48h",
+            "dosis_crrt_rango": "15 mg/kg c/24–48h (ajustar por niveles)",
+            "carga": "25–30 mg/kg IV (infusión ≥2h)",
+            "monitoreo": "AUC₀₋₂₄/MIC 400–600 (ideal) o nivel valle 15–20 mg/L",
+            "notas": "⚠️ Monitoreo OBLIGATORIO. CRRT elimina ~30 mL/min. "
+                     "Medir nivel a las 12–24h post-carga. "
+                     "Infusión lenta ≥60 min (síndrome del hombre rojo si rápida). "
+                     "Con efluente >30 mL/kg/hr puede requerir c/24h.",
+        },
+        {
+            "nombre": "Teicoplanina", "clase": "Glucopéptidos",
+            "sc": 0.30, "pb": 90, "vd": 0.90,
+            "dosis_normal": "6–12 mg/kg c/24h",
+            "dosis_crrt_std": "6 mg/kg c/24–48h",
+            "dosis_crrt_rango": "6–12 mg/kg c/24–48h",
+            "carga": "6–12 mg/kg c/12h × 3 dosis",
+            "monitoreo": "Nivel valle >20 mg/L (infecciones graves >30 mg/L)",
+            "notas": "Alta PB (90%) → eliminación limitada por CRRT. "
+                     "Vd grande → distribución amplia. Monitoreo de niveles recomendado.",
+        },
+        # ── Aminoglucósidos ───────────────────────────────────────────────────
+        {
+            "nombre": "Amikacina", "clase": "Aminoglucósidos",
+            "sc": 0.90, "pb": 5, "vd": 0.27,
+            "dosis_normal": "15–20 mg/kg c/24h",
+            "dosis_crrt_std": "15 mg/kg c/24–48h",
+            "dosis_crrt_rango": "10–15 mg/kg c/24–48h (por niveles)",
+            "carga": "15–25 mg/kg IV",
+            "monitoreo": "Pico (Cmax/MIC >8–10) y valle <5 mg/L (nefrotoxicidad)",
+            "notas": "⚠️ Nefrotoxicidad + ototoxicidad. Monitoreo obligatorio. "
+                     "Alta SC (0.90) → CRRT elimina bien. Dosis extendida (cada 48h) "
+                     "permite aclaramiento entre dosis. Medir nivel antes de 2ª dosis.",
+        },
+        {
+            "nombre": "Gentamicina", "clase": "Aminoglucósidos",
+            "sc": 0.78, "pb": 5, "vd": 0.25,
+            "dosis_normal": "5–7 mg/kg c/24h",
+            "dosis_crrt_std": "3–4 mg/kg c/24–48h",
+            "dosis_crrt_rango": "2–5 mg/kg c/24–48h (por niveles)",
+            "carga": "5–7 mg/kg IV",
+            "monitoreo": "Pico 15–20 mg/L (sinérgica), valle <1 mg/L",
+            "notas": "Uso sinérgico con betalactámicos. Mismo perfil que amikacina. "
+                     "Evitar uso prolongado (>5 días) por nefro/ototoxicidad.",
+        },
+        # ── Fluoroquinolonas ──────────────────────────────────────────────────
+        {
+            "nombre": "Ciprofloxacino", "clase": "Fluoroquinolonas",
+            "sc": 0.80, "pb": 30, "vd": 2.10,
+            "dosis_normal": "400 mg c/8–12h IV",
+            "dosis_crrt_std": "400 mg c/12h IV",
+            "dosis_crrt_rango": "200–400 mg c/8–12h IV",
+            "carga": "No requiere",
+            "monitoreo": "Clínico (AUC/MIC dependiente)",
+            "notas": "Vd muy grande (2.1 L/kg) → distribución amplia a tejidos → "
+                     "CRRT elimina poco del total corporal. Sin embargo SC 0.80, "
+                     "ajuste leve por CRRT. VO disponible con biodisponibilidad ~70%.",
+        },
+        {
+            "nombre": "Levofloxacino", "clase": "Fluoroquinolonas",
+            "sc": 0.97, "pb": 30, "vd": 1.10,
+            "dosis_normal": "750 mg c/24h",
+            "dosis_crrt_std": "500 mg c/24h",
+            "dosis_crrt_rango": "250–500 mg c/24h",
+            "carga": "750 mg dosis única",
+            "monitoreo": "Clínico",
+            "notas": "SC muy alto (0.97) → CRRT elimina bien. Ajuste recomendado. "
+                     "QTc prolongation — vigilar ECG con amiodarona, antipsicóticos.",
+        },
+        {
+            "nombre": "Moxifloxacino", "clase": "Fluoroquinolonas",
+            "sc": 0.60, "pb": 48, "vd": 2.80,
+            "dosis_normal": "400 mg c/24h",
+            "dosis_crrt_std": "400 mg c/24h (sin cambio)",
+            "dosis_crrt_rango": "400 mg c/24h",
+            "carga": "No requiere",
+            "monitoreo": "Clínico, ECG (QTc)",
+            "notas": "Metabolismo principalmente hepático → no requiere ajuste por CRRT. "
+                     "Vd grande. Disponible VO con excelente biodisponibilidad.",
+        },
+        # ── Oxazolidinonas ────────────────────────────────────────────────────
+        {
+            "nombre": "Linezolid", "clase": "Oxazolidinonas",
+            "sc": 0.80, "pb": 31, "vd": 0.65,
+            "dosis_normal": "600 mg c/12h",
+            "dosis_crrt_std": "600 mg c/12h (sin cambio)",
+            "dosis_crrt_rango": "600 mg c/12h",
+            "carga": "No requiere",
+            "monitoreo": "Trombocitopenia, anemia (uso >14 días). Inhibidor MAO.",
+            "notas": "Metabolismo principalmente hepático (65%) → sin ajuste por CRRT. "
+                     "Metabolitos inactivos sí se acumulan en CRRT (monitoreo clínico). "
+                     "Interacción: ISRS/antidepresivos (síndrome serotoninérgico).",
+        },
+        # ── Lipopéptidos ──────────────────────────────────────────────────────
+        {
+            "nombre": "Daptomicina", "clase": "Lipopéptidos",
+            "sc": 0.10, "pb": 92, "vd": 0.10,
+            "dosis_normal": "6–8 mg/kg c/24h",
+            "dosis_crrt_std": "8–10 mg/kg c/48h",
+            "dosis_crrt_rango": "6–10 mg/kg c/24–48h",
+            "carga": "8–10 mg/kg dosis única",
+            "monitoreo": "CPK cada 48–72h (rabdomiólisis). Valle <24.3 mg/L.",
+            "notas": "⚠️ Alta PB (92%) → SC muy bajo (0.10) → CRRT elimina poco. "
+                     "Sin embargo AUC sí aumenta en CRRT → cada 48h es razonable. "
+                     "Inactivado por surfactante pulmonar → NO usar en neumonía. "
+                     "Monitorear CPK obligatoriamente.",
+        },
+        # ── Polimixinas ───────────────────────────────────────────────────────
+        {
+            "nombre": "Colistina (CMS IV)", "clase": "Polimixinas",
+            "sc": 0.50, "pb": 60, "vd": 0.34,
+            "dosis_normal": "CMS 9 MUI/día (dividida c/8–12h)",
+            "dosis_crrt_std": "CMS: carga 9 MUI → 6–9 MUI/día c/12h",
+            "dosis_crrt_rango": "CMS 4.5–9 MUI c/12h (ajustar por función)",
+            "carga": "CMS 9 MUI IV (en 30–60 min) → iniciar mantenimiento a las 12h",
+            "monitoreo": "Función renal residual, neurotoxicidad (parestesias, confusión)",
+            "notas": "CMS es el profármaco (inactivo) → se convierte a Colistina activa. "
+                     "PK compleja: CRRT puede eliminar tanto el CMS como la colistina. "
+                     "Ajuste empírico — niveles no siempre disponibles. "
+                     "⚠️ Nefrotoxicidad y neurotoxicidad. Usar solo si no hay alternativa.",
+        },
+        # ── Antifúngicos ──────────────────────────────────────────────────────
+        {
+            "nombre": "Fluconazol", "clase": "Antifúngicos",
+            "sc": 0.95, "pb": 11, "vd": 0.65,
+            "dosis_normal": "400–800 mg c/24h",
+            "dosis_crrt_std": "400–800 mg c/24h",
+            "dosis_crrt_rango": "200–800 mg c/24h",
+            "carga": "800 mg IV dosis única (candidiasis invasiva)",
+            "monitoreo": "Función hepática, interacciones (CYP3A4)",
+            "notas": "SC muy alto (0.95) → CRRT elimina bien → NO reducir dosis. "
+                     "Al contrario: usar dosis plena o aumentar. "
+                     "Interacción importante con tacrolimus (inhibe CYP3A4 → ↑↑ niveles Tac).",
+        },
+        {
+            "nombre": "Voriconazol IV", "clase": "Antifúngicos",
+            "sc": 0.62, "pb": 58, "vd": 4.60,
+            "dosis_normal": "6 mg/kg c/12h (carga) → 4 mg/kg c/12h",
+            "dosis_crrt_std": "⚠️ Usar formulación ORAL preferiblemente",
+            "dosis_crrt_rango": "Oral: 200 mg c/12h",
+            "carga": "IV: 6 mg/kg c/12h × 2 dosis, luego cambiar a VO",
+            "monitoreo": "Niveles de voriconazol (objetivo >1 mg/L, <5.5 mg/L). Hepáticas.",
+            "notas": "⚠️ IMPORTANTE: la formulación IV contiene sulfobutileter-β-ciclodextrina (SBECD) "
+                     "que se acumula en insuficiencia renal y puede ser nefrotóxica. "
+                     "CRRT elimina algo de SBECD pero no lo suficiente. "
+                     "Preferir formulación ORAL (200 mg c/12h, biodisponibilidad 96%) "
+                     "o cambiar a equinocandina.",
+        },
+        {
+            "nombre": "Caspofungina", "clase": "Antifúngicos",
+            "sc": 0.08, "pb": 97, "vd": 0.14,
+            "dosis_normal": "70 mg carga → 50 mg c/24h",
+            "dosis_crrt_std": "70 mg carga → 50 mg c/24h (sin cambio)",
+            "dosis_crrt_rango": "50–70 mg c/24h",
+            "carga": "70 mg IV el día 1",
+            "monitoreo": "Función hepática (Child-Pugh ≥7: 35 mg/día)",
+            "notas": "Alta PB (97%) → SC muy bajo → CRRT elimina mínimamente. "
+                     "Sin ajuste por CRRT. Ajuste solo en Child-Pugh ≥7.",
+        },
+        {
+            "nombre": "Micafungina", "clase": "Antifúngicos",
+            "sc": 0.06, "pb": 99, "vd": 0.22,
+            "dosis_normal": "100–150 mg c/24h",
+            "dosis_crrt_std": "100–150 mg c/24h (sin cambio)",
+            "dosis_crrt_rango": "100–150 mg c/24h",
+            "carga": "No requiere",
+            "monitoreo": "Función hepática",
+            "notas": "PB 99% → SC 0.06 → CRRT elimina mínimamente. Sin ajuste. "
+                     "150 mg para Aspergillus. 100 mg para Candida.",
+        },
+        {
+            "nombre": "Anidulafungina", "clase": "Antifúngicos",
+            "sc": 0.04, "pb": 99, "vd": 0.51,
+            "dosis_normal": "200 mg carga → 100 mg c/24h",
+            "dosis_crrt_std": "200 mg carga → 100 mg c/24h (sin cambio)",
+            "dosis_crrt_rango": "100 mg c/24h",
+            "carga": "200 mg IV el día 1",
+            "monitoreo": "Función hepática (leve)",
+            "notas": "PB 99% → SC 0.04 → CRRT elimina prácticamente nada. Sin ajuste. "
+                     "Degradación química (no hepática) → sin interacciones por CYP.",
+        },
+        # ── Antivirales ───────────────────────────────────────────────────────
+        {
+            "nombre": "Aciclovir IV", "clase": "Antivirales",
+            "sc": 0.85, "pb": 20, "vd": 0.70,
+            "dosis_normal": "5–10 mg/kg c/8h",
+            "dosis_crrt_std": "5–7.5 mg/kg c/24h",
+            "dosis_crrt_rango": "5–7.5 mg/kg c/12–24h",
+            "carga": "No requiere",
+            "monitoreo": "Neurotoxicidad (confusión, alucinaciones), función renal",
+            "notas": "SC alto (0.85) → CRRT elimina bien → ajuste necesario. "
+                     "⚠️ Nefrotóxico (cristaluria) e neurotóxico en dosis altas. "
+                     "Hidratación adecuada. Para VZV/HSV encefálico: 10 mg/kg c/8h → ajustar.",
+        },
+        {
+            "nombre": "Ganciclovir IV", "clase": "Antivirales",
+            "sc": 0.87, "pb": 2, "vd": 0.70,
+            "dosis_normal": "5 mg/kg c/12h",
+            "dosis_crrt_std": "2.5 mg/kg c/24h",
+            "dosis_crrt_rango": "1.25–2.5 mg/kg c/24h",
+            "carga": "5 mg/kg IV",
+            "monitoreo": "BH semanal (mielotoxicidad: leucopenia, trombocitopenia)",
+            "notas": "⚠️ Mielotóxico. Monitoreo hematológico obligatorio. "
+                     "SC 0.87 → CRRT elimina significativamente. Reducción importante de dosis. "
+                     "Valganciclovir VO no disponible en UCI; usar ganciclovir IV.",
+        },
+        {
+            "nombre": "Oseltamivir", "clase": "Antivirales",
+            "sc": 0.70, "pb": 42, "vd": 0.36,
+            "dosis_normal": "75 mg c/12h",
+            "dosis_crrt_std": "75 mg c/24h",
+            "dosis_crrt_rango": "30–75 mg c/24h",
+            "carga": "No requiere",
+            "monitoreo": "Clínico",
+            "notas": "Prodrug → convertido a oseltamivir carboxilato activo. "
+                     "CRRT elimina el metabolito activo. Reducir a 75 mg/día. "
+                     "Con efluente bajo (<15 mL/kg/hr): 30 mg/día.",
+        },
+    ]
+
+    # ── Filtrar ───────────────────────────────────────────────────────────────
+    ab_filtrados = ANTIBIOTICOS
+    if clase_filter != "Todos":
+        ab_filtrados = [a for a in ab_filtrados if a["clase"] == clase_filter]
+    if buscar_ab:
+        ab_filtrados = [a for a in ab_filtrados
+                        if buscar_ab in a["nombre"].lower()
+                        or buscar_ab in a["clase"].lower()
+                        or buscar_ab in a["notas"].lower()]
+
+    if not ab_filtrados:
+        st.info("Sin resultados. Amplía la búsqueda.")
+    else:
+        st.markdown(f"**{len(ab_filtrados)} antibiótico(s) — {modalidad_ab} "
+                    f"{efluente_ab} mL/kg/hr:**")
+        for ab in ab_filtrados:
+            sc_color = "🟢" if ab["sc"] >= 0.7 else ("🟡" if ab["sc"] >= 0.4 else "🔴")
+            with st.expander(
+                f"**{ab['nombre']}** ({ab['clase']}) — "
+                f"SC {sc_color} {ab['sc']} | PB {ab['pb']}% | Vd {ab['vd']} L/kg",
+                expanded=False
+            ):
+                col_izq, col_der = st.columns([1, 1])
+                with col_izq:
+                    st.markdown(f"**Dosis normal (función normal):** {ab['dosis_normal']}")
+                    st.markdown(f"**Dosis en CRRT ({efluente_ab} mL/kg/hr):**")
+                    st.success(f"🎯 **{ab['dosis_crrt_std']}**")
+                    st.caption(f"Rango: {ab['dosis_crrt_rango']}")
+                    if ab["carga"] and ab["carga"] != "No requiere":
+                        st.info(f"💉 **Dosis de carga:** {ab['carga']}")
+
+                with col_der:
+                    st.markdown("**Propiedades farmacocinéticas:**")
+                    pk1, pk2, pk3 = st.columns(3)
+                    pk1.metric("SC", f"{ab['sc']}",
+                               help="Coeficiente de tamizado. >0.7 = eliminación significativa por CRRT")
+                    pk2.metric("PB", f"{ab['pb']}%",
+                               help="Unión a proteínas. >80% = poca eliminación por CRRT")
+                    pk3.metric("Vd", f"{ab['vd']} L/kg",
+                               help="Volumen de distribución. >1 L/kg = distribución amplia a tejidos")
+
+                    if ab["monitoreo"] and ab["monitoreo"] != "Clínico":
+                        st.warning(f"📊 **Monitoreo:** {ab['monitoreo']}")
+
+                st.info(f"📝 {ab['notas']}")
+
+                # Ajuste por efluente
+                if efluente_ab != 25:
+                    st.caption(
+                        f"⚠️ Esta dosis es para 25 mL/kg/hr. Con {efluente_ab} mL/kg/hr: "
+                        f"{'usar extremo superior del rango' if efluente_ab > 25 else 'usar extremo inferior del rango'}."
+                    )
+
+    st.markdown("---")
+    st.markdown("### 📐 Conceptos clave")
+    with st.expander("¿Por qué el SC importa más que la modalidad?", expanded=False):
+        st.markdown("""
+**Coeficiente de tamizado (SC):** fracción del fármaco libre que pasa a través de la membrana
+con la convección. Depende principalmente de:
+- **Unión a proteínas (PB):** SC ≈ fracción libre = 1 − PB/100
+- **Peso molecular:** <500 Da pasa bien, >1000 Da pasa menos
+- **Carga eléctrica:** moléculas neutras pasan mejor
+
+**Por qué la modalidad importa menos:**
+Para un mismo efluente total (mL/hr), la clearance total es similar independientemente de si
+ese volumen viene de convección (CVVH), difusión (CVVHD) o ambas (CVVHDF).
+Lo que más importa: **¿cuánto efluente total pasa por el filtro?**
+
+**Ejemplo — Meropenem SC 0.98:**
+- CVVHDF a 2,000 mL/hr efluente: Cl ≈ 0.98 × 2,000/60 ≈ 32 mL/min
+- Añadir 100 mL/min de Qb no cambia esto
+- Añadir 500 mL/hr más de dializante: Cl ≈ 0.98 × 2,500/60 ≈ 41 mL/min ← eso sí cambia
+
+**Conclusión:** Si subes la dosis CRRT de 20 a 35 mL/kg/hr,
+el antibiótico se elimina ~75% más → ajustar dosis.
+        """)
+    with st.expander("Concepto T>MIC vs AUC/MIC — ¿qué significa?", expanded=False):
+        st.markdown("""
+**Antibióticos tiempo-dependientes (betalactámicos, vancomicina):**
+- Lo que importa: el **tiempo** que el nivel está por encima del MIC
+- Objetivo T>MIC: >50-70% del intervalo de dosificación
+- Estrategia en CRRT: infusión extendida (3-4h para meropenem, 4h para pip-tazo)
+- Resultado: niveles estables → mejor cobertura → menos toxicidad pico
+
+**Antibióticos concentración-dependientes (aminoglucósidos, fluoroquinolonas):**
+- Lo que importa: el **pico** relativo al MIC (Cmax/MIC) y/o AUC/MIC
+- Estrategia: dosis altas, intervalos largos → nivel alto pico, valle bajo → menos toxicidad
+- En CRRT: aminoglucósidos cada 24-48h con monitoreo de picos Y valles
+
+**Vancomicina:** dependiente de AUC/MIC
+- Objetivo AUC₀₋₂₄/MIC: 400-600 (para S. aureus MIC ≤1 µg/mL)
+- O nivel valle 15-20 mg/L (método tradicional, menos preciso)
+        """)
+    st.caption("Fuentes: Seyler et al. AJKD 2011, Roberts et al. SCCM 2012, "
+               "Trotman et al. Pharmacotherapy 2005, ASHP Guidelines 2020, "
+               "Murray et al. Antimicrob Agents Chemother 2022.")
 
 elif nav == "contraste":
     st.subheader("🔬 Prevención de AKI por Contraste (CA-AKI)")
