@@ -1,5 +1,5 @@
 # ============================================================
-# app.py — RenalPro by Dr. Tapia (v3.0.0)
+# app.py — RenalPro v3.1.0
 # ============================================================
 # Módulos nuevos v2.0:
 #   + Citrato Regional completo (acumulación, contraindicaciones, monitoreo)
@@ -152,7 +152,7 @@ VERSION = "v3.1.0"
 
 # ─── PAGE CONFIG ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="RenalPro by Dr. Tapia",
+    page_title="RenalPro",
     layout="wide",
     page_icon="🩺",
     initial_sidebar_state="expanded"
@@ -632,6 +632,7 @@ def _do_login(username: str, password: str):
                 "sess_consejo_nombre":user_db.get("consejo_nombre", ""),
                 "sess_consejo_numero":user_db.get("consejo_numero", ""),
                 "sess_logo_b64":      user_db.get("logo_b64", ""),
+                "sess_instituciones":  user_db.get("instituciones_json", "[]") or "[]",
                 "using_db": True,
             })
             return True, rol
@@ -783,7 +784,7 @@ section[data-testid="stSidebar"]{display:none!important;}
 
     st.markdown("""
 <div style="text-align:center;padding:20px 0;color:rgba(255,255,255,0.4);font-size:11px;">
-  RenalPro · Dr. Josué Tapia Nefrólogo · León, Gto. · Uso académico · v3.1.0
+  RenalPro · Herramienta clínica para nefrología · León, Gto.
 </div>""", unsafe_allow_html=True)
     st.stop()
 
@@ -833,7 +834,7 @@ def _status_banner():
             <span style="font-size:18px;">{av}</span>
             <span style="color:#fff;font-size:13px;">
             <strong>{nombre} — Beca Académica</strong> ·
-            Dr. Josué Tapia Nefrólogo · {dias_txt}</span>
+            RenalPro · {dias_txt}</span>
             </div>""", unsafe_allow_html=True)
 
     elif rol == "admin":
@@ -2208,6 +2209,10 @@ with st.sidebar:
     _navbtn("👤 Mi Cuenta", "micuenta")
     _navbtn("💳 Premium", "premium")
     _navbtn("🛡️ Admin" if _rol() == "admin" else "👤 Mi Cuenta", "admin")
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🔒 Política de Privacidad", key="btn_nav_priv",
+                          use_container_width=True):
+        st.session_state["nav_sel"] = "privacidad"; st.rerun()
 
     st.markdown("---")
     if st.button("🚪 Cerrar sesión", key="btn_logout", use_container_width=True):
@@ -5555,6 +5560,78 @@ elif nav == "micuenta":
                         "sess_institucion": inst_mc, "sess_especialidad": esp_mc,
                     })
                     st.success("✅ Perfil actualizado (sesión actual).")
+        # ── MIS INSTITUCIONES ─────────────────────────────────────────────────
+        st.divider()
+        st.markdown("### 🏥 Mis Instituciones")
+        st.caption("Las instituciones configuradas aquí aparecerán en el selector de la nota de evolución.")
+
+        # Cargar instituciones guardadas (desde session_state o DB)
+        if "mc_instituciones" not in st.session_state:
+            _inst_raw = st.session_state.get("sess_instituciones", "[]")
+            try:
+                import json as _json_inst
+                st.session_state["mc_instituciones"] = _json_inst.loads(_inst_raw) if isinstance(_inst_raw, str) else (_inst_raw or [])
+            except Exception:
+                st.session_state["mc_instituciones"] = []
+
+        _mis_inst = st.session_state["mc_instituciones"]
+
+        # Mostrar instituciones actuales
+        if _mis_inst:
+            for _ii, _inst_i in enumerate(_mis_inst):
+                _ic1, _ic2, _ic3 = st.columns([3, 4, 1])
+                _ic1.markdown(f"**{_inst_i.get('nombre','')}**")
+                _ic2.caption(_inst_i.get("direccion",""))
+                if _ic3.button("🗑️", key=f"del_inst_{_ii}", help="Eliminar"):
+                    st.session_state["mc_instituciones"].pop(_ii)
+                    st.rerun()
+        else:
+            st.info("Sin instituciones configuradas. Agrega la(s) institución(es) donde trabajas.")
+
+        # Agregar nueva institución
+        with st.expander("➕ Agregar institución"):
+            _ai_c1, _ai_c2 = st.columns(2)
+            _ai_nombre = _ai_c1.text_input("Nombre de la institución",
+                placeholder="Ej: Hospital General de León", key="mc_ai_nombre")
+            _ai_dir    = _ai_c2.text_input("Dirección",
+                placeholder="Ej: Blvd. Milenio 1002, León, Gto.", key="mc_ai_dir")
+            if st.button("✅ Agregar", key="mc_ai_add"):
+                if _ai_nombre.strip():
+                    st.session_state["mc_instituciones"].append({
+                        "nombre": _ai_nombre.strip(),
+                        "direccion": _ai_dir.strip(),
+                    })
+                    # Guardar en sess y DB
+                    import json as _json_inst2
+                    _inst_json_str = _json_inst2.dumps(st.session_state["mc_instituciones"],
+                                                       ensure_ascii=False)
+                    st.session_state["sess_instituciones"] = _inst_json_str
+                    if db_mc:
+                        try:
+                            _db.update_user_profile(uid_mc, {
+                                "instituciones_json": _inst_json_str
+                            })
+                        except Exception:
+                            pass  # Guardar en session_state es suficiente si DB no tiene la columna
+                    st.success(f"✅ Institución '{_ai_nombre}' agregada.")
+                    st.rerun()
+                else:
+                    st.warning("El nombre es obligatorio.")
+
+        # Guardar lista actual en DB
+        if st.button("💾 Guardar mis instituciones", key="mc_save_inst"):
+            import json as _json_inst3
+            _inst_json_str2 = _json_inst3.dumps(_mis_inst, ensure_ascii=False)
+            st.session_state["sess_instituciones"] = _inst_json_str2
+            if db_mc:
+                try:
+                    _db.update_user_profile(uid_mc, {"instituciones_json": _inst_json_str2})
+                    st.success("✅ Instituciones guardadas.")
+                except Exception as _e_inst:
+                    st.success("✅ Guardadas en sesión actual.")
+            else:
+                st.success("✅ Guardadas en sesión actual.")
+
         st.divider()
         st.markdown("### 🔒 Cambiar contraseña")
         if db_mc:
@@ -21071,6 +21148,36 @@ elif nav == "nota_evol_tx":
                     _ss[_edit_load_key] = _edit_rec_id
 
         # ── IDENTIFICAR PACIENTE Y RECUPERAR NOTAS PREVIAS ───────────────────
+        # ── INSTITUCIÓN EMISORA (al inicio) ─────────────────────────────────
+        st.markdown("#### 🏥 Institución donde se emite la nota")
+        # Cargar instituciones del perfil del usuario
+        import json as _json_ne_inst
+        _sess_inst_raw = st.session_state.get("sess_instituciones", "[]")
+        try:
+            _user_inst_list = _json_ne_inst.loads(_sess_inst_raw) if isinstance(_sess_inst_raw, str) else (_sess_inst_raw or [])
+        except Exception:
+            _user_inst_list = []
+
+        # Construir mapa: nombre → (nombre, dirección)
+        _INST_MAP = {i["nombre"]: (i["nombre"], i.get("direccion","")) for i in _user_inst_list}
+        _INST_MAP["Otra (escribir manualmente)"] = ("", "")
+
+        if len(_INST_MAP) <= 1:
+            st.info("💡 Configura tus instituciones en **Mi Cuenta → Mis Instituciones** para que aparezcan aquí.")
+
+        ne_inst_sel = st.selectbox("Selecciona la institución",
+                                    list(_INST_MAP.keys()),
+                                    key="ne_inst_sel")
+        if ne_inst_sel == "Otra (escribir manualmente)":
+            _ic1, _ic2 = st.columns(2)
+            _inst_nombre = _ic1.text_input("Nombre", key="ne_inst_custom")
+            _inst_dir    = _ic2.text_input("Dirección", key="ne_inst_dir_custom")
+        else:
+            _inst_nombre, _inst_dir = _INST_MAP[ne_inst_sel]
+        if _inst_dir:
+            st.caption(f"📍 {_inst_dir}")
+        st.divider()
+
         st.markdown("#### 👤 Receptor")
         _ne_pmode = st.radio("", ["🔍 Existente", "✏️ Sin paciente (manual)"],
                              horizontal=True, key="ne_pmode",
@@ -21867,28 +21974,6 @@ elif nav == "nota_evol_tx":
         st.divider()
 
         # ── GENERAR PDF ──────────────────────────────────────────────────────
-        # ── Institución emisora de la nota ───────────────────────────────────
-        st.markdown("#### 🏥 Institución emisora")
-        INSTITUCIONES_MAP = {
-            "Renalmedic (Consulta privada)":
-                ("Renalmedic", "Av. México 719, Col. Los Paraísos, León, Gto. CP 37328"),
-            "Hospital General de León":
-                ("Hospital General de León", "Blvd. Milenio 1002, Fracciones de los Aguirre, 37672 León de los Aldama, Gto."),
-            "IMSS — CMN del Bajío / UMAE No. 1":
-                ("IMSS — UMAE No. 1 / Centro Médico Nacional del Bajío", "León, Gto."),
-            "Clínica Alba":
-                ("Clínica Alba Diálisis & Trasplantes", "León, Gto."),
-            "Otra (escribir abajo)": ("", ""),
-        }
-        ne_inst_sel = st.selectbox("Institución donde se emite la nota",
-                                    list(INSTITUCIONES_MAP.keys()),
-                                    key="ne_inst_sel")
-        if ne_inst_sel == "Otra (escribir abajo)":
-            _inst_nombre = st.text_input("Nombre de la institución", key="ne_inst_custom")
-            _inst_dir    = st.text_input("Dirección", key="ne_inst_dir_custom")
-        else:
-            _inst_nombre, _inst_dir = INSTITUCIONES_MAP[ne_inst_sel]
-
         st.divider()
         # ── Opciones de guardado ─────────────────────────────────────────────
         ne_borrador = st.checkbox(
@@ -22004,415 +22089,362 @@ elif nav == "nota_evol_tx":
                         topMargin=1.3*_cm_ev, bottomMargin=1.5*_cm_ev)
                     _story = []
 
-                    # ── HEADER ─────────────────────────────────────────────
-                    dr_n = st.session_state.get("sess_nombre","Médico")
-                    dr_e = st.session_state.get("sess_especialidad","Nefrología/Trasplante")
-                    dr_c = st.session_state.get("sess_cedula","")
-                    dr_cg = st.session_state.get("sess_ced_general","")
-                    dr_ug = st.session_state.get("sess_univ_general","")
-                    dr_u  = st.session_state.get("sess_universidad","")
+                    # ── Helpers ─────────────────────────────────────────────
+                    import re as _re_pdf
+                    def _strip_em(s):
+                        return _re_pdf.sub(r'[^-À-ÿÀ-ɏ°·—→←×]','',str(s or "")).strip()
+
+                    AMB_BG = _HC_ev("#FFFBEB"); AMB_BD = _HC_ev("#F59E0B")
+                    AZ_BD  = _HC_ev("#BFDBFE")
+
+                    def _lab_color(val, lo, hi):
+                        try:
+                            v = float(val)
+                            if v < lo or v > hi: return ROJ
+                            if v < lo*1.1 or v > hi*0.9: return AMA
+                            return VRD
+                        except: return GR
+
+                    def _lab_txt(val, lo, hi, unit="", decimals=1):
+                        try:
+                            v = float(val)
+                            fmt = f"{v:.{decimals}f}"
+                            return f"<b>{fmt}</b> {unit}".strip()
+                        except: return str(val or "—")
+
+                    # ── Doctor / Institución ────────────────────────────────
+                    dr_n    = st.session_state.get("sess_nombre","Dr. Josué Wigberto Tapia López")
+                    dr_e    = st.session_state.get("sess_especialidad","Nefrología")
+                    dr_c    = st.session_state.get("sess_cedula","9940966")
+                    dr_cg   = st.session_state.get("sess_ced_general","6446765")
                     dr_cons = st.session_state.get("sess_consejo_nombre","")
                     dr_cn   = st.session_state.get("sess_consejo_num","")
-                    # Institución seleccionada en la nota (override del perfil)
                     dr_inst = _inst_nombre or st.session_state.get("sess_institucion","")
                     dr_dom  = _inst_dir    or st.session_state.get("sess_domicilio","")
-                    dr_tel  = ""  # Teléfono removido del PDF por privacidad
                     logo_b64 = st.session_state.get("sess_logo_b64","")
 
                     if logo_b64:
                         try:
                             _logo_cell = _Img_ev(_io_ev.BytesIO(_b64ev.b64decode(logo_b64)),
-                                                  width=1.8*_cm_ev, height=1.8*_cm_ev, kind="proportional")
-                        except Exception:
-                            _logo_cell = _P("Rx", 24, True, AZ1, _TC_ev)
+                                                  width=1.6*_cm_ev, height=1.6*_cm_ev, kind="proportional")
+                        except: _logo_cell = _P("Rx", 20, True, AZ1, _TC_ev)
                     else:
-                        _logo_cell = _P("Rx", 24, True, AZ1, _TC_ev)
+                        _logo_cell = _P("Rx", 20, True, AZ1, _TC_ev)
 
-                    _hdr_txt = [
-                        _P(dr_inst or "Servicio de Trasplante Renal", 11, True, AZ1, sp=1),
-                        _P(dr_dom or "—", 8, color=GR, sp=1),
-                        # Teléfono removido del PDF
-                        _P(f"DPT {int(ne_dpt)} · {ne_fecha}", 9, color=AZ2, align=_TR_ev, sp=0),
-                    ]
-                    _th = _Tbl_ev([[_logo_cell, _hdr_txt]], colWidths=[2.2*_cm_ev, 15.8*_cm_ev])
-                    _th.setStyle(_TS_ev([
+                    # ── 1. ENCABEZADO ───────────────────────────────────────
+                    _hdr_inst = _Tbl_ev([[
+                        _logo_cell,
+                        [_P(dr_inst or "Servicio de Nefrologia y Trasplante", 12, True, AZ1, sp=1),
+                         _P(dr_dom or "", 9, color=GR, sp=1),
+                         _P(f"Servicio de Nefrologia y Trasplante", 9, color=GR, sp=0)],
+                        _P(f"DPT {int(ne_dpt)} · {ne_fecha}", 10, True, AZ2, _TR_ev),
+                    ]], colWidths=[1.8*_cm_ev, 12.5*_cm_ev, 3.7*_cm_ev])
+                    _hdr_inst.setStyle(_TS_ev([
                         ("BACKGROUND",(0,0),(-1,-1),AZC),
                         ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
-                        ("TOPPADDING",(0,0),(-1,-1),6),
-                        ("BOTTOMPADDING",(0,0),(-1,-1),6),
+                        ("TOPPADDING",(0,0),(-1,-1),7),
+                        ("BOTTOMPADDING",(0,0),(-1,-1),7),
                         ("LEFTPADDING",(0,0),(-1,-1),8),
-                        ("BOX",(0,0),(-1,-1),1.2,AZ1),
-                        ("LINEABOVE",(0,0),(-1,0),3,AZ2),
+                        ("BOX",(0,0),(-1,-1),1.5,AZ1),
                     ]))
-                    _story.append(_th)
-                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
-
-                    # Datos del médico
-                    _creds = []
-                    if dr_cg: _creds.append(f"Méd. Gral. Céd.: {dr_cg} | {dr_ug}")
-                    if dr_c:  _creds.append(f"Especialidad Céd.: {dr_c} | {dr_u}")
-                    if dr_cons: _creds.append(f"Certif.: {dr_cons} N°{dr_cn}")
-                    _med_rows = [[_P(dr_n, 11, True, AZ1)], [_P(dr_e, 9, color=GR)]]
-                    for _cr in _creds: _med_rows.append([_P(_cr, 8, color=GR)])
-                    _tm = _Tbl_ev(_med_rows, colWidths=[18*_cm_ev])
-                    _tm.setStyle(_TS_ev([
-                        ("TOPPADDING",(0,0),(-1,-1),1),
-                        ("BOTTOMPADDING",(0,0),(-1,-1),1),
-                        ("LEFTPADDING",(0,0),(-1,-1),3),
-                    ]))
-                    _story.append(_tm)
-                    _story.append(_HR_ev(width="100%", thickness=1.5, color=AZ2))
-                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
-
-                    # ── TÍTULO + DPT/UBICACIÓN destacado ────────────────────
-                    _story.append(_P("NOTA DE EVOLUCIÓN POST-TRASPLANTE RENAL",
-                                     13, True, AZ1, _TC_ev))
-                    _ubic_txt = f"<b>DPT {int(ne_dpt)}</b> · {ne_fecha} {ne_hora} · {ne_area.split(' (')[0]}"
-                    if ne_cama: _ubic_txt += f" · Cama {ne_cama}"
-                    _t_dpt = _Tbl_ev([[_P(_ubic_txt, 10, color=_wh_ev, align=_TC_ev)]],
-                                     colWidths=[18*_cm_ev])
-                    _t_dpt.setStyle(_TS_ev([
-                        ("BACKGROUND",(0,0),(-1,-1),AZ2),
-                        ("TOPPADDING",(0,0),(-1,-1),6),
-                        ("BOTTOMPADDING",(0,0),(-1,-1),6),
-                        ("ROUNDEDCORNERS",[4,4,4,4]),
-                    ]))
-                    _story.append(_t_dpt)
-                    _story.append(_Sp_ev(1, 0.25*_cm_ev))
-
-                    # ── TABLA RECEPTOR ──────────────────────────────────────
-                    _imc = (ne_peso/((ne_talla/100)**2)) if ne_talla > 0 and ne_peso > 0 else 0
-                    _t_pac = _Tbl_ev([
-                        [_P("RECEPTOR", 9, True, _wh_ev), _P("", 8), _P("", 8), _P("", 8), _P("", 8), _P("", 8)],
-                        [_P("Nombre:", 8, True), _P(ne_nombre, 9),
-                         _P("Exp:", 8, True), _P(ne_exp or "—", 9),
-                         _P("Edad:", 8, True), _P(f"{ne_edad} años" if ne_edad else "—", 9)],
-                        [_P("Sexo:", 8, True), _P(ne_sexo, 9),
-                         _P("Peso hoy:", 8, True), _P(f"{ne_peso:.1f} kg", 9),
-                         _P("Talla:", 8, True), _P(f"{ne_talla:.0f} cm · IMC {_imc:.1f}" if ne_talla>0 else "—", 9)],
-                    ], colWidths=[2.2*_cm_ev, 4.5*_cm_ev, 1.5*_cm_ev, 3.5*_cm_ev, 1.6*_cm_ev, 4.7*_cm_ev])
-                    _t_pac.setStyle(_TS_ev([
-                        ("BACKGROUND",(0,0),(-1,0),AZ1),
-                        ("SPAN",(0,0),(-1,0)),
-                        ("BACKGROUND",(0,1),(-1,-1),GRL),
-                        ("TOPPADDING",(0,0),(-1,-1),3),
-                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
-                        ("LEFTPADDING",(0,0),(-1,-1),5),
-                        ("BOX",(0,0),(-1,-1),0.5,AZM),
-                        ("LINEBELOW",(0,0),(-1,0),0.5,AZ1),
-                    ]))
-                    _story.append(_t_pac)
-                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
-
-                    # ── TABLA DATOS DEL TRASPLANTE ──────────────────────────
-                    _isq_fria_str = f"{ne_isq_fria_h}h {ne_isq_fria_m}min" if (ne_isq_fria_h or ne_isq_fria_m) else "—"
-                    _datos_tx_rows = [
-                        [_P("DATOS DEL TRASPLANTE", 9, True, _wh_ev), _P("", 8), _P("", 8), _P("", 8)],
-                        [_P("Fecha TR:", 8, True), _P(ne_fecha_tx or "—", 9),
-                         _P("Donador:", 8, True), _P(ne_donador, 9)],
-                        [_P("Inducción:", 8, True), _P(f"{ne_induccion}", 9),
-                         _P("Dosis acum.:", 8, True), _P(ne_ind_dosis or "—", 9)],
-                        [_P("HLA mismatches:", 8, True), _P(ne_hla or "—", 9),
-                         _P("Crossmatch:", 8, True), _P(ne_xmatch, 9)],
-                        [_P("PRA Clase I:", 8, True), _P(f"{ne_pra_I or '—'}", 9),
-                         _P("PRA Clase II:", 8, True), _P(f"{ne_pra_II or '—'}", 9)],
-                        [_P("DSA:", 8, True), _P(ne_dsa or "—", 9),
-                         _P("Anti-MICA:", 8, True), _P(ne_mica or "—", 9)],
-                    ]
-                    if ne_kdpi:
-                        _datos_tx_rows.append([_P("KDPI:", 8, True), _P(f"{ne_kdpi}%", 9, color=AZ2, bold=True),
-                                                _P("", 8), _P("", 8)])
-                    _datos_tx_rows.extend([
-                        [_P("Isq. fría:", 8, True), _P(_isq_fria_str, 9),
-                         _P("Isq. caliente:", 8, True), _P(f"{ne_isq_cal} min" if ne_isq_cal else "—", 9)],
-                        [_P("Duración cx:", 8, True), _P(ne_dur_cx or "—", 9),
-                         _P("Uresis post-Qx:", 8, True), _P(ne_uresis_temp, 9, bold=True,
-                            color=VRD if ne_uresis_temp=="Sí" else ROJ if ne_uresis_temp=="No" else GR)],
-                    ])
-                    _t_tx = _Tbl_ev(_datos_tx_rows,
-                                     colWidths=[3*_cm_ev, 6*_cm_ev, 3*_cm_ev, 6*_cm_ev])
-                    _t_tx.setStyle(_TS_ev([
-                        ("BACKGROUND",(0,0),(-1,0),AZ1),
-                        ("SPAN",(0,0),(-1,0)),
-                        ("BACKGROUND",(0,1),(-1,-1),GRL),
-                        ("TOPPADDING",(0,0),(-1,-1),2),
-                        ("BOTTOMPADDING",(0,0),(-1,-1),2),
-                        ("LEFTPADDING",(0,0),(-1,-1),5),
-                        ("BOX",(0,0),(-1,-1),0.5,AZM),
-                    ]))
-                    _story.append(_t_tx)
-                    _story.append(_Sp_ev(1, 0.25*_cm_ev))
-
-                    # ── ANTECEDENTES ────────────────────────────────────────
-                    _ant_list = st.session_state.get("_ne_antecedentes_list", [])
-                    if _ant_list:
-                        _story.append(_P("ANTECEDENTES DEL RECEPTOR", 10, True, AZ1))
-                        for _a in _ant_list:
-                            _story.append(_P(f"- {_a}", 9))
-                        _story.append(_Sp_ev(1, 0.2*_cm_ev))
-
-                    # ── ESTADO CLÍNICO ──────────────────────────────────────
-                    if ne_subjetivo:
-                        _story.append(_P("S — SUBJETIVO", 10, True, AZ1))
-                        _story.append(_P(ne_subjetivo, 9))
-                        _story.append(_Sp_ev(1, 0.15*_cm_ev))
-
-                    # Signos vitales en tabla
-                    _t_vit = _Tbl_ev([
-                        [_P("SIGNOS VITALES", 9, True, _wh_ev), _P("", 8), _P("", 8),
-                         _P("", 8), _P("", 8), _P("", 8)],
-                        [_P("TA", 7, True, color=GR, align=_TC_ev),
-                         _P("FC", 7, True, color=GR, align=_TC_ev),
-                         _P("FR", 7, True, color=GR, align=_TC_ev),
-                         _P("T°", 7, True, color=GR, align=_TC_ev),
-                         _P("SpO2", 7, True, color=GR, align=_TC_ev),
-                         _P("EVA", 7, True, color=GR, align=_TC_ev)],
-                        [_P(ne_ta or "—", 10, True, align=_TC_ev),
-                         _P(f"{ne_fc}" if ne_fc else "—", 10, True, align=_TC_ev),
-                         _P(f"{ne_fr}" if ne_fr else "—", 10, True, align=_TC_ev),
-                         _P(f"{ne_temp}°" if ne_temp else "—", 10, True, align=_TC_ev),
-                         _P(f"{ne_spo2}%" if ne_spo2 else "—", 10, True, align=_TC_ev),
-                         _P(f"{ne_dol}/10" if ne_dol else "—", 10, True, align=_TC_ev)],
-                    ], colWidths=[3*_cm_ev]*6)
-                    _t_vit.setStyle(_TS_ev([
-                        ("BACKGROUND",(0,0),(-1,0),AZ1),
-                        ("SPAN",(0,0),(-1,0)),
-                        ("BACKGROUND",(0,1),(-1,1),AZC),
-                        ("BACKGROUND",(0,2),(-1,2),_wh_ev),
-                        ("TOPPADDING",(0,0),(-1,-1),3),
-                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
-                        ("BOX",(0,0),(-1,-1),0.5,AZM),
-                        ("GRID",(0,1),(-1,-1),0.3,AZM),
-                    ]))
-                    _story.append(_t_vit)
+                    _story.append(_hdr_inst)
                     _story.append(_Sp_ev(1, 0.15*_cm_ev))
 
-                    # Balance hídrico tabla
-                    _bal_color = VRD if -500 <= ne_balance <= 500 else AMA if -1500 <= ne_balance <= 1500 else ROJ
-                    _t_bal = _Tbl_ev([
-                        [_P("BALANCE HÍDRICO 24 h", 9, True, _wh_ev), _P("", 8), _P("", 8), _P("", 8)],
-                        [_P("Ingresos:", 8, True, align=_TC_ev),
-                         _P("Egresos:", 8, True, align=_TC_ev),
-                         _P("Drenaje Blake:", 8, True, align=_TC_ev),
-                         _P("BALANCE:", 8, True, align=_TC_ev, color=_bal_color)],
-                        [_P(f"{ne_ingresos} mL", 10, align=_TC_ev),
-                         _P(f"{ne_egresos} mL", 10, align=_TC_ev),
-                         _P(f"{ne_drenaje_blake} mL", 10, align=_TC_ev),
-                         _P(f"{ne_balance:+d} mL", 11, True, color=_bal_color, align=_TC_ev)],
-                        [_P("", 7), _P("", 7), _P("", 7),
-                         _P(f"Diuresis 24h: {ne_diuresis_24h} mL · Horaria: {ne_diuresis_h:.1f} mL/h",
-                            8, color=GR, align=_TC_ev)],
-                    ], colWidths=[4.5*_cm_ev]*4)
-                    _t_bal.setStyle(_TS_ev([
-                        ("BACKGROUND",(0,0),(-1,0),AZ1),
-                        ("SPAN",(0,0),(-1,0)),
-                        ("BACKGROUND",(0,1),(-1,1),AZC),
-                        ("SPAN",(0,3),(2,3)),
-                        ("BACKGROUND",(0,3),(-1,3),GRL),
-                        ("TOPPADDING",(0,0),(-1,-1),3),
-                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
-                        ("BOX",(0,0),(-1,-1),0.5,AZM),
-                        ("GRID",(0,1),(-1,2),0.3,AZM),
-                    ]))
-                    _story.append(_t_bal)
+                    # Título + médico
+                    _story.append(_P("NOTA DE EVOLUCION POST-TRASPLANTE RENAL",
+                                     13, True, AZ1, _TC_ev))
+                    _ceds = f"Ced.Esp.: {dr_c}"
+                    if dr_cg: _ceds += f" · Ced.Gral.: {dr_cg}"
+                    if dr_cn: _ceds += f" · CMN: {dr_cn}"
+                    _story.append(_P(f"{dr_n} · {dr_e} · {_ceds} · {ne_hora} hrs",
+                                     8, color=GR, align=_TC_ev))
+                    _story.append(_HR_ev(width="100%", thickness=1.5, color=AZ1))
                     _story.append(_Sp_ev(1, 0.2*_cm_ev))
 
-                    # Exploración física
-                    if ne_ef_gen or ne_ef_abd or ne_ef_acc:
-                        _story.append(_P("O — EXPLORACIÓN FÍSICA", 10, True, AZ1))
-                        if ne_ef_gen: _story.append(_P(f"<b>General/CP:</b> {ne_ef_gen}", 9))
-                        if ne_ef_abd: _story.append(_P(f"<b>Abdomen/Injerto:</b> {ne_ef_abd}", 9))
-                        if ne_ef_acc: _story.append(_P(f"<b>Accesos:</b> {ne_ef_acc}", 9))
-                        _story.append(_Sp_ev(1, 0.2*_cm_ev))
-
-                    # ── FUNCIÓN DEL INJERTO ─────────────────────────────────
-                    _cr_color = VRD if _delta_cr < 0 else ROJ if _delta_cr > 5 else AMA
-                    _cr_arrow = "↓" if _delta_cr < 0 else "↑" if _delta_cr > 5 else "→"
-                    _t_inj = _Tbl_ev([
-                        [_P("FUNCIÓN DEL INJERTO", 9, True, _wh_ev),
-                         _P("", 8), _P("", 8), _P("", 8)],
-                        [_P("Cr hoy", 8, True, color=GR, align=_TC_ev),
-                         _P("Cr ayer", 8, True, color=GR, align=_TC_ev),
-                         _P("dCr", 8, True, color=GR, align=_TC_ev),
-                         _P("BUN", 8, True, color=GR, align=_TC_ev)],
-                        [_P(f"{ne_cr_hoy:.2f}", 11, True, align=_TC_ev),
-                         _P(f"{ne_cr_ayer:.2f}", 11, True, align=_TC_ev),
-                         _P(f"{_cr_arrow} {_delta_cr:+.1f}%", 11, True, color=_cr_color, align=_TC_ev),
-                         _P(f"{ne_bun}", 11, True, align=_TC_ev)],
-                        [_P("mg/dL", 7, color=GR, align=_TC_ev),
-                         _P("mg/dL", 7, color=GR, align=_TC_ev),
-                         _P("vs ayer", 7, color=GR, align=_TC_ev),
-                         _P("mg/dL", 7, color=GR, align=_TC_ev)],
-                    ], colWidths=[4.5*_cm_ev]*4)
-                    _t_inj.setStyle(_TS_ev([
-                        ("BACKGROUND",(0,0),(-1,0),AZ1),
-                        ("SPAN",(0,0),(-1,0)),
-                        ("BACKGROUND",(0,1),(-1,1),AZC),
-                        ("TOPPADDING",(0,0),(-1,-1),3),
-                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
-                        ("BOX",(0,0),(-1,-1),0.5,AZM),
-                        ("GRID",(0,1),(-1,-1),0.3,AZM),
-                    ]))
-                    _story.append(_t_inj)
-                    _story.append(_Sp_ev(1, 0.1*_cm_ev))
-                    _story.append(_P(f"<b>Patrón:</b> {ne_patron}", 9))
-                    _trr_str = f"<b>TRR hoy:</b> {ne_trr_hoy}"
-                    if "Sí" in ne_trr_hoy and ne_uf > 0:
-                        _trr_str += f" · UF: {ne_uf} mL"
-                    _trr_str += f" · Sesiones acumuladas post-TR: {ne_sesiones_total}"
-                    _story.append(_P(_trr_str, 9))
-                    if ne_doppler: _story.append(_P(f"<b>USG Doppler:</b> {ne_doppler}", 9))
-                    if ne_biopsia: _story.append(_P(f"<b>Biopsia:</b> {ne_biopsia}", 9))
-                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
-
-                    # ── LABORATORIOS (3 columnas) ───────────────────────────
-                    # Badge Tac C0
-                    _tac_no_disp_pdf = st.session_state.get("ne_tac_no_disp", False)
-                    if _tac_no_disp_pdf or ne_tac_c0 == 0.0:
-                        _tac_color = GR; _tac_emoji = "⏳"; _tac_display_pdf = "Pendiente"
-                    elif 8 <= ne_tac_c0 <= 12:
-                        _tac_color = VRD; _tac_emoji = "🟢"; _tac_display_pdf = f"{ne_tac_c0:.1f} ng/mL"
-                    elif ne_tac_c0 > 15:
-                        _tac_color = ROJ; _tac_emoji = "🔴"; _tac_display_pdf = f"{ne_tac_c0:.1f} ng/mL"
-                    else:
-                        _tac_color = AMA; _tac_emoji = "🟡"; _tac_display_pdf = f"{ne_tac_c0:.1f} ng/mL"
-                    _t_lab = _Tbl_ev([
-                        [_P("LABORATORIOS", 9, True, _wh_ev), _P("", 8), _P("", 8)],
-                        [_P("<b>BH / Hematológico</b>", 9, color=AZ1),
-                         _P("<b>QS / Electrolitos</b>", 9, color=AZ1),
-                         _P("<b>IS / Virales</b>", 9, color=AZ1)],
-                        [_P(f"Hb: <b>{ne_hb:.1f}</b> g/dL<br/>"
-                            f"Leu: {ne_leu:.1f} x10^3<br/>"
-                            f"Plt: {ne_plt} x10^3", 9),
-                         _P(f"Na: <b>{ne_na}</b> · K: <b>{ne_k:.1f}</b><br/>"
-                            f"Ca: {ne_ca:.1f} · P: {ne_p:.1f}<br/>"
-                            f"Mg: {ne_mg:.1f}", 9),
-                         _P(f"<b>Tac C0: <font color='#{_tac_color.hexval()[2:]}'>"
-                            f"{_tac_display_pdf}</font></b><br/>"
-                            f"CMV: {ne_cmv or 'ND'}<br/>"
-                            f"BK: {ne_bk or 'ND'} · PCR: {ne_pcr or '—'}", 9)],
-                    ], colWidths=[6*_cm_ev]*3)
-                    _t_lab.setStyle(_TS_ev([
-                        ("BACKGROUND",(0,0),(-1,0),AZ1),
-                        ("SPAN",(0,0),(-1,0)),
-                        ("BACKGROUND",(0,1),(-1,1),AZC),
-                        ("TOPPADDING",(0,0),(-1,-1),3),
-                        ("BOTTOMPADDING",(0,0),(-1,-1),3),
-                        ("LEFTPADDING",(0,0),(-1,-1),6),
-                        ("BOX",(0,0),(-1,-1),0.5,AZM),
-                        ("GRID",(0,1),(-1,-1),0.3,AZM),
-                        ("VALIGN",(0,2),(-1,2),"TOP"),
-                    ]))
-                    _story.append(_t_lab)
-                    _story.append(_Sp_ev(1, 0.1*_cm_ev))
-                    if ne_uricult: _story.append(_P(f"<b>Urocultivo/EGO:</b> {ne_uricult}", 9))
-                    if ne_otros_labs: _story.append(_P(f"<b>Otros labs:</b> {ne_otros_labs}", 9))
-                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
-
-                    # ── INMUNOSUPRESIÓN + PROFILAXIS (2 cols) ──────────────
-                    _is_txt = []
-                    if ne_tac_dosis:  _is_txt.append(f"<b>Tac:</b> {ne_tac_dosis}")
-                    if ne_mmf_dosis:  _is_txt.append(f"<b>MMF/MPA:</b> {ne_mmf_dosis}")
-                    if ne_pred:       _is_txt.append(f"<b>Prednisona:</b> {ne_pred}")
-                    if ne_otros_is:   _is_txt.append(f"<b>Otros:</b> {ne_otros_is}")
-                    if ne_mp_bolos > 0:
-                        _is_txt.append(f"<b>Metilprednisolona:</b> {ne_mp_bolos} bolo(s) · {ne_mp_dosis or '—'}")
-                    _pf_txt = []
-                    if ne_pf_cmv:   _pf_txt.append(f"<b>Valganciclovir:</b> {ne_pf_cmv}")
-                    if ne_pf_pjp:   _pf_txt.append(f"<b>TMP-SMX:</b> {ne_pf_pjp}")
-                    if ne_pf_otros: _pf_txt.append(f"<b>Otras:</b> {ne_pf_otros}")
-                    _pf_txt.append(f"<b>Profilaxis ATB perioperatoria:</b> {ne_atb_pre} · "
-                                    f"{ne_atb_esquema or '—'} · ¿Continúa? {ne_atb_continua}")
-                    _t_isp = _Tbl_ev([
-                        [_P("INMUNOSUPRESION", 9, True, _wh_ev),
-                         _P("PROFILAXIS", 9, True, _wh_ev)],
-                        [_P("<br/>".join(_is_txt) if _is_txt else "—", 9),
-                         _P("<br/>".join(_pf_txt) if _pf_txt else "—", 9)],
-                    ], colWidths=[9*_cm_ev, 9*_cm_ev])
-                    _t_isp.setStyle(_TS_ev([
-                        ("BACKGROUND",(0,0),(-1,0),AZ1),
-                        ("BACKGROUND",(0,1),(-1,-1),GRL),
+                    # ── 2. FICHA DE IDENTIFICACION ──────────────────────────
+                    _ficha_data = [
+                        [_P("Nombre", 8, True, AZ1), _P(ne_nombre, 9),
+                         _P("Expediente", 8, True, AZ1), _P(ne_exp or "—", 9)],
+                        [_P("Servicio / Cama", 8, True, AZ1),
+                         _P(f"{ne_area.split('(')[0].strip()} · Cama {ne_cama}" if ne_cama else ne_area.split("(")[0].strip(), 9),
+                         _P("Fecha de Tx", 8, True, AZ1), _P(str(ne_fecha_tx or "—"), 9)],
+                        [_P("Donador", 8, True, AZ1), _P(str(ne_donador or "—"), 9),
+                         _P("DPT / Ingreso", 8, True, AZ1),
+                         _P(f"DPT {int(ne_dpt)} · Ingreso: {ne_fecha}", 9)],
+                    ]
+                    _t_ficha = _Tbl_ev(_ficha_data, colWidths=[3.2*_cm_ev, 5.8*_cm_ev, 3.2*_cm_ev, 5.8*_cm_ev])
+                    _t_ficha.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(0,-1),AZC),
+                        ("BACKGROUND",(2,0),(2,-1),AZC),
+                        ("GRID",(0,0),(-1,-1),0.3,AZ_BD),
                         ("TOPPADDING",(0,0),(-1,-1),4),
                         ("BOTTOMPADDING",(0,0),(-1,-1),4),
                         ("LEFTPADDING",(0,0),(-1,-1),6),
-                        ("BOX",(0,0),(-1,-1),0.5,AZM),
-                        ("VALIGN",(0,1),(-1,1),"TOP"),
                     ]))
-                    _story.append(_t_isp)
+                    _story.append(_t_ficha)
                     _story.append(_Sp_ev(1, 0.2*_cm_ev))
 
-                    # ── A: DIAGNÓSTICOS DEL DÍA ─────────────────────────────
-                    _dx_list = st.session_state.get("_ne_dx_list", [])
-                    _story.append(_P("A — DIAGNÓSTICOS Y PROBLEMAS ACTIVOS", 10, True, AZ1))
-                    if _dx_list:
-                        for _i, _d in enumerate(_dx_list, 1):
-                            _story.append(_P(f"<b>{_i}.</b> {_d}", 9))
-                    else:
-                        _story.append(_P("(Sin diagnósticos capturados)", 9, color=GR))
+                    # ── 3. DIAGNOSTICOS ─────────────────────────────────────
+                    _dx_list_pdf = st.session_state.get("_ne_dx_list", [])
+                    if _dx_list_pdf:
+                        _story.append(_P("DIAGNOSTICOS", 9, True, AZ1))
+                        _story.append(_HR_ev(width="100%", thickness=0.5, color=AZ_BD))
+                        for _di, _dx in enumerate(_dx_list_pdf):
+                            _fs_dx = 9 if _di == 0 else 8
+                            _bold_dx = (_di == 0)
+                            _story.append(_P(f"{_di+1}. {_strip_em(_dx)}", _fs_dx, _bold_dx))
+                        _story.append(_Sp_ev(1, 0.15*_cm_ev))
+
+                    # ── Helper: SECCION SOAP ────────────────────────────────
+                    def _soap_header(letra, titulo):
+                        _t = _Tbl_ev([[
+                            _P(letra, 10, True, _wh_ev, _TC_ev),
+                            _P(titulo.upper(), 9, True, AZ1),
+                        ]], colWidths=[0.65*_cm_ev, 17.35*_cm_ev])
+                        _t.setStyle(_TS_ev([
+                            ("BACKGROUND",(0,0),(0,-1),AZ1),
+                            ("BACKGROUND",(1,0),(1,-1),AZC),
+                            ("VALIGN",(0,0),(-1,-1),"MIDDLE"),
+                            ("TOPPADDING",(0,0),(-1,-1),3),
+                            ("BOTTOMPADDING",(0,0),(-1,-1),3),
+                            ("LEFTPADDING",(0,0),(-1,-1),5),
+                            ("LINEBELOW",(0,0),(-1,-1),0.5,AZ1),
+                        ]))
+                        return _t
+
+                    # ── 4. S — SUBJETIVO ────────────────────────────────────
+                    if ne_subjetivo:
+                        _story.append(_soap_header("S", "Subjetivo"))
+                        _story.append(_Sp_ev(1, 0.1*_cm_ev))
+                        _story.append(_P(_strip_em(ne_subjetivo), 9))
+                        _story.append(_Sp_ev(1, 0.2*_cm_ev))
+
+                    # ── 5. O — OBJETIVO ─────────────────────────────────────
+                    _story.append(_soap_header("O", "Objetivo"))
+                    _story.append(_Sp_ev(1, 0.1*_cm_ev))
+
+                    # Signos vitales tabla horizontal
+                    _sv_hdr = [_P("TA (mmHg)",7,True,_wh_ev,_TC_ev),
+                               _P("FC (lpm)",7,True,_wh_ev,_TC_ev),
+                               _P("FR (rpm)",7,True,_wh_ev,_TC_ev),
+                               _P("Temp (C)",7,True,_wh_ev,_TC_ev),
+                               _P("SpO2 (%)",7,True,_wh_ev,_TC_ev),
+                               _P("EVA",7,True,_wh_ev,_TC_ev),
+                               _P("Diuresis",7,True,_wh_ev,_TC_ev)]
+                    _sv_vals = [_P(ne_ta or "—",10,True,align=_TC_ev),
+                                _P(ne_fc or "—",10,True,align=_TC_ev),
+                                _P(ne_fr or "—",10,True,align=_TC_ev),
+                                _P(f"{ne_temp}C" if ne_temp else "—",10,True,align=_TC_ev),
+                                _P(f"{ne_spo2}%" if ne_spo2 else "—",10,True,align=_TC_ev),
+                                _P(f"{ne_dol}/10" if ne_dol else "—",10,True,align=_TC_ev),
+                                _P(f"{ne_diuresis_24h} mL",9,align=_TC_ev)]
+                    _t_sv = _Tbl_ev([_sv_hdr, _sv_vals],
+                                    colWidths=[2.6*_cm_ev,2.1*_cm_ev,2.1*_cm_ev,2.1*_cm_ev,
+                                               2.1*_cm_ev,1.5*_cm_ev,3.5*_cm_ev])
+                    _t_sv.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,0),AZ1),
+                        ("BACKGROUND",(0,1),(-1,1),AZC),
+                        ("GRID",(0,0),(-1,-1),0.3,AZ_BD),
+                        ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+                    ]))
+                    _story.append(_t_sv)
+
+                    # Balance hídrico
+                    _bh_txt = (f"Ingresos: {ne_ingresos} mL · Egresos: {ne_egresos} mL · "
+                               f"Blake: {ne_drenaje_blake} mL · "
+                               f"Balance: {ne_balance:+d} mL  |  "
+                               f"Uresis: {ne_diuresis_24h} mL/24h · "
+                               f"{ne_diuresis_h:.1f} mL/hr")
+                    _story.append(_Sp_ev(1, 0.1*_cm_ev))
+                    _story.append(_P(_bh_txt, 8, color=GR))
+                    _story.append(_Sp_ev(1, 0.15*_cm_ev))
+
+                    # Exploración física
+                    def _ef_row(label, txt):
+                        if not txt: return
+                        _story.append(_P(f"<b>{label}:</b> {_strip_em(txt)}", 9))
+
+                    _ef_row("Exploración física general / cardiopulmonar", ne_ef_gen)
+                    _ef_row("Abdomen / Lecho del injerto", ne_ef_abd)
+                    _ef_row("Accesos vasculares / CVC / FAVI", ne_ef_acc)
+
+                    # Función del injerto
+                    _story.append(_Sp_ev(1, 0.1*_cm_ev))
+                    _cr_trend = ""
+                    if ne_cr_ayer and ne_cr_hoy:
+                        _d = ne_cr_hoy - ne_cr_ayer
+                        _cr_trend = f" (vs ayer {ne_cr_ayer:.2f}: {_d:+.2f} mg/dL, {(_d/ne_cr_ayer*100 if ne_cr_ayer else 0):+.1f}%)"
+                    _story.append(_P(
+                        f"<b>Funcion del injerto:</b> Cr {ne_cr_hoy:.2f} mg/dL{_cr_trend} · "
+                        f"BUN {ne_bun} · {_strip_em(ne_patron or '')}"
+                        + (f" · TRR: {ne_trr_hoy}" if ne_trr_hoy and "No" not in ne_trr_hoy else "")
+                        + (f" · Sesiones post-TX: {ne_sesiones_total}" if ne_sesiones_total else ""),
+                        9))
+                    if ne_doppler:
+                        _story.append(_P(f"<b>USG Doppler:</b> {_strip_em(ne_doppler)}", 9))
+                    if ne_biopsia:
+                        _story.append(_P(f"<b>Biopsia:</b> {_strip_em(ne_biopsia)}", 9))
+                    _story.append(_Sp_ev(1, 0.15*_cm_ev))
+
+                    # Laboratorios 3 columnas
+                    _story.append(_P("Laboratorios del dia:", 9, True, AZ1))
+
+                    def _lc(val, lo=None, hi=None, unit="", dec=1, pending=False):
+                        if pending or val == 0.0 and pending:
+                            return _P("Pendiente", 8, color=GR, align=_TC_ev)
+                        try:
+                            v = float(val)
+                            c = _lab_color(v, lo, hi) if lo is not None else _bk_ev
+                            return _P(f"<b>{v:.{dec}f}</b> {unit}".strip(), 9, color=c, align=_TC_ev)
+                        except: return _P(str(val or "—"), 9, align=_TC_ev)
+
+                    _labs_hdr = [_P("BH / Hematologico",8,True,_wh_ev,_TC_ev),
+                                 _P("QS / Electrolitos",8,True,_wh_ev,_TC_ev),
+                                 _P("IS / Virales / Inflamacion",8,True,_wh_ev,_TC_ev)]
+                    _tac_pend = st.session_state.get("ne_tac_no_disp", False)
+                    _tac_str = "Pendiente" if _tac_pend else f"{ne_tac_c0:.1f} ng/mL"
+                    _labs_vals = [
+                        [_P(f"Hb: {ne_hb:.1f} g/dL | Leu: {ne_leu:.1f} x10^3 | Plt: {ne_plt} x10^3", 9),
+                         _P(f"Na: {ne_na} K: {ne_k:.1f} | Ca: {ne_ca_tx:.1f} P: {ne_p:.1f} | Mg: {ne_mg_tx:.1f} BUN: {ne_bun}", 9),
+                         _P(f"Tac C0: {_tac_str} | CMV: {ne_cmv or 'ND'} BK: {ne_bk or 'ND'} | PCR: {ne_pcr_lab or '-'}", 9)],
+                    ]
+                    _t_labs = _Tbl_ev([_labs_hdr] + _labs_vals, colWidths=[6*_cm_ev]*3)
+                    _t_labs.setStyle(_TS_ev([
+                        ("BACKGROUND",(0,0),(-1,0),AZ1),
+                        ("GRID",(0,0),(-1,-1),0.3,AZ_BD),
+                        ("BACKGROUND",(0,1),(-1,-1),AZC),
+                        ("TOPPADDING",(0,0),(-1,-1),4),("BOTTOMPADDING",(0,0),(-1,-1),4),
+                        ("LEFTPADDING",(0,0),(-1,-1),6),("VALIGN",(0,0),(-1,-1),"TOP"),
+                    ]))
+                    _story.append(_t_labs)
+                    if ne_otros_labs:
+                        _story.append(_P(f"Otros: {_strip_em(ne_otros_labs)}", 8, color=GR))
+                    if ne_uricult:
+                        _story.append(_P(f"Urocultivo/Sedimento: {_strip_em(ne_uricult)}", 8, color=GR))
+                    _story.append(_Sp_ev(1, 0.15*_cm_ev))
+
+                    # TRRC si aplica
+                    if "Sí" in ne_trr_hoy:
+                        _story.append(_P(f"<b>TRR:</b> {_strip_em(ne_trr_hoy)}"
+                                         + (f" · UF: {ne_uf} mL" if ne_uf else "")
+                                         + (f" · Sesiones acumuladas post-TX: {ne_sesiones_total}" if ne_sesiones_total else ""),
+                                         9))
+
+                    # ── 6. A — ANÁLISIS ─────────────────────────────────────
+                    _story.append(_soap_header("A", "Analisis"))
+                    _story.append(_Sp_ev(1, 0.1*_cm_ev))
+                    # Diagnóstico principal auto
+                    _dx_p = _strip_em(_dx_list_pdf[0]) if _dx_list_pdf else ""
+                    _auto_a = (f"Paciente con {_dx_p}. " if _dx_p else "") +                               f"Cr {ne_cr_hoy:.2f} mg/dL ({('mejoria' if ne_cr_hoy < ne_cr_ayer else 'incremento') if ne_cr_ayer else ''}). "
+                    # Análisis principal: textos del plan
+                    _an_pl = _ne_plan.get("ne_pl_is","") or _ne_plan.get("ne_pl_lab","") or ""
                     if ne_problemas:
-                        _story.append(_P(f"<i>Eventos del día: {ne_problemas}</i>", 9, color=GR))
+                        _story.append(_P(_strip_em(ne_problemas), 9))
+                    else:
+                        _story.append(_P(_auto_a, 9))
                     _story.append(_Sp_ev(1, 0.2*_cm_ev))
 
-                    # ── P: PLAN POR RUBROS ──────────────────────────────────
-                    _story.append(_P("P — PLAN TERAPÉUTICO DEL DÍA", 10, True, AZ1))
+                    # ── 7. P — PLAN ─────────────────────────────────────────
+                    _story.append(_soap_header("P", "Plan terapeutico del dia"))
+                    _story.append(_Sp_ev(1, 0.1*_cm_ev))
+
+                    import re as _re_lbl
+                    def _clean_lbl(s):
+                        return _re_lbl.sub(r'[^-À-ÿÀ-ɏ]', '', s).strip()
+
                     _plan_rows = []
-                    # Strip emojis del label para PDF (no soportados por fuentes estándar)
-                    import re as _re_plan
-                    def _strip_emoji(s):
-                        return _re_plan.sub(r'[^\x00-\x7F\xC0-\xFF\u00C0-\u024F]', '', s).strip()
                     for _lbl, _key, _ph in _pl_keys:
                         _val = _ne_plan.get(_key, "").strip()
                         if _val:
-                            _lbl_clean = _strip_emoji(_lbl)
-                            _plan_rows.append([_P(_lbl_clean, 8, True, color=AZ1),
-                                                _P(_val.replace("\n","<br/>"), 9)])
+                            _plan_rows.append([
+                                _P(_clean_lbl(_lbl), 8, True, AZ1),
+                                _P(_strip_em(_val).replace("\n","<br/>"), 9)
+                            ])
+
+                    # IS estructurado
+                    _is_lines = []
+                    if ne_tac_dosis: _is_lines.append(f"Tacrolimus: {_strip_em(ne_tac_dosis)}")
+                    if ne_mmf_dosis: _is_lines.append(f"MMF/MPA: {_strip_em(ne_mmf_dosis)}")
+                    if ne_pred:      _is_lines.append(f"Prednisona: {_strip_em(ne_pred)}")
+                    if ne_otros_is:  _is_lines.append(_strip_em(ne_otros_is))
+                    if ne_mp_bolos:  _is_lines.append(f"Metilprednisolona: {ne_mp_bolos} bolo(s) · {_strip_em(ne_mp_dosis or '')}")
+                    if _is_lines and not any(k == "ne_pl_is" and _ne_plan.get("ne_pl_is","").strip() for _,k,_ in _pl_keys):
+                        _plan_rows.insert(0, [_P("Inmunosupresion", 8, True, AZ1),
+                                              _P("<br/>".join(_is_lines), 9)])
+
+                    # Profilaxis
+                    _pf_lines = []
+                    if ne_pf_cmv: _pf_lines.append(_strip_em(ne_pf_cmv))
+                    if ne_pf_pjp: _pf_lines.append(_strip_em(ne_pf_pjp))
+                    if ne_pf_otros: _pf_lines.append(_strip_em(ne_pf_otros))
+                    if _pf_lines and not any(k == "ne_pl_pf" and _ne_plan.get("ne_pl_pf","").strip() for _,k,_ in _pl_keys):
+                        _plan_rows.insert(1 if _is_lines else 0,
+                                          [_P("Profilaxis", 8, True, AZ1),
+                                           _P("<br/>".join(_pf_lines), 9)])
+
                     if _plan_rows:
-                        _t_plan = _Tbl_ev(_plan_rows, colWidths=[4.5*_cm_ev, 13.5*_cm_ev])
+                        _t_plan = _Tbl_ev(_plan_rows, colWidths=[3.8*_cm_ev, 14.2*_cm_ev])
                         _t_plan.setStyle(_TS_ev([
-                            ("BACKGROUND",(0,0),(-1,-1),GRL),
-                            ("TOPPADDING",(0,0),(-1,-1),4),
-                            ("BOTTOMPADDING",(0,0),(-1,-1),4),
-                            ("LEFTPADDING",(0,0),(-1,-1),6),
-                            ("BOX",(0,0),(-1,-1),0.5,AZM),
-                            ("GRID",(0,0),(-1,-1),0.3,AZM),
-                            ("VALIGN",(0,0),(-1,-1),"TOP"),
+                            ("BACKGROUND",(0,0),(0,-1),AZC),
+                            ("GRID",(0,0),(-1,-1),0.3,AZ_BD),
+                            ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+                            ("LEFTPADDING",(0,0),(-1,-1),7),("VALIGN",(0,0),(-1,-1),"TOP"),
                         ]))
                         _story.append(_t_plan)
-                    if ne_pendientes:
-                        _story.append(_Sp_ev(1, 0.1*_cm_ev))
-                        _story.append(_P(f"<b>📌 Pendientes:</b> {ne_pendientes}", 9, color=AZ2))
 
-                    # ── FIRMA ───────────────────────────────────────────────
-                    _story.append(_Sp_ev(1, 0.8*_cm_ev))
-                    _firma_items = [_P("_"*40, 9, align=_TC_ev), _Sp_ev(1, 0.05*_cm_ev),
-                                     _P(dr_n, 10, bold=True, align=_TC_ev)]
-                    for _cr in _creds: _firma_items.append(_P(_cr, 8, color=GR, align=_TC_ev))
-                    _t_firma = _Tbl_ev([["", _firma_items]], colWidths=[6*_cm_ev, 12*_cm_ev])
-                    _t_firma.setStyle(_TS_ev([("VALIGN",(0,0),(-1,-1),"BOTTOM")]))
+                    # Pendientes en cuadro ambar
+                    if ne_pendientes:
+                        _story.append(_Sp_ev(1, 0.15*_cm_ev))
+                        _t_pend = _Tbl_ev([[
+                            _P("Pendientes:", 9, True, AMB_BD),
+                            _P(_strip_em(ne_pendientes), 9),
+                        ]], colWidths=[2.2*_cm_ev, 15.8*_cm_ev])
+                        _t_pend.setStyle(_TS_ev([
+                            ("BACKGROUND",(0,0),(-1,-1),AMB_BG),
+                            ("LINEAFTER",(0,0),(0,-1),3,AMB_BD),
+                            ("BOX",(0,0),(-1,-1),0.5,AMB_BD),
+                            ("TOPPADDING",(0,0),(-1,-1),5),("BOTTOMPADDING",(0,0),(-1,-1),5),
+                            ("LEFTPADDING",(0,0),(-1,-1),7),
+                        ]))
+                        _story.append(_t_pend)
+
+                    # Firma
+                    _story.append(_Sp_ev(1, 0.4*_cm_ev))
+                    _firma_line = "_" * 38
+                    _t_firma = _Tbl_ev([[
+                        "",
+                        [_P(_firma_line, 9, align=_TC_ev),
+                         _P(dr_n, 10, True, align=_TC_ev),
+                         _P(dr_e, 9, color=GR, align=_TC_ev),
+                         _P(_ceds, 8, color=GR, align=_TC_ev)],
+                    ]], colWidths=[9*_cm_ev, 9*_cm_ev])
                     _story.append(_t_firma)
-                    _story.append(_Sp_ev(1, 0.2*_cm_ev))
-                    _story.append(_HR_ev(width="100%", thickness=0.5, color=AZM))
-                    _story.append(_P(f"NOM-004-SSA3-2012 · Nota de evolución post-TR · {dr_inst}",
+
+                    # Footer
+                    _story.append(_Sp_ev(1, 0.3*_cm_ev))
+                    _story.append(_HR_ev(width="100%", thickness=0.5, color=GR))
+                    _story.append(_P("NOM-004-SSA3-2012 · Nota de evolucion post-TR",
                                      7, color=GR, align=_TC_ev))
 
-                    # Numeración Página X de Y
+                    # Canvas con numero de pagina
                     class _NC(_rlcanv_ev.Canvas):
                         def __init__(self, *args, **kwargs):
                             super().__init__(*args, **kwargs)
-                            self._saved_states = []
+                            self._saved_page_states = []
                         def showPage(self):
-                            self._saved_states.append(dict(self.__dict__))
+                            self._saved_page_states.append(dict(self.__dict__))
                             self._startPage()
                         def save(self):
-                            total = len(self._saved_states)
-                            for state in self._saved_states:
-                                self.__dict__.update(state)
+                            total = len(self._saved_page_states)
+                            for _state in self._saved_page_states:
+                                self.__dict__.update(_state)
                                 self.setFont("Helvetica", 7)
                                 self.setFillColor(GR)
                                 self.drawRightString(_letter_ev[0] - 1.5*_cm_ev, 0.8*_cm_ev,
-                                    f"Página {self._pageNumber} de {total}")
+                                    f"Pagina {self._pageNumber} de {total}")
                                 super().showPage()
                             super().save()
+
 
                     _doc.build(_story, canvasmaker=_NC)
                     _buf.seek(0)
@@ -23194,6 +23226,111 @@ elif nav == "dashboard_tr":
 # tablas comparativas y referencias clave (RCTs históricos y modernos).
 # Contenido en clinical_data/educacion/*.json (editable sin tocar código).
 # ══════════════════════════════════════════════════════════════════════════════
+elif nav == "privacidad":
+    st.subheader("🔒 Política de Privacidad y Aviso de Cumplimiento Normativo")
+    st.caption("RenalPro — Herramienta clínica para nefrología")
+
+    st.markdown("""
+## 1. Responsable del tratamiento de datos
+
+RenalPro es una herramienta de apoyo clínico desarrollada por médicos especialistas en
+nefrología en León, Guanajuato, México. El responsable del tratamiento de los datos es el
+médico registrado en la plataforma, quien opera como responsable ante sus pacientes conforme
+a la normatividad mexicana aplicable.
+
+---
+
+## 2. Datos personales que se recaban
+
+RenalPro recaba los siguientes datos cuando el médico los ingresa voluntariamente:
+
+**Del médico usuario:**
+- Nombre, correo electrónico, especialidad, número de cédula profesional
+- Institución de adscripción (opcional)
+
+**Datos clínicos (ingresados por el médico):**
+- Nombre y expediente del paciente
+- Datos clínicos de evolución: signos vitales, laboratorios, diagnósticos, tratamiento
+- Notas clínicas generadas en la plataforma
+
+**Importante:** RenalPro no recaba datos biométricos, financieros, patrimoniales ni datos
+sensibles más allá de los estrictamente necesarios para el ejercicio de la práctica médica.
+
+---
+
+## 3. Finalidad del tratamiento
+
+Los datos se utilizan exclusivamente para:
+- Generación y almacenamiento de notas clínicas de evolución
+- Seguimiento longitudinal del paciente trasplantado
+- Apoyo en la toma de decisiones clínicas
+- Generación de documentos clínicos en formato PDF
+
+Los datos **no** se comparten con terceros, no se usan con fines publicitarios
+y no se transfieren fuera del entorno del médico usuario.
+
+---
+
+## 4. Almacenamiento y seguridad
+
+Los datos se almacenan en una base de datos PostgreSQL alojada en Railway
+(infraestructura en servidores ubicados en Estados Unidos bajo estándares
+SOC 2 Type II). Las comunicaciones están cifradas mediante TLS/HTTPS.
+
+El acceso a los datos clínicos requiere autenticación con contraseña. Cada médico
+accede únicamente a los expedientes que él mismo registró.
+
+---
+
+## 5. Cumplimiento normativo
+
+RenalPro está diseñado para apoyar el cumplimiento de:
+
+| Norma | Descripción |
+|---|---|
+| **NOM-004-SSA3-2012** | Del expediente clínico — las notas generadas siguen la estructura SOAP requerida |
+| **NOM-024-SSA3-2012** | Sistemas de información de registro electrónico de salud |
+| **NOM-003-SSA3-2010** | Práctica de hemodiálisis — módulo de hemodialysis |
+| **LFPDPPP** | Ley Federal de Protección de Datos Personales en Posesión de los Particulares |
+
+**Nota importante:** RenalPro es una herramienta de apoyo clínico. La responsabilidad
+del expediente clínico, el juicio médico y las decisiones terapéuticas recaen
+exclusivamente en el médico tratante.
+
+---
+
+## 6. Derechos ARCO
+
+Conforme a la LFPDPPP, el usuario tiene derecho a:
+- **Acceder** a sus datos almacenados
+- **Rectificar** información incorrecta
+- **Cancelar** su cuenta y datos asociados
+- **Oponerse** al tratamiento de sus datos
+
+Para ejercer estos derechos, el usuario puede eliminar su cuenta desde **Mi Cuenta**
+o contactar al administrador de la plataforma.
+
+---
+
+## 7. Uso de herramientas de inteligencia artificial
+
+RenalPro puede integrar herramientas de IA (como la API de Anthropic) para asistencia
+en la redacción de notas. En estos casos, el contenido enviado a la API no incluye
+datos identificables del paciente y sigue las políticas de privacidad del proveedor.
+
+---
+
+## 8. Modificaciones
+
+Esta política puede actualizarse. Se notificará a los usuarios registrados ante
+cambios relevantes.
+
+**Última actualización:** Mayo 2026
+    """)
+
+    st.info("Si tienes dudas sobre el manejo de tus datos o los de tus pacientes, "
+            "contacta al administrador de la plataforma desde la sección Mi Cuenta.")
+
 elif nav == "aprendizaje":
     st.subheader("🎓 Aprendizaje TR — Para fellow de trasplante")
     st.caption("Contenido pedagógico curado: fisiopatología, casos, preguntas, controversias. "
