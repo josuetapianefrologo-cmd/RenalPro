@@ -109,17 +109,17 @@ except ImportError:
     }
 
 # ── Caché de consultas DB (evita ir a Railway en cada clic) ───────────────────
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=60)
 def _cached_prescriptions(uid: int):
     """Consulta prescripciones con caché de 15s."""
     return _db.get_prescriptions(uid) if _DB_ON else []
 
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=60)
 def _cached_sessions(presc_id: int):
     """Consulta sesiones con caché de 15s."""
     return _db.get_sessions(presc_id) if _DB_ON else []
 
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=120)
 def _cached_patients(uid: int):
     """Consulta pacientes con caché de 15s."""
     if not _DB_ON:
@@ -129,7 +129,7 @@ def _cached_patients(uid: int):
     except AttributeError:
         return []  # db.py desactualizado — subir versión nueva a GitHub
 
-@st.cache_data(ttl=15)
+@st.cache_data(ttl=60)
 def _cached_clinical_records(patient_id: int):
     """Consulta registros clínicos con caché de 15s."""
     if not _DB_ON:
@@ -139,10 +139,28 @@ def _cached_clinical_records(patient_id: int):
     except AttributeError:
         return []  # db.py desactualizado — subir versión nueva a GitHub
 
-@st.cache_data(ttl=20)
+@st.cache_data(ttl=120)
 def _cached_all_users():
     """Consulta todos los usuarios con caché de 20s."""
     return _db.get_all_users() if _DB_ON else []
+
+@st.cache_data(ttl=300)
+def _cached_payment_history(uid: int):
+    """Historial de pagos — caché 5 min."""
+    return _db.get_payment_history(uid) if _DB_ON else []
+
+@st.cache_data(ttl=120)
+def _cached_user_diagnosticos(uid: int):
+    """Diagnósticos personalizados del usuario — caché 2 min."""
+    try:
+        return _db.get_user_diagnosticos(uid) if _DB_ON else []
+    except Exception:
+        return []
+
+@st.cache_resource
+def _get_db_status():
+    """Estado de la conexión DB — se evalúa una vez por sesión."""
+    return _DB_ON and _db.db_ok() if _DB_ON else False
 
 def _clear_cache():
     """Invalida todos los cachés tras una escritura."""
@@ -554,6 +572,8 @@ def _verify(pwd: str, h: str) -> bool:
 
 def _init_db():
     """Inicializa cuentas demo en session_state (fallback sin Railway)."""
+    if st.session_state.get("_init_db_done"):
+        return  # Ya inicializado en esta sesión — no repetir
     if "auth_users" not in st.session_state:
         admin_u = "josuetapia"
         admin_p = "Tapia2024!"
@@ -581,6 +601,7 @@ def _init_db():
     # Inicializar tablas Railway si está disponible
     if _DB_ON and _db.db_ok():
         _db.init_tables()
+    st.session_state["_init_db_done"] = True
 
 def _get_role(user: dict) -> str:
     if not user.get("is_active", True): return "inactivo"
@@ -2188,6 +2209,7 @@ with st.sidebar:
     _navbtn("🫀 Donante Vivo", "eval_donante_vivo")
     _navbtn("🔴 Nota Post-Trasplante", "nota_tx")
     _navbtn("🩺 Nota Evolución Post-TX", "nota_evol_tx")
+    _navbtn("💊 Profilaxis Post-TR", "profilaxis_tx")
     _navbtn("🌡️ Algoritmo Fiebre Post-TR", "fiebre_tx")
     _navbtn("👶 Embarazo en TR", "embarazo_tx")
     _navbtn("🦠 Algoritmo CMV", "algo_cmv")
@@ -5010,7 +5032,7 @@ elif nav == "premium":
 
         # Historial de pagos
         if _DB_ON and _db.db_ok() and uid:
-            hist = _db.get_payment_history(uid)
+            hist = _cached_payment_history(uid)
             if hist:
                 st.markdown("### 💳 Historial de pagos")
                 for h in hist:
@@ -15602,7 +15624,7 @@ Injerto renal con buena función → produce EPO
             custom_dx = []
             if uid_rx and _DB_ON and _db.db_ok():
                 try:
-                    custom_dx = _db.get_user_diagnosticos(uid_rx)
+                    custom_dx = _cached_user_diagnosticos(uid_rx)
                 except Exception:
                     custom_dx = []
             todos_dx = CIE10_BASE + [f"★ {d}" for d in custom_dx] + ["✏️ Agregar diagnóstico nuevo"]
@@ -17974,7 +17996,7 @@ elif nav == "receta":
                     st.session_state["_rx_prefilled_msg"] = ""
                     if pac_id_rx and _DB_ON and _db.db_ok() and not st.session_state.get(_PAC_RX_KEY):
                         try:
-                            _recs_prev = _db.get_clinical_records(pac_id_rx) or []
+                            _recs_prev = _cached_clinical_records(pac_id_rx) or []
                             _last_rx = next((r for r in _recs_prev
                                              if r.get("tipo") == "Receta médica"), None)
                             if _last_rx:
@@ -18039,7 +18061,7 @@ elif nav == "receta":
                 ]
                 custom_dx = []
                 if uid_rx and _DB_ON and _db.db_ok():
-                    try: custom_dx = _db.get_user_diagnosticos(uid_rx)
+                    try: custom_dx = _cached_user_diagnosticos(uid_rx)
                     except Exception: pass
                 todos_dx  = CIE10_BASE + [f"★ {d}" for d in custom_dx] + ["✏️ Diagnóstico manual"]
                 dx_list_key = f"rx_dx_list_{uid_rx}"
@@ -22966,7 +22988,7 @@ elif nav == "dashboard_tr":
                     st.caption("Útil para candidatos pre-TR o pacientes sin nota inicial.")
                     # Buscar pacientes disponibles
                     try:
-                        _todos_pac = _db.get_patients(_uid_dash) or []
+                        _todos_pac = _cached_patients(_uid_dash) or []
                     except Exception:
                         _todos_pac = []
                     # Filtrar los que NO están marcados
@@ -23330,6 +23352,819 @@ cambios relevantes.
 
     st.info("Si tienes dudas sobre el manejo de tus datos o los de tus pacientes, "
             "contacta al administrador de la plataforma desde la sección Mi Cuenta.")
+
+elif nav == "profilaxis_tx":
+    import datetime as _dt_pf
+
+    st.markdown("## 💊 Profilaxis Post-Trasplante Renal")
+    st.caption("Protocolos basados en KDIGO 2022, AST 2019 y guías institucionales.")
+
+    pf_tab = st.tabs([
+        "📅 Calculadora",
+        "🦠 CMV",
+        "🫁 PJP/TMP-SMX",
+        "🍄 Antifúngicos",
+        "🧫 TB/Isoniazida",
+        "🫀 Hepatitis B/C",
+        "🧬 BK / EBV",
+        "💊 VZV / VHS",
+        "🦴 No infecciosas",
+        "📋 Referencia rápida",
+    ])
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 1 — CALCULADORA PERSONALIZADA
+    # ══════════════════════════════════════════════════════════════════════
+    with pf_tab[0]:
+        st.markdown("### Calculadora de profilaxis por paciente")
+        st.info("Ingresa los datos del trasplante para obtener el cronograma personalizado.")
+
+        pf_c1, pf_c2, pf_c3 = st.columns(3)
+        pf_fecha_tx = pf_c1.date_input("📅 Fecha del trasplante",
+                                        value=_dt_pf.date.today(),
+                                        max_value=_dt_pf.date.today(),
+                                        format="DD/MM/YYYY",
+                                        key="pf_fecha_tx")
+        pf_cmv_donor  = pf_c2.selectbox("Serología CMV Donador",
+            ["D+ (Positivo)", "D- (Negativo)", "Desconocido"], key="pf_cmv_d")
+        pf_cmv_recept = pf_c3.selectbox("Serología CMV Receptor",
+            ["R+ (Positivo)", "R- (Negativo)", "Desconocido"], key="pf_cmv_r")
+
+        pf_c4, pf_c5, pf_c6 = st.columns(3)
+        pf_ltbi  = pf_c4.selectbox("TB latente (LTBI)",
+            ["No detectada", "TST/IGRA positivo — en tratamiento",
+             "TST/IGRA positivo — completó tratamiento",
+             "TST/IGRA positivo — sin tratamiento previo"], key="pf_ltbi")
+        pf_riesgo = pf_c5.selectbox("Nivel de inmunosupresión",
+            ["Estándar", "Intensificada (rechazo / ATG alto)", "Reducida"], key="pf_riesgo")
+        pf_fungi  = pf_c6.selectbox("Antifúngico institucional",
+            ["Fluconazol", "Nistatina (solo oral)", "Ninguno"], key="pf_fungi_inst")
+
+        hoy = _dt_pf.date.today()
+        dias_tx = (hoy - pf_fecha_tx).days
+
+        st.markdown("---")
+        st.markdown(f"**DPT actual: {dias_tx} días** ({pf_fecha_tx.strftime('%d/%m/%Y')} → hoy)")
+        st.markdown("### Cronograma de profilaxis")
+
+        # ── CMV ──────────────────────────────────────────────────────────
+        d_pos = "D+" in pf_cmv_donor
+        r_pos = "R+" in pf_cmv_recept
+        if d_pos and not r_pos:
+            cmv_riesgo = "🔴 Alto riesgo (D+/R−)"
+            cmv_dur_dias = 180
+            cmv_dosis = "Valganciclovir **900 mg c/24h** VO"
+            cmv_nota = "Duración mínima 6 meses. Si hay rechazo o ATG: extender a 12 meses."
+        elif d_pos and r_pos:
+            cmv_riesgo = "🟡 Riesgo moderado (D+/R+)"
+            cmv_dur_dias = 90
+            cmv_dosis = "Valganciclovir **450–900 mg c/24h** VO"
+            cmv_nota = "3 meses estándar. Considerar extender si IS intensificada."
+        elif not d_pos and r_pos:
+            cmv_riesgo = "🟡 Riesgo moderado (D−/R+)"
+            cmv_dur_dias = 90
+            cmv_dosis = "Valganciclovir **450 mg c/24h** VO"
+            cmv_nota = "Reactivación del R+. Vigilar con PCR."
+        else:
+            cmv_riesgo = "🟢 Bajo riesgo (D−/R−)"
+            cmv_dur_dias = 0
+            cmv_dosis = "Sin profilaxis CMV"
+            cmv_nota = "Vigilancia clínica. Solicitar PCR si síntomas."
+
+        pf_fecha_fin_cmv = pf_fecha_tx + _dt_pf.timedelta(days=cmv_dur_dias)
+        dias_cmv_restantes = (pf_fecha_fin_cmv - hoy).days
+
+        with st.expander("🦠 CMV", expanded=True):
+            st.markdown(f"**Riesgo:** {cmv_riesgo}")
+            st.markdown(f"**Dosis:** {cmv_dosis}")
+            if cmv_dur_dias > 0:
+                if dias_cmv_restantes > 0:
+                    st.success(f"✅ Activa hasta **{pf_fecha_fin_cmv.strftime('%d/%m/%Y')}** "
+                               f"({dias_cmv_restantes} días restantes)")
+                else:
+                    st.warning(f"⏰ Completada el {pf_fecha_fin_cmv.strftime('%d/%m/%Y')} "
+                               f"(hace {abs(dias_cmv_restantes)} días)")
+            st.caption(cmv_nota)
+
+        # ── TMP-SMX ───────────────────────────────────────────────────────
+        dur_tmpsmx = 365 if pf_riesgo == "Intensificada (rechazo / ATG alto)" else 180
+        fecha_fin_tmp = pf_fecha_tx + _dt_pf.timedelta(days=dur_tmpsmx)
+        dias_tmp_rest = (fecha_fin_tmp - hoy).days
+        with st.expander("🫁 TMP-SMX (PJP)", expanded=True):
+            st.markdown("**Dosis:** TMP-SMX 80/400 mg (SS) c/24h VO — o 160/800 mg (DS) si alto riesgo")
+            if dias_tmp_rest > 0:
+                st.success(f"✅ Activa hasta **{fecha_fin_tmp.strftime('%d/%m/%Y')}** "
+                           f"({dias_tmp_rest} días restantes)")
+            else:
+                st.warning(f"⏰ Completada el {fecha_fin_tmp.strftime('%d/%m/%Y')}")
+            st.caption("Si alergia a sulfonamidas: Dapsona 100 mg/día o Pentamidina inhalada mensual.")
+
+        # ── Antifúngico ───────────────────────────────────────────────────
+        if pf_fungi != "Ninguno":
+            dur_fungi = 90 if pf_fungi == "Fluconazol" else 30
+            fecha_fin_fungi = pf_fecha_tx + _dt_pf.timedelta(days=dur_fungi)
+            dias_fungi_rest = (fecha_fin_fungi - hoy).days
+            with st.expander(f"🍄 {pf_fungi}", expanded=True):
+                if pf_fungi == "Fluconazol":
+                    st.markdown("**Dosis:** Fluconazol 100 mg c/24h VO")
+                    st.error("⚠️ **Interacción:** Fluconazol ↑ niveles de Tacrolimus ~3-5x. "
+                             "Reducir dosis de Tac al iniciar y al suspender. Monitoreo C0 estrecho.")
+                else:
+                    st.markdown("**Dosis:** Nistatina 500,000 UI enjuague c/8h")
+                if dias_fungi_rest > 0:
+                    st.success(f"✅ Activa hasta **{fecha_fin_fungi.strftime('%d/%m/%Y')}** "
+                               f"({dias_fungi_rest} días restantes)")
+                else:
+                    st.warning(f"⏰ Completada el {fecha_fin_fungi.strftime('%d/%m/%Y')}")
+
+        # ── LTBI / Isoniazida ─────────────────────────────────────────────
+        if "positivo" in pf_ltbi.lower():
+            with st.expander("🧫 Isoniazida (TB latente)", expanded=True):
+                if "en tratamiento" in pf_ltbi:
+                    pf_ini_inh = st.date_input("Fecha de inicio de Isoniazida",
+                                               value=pf_fecha_tx - _dt_pf.timedelta(days=30),
+                                               format="DD/MM/YYYY",
+                                               key="pf_ini_inh")
+                    dur_inh_dias = 270  # 9 meses
+                    fecha_fin_inh = pf_ini_inh + _dt_pf.timedelta(days=dur_inh_dias)
+                    dias_inh_tx   = (pf_fecha_tx - pf_ini_inh).days
+                    dias_inh_rest = (fecha_fin_inh - hoy).days
+                    st.markdown(f"**Dosis:** Isoniazida 300 mg c/24h VO + Piridoxina 50 mg c/24h")
+                    st.markdown(f"Llevaba **{dias_inh_tx} días** de tratamiento al momento del trasplante.")
+                    if dias_inh_tx >= 30:
+                        st.success("✅ Trasplante con ≥1 mes de INH: aceptable según guías (KDIGO).")
+                    else:
+                        st.warning("⚠️ Menos de 1 mes de INH pre-trasplante. Consultar infectología.")
+                    if dias_inh_rest > 0:
+                        st.success(f"✅ Completar INH hasta **{fecha_fin_inh.strftime('%d/%m/%Y')}** "
+                                   f"({dias_inh_rest} días restantes)")
+                    else:
+                        st.success("✅ Isoniazida completada.")
+                    st.caption("Monitorear TGO/TGP mensualmente. Suspender si ALT >3x LSN sintomático o >5x LSN asintomático.")
+                elif "completó" in pf_ltbi:
+                    st.success("✅ Tratamiento de LTBI completado pre-trasplante.")
+                else:
+                    st.error("🚨 LTBI positivo sin tratamiento. Iniciar Isoniazida + Piridoxina "
+                             "y esperar idealmente ≥1-2 meses antes del trasplante.")
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 2 — CMV DETALLADO
+    # ══════════════════════════════════════════════════════════════════════
+    with pf_tab[1]:
+        st.markdown("### 🦠 CMV — Protocolo completo")
+
+        cmv_tab2 = st.tabs(["📋 Estrategia", "🔬 Monitoreo PCR", "💊 Tratamiento", "⚠️ Resistencia"])
+
+        with cmv_tab2[0]:
+            st.markdown("#### Estrategia según serostatus D/R")
+            st.table({
+                "Serostatus": ["D+/R− (alto riesgo)", "D+/R+ (mod)", "D−/R+ (mod)", "D−/R−"],
+                "Estrategia": ["Profilaxis universal", "Profilaxis o preemptiva", "Profilaxis o preemptiva", "Ninguna / Vigilancia"],
+                "Agente": ["Valganciclovir 900 mg/día", "Valganciclovir 450–900 mg/día", "Valganciclovir 450 mg/día", "—"],
+                "Duración": ["6 meses (12 si ATG)", "3 meses", "3 meses", "—"],
+            })
+            st.markdown("""
+**Ajuste por TFG:**
+- TFGe 25–40: 450 mg c/24h
+- TFGe 10–24: 450 mg c/48h
+- TFGe <10 / HD: 200 mg 3×/semana (c/sesión HD)
+- Si rechazo o dosis alta ATG: **extender profilaxis 3 meses adicionales**
+            """)
+
+        with cmv_tab2[1]:
+            st.markdown("#### Seguimiento con PCR CMV")
+            st.markdown("""
+**Estrategia pre-emptiva (si no se usa profilaxis):**
+- Semanas 1–12: PCR semanal
+- Semanas 13–24: PCR cada 2 semanas
+- Umbral de tratamiento: **≥200 UI/mL** (o >1,000 copias/mL según lab)
+
+**Al final de la profilaxis (en todos):**
+- PCR a la semana de suspender valganciclovir
+- Si negativo: PCR mensual × 3 meses
+- Si positivo: tratar (ver tab Tratamiento)
+
+**Síntomas de CMV:**
+- Fiebre >38°C, leucopenia, trombocitopenia, hepatitis, colitis, neumonitis, retinitis
+- Solicitar PCR inmediatamente ante cualquier síntoma
+            """)
+
+            # Calculadora semanas de PCR
+            st.markdown("#### Calculadora de fechas PCR")
+            pf_cmv_ini_pcr = st.date_input("Fecha de fin de profilaxis (o inicio si pre-emptiva)",
+                                            value=_dt_pf.date.today(),
+                                            format="DD/MM/YYYY", key="pf_cmv_pcr_ini")
+            pcr_schedule = []
+            for w in [1, 2, 4, 6, 8, 12]:
+                pcr_schedule.append({
+                    "Semana": f"Semana {w} post-fin profilaxis",
+                    "Fecha": (pf_cmv_ini_pcr + _dt_pf.timedelta(weeks=w)).strftime("%d/%m/%Y"),
+                    "Tipo": "PCR CMV cuantitativa",
+                })
+            st.table(pcr_schedule)
+
+        with cmv_tab2[2]:
+            st.markdown("#### Tratamiento de enfermedad por CMV")
+            st.markdown("""
+**Enfermedad leve-moderada (no órgano-amenazante):**
+- Valganciclovir **900 mg c/12h** VO × 14–21 días
+- Reducir inmunosupresión si es posible (↓ MMF primero, luego Tac)
+- Criterio de respuesta: PCR negativa × 2 consecutivas (c/1–2 semanas)
+- Duración mínima: 14 días Y hasta 2 PCRs negativas
+
+**Enfermedad grave / órgano-amenazante:**
+- Ganciclovir **5 mg/kg IV c/12h** × mínimo 14 días
+- Luego cambiar a valganciclovir oral al mejorar
+- Hospitalización requerida
+
+**Alta inmunosupresión / CD4 <100:**
+- Considerar IVIG anti-CMV o foscarnet si resistencia
+
+**Criterios de respuesta:**
+- PCR c/1–2 semanas durante tratamiento
+- Alta clínica + 2 PCRs negativas consecutivas
+- Profilaxis secundaria: valganciclovir 900 mg/día × 3–6 meses post-tratamiento
+            """)
+
+        with cmv_tab2[3]:
+            st.markdown("#### Resistencia a ganciclovir")
+            st.error("""
+Sospechar si: PCR no ↓ ≥1 log en 2 semanas con dosis adecuada, o rebrote tras tratamiento completo.
+
+**Mutaciones:** UL97 (fosforilación) — más frecuente | UL54 (polimerasa) — mayor resistencia
+
+**Manejo:**
+- Reducir IS agresivamente
+- Cambiar a **Foscarnet** 60 mg/kg IV c/8h o 90 mg/kg c/12h (nefrotóxico)
+- Maribavir (si disponible): 400 mg c/12h VO — primera línea en resistencia (aprobado 2021)
+- Cidofovir: alternativa, muy nefrotóxico
+- Consultar Infectología
+            """)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 3 — PJP / TMP-SMX
+    # ══════════════════════════════════════════════════════════════════════
+    with pf_tab[2]:
+        st.markdown("### 🫁 PJP / TMP-SMX")
+        col_pjp1, col_pjp2 = st.columns(2)
+        with col_pjp1:
+            st.markdown("""
+#### Indicación
+Todos los receptores de trasplante renal — independientemente del conteo de CD4.
+
+#### Dosis estándar
+- **TMP-SMX 80/400 mg (SS) c/24h** VO — primera línea
+- TMP-SMX 160/800 mg (DS) 3×/semana: alternativa aceptable
+- Iniciar dentro de los primeros 7 días post-TX
+
+#### Duración
+| Escenario | Duración |
+|---|---|
+| IS estándar | **6 meses** |
+| IS intensificada (ATG, rechazo, pulsos esteroides) | **12 meses** |
+| Inmunodeficiencia persistente | Indefinido hasta recuperación IS |
+            """)
+        with col_pjp2:
+            st.markdown("""
+#### Alternativas si alergia a sulfonamidas
+| Alternativa | Dosis | Notas |
+|---|---|---|
+| Dapsona | 100 mg c/24h VO | Descartar deficiencia G6PD antes |
+| Pentamidina inhalada | 300 mg mensual | Solo PJP, no cubre Toxoplasma |
+| Atovacuona | 1,500 mg c/24h VO | Con alimentos grasos |
+
+#### Otras coberturas de TMP-SMX
+- ✅ Toxoplasma gondii
+- ✅ Nocardia spp.
+- ✅ Listeria monocytogenes
+- ✅ ITU (mientras esté activo)
+
+#### Monitoreo
+- Creatinina: TMP-SMX bloquea secreción tubular de creatinina → ↑ Cr aparente sin ↓ TFG real
+- Leucopenia: suspender si Leu <3k
+- Hiperpotasemia: TMP bloquea canales de K tubulares
+            """)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 4 — ANTIFÚNGICOS
+    # ══════════════════════════════════════════════════════════════════════
+    with pf_tab[3]:
+        st.markdown("### 🍄 Antifúngicos")
+        st.warning("""
+⚠️ **Interacción CRÍTICA — Fluconazol + Tacrolimus:**
+Fluconazol inhibe CYP3A4 y P-gp. Los niveles de Tacrolimus aumentan **3–5 veces**.
+Al iniciar: reducir dosis de Tac ~50%. Al suspender: anticipar caída de niveles.
+Monitoreo de C0 a las 48-72h de iniciar/suspender.
+        """)
+        col_af1, col_af2 = st.columns(2)
+        with col_af1:
+            st.markdown("""
+#### Fluconazol
+- **Dosis:** 100–200 mg c/24h VO
+- **Duración:** 1–3 meses (según protocolo institucional)
+- **Indicación:** Todos los receptores — profilaxis de Candida
+- **Monitoreo:** Niveles de Tacrolimus estrecho en semanas 1–4
+- **Cuándo suspender:** Al completar el mes indicado; después vigilancia clínica
+
+#### Nistatina (alternativa)
+- **Dosis:** 500,000 UI enjuague bucal c/8h × 1 mes
+- Sin interacción sistémica con IS
+- Solo cubre mucosa oral/esofágica
+            """)
+        with col_af2:
+            st.markdown("""
+#### En pacientes de alto riesgo
+(Antecedente de aspergilosis, Candida invasora, inmunodeficiencia severa)
+- Considerar **Micafungina** 50 mg IV c/24h o **Voriconazol** VO
+- Voriconazol: interacción importante con Tac (↑ aún más que fluconazol)
+- Consultar Infectología
+
+#### Criptococcus (vigilancia, no profilaxis rutinaria)
+- Solicitar Ag de Criptococo en: fiebre sin foco, meningitis, lesiones cutáneas
+- Tratamiento: Anfotericina B + 5-flucitosina inducción → fluconazol consolidación
+            """)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 5 — TB LATENTE / ISONIAZIDA
+    # ══════════════════════════════════════════════════════════════════════
+    with pf_tab[4]:
+        st.markdown("### 🧫 TB Latente e Isoniazida en el Contexto del Trasplante")
+        inh_tab = st.tabs(["📋 Indicaciones", "🗓️ Timing pre-TX", "💊 Protocolo", "🔬 Monitoreo"])
+
+        with inh_tab[0]:
+            st.markdown("""
+#### ¿Quién necesita tratamiento de LTBI?
+
+| Criterio | Umbral en candidato a TX |
+|---|---|
+| PPD/Mantoux | **≥5 mm** (inmunodeprimidos; ≥10 mm en bajo riesgo) |
+| IGRA (QuantiFERON/T-SPOT) | **Positivo** |
+| Contacto con TB activa | Siempre tratar |
+| Rx con lesiones residuales | Considerar tratar |
+| Origen en zona endémica (México) | Evaluar con IGRA |
+
+**En México:** Se recomienda IGRA sobre PPD en candidatos a TX (mayor especificidad, no afectado por BCG).
+            """)
+
+        with inh_tab[1]:
+            st.markdown("""
+#### Timing del trasplante con tratamiento de LTBI
+
+**Escenario ideal:** Completar los 9 meses de INH **antes** del trasplante.
+
+**Si no es posible esperar:**
+| Tiempo de INH pre-TX | ¿Es seguro trasplantar? |
+|---|---|
+| < 1 mes | ⚠️ No recomendado — alto riesgo de reactivación post-TX |
+| 1–2 meses | 🟡 Aceptable si hay urgencia clínica (KDIGO 2022) |
+| ≥ 2 meses | ✅ Considerado seguro en la mayoría de guías |
+| Completado (9 meses) | ✅ Ideal |
+
+**Post-trasplante:**
+- Continuar INH si no se completó — **no interrumpir por el trasplante**
+- La reactivación de TB post-TX tiene mortalidad ~30%
+- No hay contraindicación para continuar INH con IS estándar (Tac/MMF/Pred)
+            """)
+
+        with inh_tab[2]:
+            st.markdown("""
+#### Protocolo de tratamiento LTBI
+
+**Régimen estándar (9H):**
+- Isoniazida **300 mg c/24h** VO × 9 meses
+- **+ Piridoxina (B6) 25–50 mg c/24h** VO — siempre, previene neuropatía periférica
+
+**Régimen alternativo (3HP — 3 meses):**
+- Isoniazida 15 mg/kg (máx 900 mg) + Rifapentina 15–20 mg/kg (máx 900 mg) VO semanal × 12 dosis
+- ⛔ **Rifapentina o Rifampicina: contraindicada con Tacrolimus** — induce CYP3A4 intensamente
+- Puede reducir niveles de Tac >80%, causando rechazo agudo
+- Si se usa: aumentar dosis de Tac × 3–5, monitoreo diario de C0
+
+**Régimen si ya está trasplantado (con Tacrolimus):**
+- **Solo Isoniazida 300 mg × 9 meses** (evitar rifamicinas)
+- Isoniazida no tiene interacción clínicamente significativa con Tacrolimus
+            """)
+
+        with inh_tab[3]:
+            st.markdown("#### Monitoreo durante tratamiento con INH")
+            st.markdown("""
+| Parámetro | Frecuencia | Umbral de suspensión |
+|---|---|---|
+| TGO / TGP (AST/ALT) | Basal, luego **mensual** | ALT >3x LSN con síntomas / ALT >5x LSN asintomático |
+| Bilirrubina | Mensual | Elevación con síntomas |
+| Síntomas neurológicos | En cada visita | Neuropatía periférica → ajustar Piridoxina o suspender |
+| Adherencia | Mensual | Dosis directamente observada si riesgo alto |
+            """)
+            st.warning("""
+**Hepatotoxicidad por INH:**
+Riesgo aumentado con: edad >35 años, consumo de alcohol, enfermedad hepática basal,
+desnutrición. En trasplantados con IS el riesgo es moderado — no contraindicada,
+pero monitoreo estrecho.
+            """)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 6 — REFERENCIA RÁPIDA
+    # ══════════════════════════════════════════════════════════════════════
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 6 — HEPATITIS B / C
+    # ══════════════════════════════════════════════════════════════════════
+    with pf_tab[5]:
+        st.markdown("### 🫀 Hepatitis B y C en Trasplante Renal")
+        hep_tab = st.tabs(["🅱️ Hepatitis B", "©️ Hepatitis C"])
+
+        with hep_tab[0]:
+            st.markdown("#### Hepatitis B — Escenarios clínicos")
+            st.markdown("""
+**Escenario 1: Receptor HBsAg+ (hepatitis B activa o crónica)**
+- Profilaxis obligatoria con antiviral antes y después del trasplante
+- **Tenofovir disoproxil (TDF) 300 mg c/24h** — primera línea (ajustar si TFG <30)
+- **Tenofovir alafenamida (TAF) 25 mg c/24h** — si TFG <30 o riesgo óseo/renal
+- **Entecavir 0.5–1 mg c/24h** — alternativa; 1 mg si hay resistencia a lamivudina
+- Duración: **indefinida** en trasplantados (IS mantiene riesgo de reactivación)
+- Monitoreo: HBsAg, HBeAg, DNA VHB cuantitativo cada 3–6 meses
+            """)
+
+            st.warning("""
+**Escenario 2: Receptor anti-HBc+ / HBsAg− (hepatitis B oculta)**
+- Riesgo de reactivación con IS intensa (especialmente rituximab, ATG, pulsos esteroides)
+- Profilaxis: Tenofovir o Entecavir durante IS intensa y 12 meses posteriores
+- Monitoreo: DNA VHB cada 3 meses durante IS intensificada
+            """)
+
+            st.info("""
+**Escenario 3: Donador anti-HBc+ / Receptor HBsAg−**
+- Riesgo de transmisión de HBV del donador al receptor
+- Si receptor anti-HBs > 10 UI/L (vacunado): bajo riesgo — monitoreo
+- Si receptor sin inmunidad: profilaxis con Tenofovir/Entecavir + HBIG en centro de alto volumen
+- Monitoreo: DNA VHB mensual × 12 meses, luego c/3 meses
+            """)
+
+            st.markdown("""
+**Vacunación:**
+- Candidatos con serología negativa: vacunar **antes** del trasplante (respuesta mejor con TFG >30)
+- Esquema doble dosis (40 mcg): 0, 1, 2, 6 meses — verificar anti-HBs post-vacuna
+- Si anti-HBs <10 UI/L post-vacuna: revacunar con esquema triple
+            """)
+
+        with hep_tab[1]:
+            st.markdown("#### Hepatitis C — Trasplante con era de DAAs")
+            st.markdown("""
+**Receptor VHC+ sin tratamiento previo:**
+- Tratar con **DAAs antes del trasplante** siempre que sea posible
+- Lograr RVS (respuesta viral sostenida) pre-TX mejora outcomes renales y cardiovasculares
+- Si no fue posible pre-TX: tratar post-TX con DAAs (ajustar dosis según TFG e IS)
+
+**Interacciones DAAs con IS:**
+| DAA | Con Tacrolimus | Con Ciclosporina | Nota |
+|---|---|---|---|
+| Glecaprevir/Pibrentasvir | ↑ Tac moderado | ↑ CsA significativo | Monitoreo estrecho |
+| Sofosbuvir/Velpatasvir | Mínima | Mínima | Preferido post-TX |
+| Sofosbuvir/Ledipasvir | Mínima | Mínima | Preferido post-TX |
+| Grazoprevir/Elbasvir | ↑ Tac | CI con CsA | Evitar con CsA |
+
+**Trasplante de donador VHC+ a receptor VHC−:**
+- Protocolo emergente — mejora acceso a órganos
+- Requiere consentimiento informado específico
+- Tratamiento con DAAs post-TX inmediato (semana 1–2)
+- Resultados: RVS >95% en series publicadas 2019–2023
+- Centro debe tener protocolo aprobado y hepatología involucrada
+            """)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 7 — BK / EBV
+    # ══════════════════════════════════════════════════════════════════════
+    with pf_tab[6]:
+        st.markdown("### 🧬 Virus BK y EBV post-Trasplante")
+        bk_tab = st.tabs(["🦠 Virus BK (nefropatía)", "🎗️ EBV / PTLD"])
+
+        with bk_tab[0]:
+            st.markdown("#### Virus BK — Vigilancia y manejo")
+            st.error("""
+**No existe profilaxis farmacológica eficaz para BK.**
+El pilar del manejo es la vigilancia sistemática con PCR y la reducción de IS.
+            """)
+            st.markdown("""
+**Protocolo de vigilancia (KDIGO 2022):**
+
+| Período | Frecuencia |
+|---|---|
+| Meses 1–6 post-TX | PCR BK en plasma **cada mes** |
+| Meses 7–24 post-TX | PCR BK en plasma **cada 3 meses** |
+| >24 meses | Según riesgo clínico |
+
+**Umbrales de acción:**
+
+| Nivel de viremia | Acción |
+|---|---|
+| BK DNA plasma **>200 copias/mL** (>1,000 UI/mL) | Inicio de reducción de IS |
+| BK DNA plasma **>10,000 copias/mL** | Reducción agresiva de IS + biopsia si Cr ↑ |
+| BK DNA en orina **>10^7 copias/mL** (viruria) | Vigilancia estrecha — biopsia si persiste |
+
+**Estrategia de reducción de IS:**
+1. ↓ MMF 50% primero (MMF tiene mayor rol en BK que Tac)
+2. Si persiste: suspender MMF + reducir Tac (meta C0 4–6 ng/mL)
+3. Si aún persiste y Cr ↑: biopsia renal (confirmar nefropatía BK)
+4. Cambiar MMF por Leflunomida si biopsia confirma BKVN
+5. Cidofovir intravesical o IV: solo en casos refractarios (nefrotóxico)
+
+**Biopsia renal:** Indicada si viremia persistente + ↑ Cr. Hallazgo: inclusiones intranucleares en células tubulares ("ojo de búho"), inmunohistoquímica SV40+.
+            """)
+
+        with bk_tab[1]:
+            st.markdown("#### EBV y Síndrome Linfoproliferativo Post-Trasplante (PTLD)")
+            st.markdown("""
+**Vigilancia EBV:**
+
+| Riesgo | Serostatus | Frecuencia PCR |
+|---|---|---|
+| Alto riesgo | D+/R− (primoinfección) | PCR mensual × 12 meses |
+| Riesgo moderado | D+/R+ o D−/R+ | PCR cada 3 meses × 12 meses |
+| Bajo riesgo | D−/R− | Sin vigilancia rutinaria |
+
+**Signos de alarma PTLD:**
+- Fiebre prolongada sin foco
+- Adenopatías (especialmente cervicales, mediastinales)
+- Síntomas B: diaforesis nocturna, pérdida de peso
+- Masa tumoral en cualquier sitio
+- ↑ LDH sin explicación
+
+**Manejo:**
+1. **Reducción de IS** — primera y más importante medida
+   - ↓ Tac a mínimo tolerable + ↓ o suspender MMF
+2. **Rituximab** — si PTLD CD20+ (mayoría)
+3. **Quimioterapia** — si PTLD agresivo (DLBCL, Burkitt)
+4. Radioterapia para lesiones localizadas
+
+**Importante:** No hay antivirales eficaces para PTLD establecido.
+Aciclovir/valganciclovir no tratan el PTLD pero pueden usarse en primoinfección EBV.
+            """)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 8 — VZV / VHS
+    # ══════════════════════════════════════════════════════════════════════
+    with pf_tab[7]:
+        st.markdown("### 💊 Herpes Zóster (VZV) y Herpes Simple (VHS)")
+        st.markdown("""
+#### Cobertura por valganciclovir
+Durante el período que el paciente recibe **valganciclovir** para CMV, hay cobertura parcial
+para VHS-1, VHS-2 y VZV. **Al suspender valganciclovir, esta cobertura se pierde.**
+
+---
+#### Profilaxis con aciclovir / valaciclovir
+**Indicación:**
+- Pacientes con antecedente de infección por VHS o herpes zóster previo
+- Al suspender valganciclovir en D+/R− (alto riesgo, IS intensificada)
+- Considerarlo en todos durante primer año si hay IS intensa
+
+**Dosis:**
+| Agente | Dosis profiláctica | Ajuste TFG <30 |
+|---|---|---|
+| Aciclovir | 400 mg c/12h VO | 200 mg c/12h |
+| Valaciclovir | 500 mg c/24h VO | 250 mg c/24h |
+
+**Duración:** 6–12 meses post-TX o mientras IS intensificada.
+
+---
+#### Herpes Zóster — Tratamiento (si aparece)
+- **Valaciclovir 1g c/8h VO × 7–10 días** (leve-moderado, dermatoma único)
+- **Aciclovir IV 10 mg/kg c/8h** — si diseminado, ocular, neurológico o inmunodepresión severa
+- Reducir IS temporalmente si es posible
+- Consultar Oftalmología si hay afección ocular (zóster oftálmico)
+
+---
+#### Vacuna contra Zóster (Shingrix — VZV recombinante)
+- **Contraindicada en trasplantados activos** (viva atenuada no aplica; Shingrix es recombinante — SÍ se puede)
+- **Shingrix (HZ/su)** 2 dosis con 2–6 meses de diferencia
+- Idealmente vacunar **antes del trasplante** si el tiempo lo permite
+- Post-TX: esperar ≥6 meses post-trasplante y IS estable para vacunar
+        """)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # TAB 9 — NO INFECCIOSAS
+    # ══════════════════════════════════════════════════════════════════════
+    with pf_tab[8]:
+        st.markdown("### 🦴 Profilaxis de Complicaciones No Infecciosas")
+        ni_tab = st.tabs(["🦴 Osteoporosis", "🩸 NODAT", "❤️ Cardiovascular", "💊 IBP / Úlcera", "🩸 Trombosis"])
+
+        with ni_tab[0]:
+            st.markdown("#### Osteoporosis y Metabolismo Óseo Post-TX")
+            st.markdown("""
+**Factores de riesgo post-TX:**
+- Corticosteroides (principal causa) — pérdida ósea máxima primeros 6–12 meses
+- IS con Tacrolimus (menos efecto óseo que CsA)
+- ERC previa — enfermedad ósea renal (hiperparatiroidismo secundario)
+- Hipofosfatemia, hipomagnesemia post-TX
+
+**Protocolo de protección ósea:**
+
+| Fármaco | Dosis | Inicio | Duración |
+|---|---|---|---|
+| Calcio | 1,000–1,500 mg/día VO | Día 1 post-TX | Indefinido |
+| Vitamina D3 (colecalciferol) | 800–2,000 UI/día VO | Día 1 post-TX | Indefinido |
+| Calcitriol | 0.25–0.5 mcg/día | Si PTH elevado | Según niveles |
+
+**Bifosfonatos (si indicados):**
+- Indicación: DXA con T-score ≤ −2.5, fractura osteoporótica previa, corticoterapia prolongada
+- **Alendronato 70 mg semanal** VO — primera línea si TFGe ≥35
+- **Zoledronato 4–5 mg IV anual** — si intolerancia oral o TFGe <35 (usar con precaución)
+- ⛔ Bifosfonatos contraindicados si TFGe <30 (riesgo de nefrotoxicidad)
+
+**Monitoreo:**
+- DXA lumbar + cadera: basal, 12 meses, luego anual
+- Ca, P, Mg, PTH: mensual primeros 3 meses, luego cada 3–6 meses
+            """)
+
+        with ni_tab[1]:
+            st.markdown("#### NODAT — Diabetes de Novo Post-Trasplante")
+            st.error("""
+**Tacrolimus + Esteroides = principal factor de riesgo de NODAT.**
+Incidencia: 15–25% en primer año. NODAT aumenta riesgo CV y pérdida del injerto.
+            """)
+            st.markdown("""
+**Factores de riesgo:**
+- Tacrolimus (>CsA) — tóxico para células beta pancreáticas, resistencia a insulina
+- Corticosteroides en dosis altas
+- Obesidad, edad >45, HF de DM2, HCV+, CMV activo
+
+**Vigilancia:**
+| Período | Frecuencia |
+|---|---|
+| Semanas 1–4 | Glucemia en ayuno **diario** |
+| Meses 1–3 | Glucemia c/semana |
+| Meses 3–12 | HbA1c + glucemia mensual |
+| >12 meses | HbA1c cada 3 meses |
+
+**Manejo:**
+1. **Reducción de esteroides** — lo más pronto posible (sin comprometer IS)
+2. **Ajuste de Tacrolimus** — considerar C0 en rango bajo (6–8) si función estable
+3. Insulina en fase aguda hospitalaria
+4. Metformina post-alta si TFGe >45
+5. iSGLT2 (dapagliflozina, empagliflozina): emergentes en TR, datos preliminares favorables
+
+**Objetivo glucémico:**
+- Glucemia ayuno: 80–130 mg/dL
+- Glucemia postprandial: <180 mg/dL
+- HbA1c: <7–7.5%
+            """)
+
+        with ni_tab[2]:
+            st.markdown("#### Prevención Cardiovascular Post-TX")
+            st.markdown("""
+**El trasplantado renal tiene riesgo cardiovascular equivalente al de diabetes + ERC avanzada.**
+Mortalidad CV: principal causa de muerte con injerto funcionante.
+
+**Estatinas — recomendadas en todos:**
+| Estatina | Dosis | Interacción con IS | Nota |
+|---|---|---|---|
+| Fluvastatina | 40–80 mg/día | Mínima | Primera línea en TR |
+| Pravastatina | 20–40 mg/día | Mínima | Segura, sin interacción CYP |
+| Atorvastatina | 10–20 mg/día | Moderada (CYP3A4) | Usar dosis bajas |
+| Rosuvastatina | 5–10 mg/día | Moderada | Usar dosis bajas |
+| Simvastatina | Evitar | Alta (↑ miopatía con CsA) | No recomendada |
+
+**Antiagregantes:**
+- AAS 100 mg/día: no rutinario en todos, considerar si: DM, enfermedad aterosclerótica conocida, alto riesgo CV
+- Clopidogrel: si stent coronario reciente
+
+**Objetivos:**
+- TA <130/80 mmHg (meta post-TX, KDIGO 2022)
+- LDL <70 mg/dL (muy alto riesgo CV)
+- Triglicéridos <150 mg/dL
+- IMC <27 (meta a largo plazo)
+
+**Antihipertensivos en TR:**
+- Primera línea: IECAS/ARA-II con precaución (monitoreo K y Cr — útiles si proteinuria)
+- Calcioantagonistas dihidropiridínicos: amlodipino, nifedipino — seguros con IS
+- Evitar diltiazem/verapamilo: inhiben CYP3A4 → ↑ Tac
+            """)
+
+        with ni_tab[3]:
+            st.markdown("#### IBP y Protección Gástrica")
+            st.markdown("""
+**Indicación:**
+- Todos los trasplantados en el período perioperatorio y mientras reciban esteroides
+- Especialmente con dosis altas de metilprednisolona (pulsos)
+
+**Dosis:**
+- Omeprazol 20 mg c/24h VO — o
+- Pantoprazol 40 mg c/24h VO
+
+**Duración:**
+- Fase de esteroides altos: **obligatorio**
+- Al llegar a prednisona ≤10 mg/día: evaluar si continuar
+- Largo plazo: solo si hay indicación clínica (ERGE, úlcera previa, AINE crónico)
+
+**Interacción con Tacrolimus:**
+- IBPs (especialmente omeprazol) pueden **↑ absorción de Tacrolimus** moderadamente
+- Cambiar de omeprazol a pantoprazol si hay variabilidad en niveles de Tac sin explicación
+            """)
+
+        with ni_tab[4]:
+            st.markdown("#### Profilaxis de Trombosis Vascular del Injerto")
+            st.markdown("""
+**Trombosis vascular del injerto:** complicación catastrófica (pérdida del injerto)
+Incidencia: 1–5%. Máximo riesgo primeras 72 horas.
+
+**Factores de riesgo:**
+- Receptor pediátrico o adulto mayor
+- Donador en asistolia (DCD) — tiempos de isquemia prolongados
+- Injerto de donante vivo con anatomía vascular compleja
+- Trombofilia conocida del receptor (anticoagulante lúpico, factor V Leiden, etc.)
+- Episodio previo de trombosis
+
+**Profilaxis en pacientes de alto riesgo:**
+- **Heparina no fraccionada IV**: 100–300 UI/kg/día en infusión continua — primeras 48–72h
+- Luego: **Enoxaparina 40 mg SC c/24h** × 2–4 semanas
+- O **AAS 100 mg/día** × 1–3 meses (evidencia más débil)
+
+**Vigilancia:**
+- USG Doppler del injerto: día 1, 3, 7 post-TX y ante cualquier caída brusca de diuresis
+- Si diuresis cae abruptamente con Cr ↑: descartar trombosis → USG urgente
+
+**Anticoagulación crónica (si trombofilia documentada):**
+- Warfarina o DOACs — individualizar con Hematología
+- DOACs: evitar si TFGe <30 (especialmente rivaroxabán, apixabán con precaución)
+            """)
+
+    with pf_tab[9]:
+        st.markdown("### 📋 Referencia rápida — Profilaxis post-TR")
+        st.table({
+            "Agente": [
+                "Valganciclovir (CMV D+/R−)",
+                "Valganciclovir (CMV mod riesgo)",
+                "TMP-SMX (PJP/Toxoplasma)",
+                "Fluconazol",
+                "Nistatina",
+                "Aciclovir/Valaciclovir (VZV/VHS)",
+                "Isoniazida (LTBI)",
+                "Tenofovir/Entecavir (HBV)",
+                "Calcio + Vitamina D",
+                "Estatina (CV)",
+                "IBP (gastroprotección)",
+            ],
+            "Dosis estándar": [
+                "900 mg c/24h VO",
+                "450 mg c/24h VO",
+                "80/400 mg (SS) c/24h VO",
+                "100 mg c/24h VO",
+                "500,000 UI enjuague c/8h",
+                "400 mg c/12h / 500 mg c/24h VO",
+                "300 mg c/24h VO",
+                "TDF 300 mg o TAF 25 mg c/24h",
+                "1,000–1,500 mg Ca + 800–2,000 UI VitD",
+                "Pravastatina 20–40 mg o Fluvastatina 40 mg",
+                "Pantoprazol 40 mg c/24h",
+            ],
+            "Duración": [
+                "6 m (12 m si ATG/rechazo)",
+                "3 meses",
+                "6 m (12 m si IS intensa)",
+                "1–3 meses",
+                "1 mes",
+                "6–12 meses post-TX",
+                "9 meses + Piridoxina 50 mg",
+                "Indefinida en trasplantados",
+                "Indefinida",
+                "Indefinida",
+                "Mientras esteroides; luego PRN",
+            ],
+            "Interaccion Tac": [
+                "Leve (leucopenia)",
+                "Leve",
+                "Leve (↑Cr aparente, ↑K)",
+                "⚠️ ↑ Tac x3-5",
+                "Ninguna",
+                "Ninguna relevante",
+                "Minima",
+                "Minima (TDF puede ↑ Cr)",
+                "Ninguna",
+                "Moderada (evitar simvastatina)",
+                "IBP puede ↑ absorcion Tac",
+            ],
+            "Ajuste TFG": [
+                "Si (<30: 200 mg 3x/sem)",
+                "Si (<30: 450 mg c/48h)",
+                "Si si <30",
+                "Si si <50",
+                "No",
+                "Si si <30",
+                "No",
+                "Si (TAF si <30)",
+                "No",
+                "No",
+                "No",
+            ],
+        })
+        st.markdown("""
+**Interacciones críticas a recordar:**
+- 🔴 **Fluconazol + Tacrolimus**: ↑ Tac 3–5x → reducir dosis Tac al iniciar y al suspender
+- 🔴 **Rifampicina/Rifapentina + Tacrolimus**: ↓ Tac 80-90% → evitar, o triplicar dosis Tac con monitoreo diario
+- 🟡 **TMP-SMX**: eleva creatinina sérica por bloqueo tubular (no es daño renal real), puede causar hiperpotasemia
+
+**Fuentes:** KDIGO 2022 Clinical Practice Guideline for the Care of Kidney Transplant Recipients;
+AST Infectious Disease Community of Practice Guidelines 2019.
+        """)
+
 
 elif nav == "aprendizaje":
     st.subheader("🎓 Aprendizaje TR — Para fellow de trasplante")
