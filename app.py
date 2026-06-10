@@ -1227,6 +1227,23 @@ def flows_and_ff(qb, hto, dosis_mlkg, peso, uf, modalidad):
     ff = (qr_post + uf) / denom
     return qp, qp_h, qe, qr_pre, qr_post, qd, ff
 
+def apply_citrate_correction(qp_h, qe, qr_pre, qr_post, qd, uf, cit_ml_h):
+    """Con RCA, el citrato PRE-filtro es predilución y entra al efluente.
+    Recalcula Qd para conservar la dosis objetivo (qe) y devuelve flujos +
+    FF + dosis real. Misma lógica que el bloque de prescripción RCA."""
+    cit = float(cit_ml_h or 0)
+    if cit <= 0:
+        denom = max(qp_h + qr_pre, 1e-9)
+        ff = (qr_post + uf) / denom
+        return qr_pre, qr_post, qd, ff, (qe / 1.0), False
+    qr_pre_ef = max(0.0, qr_pre - cit)
+    qd_cit = qe - (cit + qr_pre_ef + qr_post + uf)
+    qd_neg = qd_cit < 0
+    qd_new = max(qd_cit, 0.0)
+    efluente_real = cit + qr_pre_ef + qr_post + qd_new + uf
+    ff = (qr_post + uf) / max(qp_h + qr_pre_ef + cit, 1e-9)
+    return qr_pre_ef, qr_post, qd_new, ff, efluente_real, qd_neg
+
 @dataclass
 class Filtro:
     nombre: str
@@ -1325,6 +1342,13 @@ def export_pdf():
     filtro_final = s.get("ui_filtro", filtro_final)
     qp, qp_h, qe, qr_pre, qr_post, qd, ff = flows_and_ff(
         qb, hto, dosis_mlkg, peso, uf, mod_final or "CVVHDF")
+    anticoag_tipo = s.get("anticoagulacion_tipo", "—")
+    dosis_mlkg_real = dosis_mlkg
+    if anticoag_tipo == "RCA":
+        _cit_pdf = s.get("rca_citrato_ml_h", 0)
+        qr_pre, qr_post, qd, ff, _efl_pdf, _ = apply_citrate_correction(
+            qp_h, qe, qr_pre, qr_post, qd, uf, _cit_pdf)
+        dosis_mlkg_real = round(_efl_pdf / peso) if peso > 0 else dosis_mlkg
     ff_txt = f"{ff:.1%}" if ff is not None else "—"
     na = float(s.get("na_main", 140.0))
     k = float(s.get("k_main", 4.0))
@@ -1669,7 +1693,7 @@ def export_pdf_pro():
          Paragraph('Dosis (mL/kg/h)', E_TH)],
         [Paragraph(_s_int(qr_pre), E_TD), Paragraph(_s_int(qr_post), E_TD),
          Paragraph(_s_int(qd), E_TD), Paragraph(_s_int(uf), E_TD),
-         Paragraph(f"{dosis_mlkg}", E_TD)],
+         Paragraph(f"{dosis_mlkg_real}", E_TD)],
     ], col_widths=[3.4*cm, 3.4*cm, 2.8*cm, 3*cm, 3.4*cm])
     story.append(flujos2)
     story.append(Spacer(1, 3*mm))
@@ -3001,9 +3025,42 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
         # Cálculos de citrato
         cit_inf_presc = cit_dose_presc * qb * 60 / cit_conc_presc if cit_conc_presc > 0 else 0
         qr_pre_efectivo = max(0.0, qr_pre - cit_inf_presc)
+
+        # ── CONSERVACIÓN DE DOSIS CON CITRATO ────────────────────────────────
+        # El citrato PRE-filtro es predilución y ENTRA al efluente. Para mantener
+        # el efluente en el objetivo (dosis_mlkg × peso) hay que recalcular Qd:
+        #   Efluente = citrato + qr_pre_solución + qr_post + Qd + UF
+        # → Qd = Efluente_objetivo − (citrato + qr_pre_efectivo + qr_post + UF)
+        qe_objetivo = dosis_mlkg * peso
+        qd_citrato = qe_objetivo - (cit_inf_presc + qr_pre_efectivo + qr_post + uf)
+
+        # Si el citrato (+ post + UF) ya excede el objetivo, no hay margen para Qd.
+        # Avisar: bajar dosis de citrato, bajar Qb o subir dosis objetivo.
+        qd_negativo = qd_citrato < 0
+        qd = max(qd_citrato, 0.0)
+
+        # Efluente REAL entregado con estos flujos (puede diferir del objetivo
+        # si Qd tocó el piso de 0).
+        efluente_real = cit_inf_presc + qr_pre_efectivo + qr_post + qd + uf
+        dosis_real = efluente_real / peso if peso > 0 else 0.0
+
+        # FF efectiva: predilución (citrato + qr_pre) protege el filtro → denominador.
         ff_adj_val = (qr_post + uf) / max(qp_h + qr_pre_efectivo + cit_inf_presc, 1e-9)
         ff_efectiva = ff_adj_val
         ff_adj_pct = ff_adj_val * 100
+
+        if qd_negativo:
+            st.error(
+                f"⚠️ Con citrato a {cit_dose_presc:.1f} mmol/L y Qb {qb} mL/min, "
+                f"la bomba de citrato ({cit_inf_presc:.0f} mL/h) + Qr_post ({qr_post:.0f}) "
+                f"+ UF ({uf:.0f}) = {cit_inf_presc + qr_post + uf:.0f} mL/h ya **superan** "
+                f"el efluente objetivo ({qe_objetivo:.0f} mL/h = {dosis_mlkg} mL/kg/h). "
+                f"Qd se fijó en 0 y la dosis REAL sube a {dosis_real:.0f} mL/kg/h. "
+                f"Opciones: ↓ dosis de citrato (p. ej. 2.5 mmol/L), ↓ Qb, o ↑ dosis objetivo.")
+        elif abs(dosis_real - dosis_mlkg) > 0.5:
+            st.warning(
+                f"ℹ️ Dosis real entregada con citrato: {dosis_real:.0f} mL/kg/h "
+                f"(objetivo {dosis_mlkg}). Qd recalculado a {qd:.0f} mL/h.")
 
         # Guardar en session_state para que Resumen/Impresión lo recoja
         st.session_state["rca_citrato_ml_h"] = float(cit_inf_presc)
@@ -3058,15 +3115,17 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
             "El calcio va por línea sistémica POST-filtro separada — no entra al efluente.")
 
         # Cálculo integrado
-        efluente_total_int = dosis_mlkg * peso          # objetivo en mL/hr
-        dosis_real_int     = efluente_total_int / peso   # debería ser == dosis_mlkg
+        efluente_total_int = efluente_real                # efluente REAL entregado
+        dosis_real_int     = dosis_real                   # mL/kg/h real
         ca_display_int     = ca_stored if ca_stored > 0 else ca_rate_est
         cit_pct_efluente   = (cit_inf_presc / efluente_total_int * 100) if efluente_total_int > 0 else 0
 
         # ── Métricas de verificación rápida ──────────────────────────────────
         vi1, vi2, vi3, vi4 = st.columns(4)
-        vi1.metric("Efluente objetivo", f"{efluente_total_int:.0f} mL/hr",
-                   help=f"= {dosis_mlkg} mL/kg/hr × {peso:.0f} kg")
+        vi1.metric("Efluente real", f"{efluente_total_int:.0f} mL/hr",
+                   delta=f"objetivo {qe_objetivo:.0f}",
+                   delta_color="off",
+                   help=f"Suma real de flujos (citrato incluido). Objetivo = {dosis_mlkg} mL/kg/hr × {peso:.0f} kg")
         vi2.metric("Citrato / Efluente", f"{cit_pct_efluente:.0f}%",
                    help="Qué porcentaje del efluente total viene del citrato")
         vi3.metric("FF efectiva", f"{ff_adj_pct:.1f}%",
@@ -3114,8 +3173,8 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
         # Efluente total
         filas_lugar.append("↓ EFLUENTE TOTAL")
         filas_fluido.append("Suma de flujos")
-        filas_ml.append(f"{efluente_total_int:.0f} = {dosis_mlkg} mL/kg/hr")
-        filas_rol.append("Objetivo CRRT | KDIGO: 20-25 mL/kg/hr")
+        filas_ml.append(f"{efluente_total_int:.0f} = {dosis_real_int:.0f} mL/kg/hr")
+        filas_rol.append("Suma REAL (citrato incluido) | KDIGO: 20-25 mL/kg/hr")
 
         # Calcio (separado, no cuenta en efluente CRRT)
         filas_lugar.append("🟡 POST-FILTRO SISTÉMICO")
