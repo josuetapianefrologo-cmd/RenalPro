@@ -2841,34 +2841,45 @@ elif nav == "presc":
 
     # ── PARÁMETROS DEL PACIENTE ────────────────────────────────────────────────
     st.markdown("#### ⚙️ Parámetros globales")
-    pg1, pg2, pg3, pg4, pg5 = st.columns(5)
-    with pg1:
-        peso = st.number_input("Peso (kg)", 10.0, 300.0,
-                               float(st.session_state.get("sb_peso", 70.0)), 0.5, key="sb_peso")
-    with pg2:
-        hto = st.number_input("Hematocrito (fracción)", 0.10, 0.60,
-                              float(st.session_state.get("sb_hto", 0.30)), 0.01,
-                              format="%.2f", key="sb_hto")
-    with pg3:
-        qb = st.number_input("Qb (mL/min)", 80, 300,
-                             int(st.session_state.get("sb_qb", 200)), 10, key="sb_qb")
-    with pg4:
-        uf = st.number_input("UF neta (mL/h)", 0, 2000,
-                             int(st.session_state.get("sb_uf", 100)), 10, key="sb_uf")
-    with pg5:
-        dosis_mlkg = st.slider("Dosis objetivo (mL/kg/h)", 10, 45,
-                               int(st.session_state.get("sb_dosis", 30)), key="sb_dosis")
+    st.caption("✏️ Ajusta varios valores y presiona **Calcular** — recalcula una sola vez (más rápido en consulta).")
+    with st.form("form_parametros_globales", border=False):
+        pg1, pg2, pg3, pg4, pg5 = st.columns(5)
+        with pg1:
+            peso = st.number_input("Peso (kg)", 10.0, 300.0,
+                                   float(st.session_state.get("sb_peso", 70.0)), 0.5, key="sb_peso")
+        with pg2:
+            hto = st.number_input("Hematocrito (fracción)", 0.10, 0.60,
+                                  float(st.session_state.get("sb_hto", 0.30)), 0.01,
+                                  format="%.2f", key="sb_hto")
+        with pg3:
+            qb = st.number_input("Qb (mL/min)", 80, 300,
+                                 int(st.session_state.get("sb_qb", 200)), 10, key="sb_qb")
+        with pg4:
+            uf = st.number_input("UF neta (mL/h)", 0, 2000,
+                                 int(st.session_state.get("sb_uf", 100)), 10, key="sb_uf")
+        with pg5:
+            dosis_mlkg = st.slider("Dosis objetivo (mL/kg/h)", 10, 45,
+                                   int(st.session_state.get("sb_dosis", 30)), key="sb_dosis")
 
-    escenarios_catalogo = [
-        "Sepsis / choque séptico", "Choque cardiogénico", "Post infarto",
-        "Neurocrítico / TCE", "Sobrecarga hídrica aislada", "Intoxicación / sobredosis",
-        "Hiponatremia severa", "Hipernatremia", "Hiperamonemia",
-        "Rabdomiólisis", "Síndrome de liberación de citocinas",
-    ]
-    escenarios = st.multiselect("Escenarios clínicos (hasta 3)", escenarios_catalogo,
-                                max_selections=3,
-                                default=st.session_state.get("sb_escenarios", ["Sepsis / choque séptico"]),
-                                key="sb_escenarios")
+        escenarios_catalogo = [
+            "Sepsis / choque séptico", "Choque cardiogénico", "Post infarto",
+            "Neurocrítico / TCE", "Sobrecarga hídrica aislada", "Intoxicación / sobredosis",
+            "Hiponatremia severa", "Hipernatremia", "Hiperamonemia",
+            "Rabdomiólisis", "Síndrome de liberación de citocinas",
+        ]
+        escenarios = st.multiselect("Escenarios clínicos (hasta 3)", escenarios_catalogo,
+                                    max_selections=3,
+                                    default=st.session_state.get("sb_escenarios", ["Sepsis / choque séptico"]),
+                                    key="sb_escenarios")
+        st.form_submit_button("🔄 Calcular", use_container_width=True, type="primary")
+
+    # Tras el submit, leer los valores confirmados de session_state
+    peso = float(st.session_state.get("sb_peso", 70.0))
+    hto = float(st.session_state.get("sb_hto", 0.30))
+    qb = int(st.session_state.get("sb_qb", 200))
+    uf = int(st.session_state.get("sb_uf", 100))
+    dosis_mlkg = int(st.session_state.get("sb_dosis", 30))
+    escenarios = list(st.session_state.get("sb_escenarios", ["Sepsis / choque séptico"]))
     st.divider()
 
     cP1, cP2, cP3 = st.columns(3)
