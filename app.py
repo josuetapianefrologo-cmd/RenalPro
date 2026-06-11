@@ -2922,15 +2922,26 @@ elif nav == "presc":
         st.warning(" | ".join(alertas_filtro))
 
     st.markdown("### Flujos sugeridos")
+    st.caption("📐 Bajo cada valor: fórmula con números sustituidos · referencia por peso.")
     ca, cb, cc, cd = st.columns(4)
     ca.metric("Qb (mL/min)", qb)
+    ca.caption(f"Flujo de sangre programado.\n\n**Mín. sugerido:** {peso * 1.5:.0f}–{peso * 2.5:.0f} mL/min (1.5–2.5 ×{peso:.0f} kg)")
     cb.metric("Qp (mL/min)", int(qp))
+    cb.caption(f"Qp = Qb × (1−Hto) = {qb} × (1−{hto:.2f}) = **{qp:.0f}** mL/min\n\nPlasma que llega al filtro.")
     cc.metric("Qe (mL/h)", int(qe))
+    cc.caption(f"Qe = dosis × peso = {dosis_mlkg} × {peso:.0f} = **{qe:.0f}** mL/h\n\n**KDIGO:** {peso * 20:.0f}–{peso * 25:.0f} mL/h (20–25 mL/kg/h)")
     cd.metric("UF (mL/h)", uf)
+    cd.caption(f"Ultrafiltración neta (retiro al paciente).\n\nBalance = {uf} × 24 = **{uf * 24 / 1000:.1f} L/24h** negativo")
     ce, cf, cg = st.columns(3)
     ce.metric("Qr PRE (mL/h)", qr_pre)
+    ce.caption(f"Predilución (70% del Qr total).\n\nProtege el filtro ↓ FF. Con RCA el citrato la cubre.")
     cf.metric("Qr POST (mL/h)", qr_post)
+    cf.caption(f"Postdilución (30% del Qr total).\n\n⚠️ Sube la FF: {qr_post} de {qr_post + qr_pre:.0f} mL/h totales de reposición.")
     cg.metric("Qd (mL/h)", int(qd))
+    cg.caption(f"Qd = Qe − (Qr_pre + Qr_post + UF)\n\n= {qe:.0f} − ({qr_pre:.0f}+{qr_post:.0f}+{uf}) = **{qd:.0f}** mL/h")
+
+    cff = st.columns(1)[0]
+    cff.caption(f"**FF = (Qr_post + UF) / (Qp·h + Qr_pre)** = ({qr_post:.0f}+{uf}) / ({qp*60:.0f}+{qr_pre:.0f}) = **{ff*100:.1f}%** · Meta <25% para proteger el filtro.")
 
     st.info(comentarios or "—")
     st.caption("Dosis objetivo 20–25 mL/kg/h (KDIGO). FF <25% para proteger el filtro.")
@@ -3022,27 +3033,82 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
 - iCa sistémico **>1.2** → ↓ infusión de calcio
         """)
 
+        # ── AJUSTE DE CITRATO POR iCa POST-FILTRO (monitoreo) ─────────────────
+        st.markdown("##### 🔬 Ajuste de citrato por iCa post-filtro")
+        aj_c1, aj_c2 = st.columns([1, 2])
+        with aj_c1:
+            ica_post_med = st.number_input(
+                "iCa post-filtro medido (mmol/L)", 0.0, 1.0, 0.0, 0.01,
+                format="%.2f", key="presc_ica_post_med",
+                help="Gas del puerto post-filtro. 0 = sin medición aún. Meta 0.25–0.35.")
+        cit_dose_sugerida = cit_dose_presc
+        if ica_post_med > 0:
+            if ica_post_med > 0.35:
+                cit_dose_sugerida = round(min(cit_dose_presc * 1.15, 6.0), 1)
+                aj_c2.warning(
+                    f"iCa post {ica_post_med:.2f} **> 0.35** → anticoagulación insuficiente. "
+                    f"Sugerencia: ↑ citrato {cit_dose_presc:.1f} → **{cit_dose_sugerida:.1f} mmol/L** (+15%).")
+            elif ica_post_med < 0.25:
+                cit_dose_sugerida = round(max(cit_dose_presc * 0.85, 2.0), 1)
+                aj_c2.warning(
+                    f"iCa post {ica_post_med:.2f} **< 0.25** → exceso de citrato (riesgo acumulación). "
+                    f"Sugerencia: ↓ citrato {cit_dose_presc:.1f} → **{cit_dose_sugerida:.1f} mmol/L** (−15%).")
+            else:
+                aj_c2.success(f"iCa post {ica_post_med:.2f} **en rango 0.25–0.35** ✅ — mantener citrato {cit_dose_presc:.1f} mmol/L.")
+            if abs(cit_dose_sugerida - cit_dose_presc) > 0.01:
+                if st.checkbox(f"Aplicar dosis sugerida ({cit_dose_sugerida:.1f} mmol/L)",
+                               key="presc_aplicar_cit_sug"):
+                    cit_dose_presc = cit_dose_sugerida
+
+        # ── MODO: ¿mantener dosis o citrato libre? ────────────────────────────
+        modo_cit = st.radio(
+            "Al cambiar el citrato, ¿qué hago con los demás flujos?",
+            ["Mantener dosis fija (recalcular Qd)", "Citrato libre (mostrar dosis real)"],
+            horizontal=True, key="presc_modo_citrato",
+            help="Dosis fija: Qd compensa para mantener el efluente objetivo. "
+                 "Citrato libre: no toco Qd; la dosis baja/sube con el citrato (como en la cama).")
+
         # Cálculos de citrato
         cit_inf_presc = cit_dose_presc * qb * 60 / cit_conc_presc if cit_conc_presc > 0 else 0
         qr_pre_efectivo = max(0.0, qr_pre - cit_inf_presc)
 
         # ── CONSERVACIÓN DE DOSIS CON CITRATO ────────────────────────────────
-        # El citrato PRE-filtro es predilución y ENTRA al efluente. Para mantener
-        # el efluente en el objetivo (dosis_mlkg × peso) hay que recalcular Qd:
+        # El citrato PRE-filtro es predilución y ENTRA al efluente.
         #   Efluente = citrato + qr_pre_solución + qr_post + Qd + UF
-        # → Qd = Efluente_objetivo − (citrato + qr_pre_efectivo + qr_post + UF)
         qe_objetivo = dosis_mlkg * peso
-        qd_citrato = qe_objetivo - (cit_inf_presc + qr_pre_efectivo + qr_post + uf)
 
-        # Si el citrato (+ post + UF) ya excede el objetivo, no hay margen para Qd.
-        # Avisar: bajar dosis de citrato, bajar Qb o subir dosis objetivo.
-        qd_negativo = qd_citrato < 0
-        qd = max(qd_citrato, 0.0)
+        # Ruta A — MANTENER DOSIS: recalcular Qd para que el efluente = objetivo
+        qd_fija = qe_objetivo - (cit_inf_presc + qr_pre_efectivo + qr_post + uf)
+        qd_fija_neg = qd_fija < 0
+        qd_fija = max(qd_fija, 0.0)
+        efl_fija = cit_inf_presc + qr_pre_efectivo + qr_post + qd_fija + uf
+        dosis_fija = efl_fija / peso if peso > 0 else 0.0
 
-        # Efluente REAL entregado con estos flujos (puede diferir del objetivo
-        # si Qd tocó el piso de 0).
-        efluente_real = cit_inf_presc + qr_pre_efectivo + qr_post + qd + uf
-        dosis_real = efluente_real / peso if peso > 0 else 0.0
+        # Ruta B — CITRATO LIBRE: Qd NO se toca (mantiene el Qd base del escenario)
+        qd_libre = qd          # qd base de flows_and_ff (sin tocar)
+        efl_libre = cit_inf_presc + qr_pre_efectivo + qr_post + qd_libre + uf
+        dosis_libre = efl_libre / peso if peso > 0 else 0.0
+
+        # Comparativa de las dos rutas
+        st.markdown("##### ⚖️ Efecto del citrato en los flujos — comparativa")
+        comp = {
+            "": ["Citrato (mL/h)", "Qd dializante (mL/h)", "Efluente (mL/h)", "Dosis real (mL/kg/h)"],
+            "🔒 Mantener dosis": [f"{cit_inf_presc:.0f}", f"{qd_fija:.0f}", f"{efl_fija:.0f}", f"{dosis_fija:.1f}"],
+            "🔓 Citrato libre":  [f"{cit_inf_presc:.0f}", f"{qd_libre:.0f}", f"{efl_libre:.0f}", f"{dosis_libre:.1f}"],
+        }
+        st.table(comp)
+
+        # Aplicar la ruta elegida
+        if "Mantener" in modo_cit:
+            qd = qd_fija
+            qd_negativo = qd_fija_neg
+            efluente_real = efl_fija
+            dosis_real = dosis_fija
+        else:
+            qd = qd_libre
+            qd_negativo = False
+            efluente_real = efl_libre
+            dosis_real = dosis_libre
 
         # FF efectiva: predilución (citrato + qr_pre) protege el filtro → denominador.
         ff_adj_val = (qr_post + uf) / max(qp_h + qr_pre_efectivo + cit_inf_presc, 1e-9)
@@ -3077,13 +3143,17 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
         fm_c1, fm_c2, fm_c3, fm_c4 = st.columns(4)
         fm_c1.metric("Citrato PRE-filtro (mL/hr)", f"{cit_inf_presc:.0f}",
                      help="Infundir por bomba de citrato en línea arterial, antes del filtro")
+        fm_c1.caption(f"= Qb×60×dosis/[citrato] = {qb}×60×{cit_dose_presc:.1f}/{cit_conc_presc:.0f} = **{cit_inf_presc:.0f}** mL/h")
         fm_c2.metric("Qr PRE solución (mL/hr)", f"{qr_pre_efectivo:.0f}",
                      delta=f"{qr_pre_efectivo - qr_pre:+.0f} vs sin citrato",
                      help=f"Qr_pre base {qr_pre:.0f} − citrato {cit_inf_presc:.0f}")
+        fm_c2.caption(f"= máx(0, Qr_pre − citrato) = máx(0, {qr_pre:.0f}−{cit_inf_presc:.0f}) = **{qr_pre_efectivo:.0f}**")
         fm_c3.metric("Predilución efectiva total (mL/hr)", f"{qr_pre_efectivo + cit_inf_presc:.0f}",
                      help="Solución PRE + citrato (ambos van pre-filtro)")
+        fm_c3.caption(f"= citrato + Qr_pre solución = {cit_inf_presc:.0f}+{qr_pre_efectivo:.0f} = **{qr_pre_efectivo + cit_inf_presc:.0f}**")
         fm_c4.metric("FF efectiva con citrato", f"{ff_adj_pct:.1f}%",
                      delta="✅ OK" if ff_adj_pct <= 25 else "⚠️ ALTA")
+        fm_c4.caption(f"= (Qr_post+UF)/(Qp·h+predil) = ({qr_post:.0f}+{uf})/({qp_h:.0f}+{qr_pre_efectivo + cit_inf_presc:.0f}) = **{ff_adj_pct:.1f}%**")
 
         if qr_pre_efectivo <= 0:
             st.info(f"💡 El citrato ({cit_inf_presc:.0f} mL/hr) cubre **toda** la predilución prevista. "
@@ -3093,19 +3163,75 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
                     f"+ bomba citrato **{cit_inf_presc:.0f} mL/hr** (PRE-filtro). "
                     f"FF efectiva ≈ {ff_adj_pct:.1f}%")
 
-        # Reposición de calcio
-        ca_stored = float(st.session_state.get("rca_calcio_ml_h", 0))
-        qeff_est = float(dosis_mlkg * peso)
-        ca_loss_est = qeff_est * 1.25 / 1000
-        num_v_stored = int(st.session_state.get("ca_viales", 12))
-        prep_v_stored = 250 if st.session_state.get("ca_prep_vol", "250 mL") == "250 mL" else 500
-        ca_conc_est = (num_v_stored * 2.23) / ((prep_v_stored + num_v_stored * 10) / 1000)
-        ca_rate_est = ca_loss_est / (ca_conc_est / 1000) if ca_conc_est > 0 else 0
-        if ca_stored <= 0:
-            st.session_state["rca_calcio_ml_h"] = float(ca_rate_est)
-        st.warning(f"⚠️ **Reposición Ca (sistémica POST-filtro):** "
-                   f"{ca_stored if ca_stored > 0 else ca_rate_est:.0f} mL/hr "
-                   f"de gluconato Ca 10% — Para preparación exacta → pestaña 🧪 Citrato RCA.")
+        # ── REPOSICIÓN DE CALCIO — INTEGRADA (dilución + ajuste por iCa sist.) ──
+        st.markdown("##### 🟡 Reposición de calcio (línea sistémica POST-filtro, SEPARADA)")
+        st.caption("Gluconato de Ca 10% — ámpula 10 mL = 1 g = 2.23 mmol Ca elemental. "
+                   "NUNCA mezclar con la línea de citrato.")
+
+        cal1, cal2, cal3 = st.columns(3)
+        with cal1:
+            ca_ampulas = st.number_input("Nº ámpulas gluconato Ca 10%", 1, 60, 17, 1,
+                                         key="presc_ca_ampulas",
+                                         help="Cada ámpula: 10 mL = 1 g = 2.23 mmol Ca")
+        with cal2:
+            ca_vol_final = st.number_input("Volumen final de la dilución (mL)", 20, 1000, 200, 10,
+                                           key="presc_ca_vol_final",
+                                           help="Volumen TOTAL de la mezcla (calcio + diluyente)")
+        with cal3:
+            ica_sist_med = st.number_input("iCa sistémico medido (mmol/L)", 0.0, 2.0, 0.0, 0.01,
+                                           format="%.2f", key="presc_ica_sist_med",
+                                           help="Gas arterial/venoso periférico. 0 = sin medición. Meta 1.0–1.2.")
+
+        # Concentración real de la dilución
+        ca_mmol_total = ca_ampulas * 2.23
+        ca_conc_mmolL = ca_mmol_total / (ca_vol_final / 1000.0) if ca_vol_final > 0 else 0.0
+
+        # Tasa inicial sugerida por pérdida de Ca en efluente (~1.2 mmol Ca por L de efluente)
+        ca_perdida_mmol_h = efluente_real * 1.2 / 1000.0
+        ca_rate_sugerida = (ca_perdida_mmol_h / (ca_conc_mmolL / 1000.0)) if ca_conc_mmolL > 0 else 0.0
+
+        # Tasa actual (lo que ya está corriendo, si se guardó)
+        ca_rate_actual = float(st.session_state.get("rca_calcio_ml_h", 0) or 0)
+        ca_rate_mostrar = ca_rate_actual if ca_rate_actual > 0 else ca_rate_sugerida
+
+        cd1, cd2, cd3 = st.columns(3)
+        cd1.metric("Concentración dilución", f"{ca_conc_mmolL:.0f} mmol/L",
+                   help=f"{ca_ampulas} ámp × 2.23 mmol = {ca_mmol_total:.1f} mmol en {ca_vol_final} mL")
+        cd2.metric("Bomba calcio sugerida", f"{ca_rate_sugerida:.0f} mL/h",
+                   help=f"Para reponer ~{ca_perdida_mmol_h:.1f} mmol Ca/h perdidos en efluente")
+        cd3.metric("Aporte actual", f"{ca_rate_mostrar * ca_conc_mmolL / 1000:.1f} mmol Ca/h",
+                   help=f"A {ca_rate_mostrar:.0f} mL/h con esta dilución")
+
+        # Ajuste por iCa sistémico medido
+        ca_rate_nueva = ca_rate_mostrar
+        if ica_sist_med > 0:
+            if ica_sist_med < 1.0:
+                ca_rate_nueva = round(ca_rate_mostrar * 1.15)
+                st.warning(f"iCa sistémico {ica_sist_med:.2f} **< 1.0** → hipocalcemia. "
+                           f"Sugerencia: ↑ bomba calcio {ca_rate_mostrar:.0f} → **{ca_rate_nueva:.0f} mL/h** (+15%). "
+                           f"Recontrolar iCa en 1 h.")
+            elif ica_sist_med > 1.2:
+                ca_rate_nueva = round(ca_rate_mostrar * 0.85)
+                st.warning(f"iCa sistémico {ica_sist_med:.2f} **> 1.2** → exceso. "
+                           f"Sugerencia: ↓ bomba calcio {ca_rate_mostrar:.0f} → **{ca_rate_nueva:.0f} mL/h** (−15%).")
+            else:
+                st.success(f"iCa sistémico {ica_sist_med:.2f} **en rango 1.0–1.2** ✅ — mantener {ca_rate_mostrar:.0f} mL/h.")
+
+        # Campo de confirmación: el médico fija la tasa que pasa a resumen/PDF
+        ca_rate_final = st.number_input(
+            "Bomba de calcio a programar (mL/h)", 0.0, 200.0,
+            float(round(ca_rate_nueva)), 1.0, key="presc_ca_rate_final",
+            help="Valor que se guarda en la prescripción (resumen e impresión).")
+        st.session_state["rca_calcio_ml_h"] = float(ca_rate_final)
+        st.session_state["rca_calcio_dilucion"] = {
+            "ampulas": int(ca_ampulas), "vol_final_ml": int(ca_vol_final),
+            "conc_mmolL": float(ca_conc_mmolL),
+            "aporte_mmol_h": float(ca_rate_final * ca_conc_mmolL / 1000)}
+
+        st.info(f"🟡 **Calcio a programar:** {ca_rate_final:.0f} mL/h de la dilución "
+                f"{ca_ampulas} ámp/{ca_vol_final} mL ({ca_conc_mmolL:.0f} mmol/L) = "
+                f"**{ca_rate_final * ca_conc_mmolL / 1000:.1f} mmol Ca/h** — línea sistémica SEPARADA, "
+                f"ajustar por iCa sistémico (meta 1.0–1.2).")
 
         # ── PRESCRIPCIÓN INTEGRADA COMPLETA ─────────────────────────────────────
         st.markdown("---")
@@ -3117,7 +3243,7 @@ Esta es la variable que **configuras** en la máquina ajustando el flujo de la b
         # Cálculo integrado
         efluente_total_int = efluente_real                # efluente REAL entregado
         dosis_real_int     = dosis_real                   # mL/kg/h real
-        ca_display_int     = ca_stored if ca_stored > 0 else ca_rate_est
+        ca_display_int     = ca_rate_final
         cit_pct_efluente   = (cit_inf_presc / efluente_total_int * 100) if efluente_total_int > 0 else 0
 
         # ── Métricas de verificación rápida ──────────────────────────────────
@@ -3780,7 +3906,7 @@ elif nav == "na":
                                     0.0, 500.0, float(st.session_state.get("cit_na_mmol_L", 408.0)),
                                     1.0, key="na_in_cit",
                                     help="Citrato trisódico 4%: ~408 mEq/L")
-        cit_inf_na = st.number_input("Tasa infusión citrato (mL/hr)", 0.0, 500.0,
+        cit_inf_na = st.number_input("Tasa infusión citrato (mL/hr)", 0.0, 3000.0,
                                      float(st.session_state.get("rca_citrato_ml_h", 0.0)),
                                      1.0, key="cit_inf_na")
     with nat3:
