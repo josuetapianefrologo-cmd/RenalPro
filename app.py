@@ -12,6 +12,7 @@
 # ============================================================
 
 import streamlit as st
+import streamlit.components.v1 as components
 import math
 import hashlib
 import json as _json
@@ -3639,6 +3640,150 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
     elif not _can_save():
         st.info("🔒 [Pro] Guarda prescripciones y accede a tu historial. "
                 "[Activar Pro →](/?nav=premium)")
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SIMULADOR PrisMax INTERACTIVO (componente HTML/SVG — sin reruns)
+    # ══════════════════════════════════════════════════════════════════════════
+    st.divider()
+    with st.expander("🖥️ Simulador PrisMax — pantalla interactiva", expanded=False):
+        st.caption("Toca cada bomba y mueve su flujo. El circuito se ilumina y "
+                   "recalcula efluente, dosis y FF en vivo — como en la máquina real. "
+                   "Arranca con los valores de tu prescripción actual.")
+
+        # Valores iniciales tomados de la prescripción real (con RCA si está activo)
+        _sim_cit = float(st.session_state.get("rca_citrato_ml_h", 0) or 0)
+        _sim_qb = int(st.session_state.get("sb_qb", qb))
+        _sim_uf = int(st.session_state.get("sb_uf", uf))
+        _sim_peso = float(st.session_state.get("sb_peso", peso))
+        try:
+            _sim_qd = int(qd)
+            _sim_qrpost = int(qr_post)
+            _sim_qrpre = int(qr_pre if _sim_cit <= 0 else 0)
+        except Exception:
+            _sim_qd, _sim_qrpost, _sim_qrpre = 1000, 200, 0
+
+        _prismax_html = """
+<div id="pmx-root" style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+     background:#0b1f3a;border-radius:14px;padding:14px;color:#fff;max-width:920px;margin:auto;">
+  <div style="display:flex;justify-content:space-between;align-items:center;
+       background:#0a1730;padding:8px 14px;border-radius:8px;margin-bottom:10px;">
+    <div><span style="color:#39d98a;font-weight:700;font-size:18px;">CVVHDF</span>
+         <span style="color:#9fb3c8;font-size:12px;margin-left:6px;">RCA</span></div>
+    <div style="color:#9fb3c8;font-size:12px;">Simulador educativo · TRRC360</div>
+  </div>
+
+  <!-- Circuito SVG -->
+  <svg viewBox="0 0 900 230" style="width:100%;height:auto;background:#0e2547;border-radius:8px;">
+    <!-- línea sangre arterial (roja) -->
+    <line id="ln-art" x1="120" y1="60" x2="430" y2="60" stroke="#e23b4e" stroke-width="5"/>
+    <!-- filtro -->
+    <rect x="430" y="35" width="40" height="120" rx="6" fill="#7da7d9" stroke="#fff" stroke-width="1.5"/>
+    <text x="450" y="170" fill="#cfe0f5" font-size="11" text-anchor="middle">Filtro</text>
+    <!-- línea retorno (azul) -->
+    <line id="ln-ret" x1="470" y1="60" x2="780" y2="60" stroke="#3b82f6" stroke-width="5"/>
+    <!-- citrato (PRE) -->
+    <line id="ln-cit" x1="180" y1="120" x2="180" y2="62" stroke="#9aa7ff" stroke-width="4"/>
+    <circle cx="180" cy="60" r="6" fill="#9aa7ff"/>
+    <!-- efluente (amarillo, baja del filtro) -->
+    <line id="ln-eff" x1="450" y1="155" x2="450" y2="205" stroke="#f2c14e" stroke-width="5"/>
+    <!-- dializante (verde, entra al filtro) -->
+    <line id="ln-dia" x1="520" y1="200" x2="520" y2="120" stroke="#39d98a" stroke-width="4"/>
+    <line id="ln-dia2" x1="520" y1="120" x2="470" y2="95" stroke="#39d98a" stroke-width="4"/>
+    <!-- sustitución post (magenta) -->
+    <line id="ln-sus" x1="680" y1="120" x2="680" y2="62" stroke="#d36ad3" stroke-width="4"/>
+    <circle cx="680" cy="60" r="6" fill="#d36ad3"/>
+    <text x="120" y="50" fill="#f0a0aa" font-size="11">Acceso</text>
+    <text x="760" y="50" fill="#9ec5ff" font-size="11">Retorno</text>
+  </svg>
+
+  <!-- Controles de bombas -->
+  <div id="pmx-pumps" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+       gap:8px;margin-top:12px;"></div>
+
+  <!-- Resultados -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:12px;">
+    <div style="background:#0a1730;border-radius:8px;padding:8px;text-align:center;">
+      <div style="color:#9fb3c8;font-size:11px;">EFLUENTE</div>
+      <div id="r-eff" style="font-size:20px;font-weight:700;">—</div>
+      <div style="color:#9fb3c8;font-size:10px;">mL/h</div></div>
+    <div style="background:#0a1730;border-radius:8px;padding:8px;text-align:center;">
+      <div style="color:#9fb3c8;font-size:11px;">DOSIS</div>
+      <div id="r-dose" style="font-size:20px;font-weight:700;">—</div>
+      <div style="color:#9fb3c8;font-size:10px;">mL/kg/h · KDIGO 20-25</div></div>
+    <div style="background:#0a1730;border-radius:8px;padding:8px;text-align:center;">
+      <div style="color:#9fb3c8;font-size:11px;">FF EFECTIVA</div>
+      <div id="r-ff" style="font-size:20px;font-weight:700;">—</div>
+      <div style="color:#9fb3c8;font-size:10px;">meta &lt;25%</div></div>
+  </div>
+  <div id="pmx-alert" style="margin-top:8px;font-size:12px;text-align:center;min-height:18px;"></div>
+</div>
+
+<script>
+(function(){
+  var peso = __PESO__, qb = __QB__, hto = __HTO__;
+  var P = {
+    cit:  {label:"💜 Citrato PRE",  color:"#9aa7ff", val:__CIT__,  min:0, max:3000, step:10},
+    qb:   {label:"🩸 Flujo sangre", color:"#e23b4e", val:qb,       min:50, max:300, step:10, unit:"mL/min"},
+    dia:  {label:"💚 Dializante",   color:"#39d98a", val:__QD__,   min:0, max:4000, step:10},
+    sus:  {label:"🟣 Sustitución",  color:"#d36ad3", val:__QRPOST__,min:0, max:3000, step:10},
+    eff:  {label:"💛 UF neta",      color:"#f2c14e", val:__UF__,   min:0, max:1000, step:10}
+  };
+  var cont = document.getElementById("pmx-pumps");
+  Object.keys(P).forEach(function(k){
+    var p = P[k];
+    var box = document.createElement("div");
+    box.style.cssText="background:#0a1730;border-radius:8px;padding:8px;border-left:4px solid "+p.color+";";
+    box.innerHTML =
+      '<div style="font-size:12px;color:#cfe0f5;">'+p.label+'</div>'+
+      '<div style="font-size:18px;font-weight:700;" id="v-'+k+'">'+p.val+'</div>'+
+      '<div style="font-size:10px;color:#9fb3c8;">'+(p.unit||"mL/h")+'</div>'+
+      '<input type="range" min="'+p.min+'" max="'+p.max+'" step="'+p.step+'" value="'+p.val+'" '+
+      'style="width:100%;accent-color:'+p.color+';" id="s-'+k+'">';
+    cont.appendChild(box);
+    box.querySelector("#s-"+k).addEventListener("input", function(e){
+      P[k].val = parseFloat(e.target.value);
+      document.getElementById("v-"+k).textContent = P[k].val;
+      recalc();
+    });
+  });
+  function setStroke(id,val,base){var el=document.getElementById(id);
+    if(el){el.setAttribute("stroke-width", Math.max(2, Math.min(10, 2+val/base)) );}}
+  function recalc(){
+    var qp_h = P.qb.val*(1-hto)*60;
+    var eff = P.cit.val + P.sus.val + P.dia.val + P.eff.val;
+    var dose = eff/peso;
+    var ff = (P.sus.val + P.eff.val) / Math.max(qp_h + P.cit.val, 1) * 100;
+    document.getElementById("r-eff").textContent = Math.round(eff);
+    document.getElementById("r-dose").textContent = dose.toFixed(1);
+    document.getElementById("r-ff").textContent = ff.toFixed(1)+"%";
+    document.getElementById("r-dose").style.color = (dose>=20&&dose<=25)?"#39d98a":(dose<20?"#f2c14e":"#e88");
+    document.getElementById("r-ff").style.color = (ff<25)?"#39d98a":"#e23b4e";
+    // colorear líneas según flujo
+    setStroke("ln-cit",P.cit.val,400); setStroke("ln-dia",P.dia.val,400);
+    setStroke("ln-dia2",P.dia.val,400); setStroke("ln-sus",P.sus.val,400);
+    setStroke("ln-eff",eff,400); setStroke("ln-art",P.qb.val,30); setStroke("ln-ret",P.qb.val,30);
+    var a=document.getElementById("pmx-alert"); var msgs=[];
+    if(ff>=25) msgs.push("⚠️ FF ≥25% — riesgo de coagulación del filtro");
+    if(dose>30) msgs.push("⚠️ Dosis alta ("+dose.toFixed(0)+") — pérdidas de fosfato/antibióticos");
+    if(dose<15) msgs.push("⚠️ Dosis baja — aclaramiento insuficiente");
+    a.innerHTML = msgs.length? '<span style="color:#ffd27a;">'+msgs.join(" · ")+'</span>'
+                             : '<span style="color:#39d98a;">✅ Parámetros dentro de rango</span>';
+  }
+  recalc();
+})();
+</script>
+"""
+        _prismax_html = (_prismax_html
+                         .replace("__PESO__", str(_sim_peso))
+                         .replace("__QB__", str(_sim_qb))
+                         .replace("__HTO__", str(hto))
+                         .replace("__CIT__", str(int(_sim_cit)))
+                         .replace("__QD__", str(_sim_qd))
+                         .replace("__QRPOST__", str(_sim_qrpost))
+                         .replace("__UF__", str(_sim_uf)))
+        components.html(_prismax_html, height=560, scrolling=False)
+        st.caption("💡 Educativo. La prescripción real para programar es la de arriba; "
+                   "este simulador ayuda a entender cómo cada bomba afecta efluente, dosis y FF.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2: CITRATO REGIONAL (RCA) — COMPLETO
