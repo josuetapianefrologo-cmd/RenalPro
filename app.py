@@ -3664,110 +3664,163 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
 
         _prismax_html = """
 <div id="pmx-root" style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;
-     background:#0b1f3a;border-radius:14px;padding:14px;color:#fff;max-width:920px;margin:auto;">
+     background:#0b1f3a;border-radius:14px;padding:14px;color:#fff;max-width:960px;margin:auto;">
   <div style="display:flex;justify-content:space-between;align-items:center;
        background:#0a1730;padding:8px 14px;border-radius:8px;margin-bottom:10px;">
     <div><span style="color:#39d98a;font-weight:700;font-size:18px;">CVVHDF</span>
-         <span style="color:#9fb3c8;font-size:12px;margin-left:6px;">RCA</span></div>
-    <div style="color:#9fb3c8;font-size:12px;">Simulador educativo · TRRC360</div>
+         <span style="color:#9fb3c8;font-size:12px;margin-left:6px;">RCA · simulador con presiones</span></div>
+    <div id="pmx-life" style="color:#9fb3c8;font-size:12px;">Vida set: 72:00 h</div>
   </div>
 
-  <!-- Circuito SVG -->
+  <!-- Escenarios -->
+  <div style="margin-bottom:10px;">
+    <span style="font-size:12px;color:#9fb3c8;">Escenario:</span>
+    <select id="pmx-scn" style="background:#0a1730;color:#fff;border:1px solid #2a4a7a;
+        border-radius:6px;padding:4px 8px;font-size:12px;margin-left:6px;">
+      <option value="normal">Normal</option>
+      <option value="coag">Filtro coagulándose (PTM/ΔP altos)</option>
+      <option value="acceso">Acceso malo (catéter colapsa)</option>
+      <option value="retorno">Retorno obstruido (acodamiento)</option>
+      <option value="viejo">Set con 60 h de uso</option>
+    </select>
+  </div>
+
   <svg viewBox="0 0 900 230" style="width:100%;height:auto;background:#0e2547;border-radius:8px;">
-    <!-- línea sangre arterial (roja) -->
     <line id="ln-art" x1="120" y1="60" x2="430" y2="60" stroke="#e23b4e" stroke-width="5"/>
-    <!-- filtro -->
-    <rect x="430" y="35" width="40" height="120" rx="6" fill="#7da7d9" stroke="#fff" stroke-width="1.5"/>
+    <rect id="filtro" x="430" y="35" width="40" height="120" rx="6" fill="#7da7d9" stroke="#fff" stroke-width="1.5"/>
     <text x="450" y="170" fill="#cfe0f5" font-size="11" text-anchor="middle">Filtro</text>
-    <!-- línea retorno (azul) -->
     <line id="ln-ret" x1="470" y1="60" x2="780" y2="60" stroke="#3b82f6" stroke-width="5"/>
-    <!-- citrato (PRE) -->
     <line id="ln-cit" x1="180" y1="120" x2="180" y2="62" stroke="#9aa7ff" stroke-width="4"/>
     <circle cx="180" cy="60" r="6" fill="#9aa7ff"/>
-    <!-- efluente (amarillo, baja del filtro) -->
     <line id="ln-eff" x1="450" y1="155" x2="450" y2="205" stroke="#f2c14e" stroke-width="5"/>
-    <!-- dializante (verde, entra al filtro) -->
     <line id="ln-dia" x1="520" y1="200" x2="520" y2="120" stroke="#39d98a" stroke-width="4"/>
     <line id="ln-dia2" x1="520" y1="120" x2="470" y2="95" stroke="#39d98a" stroke-width="4"/>
-    <!-- sustitución post (magenta) -->
     <line id="ln-sus" x1="680" y1="120" x2="680" y2="62" stroke="#d36ad3" stroke-width="4"/>
     <circle cx="680" cy="60" r="6" fill="#d36ad3"/>
     <text x="120" y="50" fill="#f0a0aa" font-size="11">Acceso</text>
     <text x="760" y="50" fill="#9ec5ff" font-size="11">Retorno</text>
   </svg>
 
-  <!-- Controles de bombas -->
+  <!-- Barras de presión estilo PrisMax -->
+  <div id="pmx-press" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;"></div>
+
   <div id="pmx-pumps" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
        gap:8px;margin-top:12px;"></div>
 
-  <!-- Resultados -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:12px;">
     <div style="background:#0a1730;border-radius:8px;padding:8px;text-align:center;">
       <div style="color:#9fb3c8;font-size:11px;">EFLUENTE</div>
-      <div id="r-eff" style="font-size:20px;font-weight:700;">—</div>
-      <div style="color:#9fb3c8;font-size:10px;">mL/h</div></div>
+      <div id="r-eff" style="font-size:20px;font-weight:700;">—</div><div style="color:#9fb3c8;font-size:10px;">mL/h</div></div>
     <div style="background:#0a1730;border-radius:8px;padding:8px;text-align:center;">
       <div style="color:#9fb3c8;font-size:11px;">DOSIS</div>
-      <div id="r-dose" style="font-size:20px;font-weight:700;">—</div>
-      <div style="color:#9fb3c8;font-size:10px;">mL/kg/h · KDIGO 20-25</div></div>
+      <div id="r-dose" style="font-size:20px;font-weight:700;">—</div><div style="color:#9fb3c8;font-size:10px;">mL/kg/h</div></div>
     <div style="background:#0a1730;border-radius:8px;padding:8px;text-align:center;">
       <div style="color:#9fb3c8;font-size:11px;">FF EFECTIVA</div>
-      <div id="r-ff" style="font-size:20px;font-weight:700;">—</div>
-      <div style="color:#9fb3c8;font-size:10px;">meta &lt;25%</div></div>
+      <div id="r-ff" style="font-size:20px;font-weight:700;">—</div><div style="color:#9fb3c8;font-size:10px;">meta &lt;25%</div></div>
   </div>
-  <div id="pmx-alert" style="margin-top:8px;font-size:12px;text-align:center;min-height:18px;"></div>
+  <div id="pmx-alarms" style="margin-top:10px;font-size:13px;"></div>
 </div>
 
 <script>
 (function(){
-  var peso = __PESO__, qb = __QB__, hto = __HTO__;
-  var P = {
-    cit:  {label:"💜 Citrato PRE",  color:"#9aa7ff", val:__CIT__,  min:0, max:3000, step:10},
-    qb:   {label:"🩸 Flujo sangre", color:"#e23b4e", val:qb,       min:50, max:300, step:10, unit:"mL/min"},
-    dia:  {label:"💚 Dializante",   color:"#39d98a", val:__QD__,   min:0, max:4000, step:10},
-    sus:  {label:"🟣 Sustitución",  color:"#d36ad3", val:__QRPOST__,min:0, max:3000, step:10},
-    eff:  {label:"💛 UF neta",      color:"#f2c14e", val:__UF__,   min:0, max:1000, step:10}
+  var peso=__PESO__, hto=__HTO__;
+  var P={
+    cit:{label:"💜 Citrato PRE",color:"#9aa7ff",val:__CIT__,min:0,max:3000,step:10},
+    qb:{label:"🩸 Flujo sangre",color:"#e23b4e",val:__QB__,min:50,max:300,step:10,unit:"mL/min"},
+    dia:{label:"💚 Dializante",color:"#39d98a",val:__QD__,min:0,max:4000,step:10},
+    sus:{label:"🟣 Sustitución",color:"#d36ad3",val:__QRPOST__,min:0,max:3000,step:10},
+    eff:{label:"💛 UF neta",color:"#f2c14e",val:__UF__,min:0,max:1000,step:10}
   };
-  var cont = document.getElementById("pmx-pumps");
+  // factores de escenario: [k_acceso, k_retorno, coag(0-1), horas]
+  var SCN={normal:[1,1,0,2], coag:[1,1.1,0.7,20], acceso:[2.4,1,0.1,10],
+           retorno:[1,2.6,0.15,10], viejo:[1.2,1.2,0.45,60]};
+  var scn="normal";
+  document.getElementById("pmx-scn").addEventListener("change",function(e){scn=e.target.value;recalc();});
+
+  var cont=document.getElementById("pmx-pumps");
   Object.keys(P).forEach(function(k){
-    var p = P[k];
-    var box = document.createElement("div");
+    var p=P[k];var box=document.createElement("div");
     box.style.cssText="background:#0a1730;border-radius:8px;padding:8px;border-left:4px solid "+p.color+";";
-    box.innerHTML =
-      '<div style="font-size:12px;color:#cfe0f5;">'+p.label+'</div>'+
+    box.innerHTML='<div style="font-size:12px;color:#cfe0f5;">'+p.label+'</div>'+
       '<div style="font-size:18px;font-weight:700;" id="v-'+k+'">'+p.val+'</div>'+
       '<div style="font-size:10px;color:#9fb3c8;">'+(p.unit||"mL/h")+'</div>'+
       '<input type="range" min="'+p.min+'" max="'+p.max+'" step="'+p.step+'" value="'+p.val+'" '+
       'style="width:100%;accent-color:'+p.color+';" id="s-'+k+'">';
     cont.appendChild(box);
-    box.querySelector("#s-"+k).addEventListener("input", function(e){
-      P[k].val = parseFloat(e.target.value);
-      document.getElementById("v-"+k).textContent = P[k].val;
-      recalc();
-    });
+    box.querySelector("#s-"+k).addEventListener("input",function(e){
+      P[k].val=parseFloat(e.target.value);document.getElementById("v-"+k).textContent=P[k].val;recalc();});
   });
+
+  function bar(id,label,val,unit,lo,hi,warnLo,warnHi){
+    var ok = val>=warnLo && val<=warnHi;
+    var color = ok? "#39d98a" : "#e23b4e";
+    var pct = Math.max(2, Math.min(100, (val-lo)/(hi-lo)*100));
+    return '<div style="background:#0a1730;border-radius:8px;padding:8px;">'+
+      '<div style="font-size:11px;color:#9fb3c8;">'+label+'</div>'+
+      '<div style="font-size:18px;font-weight:700;color:'+color+';">'+Math.round(val)+' <span style="font-size:10px;color:#9fb3c8;">'+unit+'</span></div>'+
+      '<div style="height:6px;background:#13294d;border-radius:4px;margin-top:4px;">'+
+      '<div style="height:6px;width:'+pct+'%;background:'+color+';border-radius:4px;"></div></div></div>';
+  }
+
   function setStroke(id,val,base){var el=document.getElementById(id);
-    if(el){el.setAttribute("stroke-width", Math.max(2, Math.min(10, 2+val/base)) );}}
+    if(el)el.setAttribute("stroke-width",Math.max(2,Math.min(11,2+val/base)));}
+
   function recalc(){
-    var qp_h = P.qb.val*(1-hto)*60;
-    var eff = P.cit.val + P.sus.val + P.dia.val + P.eff.val;
-    var dose = eff/peso;
-    var ff = (P.sus.val + P.eff.val) / Math.max(qp_h + P.cit.val, 1) * 100;
-    document.getElementById("r-eff").textContent = Math.round(eff);
-    document.getElementById("r-dose").textContent = dose.toFixed(1);
-    document.getElementById("r-ff").textContent = ff.toFixed(1)+"%";
-    document.getElementById("r-dose").style.color = (dose>=20&&dose<=25)?"#39d98a":(dose<20?"#f2c14e":"#e88");
-    document.getElementById("r-ff").style.color = (ff<25)?"#39d98a":"#e23b4e";
-    // colorear líneas según flujo
-    setStroke("ln-cit",P.cit.val,400); setStroke("ln-dia",P.dia.val,400);
-    setStroke("ln-dia2",P.dia.val,400); setStroke("ln-sus",P.sus.val,400);
-    setStroke("ln-eff",eff,400); setStroke("ln-art",P.qb.val,30); setStroke("ln-ret",P.qb.val,30);
-    var a=document.getElementById("pmx-alert"); var msgs=[];
-    if(ff>=25) msgs.push("⚠️ FF ≥25% — riesgo de coagulación del filtro");
-    if(dose>30) msgs.push("⚠️ Dosis alta ("+dose.toFixed(0)+") — pérdidas de fosfato/antibióticos");
-    if(dose<15) msgs.push("⚠️ Dosis baja — aclaramiento insuficiente");
-    a.innerHTML = msgs.length? '<span style="color:#ffd27a;">'+msgs.join(" · ")+'</span>'
-                             : '<span style="color:#39d98a;">✅ Parámetros dentro de rango</span>';
+    var s=SCN[scn], kAcc=s[0], kRet=s[1], coag=s[2], horas=s[3];
+    var qp_h=P.qb.val*(1-hto)*60;
+    var eff=P.cit.val+P.sus.val+P.dia.val+P.eff.val;
+    var dose=eff/peso;
+    // FF sube con la coagulación (el filtro pierde área efectiva)
+    var ff=(P.sus.val+P.eff.val)/Math.max(qp_h+P.cit.val,1)*100*(1+coag*0.8);
+
+    // ── MODELO DE PRESIONES (educativo) ──
+    // Acceso (negativa): -(Qb * k) ; peor con catéter malo
+    var p_acc = -(P.qb.val*0.95)*kAcc;
+    // Retorno (positiva): Qb + reposición empujan; obstrucción multiplica
+    var p_ret = (P.qb.val*1.1 + P.sus.val*0.05)*kRet;
+    // PTM: sube con efluente y con coagulación del filtro
+    var ptm = (eff*0.06 + P.qb.val*0.4)*(1+coag*1.6);
+    // ΔP filtro: sube con Qb y coagulación
+    var dp = (P.qb.val*0.5 + 20)*(1+coag*1.8);
+
+    document.getElementById("r-eff").textContent=Math.round(eff);
+    document.getElementById("r-dose").textContent=dose.toFixed(1);
+    document.getElementById("r-ff").textContent=ff.toFixed(1)+"%";
+    document.getElementById("r-dose").style.color=(dose>=20&&dose<=25)?"#39d98a":(dose<20?"#f2c14e":"#e88");
+    document.getElementById("r-ff").style.color=(ff<25)?"#39d98a":"#e23b4e";
+
+    document.getElementById("pmx-press").innerHTML =
+      bar("a","Acceso",p_acc,"mmHg",-350,0,-250,0)+
+      bar("r","Retorno",p_ret,"mmHg",0,400,0,350)+
+      bar("p","PTM",ptm,"mmHg",0,500,0,300)+
+      bar("d","ΔP filtro",dp,"mmHg",0,500,0,250);
+
+    var life=Math.max(0,72-horas);
+    document.getElementById("pmx-life").textContent="Vida set: "+life+":00 h"+(coag>0.6?" ⚠️":"");
+
+    setStroke("ln-cit",P.cit.val,400);setStroke("ln-dia",P.dia.val,400);
+    setStroke("ln-dia2",P.dia.val,400);setStroke("ln-sus",P.sus.val,400);
+    setStroke("ln-eff",eff,400);setStroke("ln-art",P.qb.val,30);setStroke("ln-ret",P.qb.val,30);
+    document.getElementById("filtro").setAttribute("fill", coag>0.5?"#b06a6a":(coag>0.25?"#b09a6a":"#7da7d9"));
+
+    // ── ALARMAS (umbrales tipo PrisMax) ──
+    var al=[];
+    if(p_acc < -250) al.push(["🔴 PRESIÓN DE ACCESO MUY NEGATIVA ("+Math.round(p_acc)+")","Catéter colapsa / Qb alto. Baja Qb o revisa acceso."]);
+    if(p_ret > 350) al.push(["🔴 PRESIÓN DE RETORNO ALTA ("+Math.round(p_ret)+")","Acodamiento/coágulo en retorno. Revisa línea."]);
+    if(ptm > 300) al.push(["🔴 PTM ALTA ("+Math.round(ptm)+")","Filtro coagulándose. Considera cambio de set."]);
+    if(ptm > 200 && ptm <= 300) al.push(["🟠 PTM en ascenso ("+Math.round(ptm)+")","Vigila tendencia; el filtro empieza a saturarse."]);
+    if(dp > 250) al.push(["🔴 ΔP FILTRO ALTA ("+Math.round(dp)+")","Caída de presión elevada → coagulación. Cambio probable."]);
+    if(ff >= 25) al.push(["🔴 FF ≥25% ("+ff.toFixed(0)+"%)","Hemoconcentra el filtro. Sube predilución o baja Qr_post."]);
+    if(dose > 30) al.push(["🟠 Dosis alta ("+dose.toFixed(0)+")","Pérdidas de fosfato/antibióticos sin beneficio."]);
+    if(dose < 15) al.push(["🟠 Dosis baja ("+dose.toFixed(0)+")","Aclaramiento insuficiente."]);
+    if(life<=12) al.push(["🟠 Vida del set baja ("+life+" h)","Prepara cambio programado."]);
+
+    var box=document.getElementById("pmx-alarms");
+    if(al.length===0){box.innerHTML='<div style="background:#0d3320;border:1px solid #1f7a4d;border-radius:8px;padding:10px;color:#7fe3a8;">✅ Sin alarmas — circuito estable</div>';}
+    else{box.innerHTML=al.map(function(a){
+      return '<div style="background:#3a1620;border:1px solid #7a2a3a;border-radius:8px;padding:8px 10px;margin-bottom:6px;">'+
+        '<div style="font-weight:700;color:#ff9aa9;">'+a[0]+'</div>'+
+        '<div style="font-size:12px;color:#e0b3bb;">'+a[1]+'</div></div>';}).join("");}
   }
   recalc();
 })();
@@ -3781,7 +3834,7 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
                          .replace("__QD__", str(_sim_qd))
                          .replace("__QRPOST__", str(_sim_qrpost))
                          .replace("__UF__", str(_sim_uf)))
-        components.html(_prismax_html, height=560, scrolling=False)
+        components.html(_prismax_html, height=820, scrolling=False)
         st.caption("💡 Educativo. La prescripción real para programar es la de arriba; "
                    "este simulador ayuda a entender cómo cada bomba afecta efluente, dosis y FF.")
 
