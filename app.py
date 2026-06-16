@@ -59,6 +59,12 @@ try:
 except ImportError:
     _CONSULTA_MODULE = False
 
+try:
+    from renalpro_gamagrama_renal import render as render_gamagrama
+    _GAMAGRAMA_MODULE = True
+except ImportError:
+    _GAMAGRAMA_MODULE = False
+
 # ── Paquete clinical_data: datos clínicos en JSON (KDIGO, protocolos) ─────────
 try:
     from clinical_data import (get_meta as _cd_meta,
@@ -2217,6 +2223,7 @@ with st.sidebar:
 
     _navsec("NEFROLOGÍA")
     _navbtn("🔢 Calculadoras Nefro", "nefro")
+    _navbtn("🔬 Gamagrama Renal", "gamagrama")
     _navbtn("🫀 Síndrome Cardiorrenal", "scr")
     _navbtn("🦴 ERC-MBD", "erc_mbd")
     _navbtn("🩸 HTA en ERC", "hta_erc")
@@ -24986,6 +24993,14 @@ elif nav == "aprendizaje":
                             if est.get("relevancia"):
                                 st.caption(f"🎯 {est['relevancia']}")
                             st.markdown("---")
+
+
+elif nav == "gamagrama":
+    if _GAMAGRAMA_MODULE:
+        render_gamagrama()
+    else:
+        st.warning("⚠️ Módulo de Gamagrama Renal no disponible. Verifica que "
+                   "`renalpro_gamagrama_renal.py` esté en el repositorio.")
 
 
 st.divider()
