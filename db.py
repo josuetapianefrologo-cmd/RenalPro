@@ -7,8 +7,18 @@ import psycopg2
 import psycopg2.extras
 import bcrypt
 import json
+import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
+
+# ── MODO PRIVACIDAD (LFPDPPP) ─────────────────────────────────────────────────
+# Cuando está activo (por defecto), NINGÚN dato identificable de pacientes se
+# almacena ni se recupera: las funciones de expediente, registros clínicos y
+# cohorte de trasplante se vuelven no-op. La generación de recetas en PDF sigue
+# funcionando (captura libre del nombre en sesión, sin persistencia).
+# Para reactivar el almacenamiento: variable de entorno RENALPRO_PRIVACY_MODE=0
+PRIVACY_MODE = os.environ.get("RENALPRO_PRIVACY_MODE", "1") not in ("0", "false", "False", "")
+
 
 # ── CONEXIÓN ──────────────────────────────────────────────────────────────────
 @st.cache_resource
@@ -488,6 +498,8 @@ def get_all_users() -> List[Dict]:
 # ── PRESCRIPCIONES ────────────────────────────────────────────────────────────
 # ── PACIENTES ──────────────────────────────────────────────────────────────────
 def create_patient(user_id: int, data: Dict) -> Optional[int]:
+    if PRIVACY_MODE:
+        return None
     """Crea un nuevo paciente. Retorna el ID o None."""
     conn = get_conn()
     if not conn:
@@ -519,6 +531,8 @@ def create_patient(user_id: int, data: Dict) -> Optional[int]:
         return None
 
 def get_patients(user_id: int) -> List[Dict]:
+    if PRIVACY_MODE:
+        return []
     conn = get_conn()
     if not conn:
         return []
@@ -536,6 +550,8 @@ def get_patients(user_id: int) -> List[Dict]:
         return []
 
 def get_patient(patient_id: int, user_id: int) -> Optional[Dict]:
+    if PRIVACY_MODE:
+        return None
     conn = get_conn()
     if not conn:
         return None
@@ -549,6 +565,8 @@ def get_patient(patient_id: int, user_id: int) -> Optional[Dict]:
         return None
 
 def update_patient(patient_id: int, user_id: int, data: Dict) -> bool:
+    if PRIVACY_MODE:
+        return False
     conn = get_conn()
     if not conn:
         return False
@@ -576,6 +594,8 @@ def update_patient(patient_id: int, user_id: int, data: Dict) -> bool:
         return False
 
 def delete_patient(patient_id: int, user_id: int) -> bool:
+    if PRIVACY_MODE:
+        return True
     conn = get_conn()
     if not conn:
         return False
@@ -595,6 +615,8 @@ def delete_patient(patient_id: int, user_id: int) -> bool:
 
 # ── REGISTROS CLÍNICOS ─────────────────────────────────────────────────────────
 def add_clinical_record(patient_id: int, user_id: int, data: Dict) -> Optional[int]:
+    if PRIVACY_MODE:
+        return None
     """Agrega un registro clínico vinculado al paciente."""
     conn = get_conn()
     if not conn:
@@ -628,6 +650,8 @@ def add_clinical_record(patient_id: int, user_id: int, data: Dict) -> Optional[i
         return None
 
 def get_clinical_records(patient_id: int) -> List[Dict]:
+    if PRIVACY_MODE:
+        return []
     conn = get_conn()
     if not conn:
         return []
@@ -645,6 +669,8 @@ def get_clinical_records(patient_id: int) -> List[Dict]:
         return []
 
 def delete_clinical_record(record_id: int, user_id: int) -> bool:
+    if PRIVACY_MODE:
+        return True
     conn = get_conn()
     if not conn:
         return False
@@ -1184,6 +1210,8 @@ TR_NOTE_TYPES = _tr_note_types_tuple()
 
 
 def get_cohorte_tr(user_id: int) -> List[Dict]:
+    if PRIVACY_MODE:
+        return []
     """
     Devuelve la cohorte de pacientes TR de un médico.
 
@@ -1459,6 +1487,8 @@ def _parse_tendencia(notas_rows) -> List[Dict]:
 
 
 def marcar_paciente_tr(patient_id: int, user_id: int, datos: Dict) -> bool:
+    if PRIVACY_MODE:
+        return False
     """Marca un paciente como trasplantado manualmente con metadata opcional."""
     conn = get_conn()
     if not conn:
@@ -1495,6 +1525,8 @@ def marcar_paciente_tr(patient_id: int, user_id: int, datos: Dict) -> bool:
 
 
 def desmarcar_paciente_tr(patient_id: int, user_id: int) -> bool:
+    if PRIVACY_MODE:
+        return False
     """Quita la marca manual de TR (auto-detección sigue funcionando si tiene notas)."""
     conn = get_conn()
     if not conn:
@@ -1517,6 +1549,8 @@ def desmarcar_paciente_tr(patient_id: int, user_id: int) -> bool:
 
 
 def marcar_visita_revisada(patient_id: int, user_id: int) -> bool:
+    if PRIVACY_MODE:
+        return False
     """Marca el paciente como revisado HOY (para el dashboard)."""
     conn = get_conn()
     if not conn:
