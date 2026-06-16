@@ -383,19 +383,22 @@ def _tab_simulador():
                                   diuretico=diuretico, t_diur=float(t_diur))
     tmax, pico, t_half = metricas_renograma(t, counts)
 
-    df = pd.DataFrame({"Tiempo (min)": t, "Actividad (u.a.)": counts,
+    # OJO: el nombre de la columna NO debe llevar punto. En Vega-Lite/Altair
+    # un "." se interpreta como acceso a campo anidado y la línea no se dibuja.
+    df = pd.DataFrame({"Tiempo (min)": t, "Actividad (cuentas)": counts,
                        "Curva": escenario})
     if comparar and escenario != "Normal":
         tn, cn = simular_renograma("Normal", funcion=1.0)
         df = pd.concat([df, pd.DataFrame({"Tiempo (min)": tn,
-                        "Actividad (u.a.)": cn, "Curva": "Normal (referencia)"})],
+                        "Actividad (cuentas)": cn, "Curva": "Normal (referencia)"})],
                        ignore_index=True)
 
     if _ALTAIR:
-        base = alt.Chart(df).mark_line().encode(
+        base = alt.Chart(df).mark_line(strokeWidth=2.5).encode(
             x=alt.X("Tiempo (min):Q"),
-            y=alt.Y("Actividad (u.a.):Q"),
+            y=alt.Y("Actividad (cuentas):Q"),
             color=alt.Color("Curva:N",
+                            scale=alt.Scale(range=["#3B82F6", "#94A3B8"]),
                             legend=alt.Legend(orient="top", title=None)),
         )
         capas = [base]
@@ -408,7 +411,7 @@ def _tab_simulador():
                         use_container_width=True)
     else:
         pivot = df.pivot_table(index="Tiempo (min)", columns="Curva",
-                               values="Actividad (u.a.)")
+                               values="Actividad (cuentas)")
         st.line_chart(pivot, height=340)
         marca = f"Tmax ≈ {tmax} min"
         if diuretico:
