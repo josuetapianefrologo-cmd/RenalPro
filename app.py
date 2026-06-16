@@ -2189,9 +2189,7 @@ with st.sidebar:
             letter-spacing:.08em;padding:8px 4px 2px;opacity:0.85;">── {title} ──</div>""",
             unsafe_allow_html=True)
 
-    _navsec("PACIENTES")
-    _navbtn("📂 Mis Pacientes", "pacientes")
-    _navbtn("🏥 Expediente Clínico", "expediente")
+    _navsec("RECETA")
     _navbtn("📄 Receta Médica", "receta")
 
     _navsec("CRRT / CRRT")
