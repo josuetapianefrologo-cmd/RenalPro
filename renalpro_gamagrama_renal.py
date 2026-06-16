@@ -266,9 +266,11 @@ def _tab_referencia():
                "el reflujo en sí se usa una **cistografía**.")
     st.markdown(
         "**¿Qué estudio para ver el reflujo?**\n\n"
-        "- **VCUG / CUMS (contraste):** estándar para **diagnóstico inicial y "
-        "graduación (I-V)** y para ver la uretra (clave en varones). Mayor "
-        "radiación; requiere sondaje.\n"
+        "- **VCUG / CUMS (contraste):** cistouretrografía miccional seriada "
+        "(*Voiding Cystourethrogram*) — radiografía con contraste yodado y "
+        "sonda vesical, tomada durante el llenado y la micción. Estándar para "
+        "**diagnóstico inicial y graduación (I-V)** y para ver la uretra "
+        "(clave en varones). Mayor radiación.\n"
         "- **Cistografía isotópica DIRECTA:** se instila el trazador en vejiga "
         "por sonda. Muy sensible y de **baja dosis** → ideal para **seguimiento "
         "de VUR conocido**. No evalúa uretra ni gradúa con detalle.\n"
