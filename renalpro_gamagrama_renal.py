@@ -20,6 +20,14 @@ Autor: Josué Tapia Nefrólogo — Tapia Nefrología
 """
 
 import streamlit as st
+import numpy as np
+import pandas as pd
+
+try:
+    import altair as alt
+    _ALTAIR = True
+except ImportError:                      # fallback a st.line_chart si no está
+    _ALTAIR = False
 
 # ---------------------------------------------------------------------------
 # Constantes clínicas (rangos de referencia)
@@ -163,6 +171,68 @@ def patron_trasplante(perfusion: str, captacion: str, excrecion: str,
 
 
 # ---------------------------------------------------------------------------
+# Simulador de curvas renográficas (modelo fisiológico)
+# ---------------------------------------------------------------------------
+# Modelo de 1 compartimento: dQ/dt = entrada_plasmática(t) - kout·Q(t)
+#   - entrada ∝ función (captación) y a la concentración plasmática decreciente
+#   - kout = constante de excreción (alta = lavado rápido; ~0 = retención)
+#   - kout_diur = kout tras furosemida SOLO en escenarios que responden
+ESCENARIOS_CURVA = {
+    "Normal": dict(
+        uptake=1.0, tau_p=6.0, kout=0.30, perfusion=1.0,
+        nota="Ascenso a Tmax 3-5 min y lavado normal (T½ < 10 min)."),
+    "Obstrucción (NO responde a diurético)": dict(
+        uptake=1.0, tau_p=7.0, kout=0.008, perfusion=1.0,
+        nota="Curva ascendente/meseta sin lavado; furosemida NO la modifica."),
+    "Dilatación no obstructiva (responde a diurético)": dict(
+        uptake=1.0, tau_p=7.0, kout=0.03, perfusion=1.0, kout_diur=0.40,
+        nota="Retiene hasta dar furosemida; entonces lava (T½ corto). "
+             "Sin diurético es indistinguible de obstrucción."),
+    "Función disminuida": dict(
+        uptake=0.4, tau_p=12.0, kout=0.12, perfusion=0.6,
+        nota="Amplitud baja, Tmax retrasado y eliminación lenta."),
+    "NTA del injerto (trasplante)": dict(
+        uptake=0.85, tau_p=8.0, kout=0.015, perfusion=0.95,
+        nota="Perfusión y captación conservadas con excreción ausente/retardada."),
+    "Rechazo agudo (trasplante)": dict(
+        uptake=0.35, tau_p=9.0, kout=0.10, perfusion=0.45,
+        nota="Perfusión y captación reducidas → curva achatada de baja amplitud."),
+}
+
+
+def simular_renograma(escenario, funcion=1.0, diuretico=False, t_diur=18.0,
+                      dur=30.0, dt=0.05):
+    """Integra el modelo y devuelve (tiempo, actividad) en unidades arbitrarias."""
+    p = ESCENARIOS_CURVA[escenario]
+    t = np.arange(0, dur + dt, dt)
+    Q = np.zeros_like(t)
+    up = p["uptake"] * funcion
+    tau, kb = p["tau_p"], p["kout"]
+    kd = p.get("kout_diur", kb)
+    responde = "kout_diur" in p
+    for i in range(1, len(t)):
+        ti = t[i]
+        cp = np.exp(-ti / tau) if ti >= 0.3 else 0.0          # plasma decreciente
+        k = max(kb, kd) if (diuretico and ti >= t_diur and responde) else kb
+        Q[i] = max(0.0, Q[i - 1] + (up * cp - k * Q[i - 1]) * dt)
+    vasc = p["perfusion"] * 0.6 * np.exp(-((t - 0.5) ** 2) / (2 * 0.3 ** 2))
+    return t, (Q + vasc) * 100.0
+
+
+def metricas_renograma(t, counts):
+    """Devuelve (Tmax, pico, T½_postpico). T½ = None si no hay lavado a la mitad."""
+    mask = t >= 1.0                                           # ignora pico vascular
+    idx = np.where(mask)[0][int(np.argmax(counts[mask]))]
+    tmax, pico = float(t[idx]), float(counts[idx])
+    t_half = None
+    for i in range(idx, len(t)):
+        if counts[i] <= pico / 2.0:
+            t_half = round(float(t[i] - tmax), 1)
+            break
+    return round(tmax, 1), round(pico, 1), t_half
+
+
+# ---------------------------------------------------------------------------
 # UI — Streamlit
 # ---------------------------------------------------------------------------
 def _tab_referencia():
@@ -289,6 +359,91 @@ def _tab_trasplante():
                 st.info(s)
 
 
+def _tab_simulador():
+    st.subheader("📈 Simulador de curva renográfica")
+    st.caption("Curva actividad-tiempo (cuentas vs minutos) generada con un modelo "
+               "fisiológico. Cambia el escenario y observa cómo varían el ascenso, "
+               "el Tmax y el lavado.")
+
+    c1, c2 = st.columns([2, 1])
+    escenario = c1.selectbox("Escenario clínico", list(ESCENARIOS_CURVA.keys()),
+                             key="sim_esc")
+    funcion = c2.slider("Función del riñón (×)", 0.2, 1.3, 1.0, 0.05,
+                        key="sim_fun",
+                        help="Multiplicador de captación; simula mejor/peor función.")
+
+    c3, c4, c5 = st.columns([1, 1, 1])
+    diuretico = c3.checkbox("💧 Administrar furosemida", key="sim_diur")
+    t_diur = c4.slider("Minuto de furosemida", 5, 25, 18, 1, key="sim_tdiur",
+                       disabled=not diuretico)
+    comparar = c5.checkbox("Superponer curva normal", value=True, key="sim_cmp")
+
+    # ── Simulación ──────────────────────────────────────────────────────────
+    t, counts = simular_renograma(escenario, funcion=funcion,
+                                  diuretico=diuretico, t_diur=float(t_diur))
+    tmax, pico, t_half = metricas_renograma(t, counts)
+
+    df = pd.DataFrame({"Tiempo (min)": t, "Actividad (u.a.)": counts,
+                       "Curva": escenario})
+    if comparar and escenario != "Normal":
+        tn, cn = simular_renograma("Normal", funcion=1.0)
+        df = pd.concat([df, pd.DataFrame({"Tiempo (min)": tn,
+                        "Actividad (u.a.)": cn, "Curva": "Normal (referencia)"})],
+                       ignore_index=True)
+
+    if _ALTAIR:
+        base = alt.Chart(df).mark_line().encode(
+            x=alt.X("Tiempo (min):Q"),
+            y=alt.Y("Actividad (u.a.):Q"),
+            color=alt.Color("Curva:N",
+                            legend=alt.Legend(orient="top", title=None)),
+        )
+        capas = [base]
+        capas.append(alt.Chart(pd.DataFrame({"x": [tmax]})).mark_rule(
+            strokeDash=[2, 2], color="#64748B").encode(x="x:Q"))
+        if diuretico:
+            capas.append(alt.Chart(pd.DataFrame({"x": [t_diur]})).mark_rule(
+                color="#F59E0B", size=2).encode(x="x:Q"))
+        st.altair_chart(alt.layer(*capas).properties(height=340),
+                        use_container_width=True)
+    else:
+        pivot = df.pivot_table(index="Tiempo (min)", columns="Curva",
+                               values="Actividad (u.a.)")
+        st.line_chart(pivot, height=340)
+        marca = f"Tmax ≈ {tmax} min"
+        if diuretico:
+            marca += f" · furosemida al min {t_diur}"
+        st.caption(marca)
+
+    # ── Métricas ────────────────────────────────────────────────────────────
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Tmax", f"{tmax} min",
+              help="Tiempo al pico de actividad parenquimatosa (normal 3-5 min).")
+    if t_half is None:
+        m2.metric("T½ de lavado", "Sin lavado",
+                  help="No alcanza la mitad del pico → retención.")
+    else:
+        m2.metric("T½ de lavado", f"{t_half} min")
+    pico_rel = pico / (simular_renograma("Normal")[1].max()) * 100
+    m3.metric("Amplitud vs normal", f"{pico_rel:.0f}%",
+              help="Altura del pico relativa a un riñón normal.")
+
+    # ── Interpretación del lavado ───────────────────────────────────────────
+    if t_half is not None:
+        titulo, detalle = clasifica_t12_diuretico(t_half)
+        st.info(f"**Lavado:** {titulo}. {detalle}")
+    else:
+        st.warning("**Lavado:** sin descenso a la mitad del pico → patrón de "
+                   "retención. Si es obstructivo, no responderá a la furosemida.")
+
+    st.caption(f"ℹ️ {ESCENARIOS_CURVA[escenario]['nota']}")
+
+    if escenario.startswith("Dilatación") and not diuretico:
+        st.warning("💡 Activa la furosemida: verás cómo esta curva — idéntica a una "
+                   "obstrucción sin diurético — sí lava. Ese es el fundamento del "
+                   "renograma diurético.")
+
+
 def render():
     """Punto de entrada del módulo. Llamar desde el enrutador de RenalPro."""
     st.title("🔬 Gamagrama Renal")
@@ -297,6 +452,7 @@ def render():
     tabs = st.tabs([
         "📖 Referencia",
         "📈 Renograma dinámico",
+        "🌡️ Simulador",
         "🧮 Calculadoras",
         "🫘 Trasplante",
     ])
@@ -305,8 +461,10 @@ def render():
     with tabs[1]:
         _tab_dinamico()
     with tabs[2]:
-        _tab_calculadoras()
+        _tab_simulador()
     with tabs[3]:
+        _tab_calculadoras()
+    with tabs[4]:
         _tab_trasplante()
 
     st.divider()
