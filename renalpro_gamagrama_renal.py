@@ -55,8 +55,9 @@ RADIOFARMACOS = [
         "nombre": "DMSA (Tc-99m ácido dimercaptosuccínico)",
         "mecanismo": "Fijación cortical en células del túbulo proximal",
         "evalua": "Masa de parénquima funcional, cicatrices corticales",
-        "uso": "Estudio ESTÁTICO. Pielonefritis/cicatriz, reflujo, riñón "
-               "ectópico, función diferencial cortical.",
+        "uso": "Estudio ESTÁTICO. Pielonefritis, cicatriz/nefropatía por "
+               "reflujo (el DAÑO, no el reflujo activo), riñón ectópico, "
+               "función diferencial cortical.",
     },
     {
         "nombre": "EC (Tc-99m etilencisteína) / Glucoheptonato",
@@ -252,8 +253,42 @@ def _tab_referencia():
         "- Uropatía obstructiva → **renograma diurético** (furosemida)\n"
         "- Función renal diferencial (pre-nefrectomía, **donante vivo**)\n"
         "- HTA renovascular → **renograma con captopril**\n"
-        "- Cicatrización / reflujo → **DMSA**\n"
+        "- **Cicatriz / nefropatía por reflujo** (el daño) → **DMSA**\n"
+        "- **Reflujo vesicoureteral activo** → **cistografía** (ver abajo), "
+        "**no DMSA**\n"
         "- Evaluación funcional del **injerto renal**"
+    )
+
+    st.divider()
+    st.subheader("⚠️ Evaluación de reflujo vesicoureteral (VUR)")
+    st.warning("Error frecuente: el **DMSA NO detecta reflujo activo** — solo "
+               "muestra la cicatriz/nefropatía que el reflujo ya dejó. Para ver "
+               "el reflujo en sí se usa una **cistografía**.")
+    st.markdown(
+        "**¿Qué estudio para ver el reflujo?**\n\n"
+        "- **VCUG / CUMS (contraste):** estándar para **diagnóstico inicial y "
+        "graduación (I-V)** y para ver la uretra (clave en varones). Mayor "
+        "radiación; requiere sondaje.\n"
+        "- **Cistografía isotópica DIRECTA:** se instila el trazador en vejiga "
+        "por sonda. Muy sensible y de **baja dosis** → ideal para **seguimiento "
+        "de VUR conocido**. No evalúa uretra ni gradúa con detalle.\n"
+        "- **Cistografía isotópica INDIRECTA:** continuación de un renograma "
+        "dinámico (**MAG3** preferido, o DTPA); el paciente orina y se observa "
+        "el reflujo. **Sin sonda y fisiológica**, pero requiere continencia y "
+        "buena función; menos sensible.\n"
+        "- **DMSA:** solo para la **cicatriz/nefropatía** secundaria."
+    )
+    st.markdown(
+        "**¿Cuál según la edad?**\n\n"
+        "- **Niños:** VCUG para el diagnóstico inicial/graduación; "
+        "**cistografía isotópica directa** para el seguimiento (baja "
+        "radiación). La indirecta solo en niños mayores continentes.\n"
+        "- **Adultos:** **cistografía isotópica indirecta** (sin sonda, vía "
+        "renograma MAG3) es la opción práctica; VCUG si se necesita detalle "
+        "anatómico/graduación.\n"
+        "- **Injerto renal:** reflujo al injerto → cistografía (directa o "
+        "VCUG); MAG3 para función/drenaje; DMSA solo para cicatriz/pielonefritis "
+        "del injerto."
     )
 
 
