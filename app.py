@@ -1595,6 +1595,15 @@ def export_pdf_pro():
     cit_ml_h  = s.get("rca_citrato_ml_h", 0)
     ca_ml_h   = s.get("rca_calcio_ml_h", 0)
 
+    # Dosis realmente entregada (mL/kg/h). Con RCA el citrato PRE-filtro entra al
+    # efluente y sube la dosis; se recalcula igual que en export_pdf(). Se usan
+    # variables desechables para NO alterar los flujos base mostrados arriba.
+    dosis_mlkg_real = dosis_mlkg
+    if anticoag == "RCA":
+        _qr_pre_r, _qr_post_r, _qd_r, _ff_r, _efl_real, _ = apply_citrate_correction(
+            qp_h, qe, qr_pre, qr_post, qd, uf, cit_ml_h)
+        dosis_mlkg_real = round(_efl_real / peso) if peso > 0 else dosis_mlkg
+
     unidad   = s.get("rx_unidad", "")
     nom_pac  = s.get("rx_nombre_paciente", "")
     fn       = s.get("rx_fecha_nac", "")
@@ -2311,532 +2320,11 @@ qb        = int(st.session_state.get("sb_qb", 200))
 uf        = int(st.session_state.get("sb_uf", 100))
 dosis_mlkg = int(st.session_state.get("sb_dosis", 30))
 escenarios = list(st.session_state.get("sb_escenarios", ["Sepsis / choque séptico"]))
-
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB: SCORES / CANDIDATURA CRRT
-# Refs: SOFA (Sepsis-3, 2016), APACHE II, KDIGO 2026 AKI (borrador público)
-#       STARRT-AKI 2020, AKIKI 2016, AKIKI-2 2021
-# ══════════════════════════════════════════════════════════════════════════════
-if nav == "scores":
-    st.subheader("📊 Scores de Severidad y Candidatura a CRRT")
-    st.info("💡 Los scores de mortalidad (SOFA, APACHE II) son **pronósticos**, "
-            "no contraindicaciones al CRRT. Un score alto indica enfermedad crítica "
-            "severa que **justifica** el soporte renal continuo.")
-
-    modo_score = st.radio("Calculadora", ["SOFA", "APACHE II", "AKI — KDIGO 2026",
-                                          "🏥 Candidatura a CRRT"], horizontal=True,
-                          key="modo_score")
-
-    # ── SOFA ──────────────────────────────────────────────────────────────────
-    if modo_score == "SOFA":
-        st.markdown("### SOFA Score — Sequential Organ Failure Assessment")
-        st.caption("Sepsis-3 (Singer et al., JAMA 2016). Evalúa 6 sistemas. Score 0–24.")
-
-        st.markdown("#### Sistema Respiratorio")
-        sc_r1, sc_r2 = st.columns(2)
-        with sc_r1:
-            resp_mode = st.radio("Método", ["PaO₂/FiO₂", "SpO₂/FiO₂ (sin gases)"],
-                                 horizontal=True, key="sofa_resp_mode")
-        with sc_r2:
-            if resp_mode == "PaO₂/FiO₂":
-                pafi = st.number_input("PaO₂/FiO₂ (mmHg)", 0.0, 600.0, 400.0, 10.0, key="sofa_pafi")
-                if pafi >= 400: resp_score = 0
-                elif pafi >= 300: resp_score = 1
-                elif pafi >= 200: resp_score = 2
-                elif pafi >= 100: resp_score = 3
-                else: resp_score = 4
-            else:
-                spafi = st.number_input("SpO₂/FiO₂", 0.0, 600.0, 315.0, 5.0, key="sofa_spafi")
-                if spafi >= 315: resp_score = 0
-                elif spafi >= 235: resp_score = 1
-                elif spafi >= 148: resp_score = 2
-                elif spafi >= 67: resp_score = 3
-                else: resp_score = 4
-        st.metric("Puntos respiratorio", resp_score)
-
-        st.markdown("#### Coagulación · Hígado · Cardiovascular · SNC")
-        col_s1, col_s2, col_s3, col_s4 = st.columns(4)
-        with col_s1:
-            plaq_sofa = st.number_input("Plaquetas (x10³/µL)", 0.0, 800.0, 200.0, 10.0, key="sofa_plaq")
-            if plaq_sofa >= 150: coag_score = 0
-            elif plaq_sofa >= 100: coag_score = 1
-            elif plaq_sofa >= 50: coag_score = 2
-            elif plaq_sofa >= 20: coag_score = 3
-            else: coag_score = 4
-            st.metric("Coagulación", coag_score)
-        with col_s2:
-            bili_sofa = st.number_input("Bilirrubina (mg/dL)", 0.0, 30.0, 1.0, 0.1, key="sofa_bili")
-            if bili_sofa < 1.2: liver_score = 0
-            elif bili_sofa < 2.0: liver_score = 1
-            elif bili_sofa < 6.0: liver_score = 2
-            elif bili_sofa < 12.0: liver_score = 3
-            else: liver_score = 4
-            st.metric("Hígado", liver_score)
-        with col_s3:
-            map_sofa = st.number_input("PAM (mmHg)", 0.0, 150.0,
-                                       float(st.session_state.get("pam", 65.0)), 1.0, key="sofa_map")
-            vaso_sofa = st.selectbox("Vasopresores",
-                ["Ninguno", "Dopamina ≤5 o Dobutamina",
-                 "Dopamina >5 o NE/Epi ≤0.1 µg/kg/min",
-                 "Dopamina >15 o NE/Epi >0.1 µg/kg/min"], key="sofa_vaso")
-            if "Ninguno" in vaso_sofa:
-                cv_score = 0 if map_sofa >= 70 else 1
-            elif "≤5" in vaso_sofa: cv_score = 2
-            elif "NE/Epi ≤0.1" in vaso_sofa: cv_score = 3
-            else: cv_score = 4
-            st.metric("Cardiovascular", cv_score)
-        with col_s4:
-            gcs_sofa = st.number_input("GCS", 3, 15, 15, 1, key="sofa_gcs")
-            if gcs_sofa == 15: cns_score = 0
-            elif gcs_sofa >= 13: cns_score = 1
-            elif gcs_sofa >= 10: cns_score = 2
-            elif gcs_sofa >= 6: cns_score = 3
-            else: cns_score = 4
-            st.metric("SNC", cns_score)
-
-        st.markdown("#### Sistema Renal")
-        cr_sofa_c1, cr_sofa_c2, cr_sofa_c3 = st.columns(3)
-        with cr_sofa_c1:
-            cr_sofa = st.number_input("Creatinina (mg/dL)", 0.0, 20.0,
-                                      1.0, 0.1, key="sofa_cr")
-        with cr_sofa_c2:
-            uo_sofa = st.number_input("Diuresis 24h (mL)", 0, 5000,
-                                      int(st.session_state.get("ur_main", 800)), 50, key="sofa_uo")
-        with cr_sofa_c3:
-            if cr_sofa < 1.2 and uo_sofa >= 500: renal_score = 0
-            elif cr_sofa < 2.0: renal_score = 1
-            elif cr_sofa < 3.5: renal_score = 2
-            elif cr_sofa < 5.0 or uo_sofa < 500: renal_score = 3
-            else: renal_score = 4
-            st.metric("Renal", renal_score)
-
-        sofa_total = resp_score + coag_score + liver_score + cv_score + cns_score + renal_score
-        if sofa_total <= 6: sofa_mort = "<10%"; sofa_color = "✅"
-        elif sofa_total <= 9: sofa_mort = "15–20%"; sofa_color = "🟡"
-        elif sofa_total <= 12: sofa_mort = "40–50%"; sofa_color = "🟠"
-        elif sofa_total <= 14: sofa_mort = "50–60%"; sofa_color = "🔴"
-        elif sofa_total == 15: sofa_mort = ">80%"; sofa_color = "🔴"
-        else: sofa_mort = ">90%"; sofa_color = "🔴"
-
-        st.divider()
-        sr1, sr2, sr3 = st.columns(3)
-        sr1.metric("SOFA TOTAL", sofa_total, help="Máximo 24 puntos")
-        sr2.metric("Mortalidad predicha UCI", sofa_mort)
-        sr3.metric("Interpretación", sofa_color + (" Crítico" if sofa_total > 9 else " Severo" if sofa_total > 6 else " Moderado"))
-
-        if sofa_total >= 2: st.error(f"🔴 SOFA ≥2: criterio diagnóstico de **SEPSIS** si hay infección sospechada.")
-        if renal_score >= 2:
-            st.warning(f"⚠️ SOFA renal {renal_score}/4 — AKI significativa. "
-                       f"SOFA total {sofa_total} **justifica CRRT**, no lo contraindica.")
-        st.session_state["sofa_total"] = sofa_total
-
-    # ── APACHE II ─────────────────────────────────────────────────────────────
-    elif modo_score == "APACHE II":
-        st.markdown("### APACHE II — Acute Physiology and Chronic Health Evaluation II")
-        st.caption("Knaus et al., Crit Care Med 1985. Predice mortalidad hospitalaria. Score 0–71.")
-
-        st.markdown("#### Variables fisiológicas agudas")
-        ap1, ap2, ap3, ap4 = st.columns(4)
-        with ap1:
-            temp_ap = st.number_input("Temperatura rectal (°C)", 30.0, 42.0, 37.0, 0.1, key="ap_temp")
-            if temp_ap >= 41 or temp_ap < 30: t_s = 4
-            elif temp_ap >= 39 or (temp_ap < 32 and temp_ap >= 30): t_s = 3
-            elif temp_ap >= 38.5 or (temp_ap < 34 and temp_ap >= 32): t_s = 1 if temp_ap >= 38.5 else 2
-            elif temp_ap >= 36: t_s = 0
-            else: t_s = 2
-            # Simplified lookup
-            if temp_ap >= 41: t_s = 4
-            elif temp_ap >= 39: t_s = 3
-            elif temp_ap >= 38.5: t_s = 1
-            elif temp_ap >= 36: t_s = 0
-            elif temp_ap >= 34: t_s = 1
-            elif temp_ap >= 32: t_s = 2
-            elif temp_ap >= 30: t_s = 3
-            else: t_s = 4
-            st.metric("Temperatura", t_s)
-
-            map_ap = st.number_input("PAM (mmHg)", 0, 200,
-                                     int(st.session_state.get("pam", 70)), 5, key="ap_map")
-            if map_ap >= 160: map_s = 4
-            elif map_ap >= 130: map_s = 3
-            elif map_ap >= 110: map_s = 2
-            elif map_ap >= 70: map_s = 0
-            elif map_ap >= 50: map_s = 2
-            else: map_s = 4
-            st.metric("PAM", map_s)
-
-        with ap2:
-            fc_ap = st.number_input("FC (lpm)", 0, 250, 90, 5, key="ap_fc")
-            if fc_ap >= 180: fc_s = 4
-            elif fc_ap >= 140: fc_s = 3
-            elif fc_ap >= 110: fc_s = 2
-            elif fc_ap >= 70: fc_s = 0
-            elif fc_ap >= 55: fc_s = 2
-            elif fc_ap >= 40: fc_s = 3
-            else: fc_s = 4
-            st.metric("FC", fc_s)
-
-            fr_ap = st.number_input("FR (rpm)", 0, 60, 16, 1, key="ap_fr")
-            if fr_ap >= 50: fr_s = 4
-            elif fr_ap >= 35: fr_s = 3
-            elif fr_ap >= 25: fr_s = 1
-            elif fr_ap >= 12: fr_s = 0
-            elif fr_ap >= 10: fr_s = 1
-            elif fr_ap >= 6: fr_s = 2
-            else: fr_s = 4
-            st.metric("FR", fr_s)
-
-        with ap3:
-            pafi_ap = st.number_input("PaO₂/FiO₂ (si FiO₂<0.5 → PaO₂ solo)", 0.0, 600.0, 350.0, 10.0, key="ap_pafi")
-            fi_ap = st.number_input("FiO₂", 0.21, 1.0, 0.21, 0.01, key="ap_fio2")
-            if fi_ap >= 0.5:
-                # Use A-aDO2 approximation: A-aDO2 ≈ (FiO2*713 - PaCO2/0.8) - PaO2
-                # Simplified: use PaO2/FiO2
-                if pafi_ap >= 400: ox_s = 0
-                elif pafi_ap >= 300: ox_s = 1
-                elif pafi_ap >= 200: ox_s = 3
-                else: ox_s = 4
-            else:
-                pao2 = pafi_ap  # treated as PaO2 when FiO2<0.5
-                if pao2 >= 70: ox_s = 0
-                elif pao2 >= 61: ox_s = 1
-                elif pao2 >= 55: ox_s = 3
-                else: ox_s = 4
-            st.metric("Oxigenación", ox_s)
-
-            ph_ap = st.number_input("pH arterial", 6.8, 7.7,
-                                    float(st.session_state.get("ph_main", 7.40)), 0.01, key="ap_ph")
-            if ph_ap >= 7.7: ph_s = 4
-            elif ph_ap >= 7.6: ph_s = 3
-            elif ph_ap >= 7.5: ph_s = 1
-            elif ph_ap >= 7.33: ph_s = 0
-            elif ph_ap >= 7.25: ph_s = 2
-            elif ph_ap >= 7.15: ph_s = 3
-            else: ph_s = 4
-            st.metric("pH", ph_s)
-
-        with ap4:
-            na_ap = st.number_input("Na sérico (mEq/L)", 100, 200,
-                                    int(st.session_state.get("na_main", 140)), 1, key="ap_na")
-            if na_ap >= 180: na_s = 4
-            elif na_ap >= 160: na_s = 3
-            elif na_ap >= 155: na_s = 2
-            elif na_ap >= 150: na_s = 1
-            elif na_ap >= 130: na_s = 0
-            elif na_ap >= 120: na_s = 2
-            elif na_ap >= 111: na_s = 3
-            else: na_s = 4
-            st.metric("Na", na_s)
-
-            k_ap = st.number_input("K sérico (mEq/L)", 1.0, 10.0,
-                                   float(st.session_state.get("k_main", 4.0)), 0.1, key="ap_k")
-            if k_ap >= 7.0: k_s = 4
-            elif k_ap >= 6.0: k_s = 3
-            elif k_ap >= 5.5: k_s = 1
-            elif k_ap >= 3.5: k_s = 0
-            elif k_ap >= 3.0: k_s = 1
-            elif k_ap >= 2.5: k_s = 2
-            else: k_s = 4
-            st.metric("K", k_s)
-
-        st.markdown("#### Creatinina · Hematocrito · Leucocitos · GCS")
-        ap5, ap6, ap7, ap8 = st.columns(4)
-        with ap5:
-            cr_ap = st.number_input("Creatinina (mg/dL)", 0.0, 20.0, 1.0, 0.1, key="ap_cr")
-            falla_renal_ap = st.checkbox("¿AKI agudo? (duplica puntaje Cr)", key="ap_aki")
-            if cr_ap >= 3.5: cr_s = 4
-            elif cr_ap >= 2.0: cr_s = 3
-            elif cr_ap >= 1.5: cr_s = 2
-            elif cr_ap >= 0.6: cr_s = 0
-            else: cr_s = 2
-            if falla_renal_ap: cr_s = min(4, cr_s * 2)
-            st.metric("Creatinina", cr_s)
-        with ap6:
-            hto_ap = st.number_input("Hematocrito (%)", 0.0, 60.0,
-                                     float(st.session_state.get("sb_hto", 0.30)) * 100, 1.0, key="ap_hto")
-            if hto_ap >= 60: hto_s = 4
-            elif hto_ap >= 50: hto_s = 2
-            elif hto_ap >= 46: hto_s = 1
-            elif hto_ap >= 30: hto_s = 0
-            elif hto_ap >= 20: hto_s = 2
-            else: hto_s = 4
-            st.metric("Hematocrito", hto_s)
-        with ap7:
-            wbc_ap = st.number_input("Leucocitos (x10³/mm³)", 0.0, 60.0, 10.0, 0.5, key="ap_wbc")
-            if wbc_ap >= 40: wbc_s = 4
-            elif wbc_ap >= 20: wbc_s = 2
-            elif wbc_ap >= 15: wbc_s = 1
-            elif wbc_ap >= 3: wbc_s = 0
-            elif wbc_ap >= 1: wbc_s = 2
-            else: wbc_s = 4
-            st.metric("Leucocitos", wbc_s)
-        with ap8:
-            gcs_ap = st.number_input("GCS", 3, 15, 15, 1, key="ap_gcs")
-            gcs_s = 15 - gcs_ap
-            st.metric("GCS (15 − GCS)", gcs_s)
-
-        aps = t_s + map_s + fc_s + fr_s + ox_s + ph_s + na_s + k_s + cr_s + hto_s + wbc_s + gcs_s
-
-        st.markdown("#### Edad y salud crónica")
-        age_ap_c1, age_ap_c2 = st.columns(2)
-        with age_ap_c1:
-            age_ap = st.number_input("Edad (años)", 0, 110, 60, 1, key="ap_age")
-            if age_ap < 45: age_s = 0
-            elif age_ap < 55: age_s = 2
-            elif age_ap < 65: age_s = 3
-            elif age_ap < 75: age_s = 5
-            else: age_s = 6
-            st.metric("Puntos por edad", age_s)
-        with age_ap_c2:
-            cronica_ap = st.selectbox("Enfermedad crónica severa",
-                ["Ninguna", "Cirugía electiva con enfermedad crónica",
-                 "No quirúrgico o cirugía de urgencia con enfermedad crónica"],
-                key="ap_cronica")
-            if "urgencia" in cronica_ap or "No quirúrgico" in cronica_ap: ch_s = 5
-            elif "electiva" in cronica_ap: ch_s = 2
-            else: ch_s = 0
-            st.metric("Puntos salud crónica", ch_s)
-
-        apache2_total = aps + age_s + ch_s
-
-        # Predicted mortality (simplified Knaus table)
-        if apache2_total <= 4: ap_mort = "4%"
-        elif apache2_total <= 9: ap_mort = "8%"
-        elif apache2_total <= 14: ap_mort = "15%"
-        elif apache2_total <= 19: ap_mort = "25%"
-        elif apache2_total <= 24: ap_mort = "40%"
-        elif apache2_total <= 29: ap_mort = "55%"
-        elif apache2_total <= 34: ap_mort = "73%"
-        else: ap_mort = "85%"
-
-        st.divider()
-        ar1, ar2, ar3 = st.columns(3)
-        ar1.metric("APS (fisiológico)", aps)
-        ar2.metric("APACHE II TOTAL", apache2_total)
-        ar3.metric("Mortalidad hospitalaria predicha", ap_mort)
-
-        if apache2_total > 25:
-            st.error(f"🔴 APACHE II {apache2_total} — Enfermedad crítica severa. "
-                     "Este score **indica soporte orgánico agresivo**, incluido CRRT. "
-                     "No es contraindicación.")
-        elif apache2_total > 15:
-            st.warning(f"🟠 APACHE II {apache2_total} — Enfermedad moderada-severa. "
-                       "Evaluar indicaciones de CRRT.")
-        else:
-            st.info(f"ℹ️ APACHE II {apache2_total} — Documentar en expediente como contexto clínico.")
-        st.session_state["apache2_total"] = apache2_total
-
-    # ── KDIGO 2026 AKI STAGING ────────────────────────────────────────────────
-    elif modo_score == "AKI — KDIGO 2026":
-        st.markdown("### Estadificación AKI — KDIGO 2026")
-        st.caption("KDIGO 2026 AKI & AKD Guideline (borrador revisión pública, marzo 2026). "
-                   "Estadificación idéntica a KDIGO 2012, con biomarcadores actualizados.")
-
-        st.markdown("#### Creatinina sérica")
-        kd1, kd2, kd3 = st.columns(3)
-        with kd1:
-            cr_base = st.number_input("Creatinina basal (mg/dL)", 0.0, 15.0, 0.9, 0.05, key="kd_crbase",
-                                      help="Previa estable o estimada por CKD-EPI inverso")
-        with kd2:
-            cr_act = st.number_input("Creatinina actual (mg/dL)", 0.0, 20.0, 1.5, 0.05, key="kd_cract")
-        with kd3:
-            cr_48h = st.number_input("Cr hace 48h (mg/dL, si disponible)", 0.0, 20.0, 0.0, 0.05,
-                                     key="kd_cr48",
-                                     help="Para detectar incremento ≥0.3 en 48h")
-
-        st.markdown("#### Diuresis")
-        kd4, kd5, kd6 = st.columns(3)
-        with kd4:
-            uo_h_kd = st.number_input("Diuresis más baja (mL/kg/hr)", 0.0, 3.0, 0.5, 0.05,
-                                      key="kd_uo_h")
-        with kd5:
-            uo_dur = st.selectbox("Durante cuántas horas", ["<6h", "6–12h", "12–24h", "≥24h"],
-                                  key="kd_uo_dur")
-        with kd6:
-            en_rrt = st.checkbox("¿Ya inició TRR (diálisis/CRRT)?", key="kd_rrt")
-
-        # Calculate staging
-        ratio_cr = cr_act / cr_base if cr_base > 0 else 0
-        delta_48h = cr_act - cr_48h if cr_48h > 0 else 0
-
-        aki_stage_cr = 0
-        if en_rrt: aki_stage_cr = 3
-        elif cr_act >= 4.0 and cr_act >= cr_base + 0.5: aki_stage_cr = 3
-        elif ratio_cr >= 3.0: aki_stage_cr = 3
-        elif ratio_cr >= 2.0: aki_stage_cr = 2
-        elif ratio_cr >= 1.5 or delta_48h >= 0.3: aki_stage_cr = 1
-
-        aki_stage_uo = 0
-        if uo_h_kd < 0.3 and uo_dur in ["≥24h"]: aki_stage_uo = 3
-        elif uo_h_kd < 0.3 and uo_dur == "12–24h": aki_stage_uo = 3
-        elif uo_h_kd < 0.5 and uo_dur in ["12–24h", "≥24h"]: aki_stage_uo = 2
-        elif uo_h_kd < 0.5 and uo_dur in ["6–12h"]: aki_stage_uo = 1
-        elif uo_h_kd == 0 and uo_dur == "≥24h": aki_stage_uo = 3  # anuria
-
-        aki_stage = max(aki_stage_cr, aki_stage_uo)
-
-        st.divider()
-        ks1, ks2, ks3 = st.columns(3)
-        ks1.metric("Ratio Cr actual/basal", f"{ratio_cr:.2f}x")
-        ks2.metric("Estadio por Cr", f"AKI {aki_stage_cr}" if aki_stage_cr > 0 else "Sin criterio")
-        ks3.metric("Estadio por diuresis", f"AKI {aki_stage_uo}" if aki_stage_uo > 0 else "Sin criterio")
-
-        if aki_stage == 0:
-            st.success("✅ Sin criterios de AKI al momento. Monitoreo continuo.")
-        elif aki_stage == 1:
-            st.warning(f"🟡 **AKI Estadio 1** — Riesgo. Monitoreo estrecho, evitar nefrotóxicos, "
-                       f"optimizar volemia. Evaluar TRR si hay indicación urgente.")
-        elif aki_stage == 2:
-            st.error(f"🔴 **AKI Estadio 2** — Daño. Evaluar CRRT. "
-                     f"Iniciar si hay indicaciones de urgencia o hemodynamia inestable.")
-        else:
-            st.error(f"🔴 **AKI Estadio 3** — Falla renal. **Indicación formal de evaluar CRRT** "
-                     f"(KDIGO 2026, Capítulo 5). Sin beneficio de inicio acelerado vs estándar "
-                     f"(STARRT-AKI 2020). Individualizar timing según contexto clínico.")
-
-        if en_rrt:
-            st.info("ℹ️ El inicio de TRR clasifica automáticamente como AKI Estadio 3, "
-                    "independientemente de la creatinina.")
-
-        with st.expander("📚 Biomarcadores — KDIGO 2026"):
-            st.markdown("""
-| Biomarcador | Umbral de riesgo | Aplicación clínica |
-|-------------|-----------------|-------------------|
-| **TIMP-2 x IGFBP7** | ≥0.3 (alto riesgo), ≥2.0 (muy alto) | Predicción de AKI en UCI dentro de 12h |
-| **NGAL urinario** | >150 ng/mL | Daño tubular temprano |
-| **KIM-1** | Elevado | Daño tubular proximal |
-| **Cistatina C** | Alternativa a Cr | Mejor en musculatura reducida, malnutrición, cirrosis |
-| **L-FABP urinario** | Elevado | Daño tubular |
-
-*KDIGO 2026 recomienda el uso de biomarcadores validados para estratificación de riesgo de AKI, especialmente en pacientes en UCI.*
-            """)
-
-        with st.expander("📊 Evidencia sobre timing de inicio de CRRT"):
-            st.markdown("""
-| Ensayo | Diseño | Resultado principal |
-|--------|--------|---------------------|
-| **AKIKI** (2016) | Precoz vs tardío, AKI3 | Sin diferencia en mortalidad a 60 días |
-| **IDEAL-ICU** (2018) | Precoz vs diferido, sepsis+AKI | Detenido por futilidad. Sin beneficio precoz |
-| **STARRT-AKI** (2020) | Acelerado vs estándar, 168 UCI, n=2927 | Mortalidad 90d: 43.9% vs 43.7% (p=0.92) |
-| **AKIKI-2** (2021) | Dos estrategias diferidas | Sin diferencia. Mayor riesgo con espera prolongada |
-
-**Conclusión KDIGO 2026:** No hay indicación de inicio acelerado universal.  
-**Individualizar** según: indicaciones de urgencia, tendencia del AKI, contexto clínico, metas de atención.
-            """)
-        st.session_state["aki_stage"] = aki_stage
-
-    # ── CANDIDATURA A CRRT ────────────────────────────────────────────────────
-    else:
-        st.markdown("### 🏥 Candidatura a CRRT — Evaluación integral")
-        st.caption("Basado en KDIGO 2026, SCCM/ESICM guidelines. "
-                   "Los scores de mortalidad son pronósticos, NO contraindicaciones.")
-
-        st.markdown("#### ✅ Indicaciones de urgencia (AEIOU+)")
-        ind1, ind2 = st.columns(2)
-        with ind1:
-            i_acidosis = st.checkbox("**A** — Acidosis: pH <7.15 refractaria", key="cand_acid")
-            i_electro = st.checkbox("**E** — Electrolitos: K+ >6.5 o refractario >6.0", key="cand_elec")
-            i_intox = st.checkbox("**I** — Intoxicación: tóxico dializable confirmado", key="cand_intox")
-            i_overload = st.checkbox("**O** — Sobrecarga hídrica: >10% peso + compromiso respiratorio", key="cand_overload")
-            i_uremia = st.checkbox("**U** — Uremia sintomática: encefalopatía, pericarditis, sangrado", key="cand_uremia")
-        with ind2:
-            i_aki3 = st.checkbox("AKI Estadio 3 (KDIGO)", key="cand_aki3",
-                                 value=st.session_state.get("aki_stage", 0) >= 3)
-            i_sepsis = st.checkbox("Sepsis + AKI Estadio 2–3 con SOFA ≥2", key="cand_sepsis")
-            i_hemo = st.checkbox("Inestabilidad hemodinámica (intolerante a HD convencional)", key="cand_hemo")
-            i_mods = st.checkbox("MODS (≥3 órganos en falla)", key="cand_mods")
-            i_rabdo = st.checkbox("Rabdomiólisis severa (CK >5000) o mioglobinuria", key="cand_rabdo")
-            i_hyperamm = st.checkbox("Hiperamonemia refractaria", key="cand_hyperamm")
-
-        st.markdown("#### ⛔ Contraindicaciones reales (no scores de mortalidad)")
-        contra1, contra2 = st.columns(2)
-        with contra1:
-            c_confort = st.checkbox("Decisión de cuidados de confort / limitación de esfuerzo", key="cand_confort")
-            c_acceso = st.checkbox("Sin posibilidad de acceso vascular central", key="cand_acceso")
-        with contra2:
-            c_choque = st.checkbox("Choque irreversible sin vasopresores (muerte inminente)", key="cand_choque")
-            c_coag_abs = st.checkbox("Coagulopatía refractaria absoluta (sin anticoagulación posible)",
-                                     key="cand_coag")
-
-        # Scoring
-        indics = [i_acidosis, i_electro, i_intox, i_overload, i_uremia,
-                  i_aki3, i_sepsis, i_hemo, i_mods, i_rabdo, i_hyperamm]
-        contras = [c_confort, c_acceso, c_choque, c_coag_abs]
-        n_indics = sum(indics)
-        n_contras = sum(contras)
-
-        # Scores from other tabs
-        sofa_prev = st.session_state.get("sofa_total", None)
-        apache_prev = st.session_state.get("apache2_total", None)
-        aki_prev = st.session_state.get("aki_stage", None)
-
-        st.divider()
-        st.markdown("### 📋 Conclusión y argumento clínico")
-
-        if n_contras > 0:
-            contras_activas = []
-            if c_confort: contras_activas.append("Decisión de cuidados de confort")
-            if c_acceso: contras_activas.append("Sin acceso vascular posible")
-            if c_choque: contras_activas.append("Choque irreversible inminente")
-            if c_coag_abs: contras_activas.append("Coagulopatía refractaria absoluta")
-            st.error(f"⛔ **CRRT no indicado en este momento** por: {', '.join(contras_activas)}. "
-                     f"Re-evaluar si las condiciones cambian.")
-        elif n_indics >= 2:
-            st.success(f"✅ **CRRT INDICADO** — {n_indics} indicaciones presentes. "
-                       f"Iniciar según disponibilidad y metas de atención.")
-        elif n_indics == 1:
-            st.warning(f"🟡 **CRRT a evaluar** — 1 indicación presente. "
-                       f"Puede ser suficiente si hay deterioro progresivo. Decisión clínica individualizada.")
-        else:
-            st.info("ℹ️ Sin indicaciones formales activas al momento. Monitoreo continuo y reevaluación.")
-
-        # Generate clinical text
-        st.markdown("#### 📝 Texto para expediente")
-        indics_texto = []
-        if i_acidosis: indics_texto.append("acidosis metabólica refractaria (pH <7.15)")
-        if i_electro: indics_texto.append("hipercalemia refractaria (K+ >6.0 mEq/L)")
-        if i_intox: indics_texto.append("intoxicación con tóxico dializable")
-        if i_overload: indics_texto.append("sobrecarga hídrica >10% con compromiso respiratorio")
-        if i_uremia: indics_texto.append("uremia sintomática")
-        if i_aki3: indics_texto.append("AKI Estadio 3 por criterios KDIGO 2026")
-        if i_sepsis: indics_texto.append("sepsis con AKI Estadio 2–3 y SOFA ≥2")
-        if i_hemo: indics_texto.append("inestabilidad hemodinámica (intolerante a HD convencional)")
-        if i_mods: indics_texto.append("síndrome de disfunción multiorgánica (≥3 órganos)")
-        if i_rabdo: indics_texto.append("rabdomiólisis severa con mioglobinuria")
-        if i_hyperamm: indics_texto.append("hiperamonemia refractaria")
-
-        sofa_txt = f"SOFA {sofa_prev}/24" if sofa_prev is not None else ""
-        apache_txt = f"APACHE II {apache_prev}" if apache_prev is not None else ""
-        aki_txt = f"AKI Estadio {aki_prev} (KDIGO 2026)" if aki_prev is not None else ""
-        scores_txt = ", ".join(filter(None, [sofa_txt, apache_txt, aki_txt]))
-
-        if indics_texto:
-            texto_exp = (
-                f"Paciente con enfermedad crítica severa ({scores_txt}). "
-                f"Se indica inicio de Terapia de Reemplazo Renal Continua (CRRT) por las siguientes indicaciones: "
-                f"{'; '.join(indics_texto)}. "
-                f"Los scores de severidad documentados reflejan la gravedad de la disfunción orgánica "
-                f"y constituyen indicación de soporte renal continuo, de acuerdo con KDIGO 2026 "
-                f"(Capítulo 5: Kidney Replacement Therapy) y guías SCCM/ESICM. "
-                f"Se planifica CRRT con modalidad, flujos y anticoagulación según prescripción adjunta. "
-                f"Inicio individualizado; sin evidencia de beneficio del inicio acelerado vs estándar "
-                f"(STARRT-AKI 2020, n=2927, mortalidad 90d 43.9 vs 43.7%, p=0.92)."
-            )
-        else:
-            texto_exp = (
-                f"Paciente con monitoreo renal activo ({scores_txt}). "
-                f"Sin indicaciones formales de CRRT al momento de esta evaluación. "
-                f"Se continuará vigilancia estrecha y se reevaluará candidatura ante cambios clínicos. "
-                f"Criterios de inicio según KDIGO 2026."
-            )
-        st.text_area("Copiar al expediente:", value=texto_exp, height=180, key="texto_expediente")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 1: PRESCRIPCIÓN CRRT
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "presc":
+# ==============================================================================
+# TAB 1: PRESCRIPCIÓN CRRT — cuerpo envuelto en fragment para acelerar reruns.
+# El contenido vive en _render_presc_page(); la página presc solo la invoca.
+# ==============================================================================
+def _render_presc_page():
     st.subheader("Prescripción CRRT — Recomendación combinada")
 
     if _CRRT_CASOS_MODULE:
@@ -3876,469 +3364,541 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
         st.caption("💡 Educativo. La prescripción real para programar es la de arriba; "
                    "este simulador ayuda a entender cómo cada bomba afecta efluente, dosis y FF.")
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 2: CITRATO REGIONAL (RCA) — COMPLETO
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "cit":
-    st.subheader("Anticoagulación Regional con Citrato (RCA)")
-    st.caption("Anticoagulación local del circuito sin efecto sistémico — primera línea si no hay contraindicaciones.")
+# Fragment si el runtime lo soporta (Streamlit >= 1.37: st.fragment;
+# 1.32-1.36: st.experimental_fragment). Fallback: llamada directa sin fragment.
+if hasattr(st, "fragment"):
+    _render_presc_page = st.fragment(_render_presc_page)
+elif hasattr(st, "experimental_fragment"):
+    _render_presc_page = st.experimental_fragment(_render_presc_page)
+# ==============================================================================
+# TAB: SCORES — cuerpo envuelto en fragment para acelerar reruns.
+# El contenido vive en _render_scores_page(); la página scores solo la invoca.
+# ==============================================================================
+def _render_scores_page():
+    st.subheader("📊 Scores de Severidad y Candidatura a CRRT")
+    st.info("💡 Los scores de mortalidad (SOFA, APACHE II) son **pronósticos**, "
+            "no contraindicaciones al CRRT. Un score alto indica enfermedad crítica "
+            "severa que **justifica** el soporte renal continuo.")
 
-    # ── Contraindicaciones ──────────────────────────────────────────────────
-    st.markdown("### ⚠️ Verificación de contraindicaciones")
-    ci1, ci2, ci3 = st.columns(3)
-    with ci1:
-        insuf_hep = st.selectbox("Insuficiencia hepática grave", ["No", "Sí"], key="ci_hep")
-    with ci2:
-        lac_ci = st.number_input("Lactato actual (mmol/L)", 0.0, 25.0, 2.0, 0.1, key="ci_lac")
-    with ci3:
-        alcalosis_ci = st.selectbox("Alcalosis metabólica severa (HCO₃>35)", ["No", "Sí"], key="ci_alk")
+    modo_score = st.radio("Calculadora", ["SOFA", "APACHE II", "AKI — KDIGO 2026",
+                                          "🏥 Candidatura a CRRT"], horizontal=True,
+                          key="modo_score")
 
-    contraindicado = insuf_hep == "Sí" or lac_ci > 5.0 or alcalosis_ci == "Sí"
-    if contraindicado:
-        razones = []
-        if insuf_hep == "Sí":
-            razones.append("Insuficiencia hepática grave (metabolismo de citrato deteriorado)")
-        if lac_ci > 5.0:
-            razones.append(f"Lactato {lac_ci:.1f} mmol/L > 5.0 (hipoperfusión hepática)")
-        if alcalosis_ci == "Sí":
-            razones.append("Alcalosis metabólica severa (citrato genera más HCO₃⁻)")
-        st.error("⛔ **CONTRAINDICACIÓN detectada.** Usar HEPARINA NO FRACCIONADA.\n\n" +
-                 "\n".join(f"• {r}" for r in razones))
-    else:
-        st.success("✅ Sin contraindicaciones detectadas. Citrato es la opción recomendada.")
+    # ── SOFA ──────────────────────────────────────────────────────────────────
+    if modo_score == "SOFA":
+        st.markdown("### SOFA Score — Sequential Organ Failure Assessment")
+        st.caption("Sepsis-3 (Singer et al., JAMA 2016). Evalúa 6 sistemas. Score 0–24.")
 
-    st.divider()
-
-    # ── Tipo de solución ─────────────────────────────────────────────────────
-    st.markdown("### Selección de solución de citrato")
-    sol_opts = ["Citrato trisódico 4% (136 mmol/L — más común)", "Prismocitrate (concentración configurable)"]
-    sol_type = st.selectbox("Tipo de solución", sol_opts, key="cit_sol_type")
-
-    if "4%" in sol_type:
-        cit_conc = 136.0
-        na_en_cit = 408.0   # 3 x 136 mmol/L de Na (citrato TRIsódico)
-        st.info("Citrato trisódico 4%: **136 mmol/L** de citrato | **408 mmol/L** de Na (3 Na por molécula) — considerar en balance de sodio.")
-    else:
-        cit_conc = st.number_input("Concentración del Prismocitrate (mmol/L)",
-                                   100.0, 1200.0, 1000.0, 10.0, key="cit_prismo_conc")
-        na_en_cit = st.number_input("Contenido de Na en solución (mmol/L)",
-                                    0.0, 500.0, 100.0, 5.0, key="cit_prismo_na",
-                                    help="Consultar ficha técnica del fabricante")
-        st.caption(f"Prismocitrate configurado: {cit_conc:.0f} mmol/L citrato | {na_en_cit:.0f} mmol/L Na")
-
-    # Guardar para módulo de sodio
-    st.session_state["cit_conc_mmol_L"] = cit_conc
-    st.session_state["cit_na_mmol_L"] = na_en_cit
-
-    st.divider()
-
-    # ── Cálculo de infusión de citrato ──────────────────────────────────────
-    st.markdown("### Cálculo de infusión de citrato")
-    rc1, rc2, rc3 = st.columns(3)
-    with rc1:
-        cit_qb = st.number_input("QB (mL/min)", 80, 300, int(st.session_state.get("sb_qb", 150)),
-                                 10, key="cit_qb")
-    with rc2:
-        cit_dose = st.number_input("Dosis objetivo (mmol/L sangre)", 1.0, 6.0, 3.0, 0.1,
-                                   key="cit_dose",
-                                   help="Habitual: 2–4 mmol/L. Inicio conservador a 3 mmol/L.")
-    with rc3:
-        qe_from_presc = int(dosis_mlkg * peso) if peso > 0 else 2000
-        cit_qeff = st.number_input("Efluente total (mL/hr)", 0, 6000,
-                                   qe_from_presc, 100, key="cit_qeff",
-                                   help=f"Vinculado a prescripción: {dosis_mlkg} mL/kg/h x {peso:.1f} kg = {qe_from_presc} mL/hr")
-        st.caption(f"📌 Qe prescripción = {qe_from_presc} mL/hr")
-
-    cit_qb_hr = cit_qb * 60
-    cit_inf_rate = cit_dose * cit_qb_hr / cit_conc if cit_conc > 0 else 0
-    total_flow = cit_qb_hr + cit_inf_rate
-    cit_circuit = cit_inf_rate * cit_conc / total_flow if total_flow > 0 else 0
-    cit_load = cit_inf_rate * cit_conc / 1000
-    cit_removal = cit_qeff * cit_circuit / 1000
-    cit_to_patient = cit_load - cit_removal
-
-    # Aporte de Na por citrato
-    na_aporte_cit = cit_inf_rate * na_en_cit / 1000  # mmol/hr
-
-    rcr1, rcr2, rcr3, rcr4 = st.columns(4)
-    rcr1.metric("Tasa citrato (mL/hr)", f"{cit_inf_rate:.0f}")
-    rcr2.metric("Carga al circuito (mmol/hr)", f"{cit_load:.2f}")
-    rcr3.metric("Remoción por filtro (mmol/hr)", f"{cit_removal:.2f}")
-    rcr4.metric("Carga al paciente (mmol/hr)", f"{cit_to_patient:.2f}")
-
-    st.caption(f"[Citrato] en circuito: **{cit_circuit:.1f} mmol/L** | "
-               f"Aporte de Na por citrato: **{na_aporte_cit:.1f} mmol/hr** "
-               f"({na_aporte_cit * 24:.0f} mmol/día) — incluir en balance de sodio.")
-
-    # Guardar para PDF y tarjeta enfermería
-    st.session_state["rca_citrato_ml_h"] = float(cit_inf_rate)
-    st.session_state["anticoagulacion_tipo"] = "RCA"
-
-    st.divider()
-
-    # ── Reposición de calcio ─────────────────────────────────────────────────
-    st.markdown("### Calculadora de reposición de calcio")
-    st.caption("Gluconato de calcio 10% — cada ámpula de **10 mL = 2.23 mmol** de Ca elemental")
-
-    ca_loss = cit_qeff * 1.25 / 1000  # mmol/hr estimado
-
-    cac1, cac2, cac3 = st.columns(3)
-    with cac1:
-        num_viales = st.number_input("# de ámpulas de gluconato Ca 10% (10 mL c/u)",
-                                     1, 30, 12, 1, key="ca_viales",
-                                     help="Ejemplo habitual: 12 ámpulas")
-    with cac2:
-        prep_vol_str = st.selectbox("Volumen de NaCl 0.9% para aforar",
-                                    ["250 mL", "500 mL"], key="ca_prep_vol")
-        prep_vol_ml = 250 if "250" in prep_vol_str else 500
-    with cac3:
-        st.metric("Pérdida estimada de Ca (mmol/hr)", f"{ca_loss:.2f}",
-                  help="Estimado: Qeff x 1.25 mmol/L / 1000")
-
-    mmol_per_vial = 2.23
-    total_ca = num_viales * mmol_per_vial
-    # AFORO: el volumen total de la preparación es el de la bolsa (250 o 500 mL).
-    # Las ámpulas se añaden a la bolsa ya aforada — el volumen final NO se suma.
-    vol_total_ca = prep_vol_ml
-    ca_conc_mmol_L = total_ca / (vol_total_ca / 1000) if vol_total_ca > 0 else 0
-    ca_inf_rate_ml_hr = ca_loss / (ca_conc_mmol_L / 1000) if ca_conc_mmol_L > 0 else 0
-
-    carc1, carc2, carc3, carc4 = st.columns(4)
-    carc1.metric("Ca total en bolsa (mmol)", f"{total_ca:.2f}")
-    carc2.metric("Volumen total aforado (mL)", f"{vol_total_ca}",
-                 help="Aforado: el volumen final es el de la bolsa de NaCl")
-    carc3.metric("Concentración Ca (mmol/L)", f"{ca_conc_mmol_L:.1f}")
-    carc4.metric("Tasa infusión inicial (mL/hr)", f"{ca_inf_rate_ml_hr:.0f}")
-
-    st.info(f"📋 **Preparación (aforado):** Agregar {num_viales} ámpulas gluconato Ca 10% (10mL c/u) "
-            f"a bolsa de **{prep_vol_ml}mL NaCl 0.9%** — volumen final aforado = **{vol_total_ca}mL** "
-            f"con **{ca_conc_mmol_L:.1f} mmol/L** Ca elemental. "
-            f"Infundir a **{ca_inf_rate_ml_hr:.0f} mL/hr** por línea sistémica (POSTFILTRO).")
-    st.caption("⚠️ El calcio se infunde por línea sistémica post-filtro, NUNCA en la línea de citrato ni pre-filtro.")
-
-    # Guardar para PDF
-    st.session_state["rca_calcio_ml_h"] = float(ca_inf_rate_ml_hr)
-
-    st.divider()
-
-    # ── Ajuste por iCa ──────────────────────────────────────────────────────
-    st.markdown("### Ajuste por calcio ionizado medido")
-    adj1, adj2 = st.columns(2)
-    with adj1:
-        ica_post = st.number_input("iCa POST-filtro (mmol/L)", 0.0, 2.0, 0.35, 0.01,
-                                   key="ica_post", help="Objetivo: 0.25–0.40 mmol/L")
-    with adj2:
-        ica_sist = st.number_input("iCa sistémico (mmol/L)", 0.0, 2.5, 1.10, 0.01,
-                                   key="ica_sist", help="Objetivo: 1.0–1.2 mmol/L")
-
-    # Ajuste citrato por iCa post-filtro
-    if ica_post < 0.25:
-        st.warning(f"⬇️ iCa post-filtro BAJO ({ica_post:.2f} mmol/L). "
-                   f"**↓ Citrato 10–20%:** nueva tasa ≈ {cit_inf_rate * 0.85:.0f}–{cit_inf_rate * 0.90:.0f} mL/hr")
-    elif ica_post > 0.40:
-        st.warning(f"⬆️ iCa post-filtro ALTO ({ica_post:.2f} mmol/L). "
-                   f"**↑ Citrato 10–20%:** nueva tasa ≈ {cit_inf_rate * 1.10:.0f}–{cit_inf_rate * 1.20:.0f} mL/hr")
-    else:
-        st.success(f"✅ iCa post-filtro en rango ({ica_post:.2f} mmol/L — objetivo 0.25–0.40). Citrato adecuado.")
-
-    # Ajuste calcio por iCa sistémico
-    if ica_sist < 1.0:
-        st.warning(f"⬆️ iCa sistémico BAJO ({ica_sist:.2f} mmol/L). "
-                   f"**↑ Calcio 10–20%:** nueva tasa ≈ {ca_inf_rate_ml_hr * 1.10:.0f}–{ca_inf_rate_ml_hr * 1.20:.0f} mL/hr")
-    elif ica_sist > 1.2:
-        st.warning(f"⬇️ iCa sistémico ALTO ({ica_sist:.2f} mmol/L). "
-                   f"**↓ Calcio 10–20%:** nueva tasa ≈ {ca_inf_rate_ml_hr * 0.80:.0f}–{ca_inf_rate_ml_hr * 0.90:.0f} mL/hr")
-    else:
-        st.success(f"✅ iCa sistémico en rango ({ica_sist:.2f} mmol/L — objetivo 1.0–1.2). Calcio adecuado.")
-
-    # Guardar targets para PDF
-    st.session_state["rca_targets"] = {
-        "iCa_post": f"{ica_post:.2f}",
-        "iCa_sist": f"{ica_sist:.2f}",
-        "citrato_obj_mmolL": float(cit_dose)
-    }
-
-    st.divider()
-
-    # ── Calendario de monitoreo ──────────────────────────────────────────────
-    st.markdown("### 📅 Calendario de monitoreo RCA")
-    st.markdown("""
-| Momento | Qué medir | Acción |
-|---------|-----------|--------|
-| **30 min post-inicio** | iCa post-filtro + iCa sistémico | Ajuste inicial ±10–20% |
-| **1–2 hrs** | iCa ambos | Confirmar estabilidad |
-| **Cada 4–6 hrs (estable)** | iCa ambos + Na, K, HCO₃⁻, AG | Mantenimiento |
-| **Post-ajuste de dosis** | 30 min después del cambio | Verificar nuevo equilibrio |
-| **Cada 12–24 hrs** | Ca total, Ca iónico, AG, pH, HCO₃⁻, lactato | Detección acumulación |
-    """)
-
-    st.divider()
-
-    # ── Detección de acumulación de citrato ─────────────────────────────────
-    st.markdown("### 🔍 Detección de acumulación de citrato")
-    st.caption("La acumulación ocurre cuando el hígado no metaboliza el citrato (insuficiencia hepática, bajo gasto cardíaco).")
-
-    acc1, acc2, acc3 = st.columns(3)
-    with acc1:
-        ca_total_acc = st.number_input("Ca total sérico (mmol/L)", 1.0, 4.0, 2.3, 0.1, key="acc_catot",
-                                       help="Normal: 2.1–2.6 mmol/L")
-        ca_ion_acc = st.number_input("Ca iónico sistémico (mmol/L)", 0.3, 2.0, 1.1, 0.01, key="acc_caion")
-    with acc2:
-        ag_acc = st.number_input("Anión gap (mEq/L)", 5.0, 40.0, 12.0, 0.5, key="acc_ag",
-                                 help="Normal: 8–16 mEq/L")
-        hco3_acc = st.number_input("HCO₃⁻ (mEq/L)", 10.0, 50.0, 24.0, 0.5, key="acc_hco3")
-    with acc3:
-        ph_acc = st.number_input("pH", 7.10, 7.70, 7.40, 0.01, key="acc_ph")
-        ca_inf_sube = st.selectbox("¿Infusión Ca en aumento sin corregir iCa?", ["No", "Sí"],
-                                   key="acc_ca_sube")
-
-    ratio_ca = ca_total_acc / ca_ion_acc if ca_ion_acc > 0 else 0
-    criterios_acum = []
-    if ratio_ca > 2.5:
-        criterios_acum.append(f"🔴 Ca total / Ca iónico = **{ratio_ca:.2f}** (>2.5 — CRITERIO PRINCIPAL)")
-    if ag_acc > 16:
-        criterios_acum.append(f"🟠 Anión gap elevado: **{ag_acc:.1f} mEq/L** (>16)")
-    if hco3_acc > 30 or ph_acc > 7.50:
-        criterios_acum.append(f"🟠 Alcalosis metabólica: HCO₃⁻={hco3_acc:.1f}, pH={ph_acc:.2f}")
-    if ca_inf_sube == "Sí" and ca_ion_acc < 1.0:
-        criterios_acum.append("🟠 iCa sistémico bajo a pesar de ↑ infusión de calcio")
-
-    st.metric("Relación Ca total / Ca iónico", f"{ratio_ca:.2f}",
-              delta="Normal (<2.5)" if ratio_ca <= 2.5 else "ELEVADO (>2.5)")
-
-    if len(criterios_acum) >= 2:
-        st.error("🚨 **PROBABLE ACUMULACIÓN DE CITRATO**\n\n" +
-                 "\n".join(criterios_acum) +
-                 "\n\n**Acciones:** Reducir citrato 30–50% o suspender → cambiar a HNF. "
-                 "Monitorear iCa cada hora. Identificar causa (disfunción hepática, bajo GC).")
-    elif len(criterios_acum) == 1:
-        st.warning("⚠️ Un criterio de acumulación presente. Monitoreo estrecho:\n\n" + criterios_acum[0])
-    else:
-        st.success(f"✅ Sin criterios de acumulación. Ratio Ca total/iónico = {ratio_ca:.2f} (normal <2.5).")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 3: SODIO EN CRRT
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "na":
-    st.subheader("Sodio en CRRT — Predicción y Corrección")
-
-    modo_na = st.radio("Modo", ["📊 Predicción de sodio", "🎯 Corrección de sodio"], horizontal=True,
-                       key="modo_na")
-
-    # Datos del paciente compartidos
-    st.markdown("### Datos del paciente")
-    nac1, nac2, nac3, nac4, nac5 = st.columns(5)
-    with nac1:
-        na_sex = st.selectbox("Sexo", ["M", "F"], key="na_sex")
-    with nac2:
-        na_age = st.number_input("Edad (años)", 0, 110, 55, 1, key="na_age")
-    with nac3:
-        na_ht = st.number_input("Talla (cm)", 100, 220, 170, 1, key="na_ht")
-    with nac4:
-        na_wt = st.number_input("Peso (kg)", 10.0, 300.0, float(peso), 0.5, key="na_wt")
-    with nac5:
-        na_plasma = st.number_input("Na plasmático actual (mEq/L)", 100.0, 200.0, 140.0, 0.5,
-                                    key="na_plasma")
-
-    st.markdown("### Parámetros de la terapia")
-    nat1, nat2, nat3 = st.columns(3)
-    with nat1:
-        na_bags = st.number_input("[Na] en bolsas CRRT (mEq/L)", 100.0, 160.0, 140.0, 1.0,
-                                  key="na_bags", help="Na en solución de reemplazo/dializato")
-        na_qeff = st.number_input("Efluente total (mL/hr)", 0, 6000, int(dosis_mlkg * peso),
-                                  100, key="na_qeff")
-    with nat2:
-        cit_sol_tipo_na = st.session_state.get("cit_sol_type", "Citrato trisódico 4% (136 mmol/L — más común)")
-        na_in_cit = st.number_input("[Na] en solución de citrato (mEq/L)",
-                                    0.0, 500.0, float(st.session_state.get("cit_na_mmol_L", 408.0)),
-                                    1.0, key="na_in_cit",
-                                    help="Citrato trisódico 4%: ~408 mEq/L")
-        cit_inf_na = st.number_input("Tasa infusión citrato (mL/hr)", 0.0, 3000.0,
-                                     float(st.session_state.get("rca_citrato_ml_h", 0.0)),
-                                     1.0, key="cit_inf_na")
-    with nat3:
-        na_post_sol = st.number_input("[Na] solución postfiltro (mEq/L)", 0.0, 160.0, 0.0, 1.0,
-                                      key="na_post_sol", help="0 si no hay reposición postfiltro separada")
-        post_inf_na = st.number_input("Tasa reposición postfiltro (mL/hr)", 0.0, 3000.0, 0.0, 10.0,
-                                      key="post_inf_na")
-
-    if "Predicción" in modo_na:
-        st.markdown("### Predicción")
-        na_tiempo = st.number_input("Tiempo de terapia (hrs)", 1, 72, 24, 1, key="na_tiempo")
-        result_na = calc_na_pred_trrc(
-            na_sex, na_age, na_ht, na_wt, na_plasma, na_bags, na_qeff, na_tiempo,
-            na_in_cit, cit_inf_na, na_post_sol, post_inf_na)
-        if result_na:
-            rn1, rn2, rn3 = st.columns(3)
-            rn1.metric("ACT estimada (Watson)", f"{result_na['tbw']:.1f} L")
-            rn2.metric("Balance neto de Na", f"{result_na['net_na']:.1f} mEq/hr",
-                       help="+: Na se retiene | -: Na se elimina")
-            rn3.metric("[Na] predicho al final", f"{result_na['na_pred']:.1f} mEq/L",
-                       delta=f"{result_na['na_pred'] - na_plasma:+.1f} vs actual")
-            delta_24 = result_na["net_na"] * na_tiempo
-            st.info(f"Balance acumulado en {na_tiempo}h: **{delta_24:+.0f} mEq de Na** → "
-                    f"Na final predicho **{result_na['na_pred']:.1f} mEq/L**")
-            # Alertas de corrección
-            if na_plasma < 130 and (result_na["na_pred"] - na_plasma) > 10:
-                st.error("⚠️ Corrección de hiponatremia >10 mEq/L proyectada. Riesgo de ODS. Ajustar [Na] en bolsas o reducir efluente.")
-            if abs(result_na["na_pred"] - na_plasma) / na_tiempo > 0.5 and na_tiempo <= 24:
-                st.warning(f"⚠️ Velocidad de corrección ≈ {abs(result_na['na_pred'] - na_plasma) / na_tiempo:.2f} mEq/L/hr. Verificar meta clínica.")
-        else:
-            st.info("Completa los datos del paciente para calcular la predicción.")
-
-    else:  # Corrección
-        st.markdown("### Estrategias de corrección de sodio en 24h")
-        na_meta = st.number_input("[Na] objetivo en 24h (mEq/L)", 100.0, 200.0, 140.0, 0.5,
-                                  key="na_meta")
-        result_corr = calc_na_corr_trrc(
-            na_sex, na_age, na_ht, na_wt, na_plasma, na_meta, na_qeff, na_bags,
-            na_in_cit, cit_inf_na)
-        if result_corr:
-            st.metric("ACT estimada (Watson)", f"{result_corr['tbw']:.1f} L")
-            st.metric("Δ Na necesario", f"{result_corr['delta_hr']:+.1f} mEq/hr",
-                      help="Na neto que debe moverse por hora para alcanzar la meta en 24h")
-            st.markdown("---")
-            rc1, rc2 = st.columns(2)
-            with rc1:
-                st.markdown("#### Estrategia 1")
-                st.markdown("**Ajustar flujo de reposición postfiltro** (Na estándar = 140 mEq/L)")
-                st.metric("Tasa postfiltro recomendada", f"{result_corr['pf_rate']:.0f} mL/hr")
-                st.caption("Mantener [Na] en bolsas sin cambios. Ajustar sólo el flujo postfiltro.")
-            with rc2:
-                st.markdown("#### Estrategia 2")
-                st.markdown("**Ajustar [Na] en bolsas CRRT** (sin reposición postfiltro adicional)")
-                st.metric("[Na] objetivo en bolsas", f"{result_corr['target_bags']:.1f} mEq/L")
-                st.caption("Mantener flujo de efluente. Cambiar composición de la solución.")
-            # Alertas
-            delta_na_24 = na_meta - na_plasma
-            if na_plasma < 130 and delta_na_24 > 10:
-                st.error("⚠️ Meta implica corrección >10 mEq/L en 24h. Para hiponatremia ≤ 8 mEq/L/24h (≤8 si riesgo de ODS). Reconsiderar meta.")
-            if na_plasma > 150 and delta_na_24 < -12:
-                st.warning("⚠️ Corrección de hipernatremia: no exceder 10–12 mEq/L/24h. Verificar meta.")
-        else:
-            st.info("Completa los datos para calcular las estrategias de corrección.")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4: PREDICCIÓN HD + KoA
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "hd":
-    st.subheader("Predicción de Hemodiálisis convencional + KoA")
-
-    modo_hd = st.radio("Modo", ["💉 Predicción HD", "🔧 Calculadora KoA"], horizontal=True, key="modo_hd")
-
-    if "Predicción" in modo_hd:
-        st.markdown("### Datos del paciente")
-        hd1, hd2, hd3, hd4, hd5 = st.columns(5)
-        with hd1:
-            hd_sex = st.selectbox("Sexo", ["M", "F"], key="hd_sex")
-        with hd2:
-            hd_age = st.number_input("Edad (años)", 0, 110, 55, 1, key="hd_age")
-        with hd3:
-            hd_ht = st.number_input("Talla (cm)", 100, 220, 170, 1, key="hd_ht")
-        with hd4:
-            hd_wt = st.number_input("Peso seco (kg)", 10.0, 200.0, 70.0, 0.5, key="hd_wt")
-        with hd5:
-            pass
-
-        st.markdown("### Terapia prescrita")
-        hdt1, hdt2, hdt3, hdt4, hdt5 = st.columns(5)
-        with hdt1:
-            hd_time = st.number_input("Tiempo (min)", 60, 480, 240, 15, key="hd_time")
-        with hdt2:
-            hd_uf = st.number_input("UF total (L)", 0.0, 10.0, 2.0, 0.1, key="hd_uf")
-        with hdt3:
-            hd_qb = st.number_input("QB (mL/min)", 100, 500, 300, 10, key="hd_qb")
-        with hdt4:
-            hd_qd = st.number_input("QD (mL/min)", 100, 800, 500, 50, key="hd_qd")
-        with hdt5:
-            hd_koa = st.number_input("KoA membrana (mL/min)", 0.0, 2000.0, 0.0, 10.0,
-                                     key="hd_koa", help="Opcional. Si 0, estimado por QB/QD x 0.85")
-
-        result_hd = calc_hd_pred(hd_sex, hd_age, hd_ht, hd_wt, hd_time, hd_uf, hd_qb, hd_qd, hd_koa)
-        if result_hd:
-            st.markdown("### Resultados predichos")
-            hdr1, hdr2, hdr3, hdr4, hdr5 = st.columns(5)
-            hdr1.metric("ACT (Watson)", f"{result_hd['tbw']:.1f} L")
-            hdr2.metric("Aclar. urea K (mL/min)", f"{result_hd['K']:.1f}")
-            hdr3.metric("Urea Kt (L)", f"{result_hd['Kt']:.2f}")
-            hdr4.metric("Kt/V", f"{result_hd['KtV']:.2f}",
-                        delta="✅ Adecuado" if result_hd["KtV"] >= 1.2 else "⚠️ Bajo")
-            hdr5.metric("URR estimada", f"{result_hd['URR']:.1f}%",
-                        delta="✅" if result_hd["URR"] >= 65 else "⚠️")
-
-            if result_hd["KtV"] < 1.2:
-                st.warning(f"⚠️ Kt/V {result_hd['KtV']:.2f} < 1.2 (meta KDIGO para 3x/semana). "
-                           f"Considerar ↑ tiempo, ↑ QB o ↑ QD.")
-            elif result_hd["KtV"] >= 1.4:
-                st.success(f"✅ Kt/V {result_hd['KtV']:.2f} ≥ 1.4 — Excelente adecuación.")
+        st.markdown("#### Sistema Respiratorio")
+        sc_r1, sc_r2 = st.columns(2)
+        with sc_r1:
+            resp_mode = st.radio("Método", ["PaO₂/FiO₂", "SpO₂/FiO₂ (sin gases)"],
+                                 horizontal=True, key="sofa_resp_mode")
+        with sc_r2:
+            if resp_mode == "PaO₂/FiO₂":
+                pafi = st.number_input("PaO₂/FiO₂ (mmHg)", 0.0, 600.0, 400.0, 10.0, key="sofa_pafi")
+                if pafi >= 400: resp_score = 0
+                elif pafi >= 300: resp_score = 1
+                elif pafi >= 200: resp_score = 2
+                elif pafi >= 100: resp_score = 3
+                else: resp_score = 4
             else:
-                st.success(f"✅ Kt/V {result_hd['KtV']:.2f} — Adecuado (meta ≥1.2).")
+                spafi = st.number_input("SpO₂/FiO₂", 0.0, 600.0, 315.0, 5.0, key="sofa_spafi")
+                if spafi >= 315: resp_score = 0
+                elif spafi >= 235: resp_score = 1
+                elif spafi >= 148: resp_score = 2
+                elif spafi >= 67: resp_score = 3
+                else: resp_score = 4
+        st.metric("Puntos respiratorio", resp_score)
 
-            st.metric("Tasa UF (mL/min)", f"{result_hd['UFrate']:.1f}",
-                      help="UF rate. Objetivo <13 mL/min/m² BSA (~10 mL/kg/hr)")
+        st.markdown("#### Coagulación · Hígado · Cardiovascular · SNC")
+        col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+        with col_s1:
+            plaq_sofa = st.number_input("Plaquetas (x10³/µL)", 0.0, 800.0, 200.0, 10.0, key="sofa_plaq")
+            if plaq_sofa >= 150: coag_score = 0
+            elif plaq_sofa >= 100: coag_score = 1
+            elif plaq_sofa >= 50: coag_score = 2
+            elif plaq_sofa >= 20: coag_score = 3
+            else: coag_score = 4
+            st.metric("Coagulación", coag_score)
+        with col_s2:
+            bili_sofa = st.number_input("Bilirrubina (mg/dL)", 0.0, 30.0, 1.0, 0.1, key="sofa_bili")
+            if bili_sofa < 1.2: liver_score = 0
+            elif bili_sofa < 2.0: liver_score = 1
+            elif bili_sofa < 6.0: liver_score = 2
+            elif bili_sofa < 12.0: liver_score = 3
+            else: liver_score = 4
+            st.metric("Hígado", liver_score)
+        with col_s3:
+            map_sofa = st.number_input("PAM (mmHg)", 0.0, 150.0,
+                                       float(st.session_state.get("pam", 65.0)), 1.0, key="sofa_map")
+            vaso_sofa = st.selectbox("Vasopresores",
+                ["Ninguno", "Dopamina ≤5 o Dobutamina",
+                 "Dopamina >5 o NE/Epi ≤0.1 µg/kg/min",
+                 "Dopamina >15 o NE/Epi >0.1 µg/kg/min"], key="sofa_vaso")
+            if "Ninguno" in vaso_sofa:
+                cv_score = 0 if map_sofa >= 70 else 1
+            elif "≤5" in vaso_sofa: cv_score = 2
+            elif "NE/Epi ≤0.1" in vaso_sofa: cv_score = 3
+            else: cv_score = 4
+            st.metric("Cardiovascular", cv_score)
+        with col_s4:
+            gcs_sofa = st.number_input("GCS", 3, 15, 15, 1, key="sofa_gcs")
+            if gcs_sofa == 15: cns_score = 0
+            elif gcs_sofa >= 13: cns_score = 1
+            elif gcs_sofa >= 10: cns_score = 2
+            elif gcs_sofa >= 6: cns_score = 3
+            else: cns_score = 4
+            st.metric("SNC", cns_score)
 
-            # Predicción de solutos post-diálisis
-            st.markdown("### Predicción de solutos post-sesión")
-            st.caption("Modelos de un pool con supuestos de equilibrio simplificados.")
-            solt1, solt2, solt3 = st.columns(3)
-            with solt1:
-                pre_bun = st.number_input("BUN/Urea pre (cualquier ud.)", 0.0, 500.0, 80.0, 1.0,
-                                          key="hd_prebun")
-                pre_na = st.number_input("[Na] pre (mEq/L)", 100.0, 200.0, 140.0, 0.5, key="hd_prena")
-                pre_k = st.number_input("[K] pre (mEq/L)", 1.0, 10.0, 5.0, 0.1, key="hd_prek")
-            with solt2:
-                dial_na = st.number_input("[Na] dializado (mEq/L)", 100.0, 160.0, 140.0, 0.5,
-                                          key="hd_dialna")
-                dial_k = st.number_input("[K] dializado (mEq/L)", 0.0, 4.0, 2.0, 0.5, key="hd_dialk")
-            with solt3:
-                ktv_val = result_hd["KtV"]
-                post_bun = pre_bun * math.exp(-ktv_val)
-                post_na = dial_na + (pre_na - dial_na) * math.exp(-ktv_val * 0.3)
-                post_k = dial_k + (pre_k - dial_k) * math.exp(-ktv_val * 1.2)
-                two_pool_k = post_k * 1.3
+        st.markdown("#### Sistema Renal")
+        cr_sofa_c1, cr_sofa_c2, cr_sofa_c3 = st.columns(3)
+        with cr_sofa_c1:
+            cr_sofa = st.number_input("Creatinina (mg/dL)", 0.0, 20.0,
+                                      1.0, 0.1, key="sofa_cr")
+        with cr_sofa_c2:
+            uo_sofa = st.number_input("Diuresis 24h (mL)", 0, 5000,
+                                      int(st.session_state.get("ur_main", 800)), 50, key="sofa_uo")
+        with cr_sofa_c3:
+            if cr_sofa < 1.2 and uo_sofa >= 500: renal_score = 0
+            elif cr_sofa < 2.0: renal_score = 1
+            elif cr_sofa < 3.5: renal_score = 2
+            elif cr_sofa < 5.0 or uo_sofa < 500: renal_score = 3
+            else: renal_score = 4
+            st.metric("Renal", renal_score)
 
-                st.metric("BUN/Urea post (predicho)", f"{post_bun:.1f}")
-                st.metric("[Na] post (mEq/L)", f"{post_na:.1f}")
-                st.metric("[K] post (mEq/L)", f"{post_k:.1f}")
-                st.metric("[K] post 2-pool (rebote)", f"{two_pool_k:.1f}",
-                          help="Estimado 30% de rebote desde compartimento intracelular")
+        sofa_total = resp_score + coag_score + liver_score + cv_score + cns_score + renal_score
+        if sofa_total <= 6: sofa_mort = "<10%"; sofa_color = "✅"
+        elif sofa_total <= 9: sofa_mort = "15–20%"; sofa_color = "🟡"
+        elif sofa_total <= 12: sofa_mort = "40–50%"; sofa_color = "🟠"
+        elif sofa_total <= 14: sofa_mort = "50–60%"; sofa_color = "🔴"
+        elif sofa_total == 15: sofa_mort = ">80%"; sofa_color = "🔴"
+        else: sofa_mort = ">90%"; sofa_color = "🔴"
 
-    else:  # KoA
-        st.markdown("### Calculadora de KoA (datos in vitro del fabricante)")
-        st.caption("Basada en la ecuación de Michaels. Resolución numérica. Usar datos del datasheet del dializador.")
-        kc1, kc2, kc3 = st.columns(3)
-        with kc1:
-            koa_K = st.number_input("Aclaramiento in vitro K (mL/min)", 0.0, 500.0, 180.0, 1.0,
-                                    key="koa_K")
-        with kc2:
-            koa_QB = st.number_input("QB in vitro (mL/min)", 50.0, 500.0, 200.0, 10.0, key="koa_QB")
-        with kc3:
-            koa_QD = st.number_input("QD in vitro (mL/min)", 50.0, 800.0, 500.0, 50.0, key="koa_QD")
+        st.divider()
+        sr1, sr2, sr3 = st.columns(3)
+        sr1.metric("SOFA TOTAL", sofa_total, help="Máximo 24 puntos")
+        sr2.metric("Mortalidad predicha UCI", sofa_mort)
+        sr3.metric("Interpretación", sofa_color + (" Crítico" if sofa_total > 9 else " Severo" if sofa_total > 6 else " Moderado"))
 
-        koa_result = calc_koa(koa_K, koa_QB, koa_QD)
-        if koa_result is not None:
-            st.metric("KoA in vitro (mL/min)", f"{koa_result:.0f}")
-            st.success(f"✅ KoA = **{koa_result:.0f} mL/min** — Puedes usar este valor en el módulo de Predicción HD.")
-        elif koa_K >= min(koa_QB, koa_QD):
-            st.error("⚠️ El aclaramiento no puede ser mayor o igual al mínimo de QB y QD. Revisar datos.")
+        if sofa_total >= 2: st.error(f"🔴 SOFA ≥2: criterio diagnóstico de **SEPSIS** si hay infección sospechada.")
+        if renal_score >= 2:
+            st.warning(f"⚠️ SOFA renal {renal_score}/4 — AKI significativa. "
+                       f"SOFA total {sofa_total} **justifica CRRT**, no lo contraindica.")
+        st.session_state["sofa_total"] = sofa_total
+
+    # ── APACHE II ─────────────────────────────────────────────────────────────
+    elif modo_score == "APACHE II":
+        st.markdown("### APACHE II — Acute Physiology and Chronic Health Evaluation II")
+        st.caption("Knaus et al., Crit Care Med 1985. Predice mortalidad hospitalaria. Score 0–71.")
+
+        st.markdown("#### Variables fisiológicas agudas")
+        ap1, ap2, ap3, ap4 = st.columns(4)
+        with ap1:
+            temp_ap = st.number_input("Temperatura rectal (°C)", 30.0, 42.0, 37.0, 0.1, key="ap_temp")
+            if temp_ap >= 41 or temp_ap < 30: t_s = 4
+            elif temp_ap >= 39 or (temp_ap < 32 and temp_ap >= 30): t_s = 3
+            elif temp_ap >= 38.5 or (temp_ap < 34 and temp_ap >= 32): t_s = 1 if temp_ap >= 38.5 else 2
+            elif temp_ap >= 36: t_s = 0
+            else: t_s = 2
+            # Simplified lookup
+            if temp_ap >= 41: t_s = 4
+            elif temp_ap >= 39: t_s = 3
+            elif temp_ap >= 38.5: t_s = 1
+            elif temp_ap >= 36: t_s = 0
+            elif temp_ap >= 34: t_s = 1
+            elif temp_ap >= 32: t_s = 2
+            elif temp_ap >= 30: t_s = 3
+            else: t_s = 4
+            st.metric("Temperatura", t_s)
+
+            map_ap = st.number_input("PAM (mmHg)", 0, 200,
+                                     int(st.session_state.get("pam", 70)), 5, key="ap_map")
+            if map_ap >= 160: map_s = 4
+            elif map_ap >= 130: map_s = 3
+            elif map_ap >= 110: map_s = 2
+            elif map_ap >= 70: map_s = 0
+            elif map_ap >= 50: map_s = 2
+            else: map_s = 4
+            st.metric("PAM", map_s)
+
+        with ap2:
+            fc_ap = st.number_input("FC (lpm)", 0, 250, 90, 5, key="ap_fc")
+            if fc_ap >= 180: fc_s = 4
+            elif fc_ap >= 140: fc_s = 3
+            elif fc_ap >= 110: fc_s = 2
+            elif fc_ap >= 70: fc_s = 0
+            elif fc_ap >= 55: fc_s = 2
+            elif fc_ap >= 40: fc_s = 3
+            else: fc_s = 4
+            st.metric("FC", fc_s)
+
+            fr_ap = st.number_input("FR (rpm)", 0, 60, 16, 1, key="ap_fr")
+            if fr_ap >= 50: fr_s = 4
+            elif fr_ap >= 35: fr_s = 3
+            elif fr_ap >= 25: fr_s = 1
+            elif fr_ap >= 12: fr_s = 0
+            elif fr_ap >= 10: fr_s = 1
+            elif fr_ap >= 6: fr_s = 2
+            else: fr_s = 4
+            st.metric("FR", fr_s)
+
+        with ap3:
+            pafi_ap = st.number_input("PaO₂/FiO₂ (si FiO₂<0.5 → PaO₂ solo)", 0.0, 600.0, 350.0, 10.0, key="ap_pafi")
+            fi_ap = st.number_input("FiO₂", 0.21, 1.0, 0.21, 0.01, key="ap_fio2")
+            if fi_ap >= 0.5:
+                # Use A-aDO2 approximation: A-aDO2 ≈ (FiO2*713 - PaCO2/0.8) - PaO2
+                # Simplified: use PaO2/FiO2
+                if pafi_ap >= 400: ox_s = 0
+                elif pafi_ap >= 300: ox_s = 1
+                elif pafi_ap >= 200: ox_s = 3
+                else: ox_s = 4
+            else:
+                pao2 = pafi_ap  # treated as PaO2 when FiO2<0.5
+                if pao2 >= 70: ox_s = 0
+                elif pao2 >= 61: ox_s = 1
+                elif pao2 >= 55: ox_s = 3
+                else: ox_s = 4
+            st.metric("Oxigenación", ox_s)
+
+            ph_ap = st.number_input("pH arterial", 6.8, 7.7,
+                                    float(st.session_state.get("ph_main", 7.40)), 0.01, key="ap_ph")
+            if ph_ap >= 7.7: ph_s = 4
+            elif ph_ap >= 7.6: ph_s = 3
+            elif ph_ap >= 7.5: ph_s = 1
+            elif ph_ap >= 7.33: ph_s = 0
+            elif ph_ap >= 7.25: ph_s = 2
+            elif ph_ap >= 7.15: ph_s = 3
+            else: ph_s = 4
+            st.metric("pH", ph_s)
+
+        with ap4:
+            na_ap = st.number_input("Na sérico (mEq/L)", 100, 200,
+                                    int(st.session_state.get("na_main", 140)), 1, key="ap_na")
+            if na_ap >= 180: na_s = 4
+            elif na_ap >= 160: na_s = 3
+            elif na_ap >= 155: na_s = 2
+            elif na_ap >= 150: na_s = 1
+            elif na_ap >= 130: na_s = 0
+            elif na_ap >= 120: na_s = 2
+            elif na_ap >= 111: na_s = 3
+            else: na_s = 4
+            st.metric("Na", na_s)
+
+            k_ap = st.number_input("K sérico (mEq/L)", 1.0, 10.0,
+                                   float(st.session_state.get("k_main", 4.0)), 0.1, key="ap_k")
+            if k_ap >= 7.0: k_s = 4
+            elif k_ap >= 6.0: k_s = 3
+            elif k_ap >= 5.5: k_s = 1
+            elif k_ap >= 3.5: k_s = 0
+            elif k_ap >= 3.0: k_s = 1
+            elif k_ap >= 2.5: k_s = 2
+            else: k_s = 4
+            st.metric("K", k_s)
+
+        st.markdown("#### Creatinina · Hematocrito · Leucocitos · GCS")
+        ap5, ap6, ap7, ap8 = st.columns(4)
+        with ap5:
+            cr_ap = st.number_input("Creatinina (mg/dL)", 0.0, 20.0, 1.0, 0.1, key="ap_cr")
+            falla_renal_ap = st.checkbox("¿AKI agudo? (duplica puntaje Cr)", key="ap_aki")
+            if cr_ap >= 3.5: cr_s = 4
+            elif cr_ap >= 2.0: cr_s = 3
+            elif cr_ap >= 1.5: cr_s = 2
+            elif cr_ap >= 0.6: cr_s = 0
+            else: cr_s = 2
+            if falla_renal_ap: cr_s = min(4, cr_s * 2)
+            st.metric("Creatinina", cr_s)
+        with ap6:
+            hto_ap = st.number_input("Hematocrito (%)", 0.0, 60.0,
+                                     float(st.session_state.get("sb_hto", 0.30)) * 100, 1.0, key="ap_hto")
+            if hto_ap >= 60: hto_s = 4
+            elif hto_ap >= 50: hto_s = 2
+            elif hto_ap >= 46: hto_s = 1
+            elif hto_ap >= 30: hto_s = 0
+            elif hto_ap >= 20: hto_s = 2
+            else: hto_s = 4
+            st.metric("Hematocrito", hto_s)
+        with ap7:
+            wbc_ap = st.number_input("Leucocitos (x10³/mm³)", 0.0, 60.0, 10.0, 0.5, key="ap_wbc")
+            if wbc_ap >= 40: wbc_s = 4
+            elif wbc_ap >= 20: wbc_s = 2
+            elif wbc_ap >= 15: wbc_s = 1
+            elif wbc_ap >= 3: wbc_s = 0
+            elif wbc_ap >= 1: wbc_s = 2
+            else: wbc_s = 4
+            st.metric("Leucocitos", wbc_s)
+        with ap8:
+            gcs_ap = st.number_input("GCS", 3, 15, 15, 1, key="ap_gcs")
+            gcs_s = 15 - gcs_ap
+            st.metric("GCS (15 − GCS)", gcs_s)
+
+        aps = t_s + map_s + fc_s + fr_s + ox_s + ph_s + na_s + k_s + cr_s + hto_s + wbc_s + gcs_s
+
+        st.markdown("#### Edad y salud crónica")
+        age_ap_c1, age_ap_c2 = st.columns(2)
+        with age_ap_c1:
+            age_ap = st.number_input("Edad (años)", 0, 110, 60, 1, key="ap_age")
+            if age_ap < 45: age_s = 0
+            elif age_ap < 55: age_s = 2
+            elif age_ap < 65: age_s = 3
+            elif age_ap < 75: age_s = 5
+            else: age_s = 6
+            st.metric("Puntos por edad", age_s)
+        with age_ap_c2:
+            cronica_ap = st.selectbox("Enfermedad crónica severa",
+                ["Ninguna", "Cirugía electiva con enfermedad crónica",
+                 "No quirúrgico o cirugía de urgencia con enfermedad crónica"],
+                key="ap_cronica")
+            if "urgencia" in cronica_ap or "No quirúrgico" in cronica_ap: ch_s = 5
+            elif "electiva" in cronica_ap: ch_s = 2
+            else: ch_s = 0
+            st.metric("Puntos salud crónica", ch_s)
+
+        apache2_total = aps + age_s + ch_s
+
+        # Predicted mortality (simplified Knaus table)
+        if apache2_total <= 4: ap_mort = "4%"
+        elif apache2_total <= 9: ap_mort = "8%"
+        elif apache2_total <= 14: ap_mort = "15%"
+        elif apache2_total <= 19: ap_mort = "25%"
+        elif apache2_total <= 24: ap_mort = "40%"
+        elif apache2_total <= 29: ap_mort = "55%"
+        elif apache2_total <= 34: ap_mort = "73%"
+        else: ap_mort = "85%"
+
+        st.divider()
+        ar1, ar2, ar3 = st.columns(3)
+        ar1.metric("APS (fisiológico)", aps)
+        ar2.metric("APACHE II TOTAL", apache2_total)
+        ar3.metric("Mortalidad hospitalaria predicha", ap_mort)
+
+        if apache2_total > 25:
+            st.error(f"🔴 APACHE II {apache2_total} — Enfermedad crítica severa. "
+                     "Este score **indica soporte orgánico agresivo**, incluido CRRT. "
+                     "No es contraindicación.")
+        elif apache2_total > 15:
+            st.warning(f"🟠 APACHE II {apache2_total} — Enfermedad moderada-severa. "
+                       "Evaluar indicaciones de CRRT.")
         else:
-            st.info("Ingresa datos del datasheet del dializador para calcular el KoA.")
+            st.info(f"ℹ️ APACHE II {apache2_total} — Documentar en expediente como contexto clínico.")
+        st.session_state["apache2_total"] = apache2_total
 
-        with st.expander("¿Qué es el KoA?"):
+    # ── KDIGO 2026 AKI STAGING ────────────────────────────────────────────────
+    elif modo_score == "AKI — KDIGO 2026":
+        st.markdown("### Estadificación AKI — KDIGO 2026")
+        st.caption("KDIGO 2026 AKI & AKD Guideline (borrador revisión pública, marzo 2026). "
+                   "Estadificación idéntica a KDIGO 2012, con biomarcadores actualizados.")
+
+        st.markdown("#### Creatinina sérica")
+        kd1, kd2, kd3 = st.columns(3)
+        with kd1:
+            cr_base = st.number_input("Creatinina basal (mg/dL)", 0.0, 15.0, 0.9, 0.05, key="kd_crbase",
+                                      help="Previa estable o estimada por CKD-EPI inverso")
+        with kd2:
+            cr_act = st.number_input("Creatinina actual (mg/dL)", 0.0, 20.0, 1.5, 0.05, key="kd_cract")
+        with kd3:
+            cr_48h = st.number_input("Cr hace 48h (mg/dL, si disponible)", 0.0, 20.0, 0.0, 0.05,
+                                     key="kd_cr48",
+                                     help="Para detectar incremento ≥0.3 en 48h")
+
+        st.markdown("#### Diuresis")
+        kd4, kd5, kd6 = st.columns(3)
+        with kd4:
+            uo_h_kd = st.number_input("Diuresis más baja (mL/kg/hr)", 0.0, 3.0, 0.5, 0.05,
+                                      key="kd_uo_h")
+        with kd5:
+            uo_dur = st.selectbox("Durante cuántas horas", ["<6h", "6–12h", "12–24h", "≥24h"],
+                                  key="kd_uo_dur")
+        with kd6:
+            en_rrt = st.checkbox("¿Ya inició TRR (diálisis/CRRT)?", key="kd_rrt")
+
+        # Calculate staging
+        ratio_cr = cr_act / cr_base if cr_base > 0 else 0
+        delta_48h = cr_act - cr_48h if cr_48h > 0 else 0
+
+        aki_stage_cr = 0
+        if en_rrt: aki_stage_cr = 3
+        elif cr_act >= 4.0 and cr_act >= cr_base + 0.5: aki_stage_cr = 3
+        elif ratio_cr >= 3.0: aki_stage_cr = 3
+        elif ratio_cr >= 2.0: aki_stage_cr = 2
+        elif ratio_cr >= 1.5 or delta_48h >= 0.3: aki_stage_cr = 1
+
+        aki_stage_uo = 0
+        if uo_h_kd < 0.3 and uo_dur in ["≥24h"]: aki_stage_uo = 3
+        elif uo_h_kd < 0.3 and uo_dur == "12–24h": aki_stage_uo = 3
+        elif uo_h_kd < 0.5 and uo_dur in ["12–24h", "≥24h"]: aki_stage_uo = 2
+        elif uo_h_kd < 0.5 and uo_dur in ["6–12h"]: aki_stage_uo = 1
+        elif uo_h_kd == 0 and uo_dur == "≥24h": aki_stage_uo = 3  # anuria
+
+        aki_stage = max(aki_stage_cr, aki_stage_uo)
+
+        st.divider()
+        ks1, ks2, ks3 = st.columns(3)
+        ks1.metric("Ratio Cr actual/basal", f"{ratio_cr:.2f}x")
+        ks2.metric("Estadio por Cr", f"AKI {aki_stage_cr}" if aki_stage_cr > 0 else "Sin criterio")
+        ks3.metric("Estadio por diuresis", f"AKI {aki_stage_uo}" if aki_stage_uo > 0 else "Sin criterio")
+
+        if aki_stage == 0:
+            st.success("✅ Sin criterios de AKI al momento. Monitoreo continuo.")
+        elif aki_stage == 1:
+            st.warning(f"🟡 **AKI Estadio 1** — Riesgo. Monitoreo estrecho, evitar nefrotóxicos, "
+                       f"optimizar volemia. Evaluar TRR si hay indicación urgente.")
+        elif aki_stage == 2:
+            st.error(f"🔴 **AKI Estadio 2** — Daño. Evaluar CRRT. "
+                     f"Iniciar si hay indicaciones de urgencia o hemodynamia inestable.")
+        else:
+            st.error(f"🔴 **AKI Estadio 3** — Falla renal. **Indicación formal de evaluar CRRT** "
+                     f"(KDIGO 2026, Capítulo 5). Sin beneficio de inicio acelerado vs estándar "
+                     f"(STARRT-AKI 2020). Individualizar timing según contexto clínico.")
+
+        if en_rrt:
+            st.info("ℹ️ El inicio de TRR clasifica automáticamente como AKI Estadio 3, "
+                    "independientemente de la creatinina.")
+
+        with st.expander("📚 Biomarcadores — KDIGO 2026"):
             st.markdown("""
-**KoA (Mass Transfer Area Coefficient)** es el coeficiente de transferencia de masa del dializador.
-Representa la eficiencia intrínseca de la membrana independientemente de los flujos.
+| Biomarcador | Umbral de riesgo | Aplicación clínica |
+|-------------|-----------------|-------------------|
+| **TIMP-2 x IGFBP7** | ≥0.3 (alto riesgo), ≥2.0 (muy alto) | Predicción de AKI en UCI dentro de 12h |
+| **NGAL urinario** | >150 ng/mL | Daño tubular temprano |
+| **KIM-1** | Elevado | Daño tubular proximal |
+| **Cistatina C** | Alternativa a Cr | Mejor en musculatura reducida, malnutrición, cirrosis |
+| **L-FABP urinario** | Elevado | Daño tubular |
 
-**Fórmula (Michaels):**
-$$K = Q_B \\cdot \\frac{1 - e^{-KoA/Q_B \\cdot (1 - Q_B/Q_D)}}{1 - Q_B/Q_D \\cdot e^{-KoA/Q_B \\cdot (1 - Q_B/Q_D)}}$$
-
-Se obtiene de los datos in vitro del fabricante (K a QB y QD estándar).
+*KDIGO 2026 recomienda el uso de biomarcadores validados para estratificación de riesgo de AKI, especialmente en pacientes en UCI.*
             """)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 5: PLASMAFÉRESIS / TPE — COMPLETO
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "tpe":
+        with st.expander("📊 Evidencia sobre timing de inicio de CRRT"):
+            st.markdown("""
+| Ensayo | Diseño | Resultado principal |
+|--------|--------|---------------------|
+| **AKIKI** (2016) | Precoz vs tardío, AKI3 | Sin diferencia en mortalidad a 60 días |
+| **IDEAL-ICU** (2018) | Precoz vs diferido, sepsis+AKI | Detenido por futilidad. Sin beneficio precoz |
+| **STARRT-AKI** (2020) | Acelerado vs estándar, 168 UCI, n=2927 | Mortalidad 90d: 43.9% vs 43.7% (p=0.92) |
+| **AKIKI-2** (2021) | Dos estrategias diferidas | Sin diferencia. Mayor riesgo con espera prolongada |
+
+**Conclusión KDIGO 2026:** No hay indicación de inicio acelerado universal.  
+**Individualizar** según: indicaciones de urgencia, tendencia del AKI, contexto clínico, metas de atención.
+            """)
+        st.session_state["aki_stage"] = aki_stage
+
+    # ── CANDIDATURA A CRRT ────────────────────────────────────────────────────
+    else:
+        st.markdown("### 🏥 Candidatura a CRRT — Evaluación integral")
+        st.caption("Basado en KDIGO 2026, SCCM/ESICM guidelines. "
+                   "Los scores de mortalidad son pronósticos, NO contraindicaciones.")
+
+        st.markdown("#### ✅ Indicaciones de urgencia (AEIOU+)")
+        ind1, ind2 = st.columns(2)
+        with ind1:
+            i_acidosis = st.checkbox("**A** — Acidosis: pH <7.15 refractaria", key="cand_acid")
+            i_electro = st.checkbox("**E** — Electrolitos: K+ >6.5 o refractario >6.0", key="cand_elec")
+            i_intox = st.checkbox("**I** — Intoxicación: tóxico dializable confirmado", key="cand_intox")
+            i_overload = st.checkbox("**O** — Sobrecarga hídrica: >10% peso + compromiso respiratorio", key="cand_overload")
+            i_uremia = st.checkbox("**U** — Uremia sintomática: encefalopatía, pericarditis, sangrado", key="cand_uremia")
+        with ind2:
+            i_aki3 = st.checkbox("AKI Estadio 3 (KDIGO)", key="cand_aki3",
+                                 value=st.session_state.get("aki_stage", 0) >= 3)
+            i_sepsis = st.checkbox("Sepsis + AKI Estadio 2–3 con SOFA ≥2", key="cand_sepsis")
+            i_hemo = st.checkbox("Inestabilidad hemodinámica (intolerante a HD convencional)", key="cand_hemo")
+            i_mods = st.checkbox("MODS (≥3 órganos en falla)", key="cand_mods")
+            i_rabdo = st.checkbox("Rabdomiólisis severa (CK >5000) o mioglobinuria", key="cand_rabdo")
+            i_hyperamm = st.checkbox("Hiperamonemia refractaria", key="cand_hyperamm")
+
+        st.markdown("#### ⛔ Contraindicaciones reales (no scores de mortalidad)")
+        contra1, contra2 = st.columns(2)
+        with contra1:
+            c_confort = st.checkbox("Decisión de cuidados de confort / limitación de esfuerzo", key="cand_confort")
+            c_acceso = st.checkbox("Sin posibilidad de acceso vascular central", key="cand_acceso")
+        with contra2:
+            c_choque = st.checkbox("Choque irreversible sin vasopresores (muerte inminente)", key="cand_choque")
+            c_coag_abs = st.checkbox("Coagulopatía refractaria absoluta (sin anticoagulación posible)",
+                                     key="cand_coag")
+
+        # Scoring
+        indics = [i_acidosis, i_electro, i_intox, i_overload, i_uremia,
+                  i_aki3, i_sepsis, i_hemo, i_mods, i_rabdo, i_hyperamm]
+        contras = [c_confort, c_acceso, c_choque, c_coag_abs]
+        n_indics = sum(indics)
+        n_contras = sum(contras)
+
+        # Scores from other tabs
+        sofa_prev = st.session_state.get("sofa_total", None)
+        apache_prev = st.session_state.get("apache2_total", None)
+        aki_prev = st.session_state.get("aki_stage", None)
+
+        st.divider()
+        st.markdown("### 📋 Conclusión y argumento clínico")
+
+        if n_contras > 0:
+            contras_activas = []
+            if c_confort: contras_activas.append("Decisión de cuidados de confort")
+            if c_acceso: contras_activas.append("Sin acceso vascular posible")
+            if c_choque: contras_activas.append("Choque irreversible inminente")
+            if c_coag_abs: contras_activas.append("Coagulopatía refractaria absoluta")
+            st.error(f"⛔ **CRRT no indicado en este momento** por: {', '.join(contras_activas)}. "
+                     f"Re-evaluar si las condiciones cambian.")
+        elif n_indics >= 2:
+            st.success(f"✅ **CRRT INDICADO** — {n_indics} indicaciones presentes. "
+                       f"Iniciar según disponibilidad y metas de atención.")
+        elif n_indics == 1:
+            st.warning(f"🟡 **CRRT a evaluar** — 1 indicación presente. "
+                       f"Puede ser suficiente si hay deterioro progresivo. Decisión clínica individualizada.")
+        else:
+            st.info("ℹ️ Sin indicaciones formales activas al momento. Monitoreo continuo y reevaluación.")
+
+        # Generate clinical text
+        st.markdown("#### 📝 Texto para expediente")
+        indics_texto = []
+        if i_acidosis: indics_texto.append("acidosis metabólica refractaria (pH <7.15)")
+        if i_electro: indics_texto.append("hipercalemia refractaria (K+ >6.0 mEq/L)")
+        if i_intox: indics_texto.append("intoxicación con tóxico dializable")
+        if i_overload: indics_texto.append("sobrecarga hídrica >10% con compromiso respiratorio")
+        if i_uremia: indics_texto.append("uremia sintomática")
+        if i_aki3: indics_texto.append("AKI Estadio 3 por criterios KDIGO 2026")
+        if i_sepsis: indics_texto.append("sepsis con AKI Estadio 2–3 y SOFA ≥2")
+        if i_hemo: indics_texto.append("inestabilidad hemodinámica (intolerante a HD convencional)")
+        if i_mods: indics_texto.append("síndrome de disfunción multiorgánica (≥3 órganos)")
+        if i_rabdo: indics_texto.append("rabdomiólisis severa con mioglobinuria")
+        if i_hyperamm: indics_texto.append("hiperamonemia refractaria")
+
+        sofa_txt = f"SOFA {sofa_prev}/24" if sofa_prev is not None else ""
+        apache_txt = f"APACHE II {apache_prev}" if apache_prev is not None else ""
+        aki_txt = f"AKI Estadio {aki_prev} (KDIGO 2026)" if aki_prev is not None else ""
+        scores_txt = ", ".join(filter(None, [sofa_txt, apache_txt, aki_txt]))
+
+        if indics_texto:
+            texto_exp = (
+                f"Paciente con enfermedad crítica severa ({scores_txt}). "
+                f"Se indica inicio de Terapia de Reemplazo Renal Continua (CRRT) por las siguientes indicaciones: "
+                f"{'; '.join(indics_texto)}. "
+                f"Los scores de severidad documentados reflejan la gravedad de la disfunción orgánica "
+                f"y constituyen indicación de soporte renal continuo, de acuerdo con KDIGO 2026 "
+                f"(Capítulo 5: Kidney Replacement Therapy) y guías SCCM/ESICM. "
+                f"Se planifica CRRT con modalidad, flujos y anticoagulación según prescripción adjunta. "
+                f"Inicio individualizado; sin evidencia de beneficio del inicio acelerado vs estándar "
+                f"(STARRT-AKI 2020, n=2927, mortalidad 90d 43.9 vs 43.7%, p=0.92)."
+            )
+        else:
+            texto_exp = (
+                f"Paciente con monitoreo renal activo ({scores_txt}). "
+                f"Sin indicaciones formales de CRRT al momento de esta evaluación. "
+                f"Se continuará vigilancia estrecha y se reevaluará candidatura ante cambios clínicos. "
+                f"Criterios de inicio según KDIGO 2026."
+            )
+        st.text_area("Copiar al expediente:", value=texto_exp, height=180, key="texto_expediente")
+
+# Fragment si el runtime lo soporta (Streamlit >= 1.37: st.fragment;
+# 1.32-1.36: st.experimental_fragment). Fallback: llamada directa sin fragment.
+if hasattr(st, "fragment"):
+    _render_scores_page = st.fragment(_render_scores_page)
+elif hasattr(st, "experimental_fragment"):
+    _render_scores_page = st.experimental_fragment(_render_scores_page)
+# ==============================================================================
+# TAB: PLASMAFÉRESIS (tpe) — cuerpo envuelto en fragment para acelerar reruns.
+# El contenido vive en _render_tpe_page(); la página tpe solo la invoca.
+# ==============================================================================
+def _render_tpe_page():
     st.subheader("🔄 Plasmaféresis Terapéutica (TPE)")
 
     tpe_modo = st.radio("Sección",
@@ -4904,6 +4464,515 @@ TPE remueve **crioglobulinas circulantes** antes de que precipiten:
         """)
 
         st.info("📖 ASFA 2023 | KDIGO 2021 | British Society for Haematology Guidelines on Therapeutic Apheresis")
+
+# Fragment si el runtime lo soporta (Streamlit >= 1.37: st.fragment;
+# 1.32-1.36: st.experimental_fragment). Fallback: llamada directa sin fragment.
+if hasattr(st, "fragment"):
+    _render_tpe_page = st.fragment(_render_tpe_page)
+elif hasattr(st, "experimental_fragment"):
+    _render_tpe_page = st.experimental_fragment(_render_tpe_page)
+# ==============================================================================
+# TAB: CITRATO RCA (cit) — cuerpo envuelto en fragment para acelerar reruns.
+# El contenido vive en _render_cit_page(); la página cit solo la invoca.
+# ==============================================================================
+def _render_cit_page():
+    st.subheader("Anticoagulación Regional con Citrato (RCA)")
+    st.caption("Anticoagulación local del circuito sin efecto sistémico — primera línea si no hay contraindicaciones.")
+
+    # ── Contraindicaciones ──────────────────────────────────────────────────
+    st.markdown("### ⚠️ Verificación de contraindicaciones")
+    ci1, ci2, ci3 = st.columns(3)
+    with ci1:
+        insuf_hep = st.selectbox("Insuficiencia hepática grave", ["No", "Sí"], key="ci_hep")
+    with ci2:
+        lac_ci = st.number_input("Lactato actual (mmol/L)", 0.0, 25.0, 2.0, 0.1, key="ci_lac")
+    with ci3:
+        alcalosis_ci = st.selectbox("Alcalosis metabólica severa (HCO₃>35)", ["No", "Sí"], key="ci_alk")
+
+    contraindicado = insuf_hep == "Sí" or lac_ci > 5.0 or alcalosis_ci == "Sí"
+    if contraindicado:
+        razones = []
+        if insuf_hep == "Sí":
+            razones.append("Insuficiencia hepática grave (metabolismo de citrato deteriorado)")
+        if lac_ci > 5.0:
+            razones.append(f"Lactato {lac_ci:.1f} mmol/L > 5.0 (hipoperfusión hepática)")
+        if alcalosis_ci == "Sí":
+            razones.append("Alcalosis metabólica severa (citrato genera más HCO₃⁻)")
+        st.error("⛔ **CONTRAINDICACIÓN detectada.** Usar HEPARINA NO FRACCIONADA.\n\n" +
+                 "\n".join(f"• {r}" for r in razones))
+    else:
+        st.success("✅ Sin contraindicaciones detectadas. Citrato es la opción recomendada.")
+
+    st.divider()
+
+    # ── Tipo de solución ─────────────────────────────────────────────────────
+    st.markdown("### Selección de solución de citrato")
+    sol_opts = ["Citrato trisódico 4% (136 mmol/L — más común)", "Prismocitrate (concentración configurable)"]
+    sol_type = st.selectbox("Tipo de solución", sol_opts, key="cit_sol_type")
+
+    if "4%" in sol_type:
+        cit_conc = 136.0
+        na_en_cit = 408.0   # 3 x 136 mmol/L de Na (citrato TRIsódico)
+        st.info("Citrato trisódico 4%: **136 mmol/L** de citrato | **408 mmol/L** de Na (3 Na por molécula) — considerar en balance de sodio.")
+    else:
+        cit_conc = st.number_input("Concentración del Prismocitrate (mmol/L)",
+                                   100.0, 1200.0, 1000.0, 10.0, key="cit_prismo_conc")
+        na_en_cit = st.number_input("Contenido de Na en solución (mmol/L)",
+                                    0.0, 500.0, 100.0, 5.0, key="cit_prismo_na",
+                                    help="Consultar ficha técnica del fabricante")
+        st.caption(f"Prismocitrate configurado: {cit_conc:.0f} mmol/L citrato | {na_en_cit:.0f} mmol/L Na")
+
+    # Guardar para módulo de sodio
+    st.session_state["cit_conc_mmol_L"] = cit_conc
+    st.session_state["cit_na_mmol_L"] = na_en_cit
+
+    st.divider()
+
+    # ── Cálculo de infusión de citrato ──────────────────────────────────────
+    st.markdown("### Cálculo de infusión de citrato")
+    rc1, rc2, rc3 = st.columns(3)
+    with rc1:
+        cit_qb = st.number_input("QB (mL/min)", 80, 300, int(st.session_state.get("sb_qb", 150)),
+                                 10, key="cit_qb")
+    with rc2:
+        cit_dose = st.number_input("Dosis objetivo (mmol/L sangre)", 1.0, 6.0, 3.0, 0.1,
+                                   key="cit_dose",
+                                   help="Habitual: 2–4 mmol/L. Inicio conservador a 3 mmol/L.")
+    with rc3:
+        qe_from_presc = int(dosis_mlkg * peso) if peso > 0 else 2000
+        cit_qeff = st.number_input("Efluente total (mL/hr)", 0, 6000,
+                                   qe_from_presc, 100, key="cit_qeff",
+                                   help=f"Vinculado a prescripción: {dosis_mlkg} mL/kg/h x {peso:.1f} kg = {qe_from_presc} mL/hr")
+        st.caption(f"📌 Qe prescripción = {qe_from_presc} mL/hr")
+
+    cit_qb_hr = cit_qb * 60
+    cit_inf_rate = cit_dose * cit_qb_hr / cit_conc if cit_conc > 0 else 0
+    total_flow = cit_qb_hr + cit_inf_rate
+    cit_circuit = cit_inf_rate * cit_conc / total_flow if total_flow > 0 else 0
+    cit_load = cit_inf_rate * cit_conc / 1000
+    cit_removal = cit_qeff * cit_circuit / 1000
+    cit_to_patient = cit_load - cit_removal
+
+    # Aporte de Na por citrato
+    na_aporte_cit = cit_inf_rate * na_en_cit / 1000  # mmol/hr
+
+    rcr1, rcr2, rcr3, rcr4 = st.columns(4)
+    rcr1.metric("Tasa citrato (mL/hr)", f"{cit_inf_rate:.0f}")
+    rcr2.metric("Carga al circuito (mmol/hr)", f"{cit_load:.2f}")
+    rcr3.metric("Remoción por filtro (mmol/hr)", f"{cit_removal:.2f}")
+    rcr4.metric("Carga al paciente (mmol/hr)", f"{cit_to_patient:.2f}")
+
+    st.caption(f"[Citrato] en circuito: **{cit_circuit:.1f} mmol/L** | "
+               f"Aporte de Na por citrato: **{na_aporte_cit:.1f} mmol/hr** "
+               f"({na_aporte_cit * 24:.0f} mmol/día) — incluir en balance de sodio.")
+
+    # Guardar para PDF y tarjeta enfermería
+    st.session_state["rca_citrato_ml_h"] = float(cit_inf_rate)
+    st.session_state["anticoagulacion_tipo"] = "RCA"
+
+    st.divider()
+
+    # ── Reposición de calcio ─────────────────────────────────────────────────
+    st.markdown("### Calculadora de reposición de calcio")
+    st.caption("Gluconato de calcio 10% — cada ámpula de **10 mL = 2.23 mmol** de Ca elemental")
+
+    ca_loss = cit_qeff * 1.25 / 1000  # mmol/hr estimado
+
+    cac1, cac2, cac3 = st.columns(3)
+    with cac1:
+        num_viales = st.number_input("# de ámpulas de gluconato Ca 10% (10 mL c/u)",
+                                     1, 30, 12, 1, key="ca_viales",
+                                     help="Ejemplo habitual: 12 ámpulas")
+    with cac2:
+        prep_vol_str = st.selectbox("Volumen de NaCl 0.9% para aforar",
+                                    ["250 mL", "500 mL"], key="ca_prep_vol")
+        prep_vol_ml = 250 if "250" in prep_vol_str else 500
+    with cac3:
+        st.metric("Pérdida estimada de Ca (mmol/hr)", f"{ca_loss:.2f}",
+                  help="Estimado: Qeff x 1.25 mmol/L / 1000")
+
+    mmol_per_vial = 2.23
+    total_ca = num_viales * mmol_per_vial
+    # AFORO: el volumen total de la preparación es el de la bolsa (250 o 500 mL).
+    # Las ámpulas se añaden a la bolsa ya aforada — el volumen final NO se suma.
+    vol_total_ca = prep_vol_ml
+    ca_conc_mmol_L = total_ca / (vol_total_ca / 1000) if vol_total_ca > 0 else 0
+    ca_inf_rate_ml_hr = ca_loss / (ca_conc_mmol_L / 1000) if ca_conc_mmol_L > 0 else 0
+
+    carc1, carc2, carc3, carc4 = st.columns(4)
+    carc1.metric("Ca total en bolsa (mmol)", f"{total_ca:.2f}")
+    carc2.metric("Volumen total aforado (mL)", f"{vol_total_ca}",
+                 help="Aforado: el volumen final es el de la bolsa de NaCl")
+    carc3.metric("Concentración Ca (mmol/L)", f"{ca_conc_mmol_L:.1f}")
+    carc4.metric("Tasa infusión inicial (mL/hr)", f"{ca_inf_rate_ml_hr:.0f}")
+
+    st.info(f"📋 **Preparación (aforado):** Agregar {num_viales} ámpulas gluconato Ca 10% (10mL c/u) "
+            f"a bolsa de **{prep_vol_ml}mL NaCl 0.9%** — volumen final aforado = **{vol_total_ca}mL** "
+            f"con **{ca_conc_mmol_L:.1f} mmol/L** Ca elemental. "
+            f"Infundir a **{ca_inf_rate_ml_hr:.0f} mL/hr** por línea sistémica (POSTFILTRO).")
+    st.caption("⚠️ El calcio se infunde por línea sistémica post-filtro, NUNCA en la línea de citrato ni pre-filtro.")
+
+    # Guardar para PDF
+    st.session_state["rca_calcio_ml_h"] = float(ca_inf_rate_ml_hr)
+
+    st.divider()
+
+    # ── Ajuste por iCa ──────────────────────────────────────────────────────
+    st.markdown("### Ajuste por calcio ionizado medido")
+    adj1, adj2 = st.columns(2)
+    with adj1:
+        ica_post = st.number_input("iCa POST-filtro (mmol/L)", 0.0, 2.0, 0.35, 0.01,
+                                   key="ica_post", help="Objetivo: 0.25–0.40 mmol/L")
+    with adj2:
+        ica_sist = st.number_input("iCa sistémico (mmol/L)", 0.0, 2.5, 1.10, 0.01,
+                                   key="ica_sist", help="Objetivo: 1.0–1.2 mmol/L")
+
+    # Ajuste citrato por iCa post-filtro
+    if ica_post < 0.25:
+        st.warning(f"⬇️ iCa post-filtro BAJO ({ica_post:.2f} mmol/L). "
+                   f"**↓ Citrato 10–20%:** nueva tasa ≈ {cit_inf_rate * 0.85:.0f}–{cit_inf_rate * 0.90:.0f} mL/hr")
+    elif ica_post > 0.40:
+        st.warning(f"⬆️ iCa post-filtro ALTO ({ica_post:.2f} mmol/L). "
+                   f"**↑ Citrato 10–20%:** nueva tasa ≈ {cit_inf_rate * 1.10:.0f}–{cit_inf_rate * 1.20:.0f} mL/hr")
+    else:
+        st.success(f"✅ iCa post-filtro en rango ({ica_post:.2f} mmol/L — objetivo 0.25–0.40). Citrato adecuado.")
+
+    # Ajuste calcio por iCa sistémico
+    if ica_sist < 1.0:
+        st.warning(f"⬆️ iCa sistémico BAJO ({ica_sist:.2f} mmol/L). "
+                   f"**↑ Calcio 10–20%:** nueva tasa ≈ {ca_inf_rate_ml_hr * 1.10:.0f}–{ca_inf_rate_ml_hr * 1.20:.0f} mL/hr")
+    elif ica_sist > 1.2:
+        st.warning(f"⬇️ iCa sistémico ALTO ({ica_sist:.2f} mmol/L). "
+                   f"**↓ Calcio 10–20%:** nueva tasa ≈ {ca_inf_rate_ml_hr * 0.80:.0f}–{ca_inf_rate_ml_hr * 0.90:.0f} mL/hr")
+    else:
+        st.success(f"✅ iCa sistémico en rango ({ica_sist:.2f} mmol/L — objetivo 1.0–1.2). Calcio adecuado.")
+
+    # Guardar targets para PDF
+    st.session_state["rca_targets"] = {
+        "iCa_post": f"{ica_post:.2f}",
+        "iCa_sist": f"{ica_sist:.2f}",
+        "citrato_obj_mmolL": float(cit_dose)
+    }
+
+    st.divider()
+
+    # ── Calendario de monitoreo ──────────────────────────────────────────────
+    st.markdown("### 📅 Calendario de monitoreo RCA")
+    st.markdown("""
+| Momento | Qué medir | Acción |
+|---------|-----------|--------|
+| **30 min post-inicio** | iCa post-filtro + iCa sistémico | Ajuste inicial ±10–20% |
+| **1–2 hrs** | iCa ambos | Confirmar estabilidad |
+| **Cada 4–6 hrs (estable)** | iCa ambos + Na, K, HCO₃⁻, AG | Mantenimiento |
+| **Post-ajuste de dosis** | 30 min después del cambio | Verificar nuevo equilibrio |
+| **Cada 12–24 hrs** | Ca total, Ca iónico, AG, pH, HCO₃⁻, lactato | Detección acumulación |
+    """)
+
+    st.divider()
+
+    # ── Detección de acumulación de citrato ─────────────────────────────────
+    st.markdown("### 🔍 Detección de acumulación de citrato")
+    st.caption("La acumulación ocurre cuando el hígado no metaboliza el citrato (insuficiencia hepática, bajo gasto cardíaco).")
+
+    acc1, acc2, acc3 = st.columns(3)
+    with acc1:
+        ca_total_acc = st.number_input("Ca total sérico (mmol/L)", 1.0, 4.0, 2.3, 0.1, key="acc_catot",
+                                       help="Normal: 2.1–2.6 mmol/L")
+        ca_ion_acc = st.number_input("Ca iónico sistémico (mmol/L)", 0.3, 2.0, 1.1, 0.01, key="acc_caion")
+    with acc2:
+        ag_acc = st.number_input("Anión gap (mEq/L)", 5.0, 40.0, 12.0, 0.5, key="acc_ag",
+                                 help="Normal: 8–16 mEq/L")
+        hco3_acc = st.number_input("HCO₃⁻ (mEq/L)", 10.0, 50.0, 24.0, 0.5, key="acc_hco3")
+    with acc3:
+        ph_acc = st.number_input("pH", 7.10, 7.70, 7.40, 0.01, key="acc_ph")
+        ca_inf_sube = st.selectbox("¿Infusión Ca en aumento sin corregir iCa?", ["No", "Sí"],
+                                   key="acc_ca_sube")
+
+    ratio_ca = ca_total_acc / ca_ion_acc if ca_ion_acc > 0 else 0
+    criterios_acum = []
+    if ratio_ca > 2.5:
+        criterios_acum.append(f"🔴 Ca total / Ca iónico = **{ratio_ca:.2f}** (>2.5 — CRITERIO PRINCIPAL)")
+    if ag_acc > 16:
+        criterios_acum.append(f"🟠 Anión gap elevado: **{ag_acc:.1f} mEq/L** (>16)")
+    if hco3_acc > 30 or ph_acc > 7.50:
+        criterios_acum.append(f"🟠 Alcalosis metabólica: HCO₃⁻={hco3_acc:.1f}, pH={ph_acc:.2f}")
+    if ca_inf_sube == "Sí" and ca_ion_acc < 1.0:
+        criterios_acum.append("🟠 iCa sistémico bajo a pesar de ↑ infusión de calcio")
+
+    st.metric("Relación Ca total / Ca iónico", f"{ratio_ca:.2f}",
+              delta="Normal (<2.5)" if ratio_ca <= 2.5 else "ELEVADO (>2.5)")
+
+    if len(criterios_acum) >= 2:
+        st.error("🚨 **PROBABLE ACUMULACIÓN DE CITRATO**\n\n" +
+                 "\n".join(criterios_acum) +
+                 "\n\n**Acciones:** Reducir citrato 30–50% o suspender → cambiar a HNF. "
+                 "Monitorear iCa cada hora. Identificar causa (disfunción hepática, bajo GC).")
+    elif len(criterios_acum) == 1:
+        st.warning("⚠️ Un criterio de acumulación presente. Monitoreo estrecho:\n\n" + criterios_acum[0])
+    else:
+        st.success(f"✅ Sin criterios de acumulación. Ratio Ca total/iónico = {ratio_ca:.2f} (normal <2.5).")
+
+# Fragment si el runtime lo soporta (Streamlit >= 1.37: st.fragment;
+# 1.32-1.36: st.experimental_fragment). Fallback: llamada directa sin fragment.
+if hasattr(st, "fragment"):
+    _render_cit_page = st.fragment(_render_cit_page)
+elif hasattr(st, "experimental_fragment"):
+    _render_cit_page = st.experimental_fragment(_render_cit_page)
+
+
+
+
+
+
+
+
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB: SCORES / CANDIDATURA CRRT
+# Refs: SOFA (Sepsis-3, 2016), APACHE II, KDIGO 2026 AKI (borrador público)
+#       STARRT-AKI 2020, AKIKI 2016, AKIKI-2 2021
+# ══════════════════════════════════════════════════════════════════════════════
+if nav == "scores":
+    _render_scores_page()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 1: PRESCRIPCIÓN CRRT
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "presc":
+    _render_presc_page()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 2: CITRATO REGIONAL (RCA) — COMPLETO
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "cit":
+    _render_cit_page()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 3: SODIO EN CRRT
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "na":
+    st.subheader("Sodio en CRRT — Predicción y Corrección")
+
+    modo_na = st.radio("Modo", ["📊 Predicción de sodio", "🎯 Corrección de sodio"], horizontal=True,
+                       key="modo_na")
+
+    # Datos del paciente compartidos
+    st.markdown("### Datos del paciente")
+    nac1, nac2, nac3, nac4, nac5 = st.columns(5)
+    with nac1:
+        na_sex = st.selectbox("Sexo", ["M", "F"], key="na_sex")
+    with nac2:
+        na_age = st.number_input("Edad (años)", 0, 110, 55, 1, key="na_age")
+    with nac3:
+        na_ht = st.number_input("Talla (cm)", 100, 220, 170, 1, key="na_ht")
+    with nac4:
+        na_wt = st.number_input("Peso (kg)", 10.0, 300.0, float(peso), 0.5, key="na_wt")
+    with nac5:
+        na_plasma = st.number_input("Na plasmático actual (mEq/L)", 100.0, 200.0, 140.0, 0.5,
+                                    key="na_plasma")
+
+    st.markdown("### Parámetros de la terapia")
+    nat1, nat2, nat3 = st.columns(3)
+    with nat1:
+        na_bags = st.number_input("[Na] en bolsas CRRT (mEq/L)", 100.0, 160.0, 140.0, 1.0,
+                                  key="na_bags", help="Na en solución de reemplazo/dializato")
+        na_qeff = st.number_input("Efluente total (mL/hr)", 0, 6000, int(dosis_mlkg * peso),
+                                  100, key="na_qeff")
+    with nat2:
+        cit_sol_tipo_na = st.session_state.get("cit_sol_type", "Citrato trisódico 4% (136 mmol/L — más común)")
+        na_in_cit = st.number_input("[Na] en solución de citrato (mEq/L)",
+                                    0.0, 500.0, float(st.session_state.get("cit_na_mmol_L", 408.0)),
+                                    1.0, key="na_in_cit",
+                                    help="Citrato trisódico 4%: ~408 mEq/L")
+        cit_inf_na = st.number_input("Tasa infusión citrato (mL/hr)", 0.0, 3000.0,
+                                     float(st.session_state.get("rca_citrato_ml_h", 0.0)),
+                                     1.0, key="cit_inf_na")
+    with nat3:
+        na_post_sol = st.number_input("[Na] solución postfiltro (mEq/L)", 0.0, 160.0, 0.0, 1.0,
+                                      key="na_post_sol", help="0 si no hay reposición postfiltro separada")
+        post_inf_na = st.number_input("Tasa reposición postfiltro (mL/hr)", 0.0, 3000.0, 0.0, 10.0,
+                                      key="post_inf_na")
+
+    if "Predicción" in modo_na:
+        st.markdown("### Predicción")
+        na_tiempo = st.number_input("Tiempo de terapia (hrs)", 1, 72, 24, 1, key="na_tiempo")
+        result_na = calc_na_pred_trrc(
+            na_sex, na_age, na_ht, na_wt, na_plasma, na_bags, na_qeff, na_tiempo,
+            na_in_cit, cit_inf_na, na_post_sol, post_inf_na)
+        if result_na:
+            rn1, rn2, rn3 = st.columns(3)
+            rn1.metric("ACT estimada (Watson)", f"{result_na['tbw']:.1f} L")
+            rn2.metric("Balance neto de Na", f"{result_na['net_na']:.1f} mEq/hr",
+                       help="+: Na se retiene | -: Na se elimina")
+            rn3.metric("[Na] predicho al final", f"{result_na['na_pred']:.1f} mEq/L",
+                       delta=f"{result_na['na_pred'] - na_plasma:+.1f} vs actual")
+            delta_24 = result_na["net_na"] * na_tiempo
+            st.info(f"Balance acumulado en {na_tiempo}h: **{delta_24:+.0f} mEq de Na** → "
+                    f"Na final predicho **{result_na['na_pred']:.1f} mEq/L**")
+            # Alertas de corrección
+            if na_plasma < 130 and (result_na["na_pred"] - na_plasma) > 10:
+                st.error("⚠️ Corrección de hiponatremia >10 mEq/L proyectada. Riesgo de ODS. Ajustar [Na] en bolsas o reducir efluente.")
+            if abs(result_na["na_pred"] - na_plasma) / na_tiempo > 0.5 and na_tiempo <= 24:
+                st.warning(f"⚠️ Velocidad de corrección ≈ {abs(result_na['na_pred'] - na_plasma) / na_tiempo:.2f} mEq/L/hr. Verificar meta clínica.")
+        else:
+            st.info("Completa los datos del paciente para calcular la predicción.")
+
+    else:  # Corrección
+        st.markdown("### Estrategias de corrección de sodio en 24h")
+        na_meta = st.number_input("[Na] objetivo en 24h (mEq/L)", 100.0, 200.0, 140.0, 0.5,
+                                  key="na_meta")
+        result_corr = calc_na_corr_trrc(
+            na_sex, na_age, na_ht, na_wt, na_plasma, na_meta, na_qeff, na_bags,
+            na_in_cit, cit_inf_na)
+        if result_corr:
+            st.metric("ACT estimada (Watson)", f"{result_corr['tbw']:.1f} L")
+            st.metric("Δ Na necesario", f"{result_corr['delta_hr']:+.1f} mEq/hr",
+                      help="Na neto que debe moverse por hora para alcanzar la meta en 24h")
+            st.markdown("---")
+            rc1, rc2 = st.columns(2)
+            with rc1:
+                st.markdown("#### Estrategia 1")
+                st.markdown("**Ajustar flujo de reposición postfiltro** (Na estándar = 140 mEq/L)")
+                st.metric("Tasa postfiltro recomendada", f"{result_corr['pf_rate']:.0f} mL/hr")
+                st.caption("Mantener [Na] en bolsas sin cambios. Ajustar sólo el flujo postfiltro.")
+            with rc2:
+                st.markdown("#### Estrategia 2")
+                st.markdown("**Ajustar [Na] en bolsas CRRT** (sin reposición postfiltro adicional)")
+                st.metric("[Na] objetivo en bolsas", f"{result_corr['target_bags']:.1f} mEq/L")
+                st.caption("Mantener flujo de efluente. Cambiar composición de la solución.")
+            # Alertas
+            delta_na_24 = na_meta - na_plasma
+            if na_plasma < 130 and delta_na_24 > 10:
+                st.error("⚠️ Meta implica corrección >10 mEq/L en 24h. Para hiponatremia ≤ 8 mEq/L/24h (≤8 si riesgo de ODS). Reconsiderar meta.")
+            if na_plasma > 150 and delta_na_24 < -12:
+                st.warning("⚠️ Corrección de hipernatremia: no exceder 10–12 mEq/L/24h. Verificar meta.")
+        else:
+            st.info("Completa los datos para calcular las estrategias de corrección.")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 4: PREDICCIÓN HD + KoA
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "hd":
+    st.subheader("Predicción de Hemodiálisis convencional + KoA")
+
+    modo_hd = st.radio("Modo", ["💉 Predicción HD", "🔧 Calculadora KoA"], horizontal=True, key="modo_hd")
+
+    if "Predicción" in modo_hd:
+        st.markdown("### Datos del paciente")
+        hd1, hd2, hd3, hd4, hd5 = st.columns(5)
+        with hd1:
+            hd_sex = st.selectbox("Sexo", ["M", "F"], key="hd_sex")
+        with hd2:
+            hd_age = st.number_input("Edad (años)", 0, 110, 55, 1, key="hd_age")
+        with hd3:
+            hd_ht = st.number_input("Talla (cm)", 100, 220, 170, 1, key="hd_ht")
+        with hd4:
+            hd_wt = st.number_input("Peso seco (kg)", 10.0, 200.0, 70.0, 0.5, key="hd_wt")
+        with hd5:
+            pass
+
+        st.markdown("### Terapia prescrita")
+        hdt1, hdt2, hdt3, hdt4, hdt5 = st.columns(5)
+        with hdt1:
+            hd_time = st.number_input("Tiempo (min)", 60, 480, 240, 15, key="hd_time")
+        with hdt2:
+            hd_uf = st.number_input("UF total (L)", 0.0, 10.0, 2.0, 0.1, key="hd_uf")
+        with hdt3:
+            hd_qb = st.number_input("QB (mL/min)", 100, 500, 300, 10, key="hd_qb")
+        with hdt4:
+            hd_qd = st.number_input("QD (mL/min)", 100, 800, 500, 50, key="hd_qd")
+        with hdt5:
+            hd_koa = st.number_input("KoA membrana (mL/min)", 0.0, 2000.0, 0.0, 10.0,
+                                     key="hd_koa", help="Opcional. Si 0, estimado por QB/QD x 0.85")
+
+        result_hd = calc_hd_pred(hd_sex, hd_age, hd_ht, hd_wt, hd_time, hd_uf, hd_qb, hd_qd, hd_koa)
+        if result_hd:
+            st.markdown("### Resultados predichos")
+            hdr1, hdr2, hdr3, hdr4, hdr5 = st.columns(5)
+            hdr1.metric("ACT (Watson)", f"{result_hd['tbw']:.1f} L")
+            hdr2.metric("Aclar. urea K (mL/min)", f"{result_hd['K']:.1f}")
+            hdr3.metric("Urea Kt (L)", f"{result_hd['Kt']:.2f}")
+            hdr4.metric("Kt/V", f"{result_hd['KtV']:.2f}",
+                        delta="✅ Adecuado" if result_hd["KtV"] >= 1.2 else "⚠️ Bajo")
+            hdr5.metric("URR estimada", f"{result_hd['URR']:.1f}%",
+                        delta="✅" if result_hd["URR"] >= 65 else "⚠️")
+
+            if result_hd["KtV"] < 1.2:
+                st.warning(f"⚠️ Kt/V {result_hd['KtV']:.2f} < 1.2 (meta KDIGO para 3x/semana). "
+                           f"Considerar ↑ tiempo, ↑ QB o ↑ QD.")
+            elif result_hd["KtV"] >= 1.4:
+                st.success(f"✅ Kt/V {result_hd['KtV']:.2f} ≥ 1.4 — Excelente adecuación.")
+            else:
+                st.success(f"✅ Kt/V {result_hd['KtV']:.2f} — Adecuado (meta ≥1.2).")
+
+            st.metric("Tasa UF (mL/min)", f"{result_hd['UFrate']:.1f}",
+                      help="UF rate. Objetivo <13 mL/min/m² BSA (~10 mL/kg/hr)")
+
+            # Predicción de solutos post-diálisis
+            st.markdown("### Predicción de solutos post-sesión")
+            st.caption("Modelos de un pool con supuestos de equilibrio simplificados.")
+            solt1, solt2, solt3 = st.columns(3)
+            with solt1:
+                pre_bun = st.number_input("BUN/Urea pre (cualquier ud.)", 0.0, 500.0, 80.0, 1.0,
+                                          key="hd_prebun")
+                pre_na = st.number_input("[Na] pre (mEq/L)", 100.0, 200.0, 140.0, 0.5, key="hd_prena")
+                pre_k = st.number_input("[K] pre (mEq/L)", 1.0, 10.0, 5.0, 0.1, key="hd_prek")
+            with solt2:
+                dial_na = st.number_input("[Na] dializado (mEq/L)", 100.0, 160.0, 140.0, 0.5,
+                                          key="hd_dialna")
+                dial_k = st.number_input("[K] dializado (mEq/L)", 0.0, 4.0, 2.0, 0.5, key="hd_dialk")
+            with solt3:
+                ktv_val = result_hd["KtV"]
+                post_bun = pre_bun * math.exp(-ktv_val)
+                post_na = dial_na + (pre_na - dial_na) * math.exp(-ktv_val * 0.3)
+                post_k = dial_k + (pre_k - dial_k) * math.exp(-ktv_val * 1.2)
+                two_pool_k = post_k * 1.3
+
+                st.metric("BUN/Urea post (predicho)", f"{post_bun:.1f}")
+                st.metric("[Na] post (mEq/L)", f"{post_na:.1f}")
+                st.metric("[K] post (mEq/L)", f"{post_k:.1f}")
+                st.metric("[K] post 2-pool (rebote)", f"{two_pool_k:.1f}",
+                          help="Estimado 30% de rebote desde compartimento intracelular")
+
+    else:  # KoA
+        st.markdown("### Calculadora de KoA (datos in vitro del fabricante)")
+        st.caption("Basada en la ecuación de Michaels. Resolución numérica. Usar datos del datasheet del dializador.")
+        kc1, kc2, kc3 = st.columns(3)
+        with kc1:
+            koa_K = st.number_input("Aclaramiento in vitro K (mL/min)", 0.0, 500.0, 180.0, 1.0,
+                                    key="koa_K")
+        with kc2:
+            koa_QB = st.number_input("QB in vitro (mL/min)", 50.0, 500.0, 200.0, 10.0, key="koa_QB")
+        with kc3:
+            koa_QD = st.number_input("QD in vitro (mL/min)", 50.0, 800.0, 500.0, 50.0, key="koa_QD")
+
+        koa_result = calc_koa(koa_K, koa_QB, koa_QD)
+        if koa_result is not None:
+            st.metric("KoA in vitro (mL/min)", f"{koa_result:.0f}")
+            st.success(f"✅ KoA = **{koa_result:.0f} mL/min** — Puedes usar este valor en el módulo de Predicción HD.")
+        elif koa_K >= min(koa_QB, koa_QD):
+            st.error("⚠️ El aclaramiento no puede ser mayor o igual al mínimo de QB y QD. Revisar datos.")
+        else:
+            st.info("Ingresa datos del datasheet del dializador para calcular el KoA.")
+
+        with st.expander("¿Qué es el KoA?"):
+            st.markdown("""
+**KoA (Mass Transfer Area Coefficient)** es el coeficiente de transferencia de masa del dializador.
+Representa la eficiencia intrínseca de la membrana independientemente de los flujos.
+
+**Fórmula (Michaels):**
+$$K = Q_B \\cdot \\frac{1 - e^{-KoA/Q_B \\cdot (1 - Q_B/Q_D)}}{1 - Q_B/Q_D \\cdot e^{-KoA/Q_B \\cdot (1 - Q_B/Q_D)}}$$
+
+Se obtiene de los datos in vitro del fabricante (K a QB y QD estándar).
+            """)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 5: PLASMAFÉRESIS / TPE — COMPLETO
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "tpe":
+    _render_tpe_page()
 
 
 
