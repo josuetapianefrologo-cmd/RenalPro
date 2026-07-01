@@ -382,13 +382,13 @@ def render_historia_clinica_tab(conn, patient_id, patient_data, user_data):
     }
 
     with col_save:
-        if st.button("💾 Guardar Historia Clínica", use_container_width=True,
+        if st.button("💾 Guardar Historia Clínica", width='stretch',
                      key=f"{kp}_save"):
             save_historia_clinica(conn, patient_id, hc_data)
             st.success("✅ Historia clínica guardada correctamente.")
 
     with col_pdf:
-        if st.button("🖨️ Generar PDF Historia Clínica", use_container_width=True,
+        if st.button("🖨️ Generar PDF Historia Clínica", width='stretch',
                      type="primary", key=f"{kp}_pdf"):
             save_historia_clinica(conn, patient_id, hc_data)
             pdf_bytes = generate_pdf_historia(hc_data, patient_data, user_data)
@@ -401,7 +401,7 @@ def render_historia_clinica_tab(conn, patient_id, patient_data, user_data):
                 data=pdf_bytes,
                 file_name=nombre_archivo,
                 mime="application/pdf",
-                use_container_width=True,
+                width='stretch',
             )
 
 

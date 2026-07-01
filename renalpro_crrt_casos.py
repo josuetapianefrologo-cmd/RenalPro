@@ -287,7 +287,7 @@ def _tab_aclaramiento():
                                               color="#64748B", fontSize=10).encode(
             x="PesoMolecular:Q", y=alt.value(20), text="sol:N")
         st.altair_chart((linea + pts + txt).properties(height=320),
-                        use_container_width=True)
+                        width='stretch')
     else:
         mw, e_dif = curva_aclaramiento("Difusión")
         _, e_con = curva_aclaramiento("Convección")
@@ -310,7 +310,7 @@ def _tab_pesos():
     df = pd.DataFrame(PESOS_MOLECULARES,
                       columns=["Soluto", "PM (Da)", "Categoría",
                                "Unión proteica", "Nota"])
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, width='stretch', hide_index=True)
     st.caption("Categoría: pequeña < 500 Da · mediana 500–15,000 Da · "
                "grande > 15,000 Da. La dializabilidad depende también de la "
                "unión a proteínas y el volumen de distribución.")

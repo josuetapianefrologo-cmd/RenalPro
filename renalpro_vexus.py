@@ -185,7 +185,7 @@ def _tab_patrones():
             st.markdown(f"**{_TITULO_GRADO[grado]}**")
             ch = _chart_onda(vena, grado)
             if ch is not None:
-                st.altair_chart(ch, use_container_width=True)
+                st.altair_chart(ch, width='stretch')
             else:
                 t, v = _GENERADORES[vena](grado)
                 st.line_chart(pd.DataFrame({"Velocidad": v}), height=130)

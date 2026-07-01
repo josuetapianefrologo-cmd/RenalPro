@@ -783,7 +783,7 @@ section[data-testid="stSidebar"]{display:none!important;}
                                   label_visibility="collapsed")
                 p = st.text_input("Contraseña", type="password", placeholder="contraseña",
                                   key="li_p", label_visibility="collapsed")
-                submitted = st.form_submit_button("Iniciar sesión →", use_container_width=True,
+                submitted = st.form_submit_button("Iniciar sesión →", width='stretch',
                                                   type="primary")
             if submitted:
                 if u and p:
@@ -795,7 +795,7 @@ section[data-testid="stSidebar"]{display:none!important;}
                 else:
                     st.warning("Ingresa usuario y contraseña.")
             st.markdown("<div style='text-align:center;margin:6px 0;color:rgba(255,255,255,0.5);font-size:12px;'>— o —</div>", unsafe_allow_html=True)
-            if st.button("👁️  Entrar como invitado", use_container_width=True, key="btn_guest"):
+            if st.button("👁️  Entrar como invitado", width='stretch', key="btn_guest"):
                 st.session_state.update({
                     "sess_user": "guest", "sess_rol": "guest",
                     "sess_nombre": "Invitado", "logged_in": True, "consent_ok": True})
@@ -821,7 +821,7 @@ section[data-testid="stSidebar"]{display:none!important;}
   Después continúas como invitado o activas Premium por <strong>$99 MXN/mes</strong>.
 </div>""", unsafe_allow_html=True)
             agree_r = st.checkbox("Acepto que es uso académico y no sustituye el juicio clínico.", key="r_agree")
-            if st.button("Crear cuenta →", use_container_width=True, type="primary", key="btn_reg"):
+            if st.button("Crear cuenta →", width='stretch', type="primary", key="btn_reg"):
                 if not all([nombre_r, u_r, email_r, p_r]):
                     st.error("Completa todos los campos.")
                 elif p_r != p_r2:
@@ -2216,7 +2216,7 @@ with st.sidebar:
     def _navbtn(label, key, icon=""):
         active = st.session_state["nav_sel"] == key
         prefix = "▶ " if active else "   "
-        if st.button(f"{prefix}{label}", key=f"nav_{key}", use_container_width=True):
+        if st.button(f"{prefix}{label}", key=f"nav_{key}", width='stretch'):
             st.session_state["nav_sel"] = key
             st.rerun()
 
@@ -2300,11 +2300,11 @@ with st.sidebar:
     _navbtn("🛡️ Admin" if _rol() == "admin" else "👤 Mi Cuenta", "admin")
     st.sidebar.markdown("---")
     if st.sidebar.button("🔒 Política de Privacidad", key="btn_nav_priv",
-                          use_container_width=True):
+                          width='stretch'):
         st.session_state["nav_sel"] = "privacidad"; st.rerun()
 
     st.markdown("---")
-    if st.button("🚪 Cerrar sesión", key="btn_logout", use_container_width=True):
+    if st.button("🚪 Cerrar sesión", key="btn_logout", width='stretch'):
         for k in ["logged_in", "sess_user", "sess_rol", "sess_nombre", "consent_ok", "nav_sel"]:
             st.session_state.pop(k, None)
         st.rerun()
@@ -2398,7 +2398,7 @@ def _render_presc_page():
                                     max_selections=3,
                                     default=st.session_state.get("sb_escenarios", ["Sepsis / choque séptico"]),
                                     key="sb_escenarios")
-        st.form_submit_button("🔄 Calcular", use_container_width=True, type="primary")
+        st.form_submit_button("🔄 Calcular", width='stretch', type="primary")
 
     # Tras el submit, leer los valores confirmados de session_state
     peso = float(st.session_state.get("sb_peso", 70.0))
@@ -3095,7 +3095,7 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
                 st.info(f"↩️ Actualizando prescripción existente — ID {update_id}. "
                         "Los parámetros se guardarán sobre el registro original.")
                 if st.button("🔄 Actualizar prescripción", type="primary",
-                             key="btn_guardar_presc", use_container_width=True):
+                             key="btn_guardar_presc", width='stretch'):
                     _esc  = list(st.session_state.get("sb_escenarios", []))
                     _mod, _, _ = combinar_recomendaciones(_esc)
                     _qb   = int(st.session_state.get("sb_qb", 200))
@@ -3131,7 +3131,7 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
                     st.rerun()
             else:
                 if st.button("💾 Guardar prescripción", type="primary",
-                             key="btn_guardar_presc", use_container_width=True):
+                             key="btn_guardar_presc", width='stretch'):
                     _esc  = list(st.session_state.get("sb_escenarios", []))
                     _mod, _, _ = combinar_recomendaciones(_esc)
                     _qb   = int(st.session_state.get("sb_qb", 200))
@@ -4718,143 +4718,11 @@ if hasattr(st, "fragment"):
     _render_cit_page = st.fragment(_render_cit_page)
 elif hasattr(st, "experimental_fragment"):
     _render_cit_page = st.experimental_fragment(_render_cit_page)
-
-
-
-
-
-
-
-
-
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB: SCORES / CANDIDATURA CRRT
-# Refs: SOFA (Sepsis-3, 2016), APACHE II, KDIGO 2026 AKI (borrador público)
-#       STARRT-AKI 2020, AKIKI 2016, AKIKI-2 2021
-# ══════════════════════════════════════════════════════════════════════════════
-if nav == "scores":
-    _render_scores_page()
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 1: PRESCRIPCIÓN CRRT
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "presc":
-    _render_presc_page()
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 2: CITRATO REGIONAL (RCA) — COMPLETO
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "cit":
-    _render_cit_page()
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 3: SODIO EN CRRT
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "na":
-    st.subheader("Sodio en CRRT — Predicción y Corrección")
-
-    modo_na = st.radio("Modo", ["📊 Predicción de sodio", "🎯 Corrección de sodio"], horizontal=True,
-                       key="modo_na")
-
-    # Datos del paciente compartidos
-    st.markdown("### Datos del paciente")
-    nac1, nac2, nac3, nac4, nac5 = st.columns(5)
-    with nac1:
-        na_sex = st.selectbox("Sexo", ["M", "F"], key="na_sex")
-    with nac2:
-        na_age = st.number_input("Edad (años)", 0, 110, 55, 1, key="na_age")
-    with nac3:
-        na_ht = st.number_input("Talla (cm)", 100, 220, 170, 1, key="na_ht")
-    with nac4:
-        na_wt = st.number_input("Peso (kg)", 10.0, 300.0, float(peso), 0.5, key="na_wt")
-    with nac5:
-        na_plasma = st.number_input("Na plasmático actual (mEq/L)", 100.0, 200.0, 140.0, 0.5,
-                                    key="na_plasma")
-
-    st.markdown("### Parámetros de la terapia")
-    nat1, nat2, nat3 = st.columns(3)
-    with nat1:
-        na_bags = st.number_input("[Na] en bolsas CRRT (mEq/L)", 100.0, 160.0, 140.0, 1.0,
-                                  key="na_bags", help="Na en solución de reemplazo/dializato")
-        na_qeff = st.number_input("Efluente total (mL/hr)", 0, 6000, int(dosis_mlkg * peso),
-                                  100, key="na_qeff")
-    with nat2:
-        cit_sol_tipo_na = st.session_state.get("cit_sol_type", "Citrato trisódico 4% (136 mmol/L — más común)")
-        na_in_cit = st.number_input("[Na] en solución de citrato (mEq/L)",
-                                    0.0, 500.0, float(st.session_state.get("cit_na_mmol_L", 408.0)),
-                                    1.0, key="na_in_cit",
-                                    help="Citrato trisódico 4%: ~408 mEq/L")
-        cit_inf_na = st.number_input("Tasa infusión citrato (mL/hr)", 0.0, 3000.0,
-                                     float(st.session_state.get("rca_citrato_ml_h", 0.0)),
-                                     1.0, key="cit_inf_na")
-    with nat3:
-        na_post_sol = st.number_input("[Na] solución postfiltro (mEq/L)", 0.0, 160.0, 0.0, 1.0,
-                                      key="na_post_sol", help="0 si no hay reposición postfiltro separada")
-        post_inf_na = st.number_input("Tasa reposición postfiltro (mL/hr)", 0.0, 3000.0, 0.0, 10.0,
-                                      key="post_inf_na")
-
-    if "Predicción" in modo_na:
-        st.markdown("### Predicción")
-        na_tiempo = st.number_input("Tiempo de terapia (hrs)", 1, 72, 24, 1, key="na_tiempo")
-        result_na = calc_na_pred_trrc(
-            na_sex, na_age, na_ht, na_wt, na_plasma, na_bags, na_qeff, na_tiempo,
-            na_in_cit, cit_inf_na, na_post_sol, post_inf_na)
-        if result_na:
-            rn1, rn2, rn3 = st.columns(3)
-            rn1.metric("ACT estimada (Watson)", f"{result_na['tbw']:.1f} L")
-            rn2.metric("Balance neto de Na", f"{result_na['net_na']:.1f} mEq/hr",
-                       help="+: Na se retiene | -: Na se elimina")
-            rn3.metric("[Na] predicho al final", f"{result_na['na_pred']:.1f} mEq/L",
-                       delta=f"{result_na['na_pred'] - na_plasma:+.1f} vs actual")
-            delta_24 = result_na["net_na"] * na_tiempo
-            st.info(f"Balance acumulado en {na_tiempo}h: **{delta_24:+.0f} mEq de Na** → "
-                    f"Na final predicho **{result_na['na_pred']:.1f} mEq/L**")
-            # Alertas de corrección
-            if na_plasma < 130 and (result_na["na_pred"] - na_plasma) > 10:
-                st.error("⚠️ Corrección de hiponatremia >10 mEq/L proyectada. Riesgo de ODS. Ajustar [Na] en bolsas o reducir efluente.")
-            if abs(result_na["na_pred"] - na_plasma) / na_tiempo > 0.5 and na_tiempo <= 24:
-                st.warning(f"⚠️ Velocidad de corrección ≈ {abs(result_na['na_pred'] - na_plasma) / na_tiempo:.2f} mEq/L/hr. Verificar meta clínica.")
-        else:
-            st.info("Completa los datos del paciente para calcular la predicción.")
-
-    else:  # Corrección
-        st.markdown("### Estrategias de corrección de sodio en 24h")
-        na_meta = st.number_input("[Na] objetivo en 24h (mEq/L)", 100.0, 200.0, 140.0, 0.5,
-                                  key="na_meta")
-        result_corr = calc_na_corr_trrc(
-            na_sex, na_age, na_ht, na_wt, na_plasma, na_meta, na_qeff, na_bags,
-            na_in_cit, cit_inf_na)
-        if result_corr:
-            st.metric("ACT estimada (Watson)", f"{result_corr['tbw']:.1f} L")
-            st.metric("Δ Na necesario", f"{result_corr['delta_hr']:+.1f} mEq/hr",
-                      help="Na neto que debe moverse por hora para alcanzar la meta en 24h")
-            st.markdown("---")
-            rc1, rc2 = st.columns(2)
-            with rc1:
-                st.markdown("#### Estrategia 1")
-                st.markdown("**Ajustar flujo de reposición postfiltro** (Na estándar = 140 mEq/L)")
-                st.metric("Tasa postfiltro recomendada", f"{result_corr['pf_rate']:.0f} mL/hr")
-                st.caption("Mantener [Na] en bolsas sin cambios. Ajustar sólo el flujo postfiltro.")
-            with rc2:
-                st.markdown("#### Estrategia 2")
-                st.markdown("**Ajustar [Na] en bolsas CRRT** (sin reposición postfiltro adicional)")
-                st.metric("[Na] objetivo en bolsas", f"{result_corr['target_bags']:.1f} mEq/L")
-                st.caption("Mantener flujo de efluente. Cambiar composición de la solución.")
-            # Alertas
-            delta_na_24 = na_meta - na_plasma
-            if na_plasma < 130 and delta_na_24 > 10:
-                st.error("⚠️ Meta implica corrección >10 mEq/L en 24h. Para hiponatremia ≤ 8 mEq/L/24h (≤8 si riesgo de ODS). Reconsiderar meta.")
-            if na_plasma > 150 and delta_na_24 < -12:
-                st.warning("⚠️ Corrección de hipernatremia: no exceder 10–12 mEq/L/24h. Verificar meta.")
-        else:
-            st.info("Completa los datos para calcular las estrategias de corrección.")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4: PREDICCIÓN HD + KoA
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "hd":
+# ==============================================================================
+# TAB: hd — cuerpo envuelto en fragment para acelerar reruns.
+# El contenido vive en _render_hd_page(); la página hd solo la invoca.
+# ==============================================================================
+def _render_hd_page():
     st.subheader("Predicción de Hemodiálisis convencional + KoA")
 
     modo_hd = st.radio("Modo", ["💉 Predicción HD", "🔧 Calculadora KoA"], horizontal=True, key="modo_hd")
@@ -4968,1913 +4836,17 @@ $$K = Q_B \\cdot \\frac{1 - e^{-KoA/Q_B \\cdot (1 - Q_B/Q_D)}}{1 - Q_B/Q_D \\cdo
 Se obtiene de los datos in vitro del fabricante (K a QB y QD estándar).
             """)
 
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 5: PLASMAFÉRESIS / TPE — COMPLETO
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "tpe":
-    _render_tpe_page()
-
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 6: KT/V POR OBJETIVOS
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "ktv":
-    st.subheader("Dosis por objetivos (Kt/V urea — CRRT)")
-    V = st.number_input("Volumen de distribución V (L) ≈ 0.6xpeso", value=round(0.6 * peso, 1),
-                        step=0.1)
-    C0 = st.number_input("Urea inicial C0 (mg/dL)", value=150.0, step=1.0)
-    Ct = st.number_input("Urea objetivo Ct (mg/dL)", value=100.0, step=1.0)
-    horas = st.number_input("Tiempo de tratamiento (h)", value=24, step=1)
-    E = st.number_input("Eficiencia del sistema (0.8–1.0)", value=0.9, step=0.05,
-                        min_value=0.5, max_value=1.0)
-    ktv_req = log(C0 / Ct) if (C0 > 0 and Ct > 0 and C0 > Ct) else None
-    st.metric("Kt/V requerido", f"{ktv_req:.2f}" if ktv_req else "—")
-    K_Lh = ((ktv_req * V) / horas) / E if ktv_req else None
-    dosis_calc = (K_Lh * 1000) / peso if K_Lh and peso > 0 else None
-    colx, coly = st.columns(2)
-    colx.metric("K requerido (L/h)", f"{K_Lh:.2f}" if K_Lh else "—")
-    coly.metric("Dosis estimada (mL/kg/h)", f"{dosis_calc:.1f}" if dosis_calc else "—")
-    if dosis_calc:
-        if dosis_calc < 20:
-            st.warning(f"⚠️ Dosis {dosis_calc:.1f} mL/kg/h < 20. Considerar aumentar.")
-        elif dosis_calc > 35:
-            st.info(f"ℹ️ Dosis {dosis_calc:.1f} mL/kg/h > 35. Sin evidencia de beneficio adicional.")
-        else:
-            st.success(f"✅ Dosis {dosis_calc:.1f} mL/kg/h dentro del rango 20–35.")
-    st.caption("Relación entre Kt/V objetivo y dosis de efluente (ver Referencias).")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 7: BALANCE DINÁMICO
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "bal":
-    st.subheader("Balance dinámico y metas de UF")
-    peso_seco = st.number_input("Peso seco objetivo (kg)", value=max(0.0, peso - 5), step=0.5)
-    fo_actual = (peso - peso_seco) / peso_seco if peso_seco > 0 else 0.0
-    fo_obj = st.number_input("FO% objetivo (p. ej. 0.05 = 5%)", value=0.05, step=0.01)
-    horas_trrc = st.number_input("Horas de CRRT planificadas (h)", value=24, step=1)
-    ingresos = st.number_input("Ingresos previstos (mL)", value=0, step=50)
-    uresis_res = st.number_input("Uresis residual 24h (mL)",
-                                 value=int(st.session_state.get("ur_main", 0)), step=50)
-    uf_obj = ((peso - (1 + fo_obj) * peso_seco) * 1000) if peso_seco > 0 else None
-    uf_mant = ingresos - uresis_res
-    uf_total = (uf_obj if uf_obj is not None else 0) + uf_mant
-    uf_h = uf_total / horas_trrc if horas_trrc > 0 else 0
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("FO% actual", f"{fo_actual:.1%}")
-    c2.metric("UF objetivo (mL)", f"{int(uf_obj) if uf_obj is not None else 0}")
-    c3.metric("UF total 24h (mL)", f"{int(uf_total)}")
-    c4.metric("UF/h sugerida", f"{int(uf_h)}")
-    ratio_uf_peso = uf_h / max(float(peso), 1e-9)
-    if ratio_uf_peso > 0.002:
-        st.warning(f"⚠️ UF/h > 2 mL/kg/h ({ratio_uf_peso * 1000:.1f} mL/kg/h). Evaluar tolerancia hemodinámica.")
-    else:
-        st.success(f"✅ UF/h aceptable ({ratio_uf_peso * 1000:.1f} mL/kg/h).")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 8: ANTICOAGULACIÓN EXTENDIDA
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "anticoag":
-    st.subheader("Anticoagulación — Evaluación extendida")
-    colA, colB, colC, colD = st.columns(4)
-    plaquetas = colA.number_input("Plaquetas (mil/µL)", 0, 1000, 200, 5)
-    fib = colB.number_input("Fibrinógeno (mg/dL)", 0, 1000, 300, 10)
-    sangrado = colC.selectbox("Sangrado activo", ["No", "Sí"])
-    neuro = colD.selectbox("Post-op neuro / riesgo alto", ["No", "Sí"])
-    inr = colA.number_input("INR", 0.8, 5.0, 1.1, 0.1, key="inr_ext")
-    aptt = colB.number_input("aPTT (s)", 20.0, 120.0, 35.0, 1.0, key="aptt_ext")
-    hbpm_12h = colC.selectbox("HBPM en últimas 12h", ["No", "Sí"],
-                               help="Si 'Sí', preferir RCA o iniciar HNF con precaución.")
-    hit_previa = colD.selectbox("Antecedente de HIT", ["No", "Sí"])
-    st.session_state["hit_previa_bool"] = (hit_previa == "Sí")
-
-    usar_rca = (plaquetas < 50 or fib < 150 or sangrado == "Sí" or neuro == "Sí" or
-                inr >= 1.5 or aptt >= 45 or hbpm_12h == "Sí" or hit_previa == "Sí")
-    ac = "RCA (citrato)" if usar_rca else "Heparina no fraccionada (HNF)"
-    st.success(f"Anticoagulación sugerida: **{ac}**")
-    st.caption("RCA es preferente si no hay contraindicaciones. "
-               "Para cálculo detallado de citrato → 🧪 Citrato RCA.")
-
-    if ac.startswith("Heparina"):
-        if hbpm_12h == "Sí":
-            st.warning("HBPM reciente: considerar diferir HNF o iniciar con dosis reducida.")
-        iu_h = peso * 5
-        st.info(f"**Dosis inicial HNF sugerida:** {iu_h:.0f} UI/h (ajustar a aPTT objetivo).")
-        st.session_state["anticoagulacion_tipo"] = "HNF"
-        st.session_state["hnf_ui_h"] = float(iu_h)
-
-        # ── NOMOGRAMA HNF COMPLETO ─────────────────────────────────────────
-        st.divider()
-        st.markdown("### 📊 Nomograma HNF para CRRT")
-        st.caption("Objetivo aPTT en CRRT: **45–80 segundos** (anticoagulación moderada). "
-                   "Más conservador que anticoagulación terapéutica sistémica.")
-
-        hn1, hn2 = st.columns(2)
-        with hn1:
-            aptt_actual = st.number_input("aPTT actual (s)", 20.0, 200.0,
-                                          float(aptt), 1.0, key="hnf_aptt_nom")
-            dosis_actual_hnf = st.number_input("Dosis HNF actual (UI/hr)", 0.0, 5000.0,
-                                               float(iu_h), 50.0, key="hnf_dosis_act")
-        with hn2:
-            tipo_bolo = st.selectbox("¿Incluir bolo inicial?",
-                                     ["No (riesgo de sangrado)", "Sí — 25 UI/kg", "Sí — 50 UI/kg"],
-                                     key="hnf_bolo")
-
-        # Calculate adjustment
-        if aptt_actual < 45:
-            ajuste = "+2–3 UI/kg/hr"
-            delta_ui = 2.5 * peso
-            bolo = ""
-            if aptt_actual < 35:
-                bolo = f"+ Bolo 1,000–2,000 UI"
-            accion = f"⬆️ **AUMENTAR** {delta_ui:.0f} UI/hr (nueva dosis ≈ {dosis_actual_hnf + delta_ui:.0f} UI/hr). {bolo}"
-            color = "warning"
-        elif aptt_actual <= 60:
-            accion = "✅ **MANTENER** dosis actual — aPTT en objetivo bajo (45–60s)"
-            color = "success"
-        elif aptt_actual <= 80:
-            accion = "✅ **MANTENER** dosis actual — aPTT en objetivo óptimo (61–80s)"
-            color = "success"
-        elif aptt_actual <= 100:
-            delta_ui = 1.5 * peso
-            accion = f"⬇️ **REDUCIR** {delta_ui:.0f} UI/hr (nueva dosis ≈ {max(0, dosis_actual_hnf - delta_ui):.0f} UI/hr)"
-            color = "warning"
-        elif aptt_actual <= 120:
-            delta_ui = 2.5 * peso
-            accion = (f"⬇️ **PAUSAR 30 min** → reducir {delta_ui:.0f} UI/hr "
-                     f"(nueva dosis ≈ {max(0, dosis_actual_hnf - delta_ui):.0f} UI/hr). Repetir aPTT en 4h.")
-            color = "error"
-        else:
-            accion = (f"🛑 **PAUSAR 60 min** → reducir {2.5*peso:.0f} UI/hr. "
-                     f"Monitoreo estrecho. Si sangrado activo: protamina.")
-            color = "error"
-
-        if color == "success":
-            st.success(accion)
-        elif color == "warning":
-            st.warning(accion)
-        else:
-            st.error(accion)
-
-        st.markdown("""
-| aPTT (segundos) | Acción | Bolo | Cambio de dosis |
-|----------------|--------|------|----------------|
-| **<35** | Aumentar urgente | 2,000 UI | +3 UI/kg/hr |
-| **35–44** | Aumentar | 1,000 UI | +2 UI/kg/hr |
-| **45–60** | Mantener (objetivo bajo) | No | Sin cambio |
-| **61–80** | Mantener (objetivo óptimo) | No | Sin cambio |
-| **81–100** | Reducir ligeramente | No | −1.5 UI/kg/hr |
-| **101–120** | Pausar + reducir | No | Pausar 30 min; −2.5 UI/kg/hr |
-| **>120** | Pausar + reducir mayor | No | Pausar 60 min; −2.5 UI/kg/hr |
-        """)
-
-        st.markdown("**Frecuencia de monitoreo:**")
-        st.markdown("""
-- Primera aPTT: **4–6 horas** después de iniciar o cambiar dosis
-- Hasta 2 controles consecutivos en rango → cada **12 horas**
-- Estable >24h → cada **24 horas**
-- Siempre post-ajuste: repetir a las **4 horas**
-        """)
-
-        if tipo_bolo != "No (riesgo de sangrado)":
-            bolo_ui = 25 * peso if "25" in tipo_bolo else 50 * peso
-            st.info(f"💉 **Bolo inicial:** {bolo_ui:.0f} UI IV directo, luego iniciar infusión a {iu_h:.0f} UI/hr")
-
-        with st.expander("🔬 Anti-Xa como alternativa al aPTT"):
-            st.markdown(f"""
-**Anti-Xa para monitoreo de HNF en CRRT:**
-- Meta: **0.3–0.7 UI/mL** (anticoagulación moderada para CRRT)
-- Ventaja: No afectado por factor VIII elevado, lupus anticoagulante o coagulopatías
-- Tomar muestra: **4–6h** después de iniciar o cambiar dosis, en estado estable
-- Ajuste: mismo nomograma de aPTT como referencia; usar anti-Xa para confirmar
-
-**Conversión aproximada:**
-- Anti-Xa 0.3 UI/mL ≈ aPTT 45–50s
-- Anti-Xa 0.5 UI/mL ≈ aPTT 60–70s
-- Anti-Xa 0.7 UI/mL ≈ aPTT 80–90s
-            """)
-    else:
-        st.info("💡 Dirígete a la pestaña **🧪 Citrato RCA** para el cálculo completo de tasas y monitoreo.")
-        st.session_state["anticoagulacion_tipo"] = "RCA"
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 9: FUNDAMENTO Y CÁLCULOS
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "fund":
-    st.subheader("Fundamento y Cálculos — Transparencia pedagógica")
-    mostrar_ext = bool(st.session_state.get("mostrar_fund_extendido", False))
-    if mostrar_ext:
-        st.info("Vista extendida ACTIVADA (switch global en barra lateral).")
-
-    mod_for_fund, filtro_for_fund, _ = combinar_recomendaciones(escenarios)
-    filtro_for_fund = st.session_state.get("ui_filtro", filtro_for_fund)
-    qp_f, qp_h_f, qe_f, qr_pre_f, qr_post_f, qd_f, ff_f = flows_and_ff(
-        qb, hto, dosis_mlkg, peso, uf, mod_for_fund or "CVVHDF")
-
-    st.markdown("### Fórmulas CRRT (LaTeX)")
-    st.latex(r"Q_p = Q_b \times (1 - Hto)")
-    st.latex(r"Q_{p,h} = Q_p \times 60 \quad \text{(mL/h)}")
-    st.latex(r"Q_e = \text{dosis}_{mL/kg/h} \times \text{peso}_{kg}")
-    st.latex(r"FF = \frac{Q_{r,post} + UF}{Q_{p,h} + Q_{r,pre}} < 25\%")
-    st.latex(r"Q_{r,total} = \min(0.25 \cdot Q_{p,h},\ \max(Q_e - UF, 0)) \times f_{conv}")
-    st.latex(r"Q_d = \max(Q_e - Q_{r,pre} - Q_{r,post} - UF,\ 0)")
-
-    st.markdown("### Citrato RCA")
-    st.latex(r"\dot{V}_{cit} = \frac{D_{obj}[mmol/L] \times Q_b[mL/min] \times 60}{[Cit][mmol/L]}")
-    st.latex(r"\text{Carga al circuito} = \dot{V}_{cit} \times [Cit]/1000 \quad [mmol/h]")
-    st.latex(r"\text{Remoción} = Q_{eff} \times [Cit]_{circuito}/1000 \quad [mmol/h]")
-    st.latex(r"\frac{Ca_{total}}{Ca_{i\acute{o}nico}} > 2.5 \Rightarrow \text{Acumulación de citrato}")
-
-    st.markdown("### HD — Ecuación de Michaels")
-    st.latex(r"K = Q_B \cdot \frac{1 - e^{-\alpha(1-r)}}{1 - r \cdot e^{-\alpha(1-r)}}")
-    st.latex(r"\alpha = KoA/Q_B \quad r = Q_B/Q_D")
-    st.latex(r"Kt/V = K \cdot t_{min} / V_{mL}")
-
-    st.markdown("### Plasmaféresis")
-    st.latex(r"VPE = 65 \times peso \times (1 - Hto)")
-    st.latex(r"C_{res}^{1\,ses} = e^{-n_{recambios}} \times 100\%")
-    st.latex(r"C_{res}^{total} = (0.55 + 0.45 \cdot e^{-n_{rec}})^{n_{ses}} \times 100\%")
-
-    st.markdown("### Sustitución numérica (valores actuales CRRT)")
-    nc1, nc2, nc3 = st.columns(3)
-    with nc1:
-        st.write(f"**Qb** = {int(qb)} mL/min")
-        st.write(f"**Hto** = {hto:.2f}")
-        st.write(f"**Qp** = {int(qp_f)} mL/min")
-        st.write(f"**Qp·h** = {int(qp_h_f)} mL/h")
-    with nc2:
-        st.write(f"**Dosis** = {int(dosis_mlkg)} mL/kg/h")
-        st.write(f"**Peso** = {peso:.1f} kg")
-        st.write(f"**Qe** = {int(qe_f)} mL/h")
-        st.write(f"**UF** = {int(uf)} mL/h")
-    with nc3:
-        st.write(f"**Qr_pre** = {int(qr_pre_f)} mL/h")
-        st.write(f"**Qr_post** = {int(qr_post_f)} mL/h")
-        st.write(f"**Qd** = {int(qd_f)} mL/h")
-        st.write(f"**FF** ≈ {ff_f:.2%}")
-
-    if mostrar_ext:
-        st.divider()
-        st.markdown("### Fundamento clínico extendido")
-        for linea in _fundamento_texto_extendido(
-                na=float(st.session_state.get("na_main", 140.0)),
-                k=float(st.session_state.get("k_main", 4.0)),
-                ph=float(st.session_state.get("ph_main", 7.35)),
-                pam=float(st.session_state.get("pam", 65.0)),
-                vasopresor_alto=st.session_state.get("vaso_alto_sel", "No") == "Sí",
-                lactato_desc=st.session_state.get("lactato_desc_sel", "No") == "Sí",
-                albumina=float(st.session_state.get("alb_main", 3.0)),
-                anticoag_tipo=st.session_state.get("anticoagulacion_tipo", "—"),
-                r_targets=st.session_state.get("rca_targets", {}),
-                filtro_final=filtro_for_fund):
-            if linea:
-                st.write(linea)
-            else:
-                st.markdown("---")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 10: RESUMEN / IMPRESIÓN (unificado: orden enfermería + PDF)
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "resumen":
-    st.subheader("📋 Resumen Clínico / Orden de Enfermería / Impresión")
-    st.caption("Completa todos los campos y luego genera el PDF. "
-               "Este documento integra prescripción, anticoagulación y monitoreo en un solo lugar.")
-
-    # Banner: redirigir al módulo Prescripción para el flujo clínico principal
-    _b1, _b2 = st.columns([5, 1])
-    with _b1:
-        st.info("💡 **¿Solo necesitas la prescripción CRRT?** Usa el módulo dedicado de "
-                "**🩺 Prescripción** (sidebar). Allí puedes seleccionar paciente existente o "
-                "registrar uno nuevo, y guardar la prescripción en el expediente para reimpresión.\n\n"
-                "Este módulo **Resumen / PDF** es para generar un **documento integrado completo** "
-                "que combina prescripción + anticoagulación + monitoreo + orden de enfermería + "
-                "fundamento clínico en un solo PDF de 3 páginas.")
-    with _b2:
-        if st.button("🩺 Ir a Prescripción", use_container_width=True, key="btn_go_presc"):
-            st.session_state["nav_sel"] = "presc"
-            st.rerun()
-
-    # ── Sección 1: Identificación ─────────────────────────────────────────────
-    st.markdown("### 👤 Identificación del paciente")
-    idU, _ = st.columns([3, 1])
-    with idU:
-        st.text_input("Unidad hospitalaria", key="rx_unidad",
-                      value=st.session_state.get("rx_unidad", ""))
-    id1, id2, id3 = st.columns([2, 1, 1])
-    with id1:
-        st.text_input("Nombre del paciente", key="rx_nombre_paciente",
-                      value=st.session_state.get("rx_nombre_paciente", ""))
-    with id2:
-        st.text_input("Fecha de nacimiento", key="rx_fecha_nac",
-                      value=st.session_state.get("rx_fecha_nac", ""))
-    with id3:
-        st.text_input("Edad", key="rx_edad", value=st.session_state.get("rx_edad", ""))
-    id4, id5 = st.columns([1, 2])
-    with id4:
-        _sxo = ["", "M", "F"]
-        st.selectbox("Sexo", _sxo,
-                     index=_sxo.index(st.session_state.get("rx_sexo", ""))
-                     if st.session_state.get("rx_sexo", "") in _sxo else 0, key="rx_sexo")
-    with id5:
-        st.text_input("Expediente / NSS", key="rx_expediente",
-                      value=st.session_state.get("rx_expediente", ""))
-
-    # ── Sección 2: Prescripción completa ──────────────────────────────────────
-    st.divider()
-    st.markdown("### ⚙️ Prescripción CRRT")
-
-    mod_rs, filtro_rs, coment_rs = combinar_recomendaciones(escenarios)
-    filtro_rs = st.session_state.get("ui_filtro", filtro_rs)
-    qp_rs, qp_h_rs, qe_rs, qr_pre_rs, qr_post_rs, qd_rs, ff_rs = flows_and_ff(
-        qb, hto, dosis_mlkg, peso, uf, mod_rs or "CVVHDF")
-    ff_txt_rs = f"{ff_rs:.1%}" if ff_rs is not None else "—"
-
-    # Citrate adjustment
-    ac_rs = st.session_state.get("anticoagulacion_tipo", "—")
-    v_cit_rs = float(st.session_state.get("rca_citrato_ml_h", 0))
-    ca_ml_rs = float(st.session_state.get("rca_calcio_ml_h", 0))
-    rca_targets_rs = st.session_state.get("rca_targets", {})
-    hnf_rs = float(st.session_state.get("hnf_ui_h", peso * 5))
-
-    if ac_rs == "RCA" and v_cit_rs > 0:
-        qr_pre_sol_rs = max(0.0, qr_pre_rs - v_cit_rs)
-        ff_adj_rs = (qr_post_rs + uf) / max(qp_h_rs + qr_pre_sol_rs + v_cit_rs, 1e-9)
-    else:
-        qr_pre_sol_rs = float(qr_pre_rs)
-        ff_adj_rs = ff_rs
-
-    sc1, sc2, sc3 = st.columns(3)
-    sc1.metric("Modalidad", mod_rs or "—")
-    sc2.metric("Filtro", filtro_rs or "—")
-    sc3.metric("FF efectiva", f"{ff_adj_rs:.1%}" if ff_adj_rs else "—",
-               delta="✅" if ff_adj_rs and ff_adj_rs <= 0.25 else "⚠️ ALTA")
-
-    st.markdown("**Flujos programados en la máquina:**")
-    fm1, fm2, fm3, fm4 = st.columns(4)
-    fm1.metric("QB (mL/min)", qb)
-    fm2.metric("Qe total (mL/hr)", int(qe_rs))
-    fm3.metric("UF neta (mL/hr)", uf)
-    fm4.metric("Qd dialisato (mL/hr)", int(qd_rs))
-
-    fm5, fm6, fm7, fm8 = st.columns(4)
-    if ac_rs == "RCA" and v_cit_rs > 0:
-        fm5.metric("Qr PRE — citrato (mL/hr)", f"{v_cit_rs:.0f}",
-                   help="Citrato va PRE-filtro por bomba de citrato")
-        fm6.metric("Qr PRE — solución (mL/hr)", f"{qr_pre_sol_rs:.0f}",
-                   help=f"Original {qr_pre_rs:.0f} − citrato {v_cit_rs:.0f}")
-    else:
-        fm5.metric("Qr PRE — solución (mL/hr)", f"{qr_pre_rs:.0f}")
-        fm6.metric("Qr PRE — citrato", "No aplica")
-    fm7.metric("Qr POST (mL/hr)", f"{qr_post_rs:.0f}")
-    fm8.metric("Qe efluente = dosis x peso", f"{int(qe_rs)} mL/hr")
-
-    if coment_rs:
-        st.info(coment_rs)
-
-    # ── Sección 3: Anticoagulación (dinámica) ─────────────────────────────────
-    st.divider()
-    st.markdown("### 💊 Anticoagulación")
-
-    if ac_rs == "RCA":
-        num_viales_rs = st.session_state.get("ca_viales", 12)
-        prep_vol_rs = 250 if st.session_state.get("ca_prep_vol", "250 mL") == "250 mL" else 500
-        # AFORO: volumen final = volumen de la bolsa (no se suma el de las ámpulas)
-        vol_total_rs = prep_vol_rs
-        ca_conc_rs = (int(num_viales_rs) * 2.23) / (vol_total_rs / 1000) if vol_total_rs > 0 else 0
-
-        ac1, ac2 = st.columns(2)
-        with ac1:
-            st.markdown("#### 🧪 Citrato")
-            st.markdown(f"""
-| Parámetro | Valor |
-|-----------|-------|
-| Tipo de solución | {st.session_state.get('cit_sol_type', 'Citrato 4%')[:30]} |
-| Dosis objetivo | {st.session_state.get('cit_dose', 3.0):.1f} mmol/L sangre |
-| **Tasa de infusión citrato** | **{v_cit_rs:.0f} mL/hr** (línea arterial PRE-filtro) |
-| iCa post-filtro diana | **0.25–0.40 mmol/L** |
-""")
-        with ac2:
-            st.markdown("#### 🫙 Calcio — reposición sistémica")
-            st.markdown(f"""
-| Parámetro | Valor |
-|-----------|-------|
-| Preparación | {int(num_viales_rs)} ámpulas gluconato Ca 10% en {prep_vol_rs} mL NaCl 0.9% |
-| Volumen total preparado | {vol_total_rs} mL |
-| Concentración resultante | {ca_conc_rs:.1f} mmol/L de Ca elemental |
-| **Tasa de infusión calcio** | **{ca_ml_rs:.0f} mL/hr** (línea sistémica POST-filtro) |
-| iCa sistémico diana | **1.0–1.2 mmol/L** |
-""")
-        st.warning("⚠️ El calcio se infunde **SIEMPRE por línea sistémica post-filtro**, nunca en la línea de citrato ni pre-filtro.")
-
-    elif ac_rs == "HNF":
-        st.markdown(f"""
-| Parámetro | Valor |
-|-----------|-------|
-| Tipo | Heparina No Fraccionada (HNF) |
-| **Dosis inicial** | **{hnf_rs:.0f} UI/hr** en infusión continua |
-| Ajuste | Según aPTT (objetivo: 45–70 s o protocolo institucional) |
-| Frecuencia aPTT | Cada 4–6 hrs |
-""")
-    else:
-        st.info("Sin anticoagulación registrada. Ve a **💊 Anticoagulación** o **🧪 Citrato RCA** para configurarla.")
-
-    # ── Sección 4: Sodio (si relevante) ───────────────────────────────────────
-    na_actual = float(st.session_state.get("na_main", 140.0))
-    if na_actual < 130 or na_actual > 150:
-        st.divider()
-        st.markdown("### 🧂 Sodio — Consideraciones especiales")
-        if na_actual < 130:
-            st.warning(f"**Hiponatremia: Na = {na_actual:.0f} mEq/L** — "
-                       "Corrección máxima: ≤8–10 mEq/L/24h (≤8 si riesgo de ODS). "
-                       "Ajustar [Na] en bolsas o flujo postfiltro. "
-                       "Ve a pestaña 🧂 Sodio CRRT para calcular la estrategia.")
-        elif na_actual > 150:
-            st.warning(f"**Hipernatremia: Na = {na_actual:.0f} mEq/L** — "
-                       "Corrección: ≈0.5 mEq/L/hr (8–10 mEq/día). "
-                       "Usar dializado con Na más alto. "
-                       "Ve a pestaña 🧂 Sodio CRRT para calcular la estrategia.")
-
-    # ── Sección 5: Monitoreo (dinámico) ───────────────────────────────────────
-    st.divider()
-    st.markdown("### 🔬 Monitoreo")
-
-    if ac_rs == "RCA":
-        st.markdown("""
-| Momento | Parámetro | Objetivo / Acción |
-|---------|-----------|-------------------|
-| **Inicio** | Verificar circuito, presiones, flujos | Todo OK antes de conectar |
-| **30 min** | iCa post-filtro + iCa sistémico | Post: 0.25–0.40 / Sist: 1.0–1.2 mmol/L |
-| **1–2 hrs** | iCa ambos | Confirmar estabilidad |
-| **Cada 4–6 hrs** | iCa post + iCa sistémico + Na, K, HCO₃⁻ | Ajuste ±10–20% si fuera de meta |
-| **Cada 12–24 hrs** | Ca total + Ca iónico + Anión gap + pH + lactato | Ratio Ca_total/Ca_iónico: normal <2.5 |
-| **Post-ajuste** | iCa ambos a los 30 min del cambio | Verificar nuevo equilibrio |
-| **Circuito** | Presión transmembrana (PTM), presión de retorno | Alarma → revisar coagulación |
-""")
-        st.error("🚨 **ALERTA DE ACUMULACIÓN:** Si Ca_total/Ca_iónico >2.5 + anión gap elevado + "
-                 "iCa sistémico bajo pese a ↑ calcio → **suspender citrato, cambiar a HNF. Avisar médico URGENTE.**")
-    else:
-        st.markdown("""
-| Momento | Parámetro | Objetivo / Acción |
-|---------|-----------|-------------------|
-| **Inicio** | Verificar circuito y flujos | Todo OK antes de conectar |
-| **Cada 4–6 hrs** | aPTT | Objetivo: 45–70 s (o protocolo institucional) |
-| **Cada 4–6 hrs** | BMP (Na, K, HCO₃⁻, Ca, glucosa) | Ajustar solución según resultados |
-| **Cada 12 hrs** | Plaquetas + TP/INR | Vigilar HIT (↓ plaquetas ≥50%) |
-| **Circuito** | Presión transmembrana (PTM), coágulos | Alarma → revisar HNF |
-""")
-
-    # ── Sección 6: Alertas inmediatas ─────────────────────────────────────────
-    st.divider()
-    st.markdown("### ⚠️ Alertas inmediatas")
-    alertas_txt = [
-        f"**FF >25%:** Reducir UF o Qr_post, ↑ predilución {'(citrato o solución PRE)' if ac_rs == 'RCA' else '(Qr_pre)'}. Avisar médico.",
-        "**Presión transmembrana ↑ sostenida:** Revisar coagulación del circuito. Evaluar cambio de filtro.",
-    ]
-    if ac_rs == "RCA":
-        alertas_txt += [
-            "**iCa post-filtro <0.25:** ↓ Citrato 10–20%. Avisar médico.",
-            "**iCa post-filtro >0.40:** ↑ Citrato 10–20%. Avisar médico.",
-            "**iCa sistémico <1.0:** ↑ Calcio (gluconato) 10–20%. Avisar médico.",
-            "**iCa sistémico >1.2:** ↓ Calcio 10–20%. Avisar médico.",
-            "**Ca_total/Ca_iónico >2.5:** ACUMULACIÓN DE CITRATO. Suspender citrato → HNF. URGENTE.",
-        ]
-    else:
-        alertas_txt += [
-            "**aPTT <45 s:** ↑ HNF según protocolo. Revisar acceso vascular.",
-            "**aPTT >100 s:** ↓ HNF o suspender temporalmente. Vigilar sangrado.",
-            "**Plaquetas ↓ ≥50% del basal:** Sospechar HIT. Suspender HNF. Avisar médico URGENTE.",
-        ]
-
-    k_actual = float(st.session_state.get("k_main", 4.0))
-    ph_actual2 = float(st.session_state.get("ph_main", 7.35))
-    if k_actual >= 6.0:
-        alertas_txt.append(f"**K = {k_actual:.1f} mEq/L ≥6.0:** Dializado K 0–2 mEq/L, ↑ Qd. Re-labs cada 2 h.")
-    if ph_actual2 < 7.20:
-        alertas_txt.append(f"**pH = {ph_actual2:.2f} <7.20:** Confirmar solución con bicarbonato. ↑ Qd.")
-
-    for a in alertas_txt:
-        st.markdown(f"- {a}")
-
-    # ── Sección 7: Electrolitos CRRT ──────────────────────────────────────────
-    st.divider()
-    st.markdown("### ⚗️ Guía rápida de electrolitos en CRRT")
-    k_enf = float(st.session_state.get("k_main", 4.0))
-    ph_enf = float(st.session_state.get("ph_main", 7.35))
-    hco3_enf = float(st.session_state.get("hco3_main", 20.0))
-    if k_enf < 3.0:
-        st.error(f"K = {k_enf:.1f} — Hipocalemia severa: KCl 20–40 mEq/L en bolsas + IV según protocolo.")
-    elif k_enf < 3.5:
-        st.warning(f"K = {k_enf:.1f} — Agregar KCl 10–20 mEq/L a bolsas de reposición.")
-    elif k_enf >= 6.0:
-        st.error(f"K = {k_enf:.1f} — Hipercalemia: bolsas K=0 mEq/L, ↑ Qd 2–3 L/h.")
-    elif k_enf >= 5.5:
-        st.warning(f"K = {k_enf:.1f} — Bolsas K 0–2 mEq/L. Monitoreo cada 2–4h.")
-    else:
-        st.success(f"K = {k_enf:.1f} — Rango aceptable.")
-    if ph_enf < 7.20 or hco3_enf < 15:
-        st.error(f"pH {ph_enf:.2f} / HCO₃⁻ {hco3_enf:.0f} — Acidosis severa: solución con bicarbonato, ↑ Qd.")
-    elif ph_enf > 7.50 or hco3_enf > 30:
-        st.warning(f"pH {ph_enf:.2f} / HCO₃⁻ {hco3_enf:.0f} — Alcalosis: "
-                   f"{'revisar tasa de citrato (genera HCO₃⁻).' if ac_rs == 'RCA' else 'revisar buffer en solución.'}")
-    else:
-        st.success(f"pH {ph_enf:.2f} / HCO₃⁻ {hco3_enf:.0f} — Equilibrio ácido-base aceptable.")
-
-    # ── Sección 8: Médico + comentarios + PDF ─────────────────────────────────
-    st.divider()
-    st.markdown("### ✍️ Médico tratante")
-    pd1, pd2 = st.columns(2)
-    with pd1:
-        st.text_input("Nombre del médico", key="rx_nombre_medico",
-                      value=st.session_state.get("rx_nombre_medico", ""))
-    with pd2:
-        st.text_input("Cédula / Sello", key="rx_sello",
-                      value=st.session_state.get("rx_sello", ""))
-
-    st.text_area("Comentarios clínicos adicionales", key="rx_comentarios",
-                 value=st.session_state.get("rx_comentarios", ""), height=80)
-
-    st.markdown("### 📄 Generar PDF")
-    st.write(f"Modo docente (PDF extendido): **{'Sí ✅' if st.session_state.get('pdf_extendido') else 'No'}**")
-    st.caption("Activa el modo docente en la barra lateral para incluir fundamento clínico extendido.")
-
-    col_pdf, _ = st.columns([1, 3])
-    with col_pdf:
-        if st.button("📄 Generar PDF clínico", key="btn_export_pdf",
-                     type="primary", use_container_width=True):
-            try:
-                ts = datetime.now().strftime("%Y-%m-%d_%H-%M")
-                nom = st.session_state.get("rx_nombre_paciente", "").replace(" ", "")
-                safe = "".join(c for c in nom if c.isalnum())
-                fname = f"RenalPro_{safe}_{ts}.pdf" if safe else f"RenalPro_{ts}.pdf"
-                buf = export_pdf_pro()
-                st.download_button("⬇️ Descargar PDF", data=buf, file_name=fname,
-                                   mime="application/pdf", use_container_width=True,
-                                   key="btn_download_pdf")
-                st.success("✅ PDF generado — 3 páginas: Prescripción · Enfermería · Fundamento")
-            except Exception as e:
-                st.error(f"Error al generar PDF: {e}")
-                st.caption("Si el error persiste, verifica que todos los campos estén completos.")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB: PREMIUM — Pago automático MP + CLABE manual
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "premium":
-    rol_actual = _rol()
-    nombre_actual = _nombre()
-    uid = _user_id()
-    dias = st.session_state.get("sess_dias", 0)
-
-    # ── Ya es Pro/Admin ────────────────────────────────────────────────────────
-    if rol_actual in ("admin", "pro"):
-        st.success(f"✅ **{nombre_actual}** — Acceso Premium activo.")
-        if rol_actual == "pro" and dias:
-            st.info(f"📅 Tu suscripción vence en **{dias} días**.")
-
-        # Historial de pagos
-        if _DB_ON and _db.db_ok() and uid:
-            hist = _cached_payment_history(uid)
-            if hist:
-                st.markdown("### 💳 Historial de pagos")
-                for h in hist:
-                    estado = "✅" if h["status"] == "approved" else "⏳"
-                    st.caption(f"{estado} ${h['amount']:.0f} MXN — {str(h['created_at'])[:10]}")
-
-        if st.button("🔄 Renovar suscripción", key="btn_renew"):
-            st.session_state["_show_payment"] = True
-
-    # ── Free / Trial / Expirado ────────────────────────────────────────────────
-    if rol_actual not in ("admin", "pro") or st.session_state.get("_show_payment"):
-        st.markdown("""
-<div style="background:linear-gradient(135deg,#1E3A8A,#2563EB);border-radius:16px;
-     padding:24px 28px;margin-bottom:16px;text-align:center;">
-  <div style="font-size:32px;font-weight:800;color:#fff;">⭐ RenalPro Pro</div>
-  <div style="color:rgba(255,255,255,0.85);font-size:15px;margin-top:6px;">
-    El asistente clínico de nefrología y terapias extracorpóreas más completo
-  </div>
-  <div style="font-size:40px;font-weight:900;color:#FCD34D;margin:12px 0;">
-    $99 <span style="font-size:18px;font-weight:500;color:rgba(255,255,255,0.8)">MXN / mes</span>
-  </div>
-</div>""", unsafe_allow_html=True)
-
-        pf1, pf2 = st.columns(2)
-        with pf1:
-            st.markdown("**✅ Pro incluye:**")
-            for f in ["Guardar prescripciones ilimitadas",
-                       "Historial clínico por paciente",
-                       "Búsqueda en historial",
-                       "PDF exportable personalizado",
-                       "Todos los módulos clínicos",
-                       "Acceso desde cualquier dispositivo",
-                       "Actualizaciones automáticas",
-                       "Datos preservados 60 días tras vencimiento"]:
-                st.markdown(f"• {f}")
-        with pf2:
-            st.markdown("**❌ Modo libre:**")
-            for l in ["Sin guardar pacientes",
-                       "Sin historial",
-                       "Datos se pierden al cerrar",
-                       "Sin PDF personalizado"]:
-                st.markdown(f"• {l}")
-
-        if rol_actual == "trial":
-            st.warning(f"⏱️ Te quedan **{dias} día(s)** de prueba. Activa Pro para conservar tus datos.")
-        elif rol_actual in ("expirado", "grace"):
-            st.error("⚠️ Tu período expiró. Renueva para recuperar acceso a tus prescripciones guardadas.")
-
-        st.divider()
-        st.markdown("### 💳 Pagar con Mercado Pago")
-
-        # ── Botón de pago MP ──────────────────────────────────────────────────
-        mp_link_directo = ""
-        mp_token = ""
-        try:
-            mp_link_directo = st.secrets.get("MP_LINK_PAGO", "")
-            mp_token = st.secrets.get("MP_ACCESS_TOKEN", "")
-        except Exception:
-            pass
-
-        if mp_link_directo:
-            # Link directo de MP (más simple y confiable)
-            st.markdown(f"""
-<div style="text-align:center;padding:16px;">
-  <a href="{mp_link_directo}" target="_blank"
-     style="background:#009EE3;color:#fff;padding:14px 32px;border-radius:10px;
-            font-weight:700;font-size:16px;text-decoration:none;display:inline-block;">
-    💳 Pagar con Mercado Pago — $99 MXN
-  </a>
-  <p style="color:#64748B;font-size:12px;margin-top:8px;">
-    Acepta: tarjeta, OXXO, transferencia bancaria, efectivo
-  </p>
-</div>""", unsafe_allow_html=True)
-            st.info("✅ Después de pagar, envía tu comprobante por WhatsApp para activar tu cuenta. "
-                    "Activación en menos de 24 horas.")
-
-        elif mp_token and uid:
-            if st.button("🔗 Pagar con Mercado Pago — Tarjeta / OXXO / Transferencia",
-                         type="primary", key="btn_pagar_mp", use_container_width=True):
-                with st.spinner("Generando tu link de pago..."):
-                    link = _db.create_mp_preference(uid,
-                           st.session_state.get("sess_user","user")) if _DB_ON else None
-                    if link:
-                        st.markdown(f"""
-<div style="text-align:center;padding:16px;">
-  <a href="{link}" target="_blank"
-     style="background:#009EE3;color:#fff;padding:14px 32px;border-radius:10px;
-            font-weight:700;font-size:16px;text-decoration:none;">
-    Ir a Mercado Pago →
-  </a>
-</div>""", unsafe_allow_html=True)
-                    else:
-                        st.error("No se pudo generar el link. Usa la transferencia bancaria abajo.")
-        else:
-            st.warning("🔧 Configura MP_LINK_PAGO en Streamlit Secrets para habilitar el pago en línea.")
-
-        # ── CLABE manual (siempre disponible como alternativa) ─────────────────
-        with st.expander("📥 Transferencia bancaria / CLABE (alternativa)"):
-            try:
-                clabe   = st.secrets.get("CLABE_BANCARIA", "—")
-                banco   = st.secrets.get("BANCO", "—")
-                titular = st.secrets.get("TITULAR", "Dr. Josué Tapia López")
-                wa      = st.secrets.get("WHATSAPP_CONTACTO", "477XXXXXXX")
-            except Exception:
-                clabe = "—"; banco = "—"; titular = "Dr. Josué Tapia"; wa = "477XXXXXXX"
-
-            st.markdown(f"""
-| | |
-|---|---|
-| **Banco** | {banco} |
-| **Titular** | {titular} |
-| **Monto** | $99 MXN / mes |
-""")
-            st.markdown(f"**CLABE:** {clabe}",
-                        help="Copia este número para tu transferencia")
-            # Also show as selectable text field for easy copy
-            st.text_input("CLABE (toca para copiar)", value=clabe,
-                         key="clabe_display", disabled=True,
-                         label_visibility="collapsed")
-            st.info(f"📱 Envía tu comprobante a WhatsApp **{wa}** con tu usuario. "
-                    f"Activación en <24h.")
-
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB: ADMIN / MI CUENTA
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "admin":
-    rol_adm = _rol()
-    if rol_adm == "admin":
-        st.subheader("🛡️ Panel de Administrador")
-        _init_db()
-
-        # ── Datos según origen (DB o local) ──────────────────────────────────
-        using_db = _DB_ON and _db.db_ok()
-        if using_db:
-            all_users_db = _cached_all_users()
-        else:
-            all_users_db = []
-        users_adm = st.session_state.get("auth_users", {})
-
-        # ── Resumen ──────────────────────────────────────────────────────────
-        if using_db:
-            total  = len(all_users_db)
-            admins = sum(1 for u in all_users_db if u.get("rol") == "admin")
-            pros   = sum(1 for u in all_users_db if _db.get_effective_rol(u) == "pro")
-            becas  = sum(1 for u in all_users_db if _db.get_effective_rol(u) == "beca")
-            trials = sum(1 for u in all_users_db if _db.get_effective_rol(u) == "trial")
-            exps   = sum(1 for u in all_users_db if _db.get_effective_rol(u) in ("free","grace"))
-        else:
-            total  = len(users_adm)
-            admins = sum(1 for u in users_adm.values() if u["rol"] == "admin")
-            pros   = sum(1 for u in users_adm.values() if _get_role(u) == "pro")
-            becas  = sum(1 for u in users_adm.values() if u.get("rol") == "beca")
-            trials = sum(1 for u in users_adm.values() if _get_role(u) == "trial")
-            exps   = sum(1 for u in users_adm.values() if _get_role(u) == "expirado")
-
-        m1, m2, m3, m4, m5, m6 = st.columns(6)
-        m1.metric("Total usuarios", total)
-        m2.metric("Admins", admins)
-        m3.metric("⭐ Premium", pros)
-        m4.metric("🎓 Becas", becas)
-        m5.metric("⏱️ Trial", trials)
-        m6.metric("Free/Exp", exps)
-
-        # ═══════════════════════════════════════════════════════════════════
-        # SECCIÓN BECAS
-        # ═══════════════════════════════════════════════════════════════════
-        st.divider()
-        st.markdown("### 🎓 Becas y Acceso Académico")
-        st.caption("Da acceso completo gratuito a residentes, colegas o cualquier persona que elijas.")
-
-        beca_tab1, beca_tab2 = st.tabs(["🎓 Dar beca a usuario existente",
-                                         "➕ Crear cuenta con beca"])
-
-        with beca_tab1:
-            bc1, bc2, bc3 = st.columns([2, 2, 1])
-            with bc1:
-                beca_user = st.text_input("Usuario (ya registrado)", key="beca_user",
-                                          placeholder="nombre_usuario")
-            with bc2:
-                beca_dur = st.selectbox("Duración del acceso",
-                    ["Sin límite (indefinido)", "1 mes", "3 meses",
-                     "6 meses", "1 año"], key="beca_dur")
-            with bc3:
-                st.markdown(" ")
-                st.markdown(" ")
-                dar_beca = st.button("🎓 Dar acceso", key="btn_dar_beca",
-                                     type="primary", use_container_width=True)
-
-            if dar_beca and beca_user:
-                meses_beca = {"Sin límite (indefinido)": 0, "1 mes": 1,
-                              "3 meses": 3, "6 meses": 6, "1 año": 12}.get(beca_dur, 0)
-
-                if using_db:
-                    target = _db.get_user(beca_user.strip().lower())
-                    if target:
-                        ok = _db.grant_beca(target["id"], meses_beca)
-                        if ok:
-                            dur_txt = "indefinido" if meses_beca == 0 else f"{beca_dur}"
-                            st.success(f"🎓 **{beca_user}** ahora tiene acceso de beca académica — {dur_txt}.")
-                            st.info("El residente verá '🎓 Beca Académica — Dr. Josué Tapia Nefrólogo' al iniciar sesión.")
-                        else:
-                            st.error("Error al otorgar beca. Verifica la conexión con Railway.")
-                    else:
-                        st.error(f"Usuario '{beca_user}' no encontrado en la base de datos.")
-                else:
-                    # Local fallback
-                    uname_b = beca_user.strip().lower()
-                    if uname_b in users_adm:
-                        users_adm[uname_b]["rol"] = "beca"
-                        if meses_beca > 0:
-                            from datetime import date, timedelta
-                            end_d = (date.today() + timedelta(days=30*meses_beca)).strftime("%Y-%m-%d")
-                            users_adm[uname_b]["sub_end"] = end_d
-                        else:
-                            users_adm[uname_b]["sub_end"] = "2099-12-31"
-                        st.success(f"🎓 Beca otorgada a **{beca_user}**.")
-                    else:
-                        st.error(f"Usuario '{beca_user}' no encontrado.")
-
-            # Mostrar becas activas
-            st.markdown("#### Becas activas")
-            if using_db:
-                becados = [u for u in all_users_db if _db.get_effective_rol(u) == "beca"]
-            else:
-                becados = [(k, v) for k, v in users_adm.items() if v.get("rol") == "beca"]
-                becados = [{"username": k, "nombre": v.get("nombre",""), "subscription_end": v.get("sub_end")} for k,v in users_adm.items() if v.get("rol") == "beca"]
-
-            if not becados:
-                st.info("No hay becas activas actualmente.")
-            else:
-                for b in becados:
-                    uname_b = b.get("username","")
-                    nombre_b = b.get("nombre","")
-                    sub_b = b.get("subscription_end")
-                    if sub_b and hasattr(sub_b, 'year') and sub_b.year >= 2099:
-                        dur_b = "Indefinida"
-                    elif sub_b:
-                        dur_b = f"Vence: {str(sub_b)[:10]}"
-                    else:
-                        dur_b = "Indefinida"
-                    col_b1, col_b2 = st.columns([3, 1])
-                    col_b1.markdown(f"🎓 **{uname_b}** — {nombre_b} · {dur_b}")
-                    with col_b2:
-                        if st.button("Revocar", key=f"rev_{uname_b}"):
-                            if using_db and b.get("id"):
-                                _db.revoke_beca(b["id"])
-                            else:
-                                if uname_b in users_adm:
-                                    users_adm[uname_b]["rol"] = "free"
-                                    users_adm[uname_b]["sub_end"] = None
-                            st.warning(f"Beca de {uname_b} revocada.")
-                            st.rerun()
-
-        with beca_tab2:
-            st.caption("Crea la cuenta del residente y dale beca en un solo paso.")
-            nc1, nc2 = st.columns(2)
-            with nc1:
-                nb_nombre = st.text_input("Nombre completo", key="nb_nombre",
-                                          placeholder="Dr. / Dra. Nombre Apellido")
-                nb_user   = st.text_input("Usuario", key="nb_user",
-                                          placeholder="nombre_usuario")
-                nb_pass   = st.text_input("Contraseña temporal", key="nb_pass",
-                                          type="password", placeholder="mínimo 6 caracteres")
-            with nc2:
-                nb_email  = st.text_input("Email (opcional)", key="nb_email")
-                nb_dur    = st.selectbox("Duración de beca",
-                    ["Sin límite (indefinido)", "1 mes", "3 meses", "6 meses", "1 año"],
-                    key="nb_dur")
-                nb_esp    = st.text_input("Especialidad", key="nb_esp",
-                                          placeholder="Residencia/Especialidad")
-
-            if st.button("➕ Crear cuenta con beca", key="btn_crear_beca",
-                         type="primary", use_container_width=True):
-                if nb_nombre and nb_user and nb_pass and len(nb_pass) >= 6:
-                    meses_nb = {"Sin límite (indefinido)": 0, "1 mes": 1,
-                                "3 meses": 3, "6 meses": 6, "1 año": 12}.get(nb_dur, 0)
-                    if using_db:
-                        ok, msg = _db.create_user(nb_user.strip().lower(), nb_pass,
-                                                  nb_nombre, nb_email, trial_days=0)
-                        if ok:
-                            new_u = _db.get_user(nb_user.strip().lower())
-                            if new_u:
-                                _db.grant_beca(new_u["id"], meses_nb)
-                            st.success(f"🎓 Cuenta creada con beca para **{nb_nombre}**.")
-                            st.info(f"Usuario: `{nb_user}` · Contraseña temporal: entregada de forma segura")
-                        else:
-                            st.error(f"Error: {msg}")
-                    else:
-                        uname_nb = nb_user.strip().lower()
-                        if uname_nb in users_adm:
-                            st.error("Ese usuario ya existe.")
-                        else:
-                            users_adm[uname_nb] = {
-                                "nombre": nb_nombre, "email": nb_email,
-                                "especialidad": nb_esp,
-                                "password_hash": _hash(nb_pass),
-                                "rol": "beca", "is_active": True,
-                                "trial_end": None, "sub_end": "2099-12-31",
-                                "created": datetime.now().strftime("%Y-%m-%d"), "last_login": None
-                            }
-                            st.success(f"🎓 Cuenta con beca creada para **{nb_nombre}**.")
-                else:
-                    st.warning("Completa nombre, usuario y contraseña (mínimo 6 caracteres).")
-
-        # ═══════════════════════════════════════════════════════════════════
-        # GESTIÓN DE USUARIOS
-        # ═══════════════════════════════════════════════════════════════════
-        # ═══════════════════════════════════════════════════════════════════
-        # GESTIÓN DE USUARIOS — usa Railway DB si está conectado
-        # ═══════════════════════════════════════════════════════════════════
-        st.divider()
-        st.markdown("### 👥 Gestión de usuarios")
-
-        if using_db and all_users_db:
-            # ── Vista Railway DB (usuarios reales) ───────────────────────────
-            buscar_adm = st.text_input("🔍 Buscar usuario", key="adm_buscar",
-                                       placeholder="Nombre o username...")
-            usuarios_filtrados = [u for u in all_users_db
-                if buscar_adm.lower() in (u.get("username","") + u.get("nombre","")).lower()
-            ] if buscar_adm else all_users_db
-
-            for u in usuarios_filtrados:
-                uid_u   = u.get("id")
-                uname_u = u.get("username","")
-                rol_u   = _db.get_effective_rol(u)
-                nom_u   = u.get("nombre","—")
-                av_u    = u.get("avatar","👤")
-                dias_u  = _db.get_dias_restantes(u)
-                icon_m  = {"admin":"🛡️","pro":"⭐","beca":"🎓","trial":"⏱️","free":"👁️"}.get(rol_u,"❓")
-                dias_txt = f" · {dias_u}d" if dias_u and dias_u < 365 else ""
-
-                with st.expander(f"{av_u} {icon_m} **{uname_u}** — {nom_u} ({rol_u}{dias_txt})"):
-                    ci1, ci2 = st.columns([2,1])
-                    with ci1:
-                        st.write(f"**Email:** {u.get('email','—')}")
-                        st.write(f"**Institución:** {u.get('institucion','—')}")
-                        st.write(f"**Rol:** {rol_u}")
-                        st.write(f"**Creado:** {str(u.get('created_at',''))[:10]}")
-                        st.write(f"**Último acceso:** {str(u.get('last_login','Nunca'))[:16] if u.get('last_login') else 'Nunca'}")
-                        if u.get("subscription_end"):
-                            st.write(f"**Acceso hasta:** {str(u['subscription_end'])[:10]}")
-                    with ci2:
-                        if uname_u != st.session_state.get("sess_user"):
-                            # Dar beca
-                            if rol_u != "beca":
-                                if st.button(f"🎓 Dar beca indef.", key=f"beca_db_{uid_u}",
-                                             use_container_width=True):
-                                    _db.grant_beca(uid_u, 0)
-                                    _clear_cache()
-                                    st.success(f"🎓 Beca otorgada a {uname_u}")
-                                    st.rerun()
-                            else:
-                                if st.button(f"Revocar beca", key=f"rev_db_{uid_u}",
-                                             use_container_width=True):
-                                    _db.revoke_beca(uid_u)
-                                    _clear_cache()
-                                    st.warning(f"Beca revocada de {uname_u}")
-                                    st.rerun()
-                            # Activar Premium
-                            end_d = st.date_input("Premium hasta:", key=f"end_db_{uid_u}")
-                            if st.button(f"⭐ Activar Premium", key=f"pro_db_{uid_u}",
-                                         use_container_width=True):
-                                import psycopg2
-                                from datetime import datetime as _dt
-                                conn_adm = _db.get_conn()
-                                if conn_adm:
-                                    try:
-                                        cur_adm = conn_adm.cursor()
-                                        cur_adm.execute("""UPDATE users SET rol='pro',
-                                            subscription_end=%s, grace_until=%s WHERE id=%s""",
-                                            (end_d, end_d, uid_u))
-                                        conn_adm.commit()
-                                        cur_adm.close()
-                                        _clear_cache()
-                                        st.success(f"✅ {uname_u} activado Premium hasta {end_d}")
-                                        st.rerun()
-                                    except Exception as e:
-                                        st.error(f"Error: {e}")
-                            # Hacer admin
-                            if rol_u != "admin":
-                                if st.button(f"🛡️ Hacer admin", key=f"adm_db_{uid_u}",
-                                             use_container_width=True):
-                                    conn_adm = _db.get_conn()
-                                    if conn_adm:
-                                        try:
-                                            cur_adm = conn_adm.cursor()
-                                            cur_adm.execute("UPDATE users SET rol='admin' WHERE id=%s", (uid_u,))
-                                            conn_adm.commit()
-                                            cur_adm.close()
-                                            _clear_cache()
-                                            st.success(f"🛡️ {uname_u} ahora es admin")
-                                            st.rerun()
-                                        except Exception as e:
-                                            st.error(f"Error: {e}")
-                        else:
-                            st.caption("Tu propia cuenta")
-        else:
-            # ── Vista local (sin Railway) ─────────────────────────────────────
-            users_adm = st.session_state.get("auth_users", {})
-            for uname_l, udata_l in list(users_adm.items()):
-                rol_l = _get_role(udata_l)
-                with st.expander(f"**{uname_l}** — {udata_l.get('nombre','—')} ({rol_l})"):
-                    st.write(f"**Email:** {udata_l.get('email','—')}")
-                    st.write(f"**Rol:** {rol_l}")
-                    if uname_l != st.session_state.get("sess_user"):
-                        if st.button(f"🎓 Dar beca", key=f"beca_local_{uname_l}"):
-                            udata_l["rol"] = "beca"
-                            udata_l["sub_end"] = "2099-12-31"
-                            st.success(f"🎓 Beca otorgada a {uname_l}")
-                            st.rerun()
-
-elif nav == "micuenta":
-    # ══════════════════════════════════════════════════════════════════════════
-    # MI CUENTA — Perfil, avatar y contraseña
-    # ══════════════════════════════════════════════════════════════════════════
-    if not _is_auth():
-        st.warning("Inicia sesión para ver tu perfil.")
-    else:
-        st.subheader("👤 Mi Cuenta")
-        uid_mc  = _user_id()
-        rol_mc  = _rol()
-        db_mc   = _DB_ON and _db.db_ok() and uid_mc
-
-        AVATARES = [
-            "👨‍⚕️","👩‍⚕️","🧑‍⚕️","👨‍🔬","👩‍🔬","🧑‍💻",
-            "🫀","🩺","🔬","🏥","🩻","💊","🧬","🫁","⚕️","🩸",
-            "😊","😎","🤓","🧐","💪","🌟",
-        ]
-
-        mc1, mc2 = st.columns([1, 2])
-
-        with mc1:
-            st.markdown("### Avatar")
-            av_actual = st.session_state.get("sess_avatar", "👨‍⚕️")
-            st.markdown(f"""
-<div style="background:#1E3A8A;width:100px;height:100px;border-radius:50%;
-     display:flex;align-items:center;justify-content:center;margin:0 auto 12px auto;
-     font-size:52px;">{av_actual}</div>""", unsafe_allow_html=True)
-            st.caption("Selecciona tu avatar:")
-            av_sel = av_actual
-            cols_av = st.columns(6)
-            for i, av in enumerate(AVATARES):
-                with cols_av[i % 6]:
-                    border = "3px solid #2563EB" if av == av_actual else "1px solid #CBD5E1"
-                    if st.button(av, key=f"av_{i}",
-                                 help=f"Seleccionar {av}"):
-                        av_sel = av
-                        st.session_state["sess_avatar"] = av
-
-        with mc2:
-            st.markdown("### Información del perfil")
-            nom_mc  = st.text_input("Nombre completo",
-                                    value=st.session_state.get("sess_nombre",""), key="mc_nombre")
-            email_mc= st.text_input("Email",
-                                    value=st.session_state.get("sess_email",""), key="mc_email")
-            esp_mc  = st.text_input("Especialidad",
-                                    value=st.session_state.get("sess_especialidad",""),
-                                    key="mc_esp", placeholder="Ej: Nefrología")
-            inst_mc = st.text_input("Institución / Hospital",
-                                    value=st.session_state.get("sess_institucion",""),
-                                    key="mc_inst", placeholder="Ej: IMSS CMNO N1, León, Gto.")
-            dom_mc  = st.text_input("Domicilio del consultorio",
-                                    value=st.session_state.get("sess_domicilio",""),
-                                    key="mc_dom", placeholder="Av. Juan Alonso de Torres 1702, León, Gto.")
-            tel_mc  = st.text_input("Teléfono del consultorio",
-                                    value=st.session_state.get("sess_telefono",""),
-                                    key="mc_tel", placeholder="(477) 123-4567")
-
-            st.markdown("---")
-            st.markdown("**Credenciales COFEPRIS**")
-            st.caption("Requeridas para receta médica oficial en México")
-
-            cg1, cg2 = st.columns(2)
-            with cg1:
-                ced_gen_mc = st.text_input("Cédula Medicina General",
-                                           value=st.session_state.get("sess_ced_general",""),
-                                           key="mc_ced_gen", placeholder="Ej: 8765432")
-            with cg2:
-                univ_gen_mc = st.text_input("Universidad (título general)",
-                                            value=st.session_state.get("sess_univ_general",""),
-                                            key="mc_univ_gen", placeholder="Ej: UNAM")
-            ce1, ce2 = st.columns(2)
-            with ce1:
-                ced_esp_mc = st.text_input("Cédula de Especialidad",
-                                           value=st.session_state.get("sess_cedula",""),
-                                           key="mc_cedula", placeholder="Ej: 9940966")
-            with ce2:
-                univ_esp_mc = st.text_input("Universidad (especialidad)",
-                                            value=st.session_state.get("sess_universidad",""),
-                                            key="mc_univ", placeholder="Ej: UNAM")
-
-            cc1, cc2 = st.columns(2)
-            with cc1:
-                consejo_mc = st.text_input("Consejo Mexicano de certificación",
-                                           value=st.session_state.get("sess_consejo_nombre",""),
-                                           key="mc_consejo", placeholder="Ej: Consejo Mexicano de Nefrología")
-            with cc2:
-                consejo_num_mc = st.text_input("Número de certificación",
-                                               value=st.session_state.get("sess_consejo_numero",""),
-                                               key="mc_consejo_num", placeholder="Ej: 1267")
-
-            if st.button("💾 Guardar cambios", type="primary", key="btn_mc_save",
-                         use_container_width=True):
-                av_nuevo = st.session_state.get("sess_avatar", av_actual)
-                if db_mc:
-                    try:
-                        ok = _db.update_user_profile(
-                            uid_mc, nom_mc, email_mc, esp_mc, inst_mc, av_nuevo,
-                            cedula     = ced_esp_mc,
-                            universidad= univ_esp_mc,
-                            domicilio  = dom_mc,
-                            telefono   = tel_mc,
-                            cedula_general        = ced_gen_mc,
-                            universidad_general   = univ_gen_mc,
-                            cedula_especialidad   = ced_esp_mc,
-                            universidad_especialidad = univ_esp_mc,
-                            consejo_nombre = consejo_mc,
-                            consejo_numero = consejo_num_mc,
-                        )
-                    except TypeError:
-                        ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
-                                                     esp_mc, inst_mc, av_nuevo)
-                    if ok:
-                        st.session_state.update({
-                            "sess_nombre":         nom_mc,
-                            "sess_email":          email_mc,
-                            "sess_institucion":    inst_mc,
-                            "sess_especialidad":   esp_mc,
-                            "sess_cedula":         ced_esp_mc,
-                            "sess_universidad":    univ_esp_mc,
-                            "sess_domicilio":      dom_mc,
-                            "sess_telefono":       tel_mc,
-                            "sess_ced_general":    ced_gen_mc,
-                            "sess_univ_general":   univ_gen_mc,
-                            "sess_consejo_nombre": consejo_mc,
-                            "sess_consejo_numero": consejo_num_mc,
-                        })
-                        _clear_cache()
-                        st.success("✅ Perfil actualizado.")
-                    else:
-                        st.error("Error al guardar. Verifica conexión con Railway.")
-                else:
-                    st.session_state.update({
-                        "sess_nombre": nom_mc, "sess_email": email_mc,
-                        "sess_institucion": inst_mc, "sess_especialidad": esp_mc,
-                    })
-                    st.success("✅ Perfil actualizado (sesión actual).")
-        # ── MIS INSTITUCIONES ─────────────────────────────────────────────────
-        st.divider()
-        st.markdown("### 🏥 Mis Instituciones")
-        st.caption("Las instituciones configuradas aquí aparecerán en el selector de la nota de evolución.")
-
-        # Cargar instituciones guardadas (desde session_state o DB)
-        if "mc_instituciones" not in st.session_state:
-            _inst_raw = st.session_state.get("sess_instituciones", "[]")
-            try:
-                import json as _json_inst
-                st.session_state["mc_instituciones"] = _json_inst.loads(_inst_raw) if isinstance(_inst_raw, str) else (_inst_raw or [])
-            except Exception:
-                st.session_state["mc_instituciones"] = []
-
-        _mis_inst = st.session_state["mc_instituciones"]
-
-        # Mostrar instituciones actuales
-        if _mis_inst:
-            for _ii, _inst_i in enumerate(_mis_inst):
-                _ic1, _ic2, _ic3 = st.columns([3, 4, 1])
-                _ic1.markdown(f"**{_inst_i.get('nombre','')}**")
-                _ic2.caption(_inst_i.get("direccion",""))
-                if _ic3.button("🗑️", key=f"del_inst_{_ii}", help="Eliminar"):
-                    st.session_state["mc_instituciones"].pop(_ii)
-                    st.rerun()
-        else:
-            st.info("Sin instituciones configuradas. Agrega la(s) institución(es) donde trabajas.")
-
-        # Agregar nueva institución
-        with st.expander("➕ Agregar institución"):
-            _ai_c1, _ai_c2 = st.columns(2)
-            _ai_nombre = _ai_c1.text_input("Nombre de la institución",
-                placeholder="Ej: Hospital General de León", key="mc_ai_nombre")
-            _ai_dir    = _ai_c2.text_input("Dirección",
-                placeholder="Ej: Blvd. Milenio 1002, León, Gto.", key="mc_ai_dir")
-            if st.button("✅ Agregar", key="mc_ai_add"):
-                if _ai_nombre.strip():
-                    st.session_state["mc_instituciones"].append({
-                        "nombre": _ai_nombre.strip(),
-                        "direccion": _ai_dir.strip(),
-                    })
-                    # Guardar en sess y DB
-                    import json as _json_inst2
-                    _inst_json_str = _json_inst2.dumps(st.session_state["mc_instituciones"],
-                                                       ensure_ascii=False)
-                    st.session_state["sess_instituciones"] = _inst_json_str
-                    if db_mc:
-                        try:
-                            _db.update_user_profile(uid_mc, {
-                                "instituciones_json": _inst_json_str
-                            })
-                        except Exception:
-                            pass  # Guardar en session_state es suficiente si DB no tiene la columna
-                    st.success(f"✅ Institución '{_ai_nombre}' agregada.")
-                    st.rerun()
-                else:
-                    st.warning("El nombre es obligatorio.")
-
-        # Guardar lista actual en DB
-        if st.button("💾 Guardar mis instituciones", key="mc_save_inst"):
-            import json as _json_inst3
-            _inst_json_str2 = _json_inst3.dumps(_mis_inst, ensure_ascii=False)
-            st.session_state["sess_instituciones"] = _inst_json_str2
-            if db_mc:
-                try:
-                    _db.update_user_profile(uid_mc, {"instituciones_json": _inst_json_str2})
-                    st.success("✅ Instituciones guardadas.")
-                except Exception as _e_inst:
-                    st.success("✅ Guardadas en sesión actual.")
-            else:
-                st.success("✅ Guardadas en sesión actual.")
-
-        st.divider()
-        st.markdown("### 🔒 Cambiar contraseña")
-        if db_mc:
-            cp1, cp2, cp3 = st.columns(3)
-            with cp1:
-                pwd_old = st.text_input("Contraseña actual", type="password", key="mc_old_pwd")
-            with cp2:
-                pwd_new = st.text_input("Nueva contraseña (mín. 6 car.)", type="password", key="mc_new_pwd")
-            with cp3:
-                pwd_conf = st.text_input("Confirmar nueva", type="password", key="mc_conf_pwd")
-            if st.button("🔒 Cambiar contraseña", key="btn_mc_pwd"):
-                if not pwd_old or not pwd_new:
-                    st.warning("Completa todos los campos.")
-                elif len(pwd_new) < 6:
-                    st.warning("La nueva contraseña debe tener al menos 6 caracteres.")
-                elif pwd_new != pwd_conf:
-                    st.warning("Las contraseñas no coinciden.")
-                else:
-                    import bcrypt as _bcrypt
-                    new_hash = _bcrypt.hashpw(pwd_new.encode(), _bcrypt.gensalt()).decode()
-                    ok = _db.change_password(uid_mc, pwd_old, new_hash)
-                    if ok:
-                        st.success("✅ Contraseña actualizada correctamente.")
-                    else:
-                        st.error("Contraseña actual incorrecta.")
-        else:
-            st.info("Conecta Railway para cambiar tu contraseña.")
-
-        st.divider()
-        st.markdown("### 🖼️ Logo / Sello del consultorio")
-        st.caption("Se incluirá en la receta médica. JPG o PNG · Máximo 2 MB · Recomendado: 300x300 px")
-        logo_file = st.file_uploader("Subir logo", type=["jpg","jpeg","png"],
-                                     key="mc_logo_upload")
-        if logo_file:
-            if logo_file.size > 2_097_152:
-                st.error("El archivo supera 2 MB. Sube una imagen más pequeña.")
-            else:
-                import base64
-                logo_b64 = base64.b64encode(logo_file.read()).decode()
-                st.session_state["sess_logo_b64"]  = logo_b64
-                st.session_state["sess_logo_mime"] = logo_file.type
-                # Persist to DB
-                if _DB_ON and _db.db_ok():
-                    try:
-                        _db.save_user_logo(_user_id(), logo_b64)
-                    except Exception:
-                        pass
-                st.success("✅ Logo cargado — aparecerá en las recetas.")
-        if st.session_state.get("sess_logo_b64"):
-            import base64
-            logo_data = base64.b64decode(st.session_state["sess_logo_b64"])
-            st.image(logo_data, width=120, caption="Logo actual")
-            if st.button("🗑️ Quitar logo", key="btn_rm_logo"):
-                st.session_state.pop("sess_logo_b64", None)
-                st.session_state.pop("sess_logo_mime", None)
-                st.rerun()
-
-        st.divider()
-        st.markdown("### 📊 Información de cuenta")
-        r1, r2, r3 = st.columns(3)
-        r1.metric("Rol actual", rol_mc)
-        r2.metric("Usuario", st.session_state.get("sess_user","—"))
-        dias_mc = st.session_state.get("sess_dias", 0)
-        r3.metric("Días restantes",
-                  "Indefinido" if rol_mc in ("admin","beca") and dias_mc > 365*5
-                  else str(dias_mc) if dias_mc else "—")
-
-        st.divider()
-        st.markdown("### ➕ Crear usuario manualmente")
-        nc1, nc2 = st.columns(2)
-        with nc1:
-            new_u = st.text_input("Usuario", key="new_u")
-            new_nombre = st.text_input("Nombre completo", key="new_nombre")
-            new_email = st.text_input("Email", key="new_email")
-        with nc2:
-            new_esp = st.selectbox("Especialidad", ["Nefrología", "Medicina Crítica",
-                "Medicina Interna", "Otra"], key="new_esp")
-            new_rol = st.selectbox("Rol inicial", ["trial", "beca", "pro"], key="new_rol",
-                                help="Rol 'admin' solo puede asignarse directamente en DB por seguridad.")
-            new_pass = st.text_input("Contraseña temporal", type="password", key="new_pass")
-        if st.button("Crear usuario", key="btn_create_user", type="primary"):
-            if new_u and new_pass and new_nombre:
-                ok, msg = _do_register(new_u, new_pass, new_nombre, new_email, new_esp)
-                if ok:
-                    if new_rol != "trial":
-                        users_adm[new_u.lower()]["rol"] = new_rol
-                    st.success(f"✅ Usuario {new_u} creado como {new_rol}.")
-                else:
-                    st.error(msg)
-            else:
-                st.error("Completa usuario, nombre y contraseña.")
-
-        st.divider()
-        st.markdown("### 🔑 Cambiar mi contraseña")
-        adm_uname = st.session_state.get("sess_user", "")
-        adm_data = st.session_state.get("auth_users", {}).get(adm_uname, {})
-        acp1, acp2 = st.columns(2)
-        with acp1:
-            old_pa = st.text_input("Contraseña actual", type="password", key="adm_old")
-            new_pa1 = st.text_input("Nueva contraseña (mín. 6 caracteres)", type="password", key="adm_new1")
-            new_pa2 = st.text_input("Confirmar nueva contraseña", type="password", key="adm_new2")
-            if st.button("✅ Actualizar contraseña", key="btn_adm_pass", type="primary"):
-                if _verify(old_pa, adm_data.get("password_hash", "")):
-                    if new_pa1 == new_pa2 and len(new_pa1) >= 6:
-                        adm_data["password_hash"] = _hash(new_pa1)
-                        st.success("✅ Contraseña actualizada correctamente.")
-                    else:
-                        st.error("Las contraseñas no coinciden o tienen menos de 6 caracteres.")
-                else:
-                    st.error("Contraseña actual incorrecta.")
-        with acp2:
-            st.info("💡 **Recuerda:** Si cambias tu contraseña aquí, actualiza también "
-                    "`ADMIN_PASSWORD` en **Streamlit Secrets** para que el cambio persista "
-                    "después de un redeploy.")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 12: REFERENCIAS
-# ══════════════════════════════════════════════════════════════════════════════
-elif nav == "refs":
-    st.subheader("Referencias — filtradas por contexto clínico")
-    escenarios_sel_ref = st.session_state.get("sb_escenarios", [])
-    anticoag_ref = st.session_state.get("anticoagulacion_tipo", "—")
-
-    colf1, colf2 = st.columns([2, 1])
-    query_ref = colf1.text_input("Buscar en títulos/resumen", "")
-    solo_ctx = colf2.checkbox("Solo relevantes al contexto actual", value=True)
-
-    refs = filtrar_refs_por_contexto(escenarios_sel_ref, anticoag_ref) if solo_ctx else BIBLIO
-    if query_ref.strip():
-        ql = query_ref.lower()
-        refs = [r for r in refs if ql in r["title"].lower() or ql in r["blurb"].lower()]
-
-    if not refs:
-        st.info("No hay referencias que coincidan. Amplía la búsqueda.")
-    else:
-        for i, r in enumerate(refs, 1):
-            st.markdown(f"**[{i}] {r['title']}**  \n"
-                        f"*{r['where']}* ({r['yr']}) — {r['blurb']}  \n"
-                        f"[🔗 Ver fuente]({r['url']})")
-            st.markdown("---")
-    st.caption("Las referencias se actualizan al cambiar escenarios o anticoagulación.")
-
-elif nav == "guia":
-    st.title("🎓 Guía Clínica — Marco Teórico y Parámetros")
-    st.caption("Explica el porqué de cada parámetro en la app. Organizado por módulo.")
-
-    tema = st.selectbox("📂 Seleccionar tema", [
-        "🩺 Prescripción CRRT — todos los parámetros",
-        "🧪 Citrato RCA — mecanismo y cálculos",
-        "⚖️ Fracción de filtración (FF)",
-        "💧 Balance hídrico en CRRT",
-        "💊 Anticoagulación — HNF vs Citrato",
-        "📊 Dosis CRRT — evidencia KDIGO",
-        "🔬 Monitoreo iCa en Citrato RCA",
-        "🧂 Electrolitos en CRRT",
-        "🏥 Indicaciones de CRRT / TCRR",
-        "🔴 Acumulación de citrato — diagnóstico y manejo",
-    ], key="guia_tema")
-
-    st.markdown("---")
-
-    if "Prescripción CRRT" in tema:
-        st.markdown("## 🩺 Prescripción CRRT — Parámetros y razonamiento")
-        tabs = st.tabs(["Qb (Flujo sanguíneo)", "Dosis mL/kg/hr", "Modalidad", "UF neta", "Hematocrito"])
-
-        with tabs[0]:
-            st.markdown("""
-### Qb — Flujo sanguíneo (mL/min)
-**¿Qué es?**
-El volumen de sangre que pasa por el circuito extracorpóreo por minuto.
-
-**¿Por qué importa?**
-- Determina cuánta sangre se "procesa" por unidad de tiempo
-- Afecta directamente la **Fracción de Filtración (FF)**
-- Con citrato RCA: Qb determina la tasa de citrato (Qs × 10 con Prismocitrate 18/0)
-
-**Rango típico:** 150–250 mL/min (adulto)
-- **<100 mL/min:** riesgo de coagulación del circuito por bajo flujo
-- **>250 mL/min:** mayor trauma a glóbulos rojos; raro que aporte beneficio adicional
-
-**Evidencia:**
-KDIGO 2012 no especifica Qb óptimo. El consenso ADQI recomienda ≥150 mL/min para CVVHDF.
-En contexto de citrato: Qb más alto = más citrato = más carga hepática para metabolizarlo.
-
-**Regla práctica:** 150–200 mL/min para la mayoría de pacientes adultos.
-            """)
-
-        with tabs[1]:
-            st.markdown("""
-### Dosis CRRT — mL/kg/hr
-**¿Qué es?**
-El volumen de efluente (ultrafiltrado + dializante) generado por kilogramo de peso por hora.
-Es la medida estándar de "intensidad" de la terapia.
-
-**¿Por qué importa?**
-- Determina la **depuración de solutos** (urea, creatinina, electrolitos, mediadores inflamatorios)
-- Más dosis ≠ necesariamente mejor resultado (ver ATN y RENAL trials)
-
-**Evidencia clave:**
-| Estudio | Dosis | Resultado |
-|---|---|---|
-| **ATN Trial** (VA/NIH, 2008) | 20 vs 35 mL/kg/hr | Sin diferencia en mortalidad |
-| **RENAL Trial** (ANZICS, 2009) | 25 vs 40 mL/kg/hr | Sin diferencia en mortalidad |
-| **KDIGO 2012** | ≥20-25 mL/kg/hr | Recomendación clase 1A |
-
-**Rango recomendado:** 20–25 mL/kg/hr mantenimiento
-- **Inicio/sepsis:** puede usarse 25–30 mL/kg/hr las primeras 24-48h
-- **>35 mL/kg/hr:** sin beneficio demostrado; aumenta complicaciones
-
-**Clave:** La dosis **prescrita** vs **entregada** difiere ~15-20% por interrupciones.
-Prescribir 25-30 para entregar realmente ~20-25 mL/kg/hr.
-            """)
-
-        with tabs[2]:
-            st.markdown("""
-### Modalidad — CVVH / CVVHD / CVVHDF
-**¿Qué diferencia hay?**
-
-| Modalidad | Mecanismo principal | Cuándo usarla |
-|---|---|---|
-| **CVVH** | Convección (ultrafiltración) | Mediadores inflamatorios grandes, sobrecarga hídrica |
-| **CVVHD** | Difusión (dializante) | Depuración rápida K, urea, amonio |
-| **CVVHDF** | Convección + difusión | La mayoría de pacientes; más versátil |
-
-**Pre vs postdilución en CVVH/CVVHDF:**
-- **Predilución (PRE):** solución va ANTES del filtro → diluye sangre → protege filtro (↓FF)
-- **Postdilución (POST):** solución va DESPUÉS → mayor depuración por aclaramiento
-- **Con citrato:** citrato ya actúa como predilución PRE → reduce necesidad de solución PRE adicional
-
-**Evidencia:** No hay diferencia clara en outcomes entre modalidades.
-CVVHDF es la más usada en UCI por versatilidad.
-            """)
-
-        with tabs[3]:
-            st.markdown("""
-### UF neta — Retiro de líquido al paciente (mL/hr)
-**¿Qué es?**
-El volumen neto que se elimina del paciente (no del circuito). Es la diferencia entre
-todo lo que sale (efluente) y todo lo que entra (soluciones de reposición + citrato + calcio).
-
-**¿Por qué importa?**
-La sobrecarga hídrica (>10% del peso corporal) en AKI se asocia a:
-- Mayor mortalidad (PICARD study, FACTT trial)
-- Peor función pulmonar (ARDS)
-- Retraso en recuperación renal
-
-**Cómo elegir:**
-| Situación clínica | UF sugerida |
-|---|---|
-| PAM <60 o vasopresor aumentando | 0–50 mL/hr (mínima) |
-| PAM estable (65-70) + lactato en descenso | 100–200 mL/hr |
-| Sobrecarga hídrica severa + PAM estable | 200–300 mL/hr |
-| Anasarca + buena tolerancia hemodinámica | Hasta 500 mL/hr |
-
-**Regla:** La tolerancia a la UF depende más de la **estabilidad hemodinámica** que de la volemia.
-            """)
-
-        with tabs[4]:
-            st.markdown("""
-### Hematocrito (fracción)
-**¿Por qué entra en el cálculo?**
-La CRRT filtra el plasma, no los elementos formes. El **flujo de plasma** (Qp) se calcula como:
-
-```
-Qp = Qb × (1 − Hto)
-```
-
-**Efecto en la FF:**
-- Hto alto → menos plasma disponible → FF más alta para el mismo efluente
-- Hto bajo → más plasma → FF más baja → circuito más seguro
-
-**Implicación práctica:**
-Un paciente con Hto 40% (0.40) y Qb 200 mL/min tiene:
-- Qp = 200 × (1 − 0.40) = 120 mL/min de plasma
-
-El mismo Qb con Hto 25%:
-- Qp = 200 × 0.75 = 150 mL/min → circuito más seguro para el mismo efluente
-
-**Rango habitual en UCI:** 0.25–0.35 (pacientes críticos con anemia)
-            """)
-
-    elif "Citrato RCA" in tema:
-        st.markdown("## 🧪 Citrato RCA — Mecanismo y Parámetros")
-        tabs = st.tabs(["Mecanismo de acción", "Concentración solución", "Target en sangre", "Cálculo de tasa", "Calcio reposición"])
-
-        with tabs[0]:
-            st.markdown("""
-### ¿Cómo funciona el citrato como anticoagulante?
-
-**Mecanismo:**
-El citrato **quela (atrapa) el calcio ionizado (Ca²⁺)** en el circuito extracorpóreo.
-Como la coagulación depende del calcio en múltiples pasos (factores II, VII, IX, X, proteína C),
-sin Ca²⁺ **el circuito no coagula**.
-
-```
-Circuito:  Sangre + Citrato → iCa²⁺ 0.25–0.35 → NO coagula en el filtro
-Paciente:  Citrato llega al hígado → metabolizado → HCO₃⁻ (bicarbonato)
-           iCa sistémico se restaura con infusión de Ca post-filtro
-```
-
-**Ventajas vs heparina (HNF):**
-- Sin anticoagulación sistémica → menos sangrado
-- Mayor vida útil del circuito
-- Sin riesgo de HIT (trombocitopenia inducida por heparina)
-- Primera línea según KDIGO 2012 si no hay contraindicaciones
-
-**Contraindicaciones:**
-- Insuficiencia hepática grave (no metaboliza citrato → acumulación)
-- Alcalosis metabólica severa (citrato → HCO₃⁻ → empeora)
-- Shock severo con bajo gasto hepático
-- No es contraindicación: insuficiencia hepática leve-moderada (con monitoreo)
-            """)
-
-        with tabs[1]:
-            st.markdown("""
-### Soluciones de citrato — ¿cuál usar?
-
-| Solución | Concentración | Regla rápida | Sodio aportado |
-|---|---|---|---|
-| **Prismocitrate 18/0** | 18 mmol/L | Tasa = Qb × **10** | ~100 mEq/L |
-| **Prismocitrate 10/2** | 10 mmol/L | Tasa = Qb × **18** | ~100 mEq/L |
-| **Citrato trisódico 4%** | 136 mmol/L | Tasa = Qb × **1.3** | 408 mEq/L ⚠️ |
-| **ACD-A** | 113 mmol/L | Tasa = Qb × **1.6** | — |
-
-**¿Por qué Prismocitrate 18/0?**
-- Solución lista para usar (no requiere preparación)
-- Concentración baja → flujos altos → mejor predilución → protege el filtro
-- Na similar al plasma → no altera natremia
-- La más usada en protocolos modernos de CKRT
-
-**⚠️ Citrato 4%:** Aporta mucho sodio (408 mEq/L) → vigilar hipernatremia.
-Requiere ajuste del sodio en la solución de reposición y dializante.
-
-**La fórmula universal:**
-```
-Tasa citrato (mL/hr) = Qb (mL/min) × 60 × Target (mmol/L) ÷ Concentración (mmol/L)
-```
-Para Prismocitrate 18 y target 3 mmol/L:
-= Qb × 60 × 3 ÷ 18 = Qb × 10
-            """)
-
-        with tabs[2]:
-            st.markdown("""
-### Target de citrato en sangre — ¿por qué 3 mmol/L?
-
-**El target NO se mide directamente en sangre.**
-Lo que se mide es el **iCa post-filtro** (proxy de la anticoagulación del circuito).
-
-**Relación:**
-```
-Target citrato 3 mmol/L en sangre → iCa post-filtro 0.25–0.35 mmol/L
-```
-
-**¿Por qué 2.5–4 mmol/L?**
-- <2.5 mmol/L: anticoagulación insuficiente → coagulación del filtro
-- 3 mmol/L: dosis estándar de inicio; balance eficacia/seguridad óptimo
-- >4 mmol/L: riesgo de acumulación sistémica si hay disfunción hepática
-
-**Ajuste por iCa post-filtro:**
-| iCa post-filtro | Interpretación | Acción |
-|---|---|---|
-| <0.25 mmol/L | Exceso de citrato | ↓ tasa 10–20% |
-| 0.25–0.35 mmol/L | ✅ Óptimo | Mantener |
-| 0.35–0.45 mmol/L | Anticoagulación límite | ↑ tasa 10% |
-| >0.45 mmol/L | Anticoagulación insuficiente | ↑ tasa 20% + revisar flujos |
-
-**Frecuencia de medición:** cada 6h las primeras 24h → cada 12–24h si estable.
-            """)
-
-        with tabs[3]:
-            st.markdown("""
-### Cálculo de la tasa de citrato — paso a paso
-
-**Fórmula:**
-```
-Tasa citrato (mL/hr) = Qb (mL/min) × 60 min/hr × Target (mmol/L sangre)
-                       ────────────────────────────────────────────────────
-                       Concentración de la solución (mmol/L)
-```
-
-**Ejemplo con tu caso de guardia:**
-- Qb = 120 mL/min
-- Target = 3 mmol/L
-- Solución = Prismocitrate 18/0 → 18 mmol/L
-
-```
-= 120 × 60 × 3 ÷ 18
-= 7,200 × 3 ÷ 18
-= 21,600 ÷ 18
-= 1,200 mL/hr ✅
-```
-
-**Regla de cabecera (solo para Prismocitrate 18/0 + target 3):**
-```
-Tasa (mL/hr) = Qb (mL/min) × 10
-```
-→ 120 × 10 = **1,200 mL/hr**
-
-**¿Por qué el citrato va PRE-filtro?**
-Porque necesita quelar el Ca²⁺ ANTES de que la sangre llegue al filtro.
-Si fuera post-filtro, la sangre ya habría coagulado dentro.
-
-El citrato PRE-filtro actúa como **predilución simultánea**: diluye la sangre
-y anticoagula en un solo flujo → doble función → protege el filtro.
-            """)
-
-        with tabs[4]:
-            st.markdown("""
-### Calcio post-filtro — ¿cuánto reponer?
-
-**¿Por qué reponer calcio?**
-El citrato quelado pasa parcialmente al paciente (el resto es eliminado en el efluente).
-El hígado metaboliza el citrato → HCO₃⁻, pero libera el Ca²⁺ de vuelta.
-Sin embargo, hay pérdida neta de Ca²⁺ que debe reponerse para mantener iCa sistémico normal.
-
-**Fórmula estándar:**
-```
-Ca a reponer (mmol/hr) = Citrato infundido (mmol/hr) × 0.5
-```
-El factor 0.5 representa que aproximadamente el 50% del calcio quelado
-llega al paciente y necesita ser repuesto (el resto se elimina en el efluente).
-
-**Ejemplo:**
-- Citrato infundido = 1,200 mL/hr × 18 mmol/L ÷ 1,000 = 21.6 mmol/hr
-- Ca a reponer = 21.6 × 0.5 = **10.8 mmol/hr**
-- Gluconato Ca 10% = 0.225 mmol/mL
-- Tasa = 10.8 ÷ 0.225 = **~48 mL/hr**
-
-**Ajuste por iCa sistémico:**
-| iCa sistémico | Acción |
-|---|---|
-| <1.0 mmol/L | ↑ infusión de Ca post-filtro |
-| 1.0–1.35 mmol/L | ✅ Mantener |
-| >1.35 mmol/L | ↓ infusión de Ca post-filtro |
-
-**⚠️ CRÍTICO:** El calcio va por una línea **sistémica completamente separada**.
-NUNCA en la misma línea del citrato → precipitación → pérdida del circuito.
-            """)
-
-    elif "Fracción de filtración" in tema:
-        st.markdown("""
-## ⚖️ Fracción de Filtración (FF)
-
-### Definición
-```
-FF = Efluente total / Flujo de plasma = Qe / Qp
-```
-Con predilución (pre-filter replacement):
-```
-FF = Qe / (Qp + Qr_pre)
-```
-
-### ¿Por qué <25–30%?
-Cuando FF es alta, la sangre se **hemoconcentra** dentro del filtro:
-- Proteínas y células se concentran en la salida del filtro
-- Viscosidad aumenta → flujo se vuelve laminar → trombosis del filtro
-- Vida útil del circuito cae de 72h a <24h
-
-**Analogía:** Es como exprimir un limón. Si exprimes demasiado (FF alta),
-el residuo se compacta y obstruye. Si exprimes moderadamente (FF baja),
-el flujo se mantiene fluido.
-
-### Cómo reducir la FF
-| Estrategia | Efecto |
-|---|---|
-| ↑ Qb (flujo sanguíneo) | ↑ denominador → ↓ FF |
-| ↑ Qr_pre (predilución) | ↑ denominador → ↓ FF |
-| ↓ Qe (efluente / dosis) | ↓ numerador → ↓ FF |
-| ↓ UF neta | ↓ numerador → ↓ FF |
-| Citrato como predilución | ↑ denominador → ↓ FF |
-
-### FF con citrato RCA
-El citrato va PRE-filtro y actúa como predilución:
-```
-FF_efectiva = Qe / (Qp + Qr_pre_solución + Qcitrato)
-```
-→ El citrato **reduce** la FF efectiva: doble ventaja (anticoagula + protege filtro)
-        """)
-
-    elif "Balance hídrico" in tema:
-        st.markdown("""
-## 💧 Balance hídrico en CRRT
-
-### ¿Qué es la UF neta?
-UF neta = Volumen que **realmente se retira al paciente**.
-No confundir con el efluente total (que incluye la reposición).
-
-```
-UF neta = Efluente total − Soluciones de reposición − Citrato − Calcio
-```
-
-### Evidencia de daño por sobrecarga hídrica
-- **Sobrecarga >10% peso corporal:** mortalidad x2 en AKI (PICARD)
-- **Cada 1% aumento de sobrecarga:** +3% mortalidad en UCI pediátrica
-- **FACTT trial:** balance neutro/negativo mejor que balance positivo en ARDS + AKI
-
-### Guía de descongestión progresiva
-```
-Día 1-2 (fase resucitación): UF mínima o 0. Prioridad: estabilidad HD
-Día 3-5 (fase optimización): UF 100-200 mL/hr si PAM >65 + lactato ↓
-Día 5+ (fase desescalada): UF agresiva si tolerancia HD. Meta: -1 a -2 L/día
-```
-
-### ¿Cuándo NO retirar líquido?
-- PAM <60 mmHg
-- Vasopresor en aumento (norepinefrina >0.3 mcg/kg/min)
-- Lactato en ascenso
-- Evidencia de compromiso de perfusión de órgano
-        """)
-
-    elif "Anticoagulación" in tema:
-        st.markdown("""
-## 💊 Anticoagulación — HNF vs Citrato
-
-### Comparación directa
-
-| Parámetro | HNF | Citrato RCA |
-|---|---|---|
-| Mecanismo | Inhibe trombina sistémica | Quela Ca²⁺ en circuito |
-| Efecto sistémico | Sí → riesgo sangrado | No → anticoagulación local |
-| Monitoreo | aPTT cada 4–6h | iCa post-filtro cada 6–12h |
-| Contraindicación | Sangrado activo, HIT | Insuf. hepática grave, alcalosis |
-| Vida del circuito | 24–48h | 48–72h (mayor) |
-| Recomendación KDIGO | 2ª línea | **1ª línea** si no contraindicado |
-
-### ¿Cuándo usar HNF?
-- Contraindicación de citrato
-- Sin disponibilidad de citrato
-- Necesidad de anticoagulación sistémica simultánea (TEP, FA)
-- Shock hepático grave
-
-### Dosis HNF en CRRT
-- Inicio: 5–10 UI/kg/hr (sin bolo en críticos)
-- Objetivo aPTT: 45–70 s (1.5–2× normal)
-- Ajustar cada 4–6h hasta aPTT estable → cada 12h
-        """)
-
-    elif "Dosis CRRT" in tema:
-        st.markdown("""
-## 📊 Dosis CRRT — Evidencia y recomendaciones
-
-### Los dos grandes estudios
-**ATN Trial (VA/NIH, NEJM 2008)**
-- 1,124 pacientes, UCI, AKI
-- Dosis intensiva: 35 mL/kg/hr vs convencional: 20 mL/kg/hr
-- **Resultado: Sin diferencia** en mortalidad (53.6% vs 51.5%, p=0.47)
-
-**RENAL Trial (ANZICS, NEJM 2009)**
-- 1,508 pacientes, AUS/NZ
-- Dosis alta: 40 mL/kg/hr vs dosis menor: 25 mL/kg/hr
-- **Resultado: Sin diferencia** en mortalidad (44.7% vs 44.7%)
-
-### ¿Por qué entonces no más dosis?
-La dosis entregada siempre es menor que la prescrita (interrupciones, coágulos, cambios de filtro).
-Con 35 prescrito → se entrega ~27–28 mL/kg/hr real.
-Con 25 prescrito → se entrega ~20 mL/kg/hr real.
-
-**KDIGO 2012 (grado 1A):** ≥20–25 mL/kg/hr de dosis entregada.
-Prescribir 25–30 mL/kg/hr para asegurar 20–25 reales.
-
-### Situaciones que requieren dosis más alta
-- Hiperamonemia (IEM, falla hepática aguda): 50–70+ mL/kg/hr
-- Rabdomiólisis severa: 35–40 mL/kg/hr
-- Síndrome de liberación de citocinas: 35 mL/kg/hr puede considerarse
-        """)
-
-    elif "Monitoreo iCa" in tema:
-        st.markdown("""
-## 🔬 Monitoreo iCa en Citrato RCA
-
-### Dos sitios, dos objetivos distintos
-
-| Muestra | Objetivo | Qué indica |
-|---|---|---|
-| **POST-FILTRO** (línea venosa del circuito) | **0.25–0.35 mmol/L** | Anticoagulación del circuito |
-| **Sistémico** (gasometría arterial/venosa periférica) | **1.0–1.35 mmol/L** | Calcio del paciente |
-
-### Protocolo de medición
-```
-Primeras 24h: cada 6 horas
-24h–72h estable: cada 12 horas
->72h estable: cada 24 horas
-```
-
-### Algoritmo de ajuste (simplificado)
-```
-iCa post-filtro < 0.25 → ↓ Citrato 10–20% (demasiada anticoagulación)
-iCa post-filtro 0.25–0.35 → ✅ Sin cambios
-iCa post-filtro > 0.35 → ↑ Citrato 10–20% (anticoagulación insuficiente)
-
-iCa sistémico < 1.0 → ↑ Gluconato Ca post-filtro
-iCa sistémico 1.0–1.35 → ✅ Sin cambios
-iCa sistémico > 1.35 → ↓ Gluconato Ca post-filtro
-```
-
-### ⚠️ Acumulación de citrato — detectarla
-```
-Ratio = Ca total sérico / iCa sistémico
-```
-- Normal: <2.5
-- >2.5: ACUMULACIÓN → citrato no se está metabolizando
-
-**Causas:**
-- Insuficiencia hepática (hepatocitos no metabolizan citrato)
-- Bajo gasto cardíaco (hipoperfusión hepática)
-- Dosis de citrato excesiva
-
-**Manejo:**
-1. Reducir tasa de citrato 30–50%
-2. Si grave: cambiar a HNF
-3. Investigar causa (función hepática, gasto cardíaco)
-        """)
-
-    elif "Acumulación de citrato" in tema:
-        st.markdown("""
-## 🔴 Acumulación de citrato — Diagnóstico y manejo
-
-### ¿Qué es?
-El hígado metaboliza el citrato a HCO₃⁻ liberando el Ca²⁺. Si el hígado no puede
-hacerlo (falla hepática, bajo gasto cardíaco), el citrato se acumula sistémicamente.
-
-### Tríada diagnóstica
-```
-1. Ratio Ca total / iCa sistémico > 2.5
-2. Alcalosis metabólica inexplicable (citrato → HCO₃⁻ en exceso)
-3. Hipocalcemia sistémica (iCa sistémico <1.0 a pesar de ↑ infusión Ca)
-```
-
-### Fisiopatología
-```
-Citrato normal → Hígado → HCO₃⁻ + Ca²⁺ libre → iCa sistémico normal
-Citrato acumulado → Quela Ca sistémico → iCa sistémico ↓ → hipocalcemia
-                  → Ca total SUBE (Ca-citrato unido) → ratio Ca/iCa SUBE
-```
-
-**Analogía:** Es como tener dinero bloqueado en una cuenta (Ca unido a citrato)
-vs dinero disponible (Ca iónico libre). El ratio te dice si hay mucho bloqueado.
-
-### Manejo
-| Severidad | Acción |
-|---|---|
-| Ratio 2.5–3.0 | ↓ Tasa citrato 20–30%, vigilar estrechamente |
-| Ratio >3.0 + síntomas | Cambiar a HNF de inmediato |
-| Falla hepática aguda | Citrato contraindicado desde inicio |
-
-### Prevención
-- No usar citrato en CHB aguda, síndrome de Budd-Chiari agudo, shock hepático
-- Monitorear ratio con cada gasometría en pacientes de riesgo
-        """)
-
-    elif "Electrolitos" in tema:
-        st.markdown("""
-## 🧂 Electrolitos en CRRT
-
-### Potasio (K)
-- CRRT elimina K eficientemente → riesgo de hipokalemia
-- Dializantes estándar: K 2–4 mEq/L
-- Si K sérico <3.5: usar dializante K 3–4 mEq/L o suplementar
-- Si K >5.5 (hiperkalemia): dializante K 0–2 mEq/L; ↑ Qd
-
-### Sodio (Na)
-- La corrección de hiponatremia/hipernatremia debe ser GRADUAL
-- Hiponatremia: máximo 8–10 mmol/L/24h (riesgo ODS si más rápido)
-- Ajustar Na en dializante/reposición para controlar velocidad de corrección
-
-### Fósforo (P)
-- CRRT elimina P eficientemente → hipofosfatemia frecuente
-- Monitorear P cada 12–24h
-- Suplementar si P <1.0 mg/dL
-
-### Magnesio (Mg)
-- También se elimina → monitorear
-- Objetivo Mg: 1.7–2.4 mg/dL
-
-### Con citrato RCA — considerar:
-- Citrato 4% aporta Na 408 mEq/L → ajustar Na en soluciones
-- Prismocitrate 18/0: Na ~100 mEq/L → menor impacto en natremia
-- Citrato → HCO₃⁻ → vigilar alcalosis metabólica
-        """)
-
-    elif "Indicaciones" in tema:
-        st.markdown("""
-## 🏥 Indicaciones de CRRT/TCRR
-
-### Indicaciones absolutas (emergentes)
-| Indicación | Umbral / Criterio |
-|---|---|
-| Hiperkalemia grave | K >6.5 con cambios ECG o refractaria a médico |
-| Acidosis metabólica grave | pH <7.15 refractaria a corrección |
-| Sobrecarga hídrica grave | Sin respuesta a diuréticos; SpO₂ comprometida |
-| Uremia sintomática | Encefalopatía, pericarditis, sangrado urémico |
-| Intoxicaciones dializables | Metanol, etilenglicol, litio, salicilatos |
-| Hiperamonemia | Amonio >300 µmol/L (especialmente neonatos/niños) |
-
-### AKI — criterios KDIGO para inicio
-- **Estadio 2–3:** Cr ×2 basal o UO <0.5 mL/kg/hr ×12h (estadio 2)
-- No hay Cr específica que obligue; depende del contexto clínico
-
-### ¿CRRT vs HD intermitente?
-| Parámetro | CRRT | HDI |
-|---|---|---|
-| Estabilidad hemodinámica | Superior (gradual) | Inferior (hipotensión intradialítica) |
-| Control de volumen | Preciso y continuo | Episódico |
-| Depuración de solutos | Continua pero menor por sesión | Alta por sesión |
-| Indicación preferente | Hemodinámicamente inestable | Hemodinámicamente estable |
-| Costo/recurso | Mayor | Menor |
-
-### ¿Cuándo hacer CRRT en vez de HDI?
-- PAM <65 o requiere vasopresores
-- Inestabilidad hemodinámica durante diálisis previa
-- Necesidad de corrección muy gradual (hipernatremia, OHD severa)
-- IRA + sepsis (más difusión de mediadores con CVVHDF)
-        """)
-
-    st.markdown("---")
-    st.caption("Guía basada en: KDIGO AKI 2012, ATN Trial (NEJM 2008), RENAL Trial (NEJM 2009), "
-               "ADQI Consensus, SCCM/ESICM CRRT Guidelines 2016, Kidney International 2019.")
-
-elif nav == "electrolitos":
+# Fragment si el runtime lo soporta (Streamlit >= 1.37: st.fragment;
+# 1.32-1.36: st.experimental_fragment). Fallback: llamada directa sin fragment.
+if hasattr(st, "fragment"):
+    _render_hd_page = st.fragment(_render_hd_page)
+elif hasattr(st, "experimental_fragment"):
+    _render_hd_page = st.experimental_fragment(_render_hd_page)
+# ==============================================================================
+# TAB: electrolitos — cuerpo envuelto en fragment para acelerar reruns.
+# El contenido vive en _render_electrolitos_page(); la página electrolitos solo la invoca.
+# ==============================================================================
+def _render_electrolitos_page():
     st.subheader("⚗️ Electrolitos en CRRT & Cálculo de Bolsas")
     elec_modo = st.radio("Sección",
         ["🔵 Fosfato", "🟢 Magnesio", "📦 Bolsas de solución", "🧬 Composición de bolsas"],
@@ -7081,8 +5053,17 @@ elif nav == "electrolitos":
 | Fosfato | **0** | **0** | **0** | **Agregar** |
         """)
 
-# ── CALCULADORAS DE NEFROLOGÍA ─────────────────────────────────────────────────
-elif nav == "nefro":
+# Fragment si el runtime lo soporta (Streamlit >= 1.37: st.fragment;
+# 1.32-1.36: st.experimental_fragment). Fallback: llamada directa sin fragment.
+if hasattr(st, "fragment"):
+    _render_electrolitos_page = st.fragment(_render_electrolitos_page)
+elif hasattr(st, "experimental_fragment"):
+    _render_electrolitos_page = st.experimental_fragment(_render_electrolitos_page)
+# ==============================================================================
+# TAB: nefro — cuerpo envuelto en fragment para acelerar reruns.
+# El contenido vive en _render_nefro_page(); la página nefro solo la invoca.
+# ==============================================================================
+def _render_nefro_page():
     st.subheader("🔢 Calculadoras de Nefrología")
     nefro_modo = st.radio("Sección",
         ["📐 FG & Estadificación ERC", "🧪 Orina & Electrolitos",
@@ -8054,6 +6035,2070 @@ Los **HIF-PHI** actúan bloqueando la enzima **prolil-hidroxilasa** (PHD), que n
 
     st.divider()
     st.caption("Fuentes: KDIGO 2012/2021, Micromedex, Lexicomp, Drug Prescribing in Renal Failure (Bennett). Actualizar según fichas técnicas vigentes.")
+
+# Fragment si el runtime lo soporta (Streamlit >= 1.37: st.fragment;
+# 1.32-1.36: st.experimental_fragment). Fallback: llamada directa sin fragment.
+if hasattr(st, "fragment"):
+    _render_nefro_page = st.fragment(_render_nefro_page)
+elif hasattr(st, "experimental_fragment"):
+    _render_nefro_page = st.experimental_fragment(_render_nefro_page)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB: SCORES / CANDIDATURA CRRT
+# Refs: SOFA (Sepsis-3, 2016), APACHE II, KDIGO 2026 AKI (borrador público)
+#       STARRT-AKI 2020, AKIKI 2016, AKIKI-2 2021
+# ══════════════════════════════════════════════════════════════════════════════
+if nav == "scores":
+    _render_scores_page()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 1: PRESCRIPCIÓN CRRT
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "presc":
+    _render_presc_page()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 2: CITRATO REGIONAL (RCA) — COMPLETO
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "cit":
+    _render_cit_page()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 3: SODIO EN CRRT
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "na":
+    st.subheader("Sodio en CRRT — Predicción y Corrección")
+
+    modo_na = st.radio("Modo", ["📊 Predicción de sodio", "🎯 Corrección de sodio"], horizontal=True,
+                       key="modo_na")
+
+    # Datos del paciente compartidos
+    st.markdown("### Datos del paciente")
+    nac1, nac2, nac3, nac4, nac5 = st.columns(5)
+    with nac1:
+        na_sex = st.selectbox("Sexo", ["M", "F"], key="na_sex")
+    with nac2:
+        na_age = st.number_input("Edad (años)", 0, 110, 55, 1, key="na_age")
+    with nac3:
+        na_ht = st.number_input("Talla (cm)", 100, 220, 170, 1, key="na_ht")
+    with nac4:
+        na_wt = st.number_input("Peso (kg)", 10.0, 300.0, float(peso), 0.5, key="na_wt")
+    with nac5:
+        na_plasma = st.number_input("Na plasmático actual (mEq/L)", 100.0, 200.0, 140.0, 0.5,
+                                    key="na_plasma")
+
+    st.markdown("### Parámetros de la terapia")
+    nat1, nat2, nat3 = st.columns(3)
+    with nat1:
+        na_bags = st.number_input("[Na] en bolsas CRRT (mEq/L)", 100.0, 160.0, 140.0, 1.0,
+                                  key="na_bags", help="Na en solución de reemplazo/dializato")
+        na_qeff = st.number_input("Efluente total (mL/hr)", 0, 6000, int(dosis_mlkg * peso),
+                                  100, key="na_qeff")
+    with nat2:
+        cit_sol_tipo_na = st.session_state.get("cit_sol_type", "Citrato trisódico 4% (136 mmol/L — más común)")
+        na_in_cit = st.number_input("[Na] en solución de citrato (mEq/L)",
+                                    0.0, 500.0, float(st.session_state.get("cit_na_mmol_L", 408.0)),
+                                    1.0, key="na_in_cit",
+                                    help="Citrato trisódico 4%: ~408 mEq/L")
+        cit_inf_na = st.number_input("Tasa infusión citrato (mL/hr)", 0.0, 3000.0,
+                                     float(st.session_state.get("rca_citrato_ml_h", 0.0)),
+                                     1.0, key="cit_inf_na")
+    with nat3:
+        na_post_sol = st.number_input("[Na] solución postfiltro (mEq/L)", 0.0, 160.0, 0.0, 1.0,
+                                      key="na_post_sol", help="0 si no hay reposición postfiltro separada")
+        post_inf_na = st.number_input("Tasa reposición postfiltro (mL/hr)", 0.0, 3000.0, 0.0, 10.0,
+                                      key="post_inf_na")
+
+    if "Predicción" in modo_na:
+        st.markdown("### Predicción")
+        na_tiempo = st.number_input("Tiempo de terapia (hrs)", 1, 72, 24, 1, key="na_tiempo")
+        result_na = calc_na_pred_trrc(
+            na_sex, na_age, na_ht, na_wt, na_plasma, na_bags, na_qeff, na_tiempo,
+            na_in_cit, cit_inf_na, na_post_sol, post_inf_na)
+        if result_na:
+            rn1, rn2, rn3 = st.columns(3)
+            rn1.metric("ACT estimada (Watson)", f"{result_na['tbw']:.1f} L")
+            rn2.metric("Balance neto de Na", f"{result_na['net_na']:.1f} mEq/hr",
+                       help="+: Na se retiene | -: Na se elimina")
+            rn3.metric("[Na] predicho al final", f"{result_na['na_pred']:.1f} mEq/L",
+                       delta=f"{result_na['na_pred'] - na_plasma:+.1f} vs actual")
+            delta_24 = result_na["net_na"] * na_tiempo
+            st.info(f"Balance acumulado en {na_tiempo}h: **{delta_24:+.0f} mEq de Na** → "
+                    f"Na final predicho **{result_na['na_pred']:.1f} mEq/L**")
+            # Alertas de corrección
+            if na_plasma < 130 and (result_na["na_pred"] - na_plasma) > 10:
+                st.error("⚠️ Corrección de hiponatremia >10 mEq/L proyectada. Riesgo de ODS. Ajustar [Na] en bolsas o reducir efluente.")
+            if abs(result_na["na_pred"] - na_plasma) / na_tiempo > 0.5 and na_tiempo <= 24:
+                st.warning(f"⚠️ Velocidad de corrección ≈ {abs(result_na['na_pred'] - na_plasma) / na_tiempo:.2f} mEq/L/hr. Verificar meta clínica.")
+        else:
+            st.info("Completa los datos del paciente para calcular la predicción.")
+
+    else:  # Corrección
+        st.markdown("### Estrategias de corrección de sodio en 24h")
+        na_meta = st.number_input("[Na] objetivo en 24h (mEq/L)", 100.0, 200.0, 140.0, 0.5,
+                                  key="na_meta")
+        result_corr = calc_na_corr_trrc(
+            na_sex, na_age, na_ht, na_wt, na_plasma, na_meta, na_qeff, na_bags,
+            na_in_cit, cit_inf_na)
+        if result_corr:
+            st.metric("ACT estimada (Watson)", f"{result_corr['tbw']:.1f} L")
+            st.metric("Δ Na necesario", f"{result_corr['delta_hr']:+.1f} mEq/hr",
+                      help="Na neto que debe moverse por hora para alcanzar la meta en 24h")
+            st.markdown("---")
+            rc1, rc2 = st.columns(2)
+            with rc1:
+                st.markdown("#### Estrategia 1")
+                st.markdown("**Ajustar flujo de reposición postfiltro** (Na estándar = 140 mEq/L)")
+                st.metric("Tasa postfiltro recomendada", f"{result_corr['pf_rate']:.0f} mL/hr")
+                st.caption("Mantener [Na] en bolsas sin cambios. Ajustar sólo el flujo postfiltro.")
+            with rc2:
+                st.markdown("#### Estrategia 2")
+                st.markdown("**Ajustar [Na] en bolsas CRRT** (sin reposición postfiltro adicional)")
+                st.metric("[Na] objetivo en bolsas", f"{result_corr['target_bags']:.1f} mEq/L")
+                st.caption("Mantener flujo de efluente. Cambiar composición de la solución.")
+            # Alertas
+            delta_na_24 = na_meta - na_plasma
+            if na_plasma < 130 and delta_na_24 > 10:
+                st.error("⚠️ Meta implica corrección >10 mEq/L en 24h. Para hiponatremia ≤ 8 mEq/L/24h (≤8 si riesgo de ODS). Reconsiderar meta.")
+            if na_plasma > 150 and delta_na_24 < -12:
+                st.warning("⚠️ Corrección de hipernatremia: no exceder 10–12 mEq/L/24h. Verificar meta.")
+        else:
+            st.info("Completa los datos para calcular las estrategias de corrección.")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 4: PREDICCIÓN HD + KoA
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "hd":
+    _render_hd_page()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 5: PLASMAFÉRESIS / TPE — COMPLETO
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "tpe":
+    _render_tpe_page()
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 6: KT/V POR OBJETIVOS
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "ktv":
+    st.subheader("Dosis por objetivos (Kt/V urea — CRRT)")
+    V = st.number_input("Volumen de distribución V (L) ≈ 0.6xpeso", value=round(0.6 * peso, 1),
+                        step=0.1)
+    C0 = st.number_input("Urea inicial C0 (mg/dL)", value=150.0, step=1.0)
+    Ct = st.number_input("Urea objetivo Ct (mg/dL)", value=100.0, step=1.0)
+    horas = st.number_input("Tiempo de tratamiento (h)", value=24, step=1)
+    E = st.number_input("Eficiencia del sistema (0.8–1.0)", value=0.9, step=0.05,
+                        min_value=0.5, max_value=1.0)
+    ktv_req = log(C0 / Ct) if (C0 > 0 and Ct > 0 and C0 > Ct) else None
+    st.metric("Kt/V requerido", f"{ktv_req:.2f}" if ktv_req else "—")
+    K_Lh = ((ktv_req * V) / horas) / E if ktv_req else None
+    dosis_calc = (K_Lh * 1000) / peso if K_Lh and peso > 0 else None
+    colx, coly = st.columns(2)
+    colx.metric("K requerido (L/h)", f"{K_Lh:.2f}" if K_Lh else "—")
+    coly.metric("Dosis estimada (mL/kg/h)", f"{dosis_calc:.1f}" if dosis_calc else "—")
+    if dosis_calc:
+        if dosis_calc < 20:
+            st.warning(f"⚠️ Dosis {dosis_calc:.1f} mL/kg/h < 20. Considerar aumentar.")
+        elif dosis_calc > 35:
+            st.info(f"ℹ️ Dosis {dosis_calc:.1f} mL/kg/h > 35. Sin evidencia de beneficio adicional.")
+        else:
+            st.success(f"✅ Dosis {dosis_calc:.1f} mL/kg/h dentro del rango 20–35.")
+    st.caption("Relación entre Kt/V objetivo y dosis de efluente (ver Referencias).")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 7: BALANCE DINÁMICO
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "bal":
+    st.subheader("Balance dinámico y metas de UF")
+    peso_seco = st.number_input("Peso seco objetivo (kg)", value=max(0.0, peso - 5), step=0.5)
+    fo_actual = (peso - peso_seco) / peso_seco if peso_seco > 0 else 0.0
+    fo_obj = st.number_input("FO% objetivo (p. ej. 0.05 = 5%)", value=0.05, step=0.01)
+    horas_trrc = st.number_input("Horas de CRRT planificadas (h)", value=24, step=1)
+    ingresos = st.number_input("Ingresos previstos (mL)", value=0, step=50)
+    uresis_res = st.number_input("Uresis residual 24h (mL)",
+                                 value=int(st.session_state.get("ur_main", 0)), step=50)
+    uf_obj = ((peso - (1 + fo_obj) * peso_seco) * 1000) if peso_seco > 0 else None
+    uf_mant = ingresos - uresis_res
+    uf_total = (uf_obj if uf_obj is not None else 0) + uf_mant
+    uf_h = uf_total / horas_trrc if horas_trrc > 0 else 0
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("FO% actual", f"{fo_actual:.1%}")
+    c2.metric("UF objetivo (mL)", f"{int(uf_obj) if uf_obj is not None else 0}")
+    c3.metric("UF total 24h (mL)", f"{int(uf_total)}")
+    c4.metric("UF/h sugerida", f"{int(uf_h)}")
+    ratio_uf_peso = uf_h / max(float(peso), 1e-9)
+    if ratio_uf_peso > 0.002:
+        st.warning(f"⚠️ UF/h > 2 mL/kg/h ({ratio_uf_peso * 1000:.1f} mL/kg/h). Evaluar tolerancia hemodinámica.")
+    else:
+        st.success(f"✅ UF/h aceptable ({ratio_uf_peso * 1000:.1f} mL/kg/h).")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 8: ANTICOAGULACIÓN EXTENDIDA
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "anticoag":
+    st.subheader("Anticoagulación — Evaluación extendida")
+    colA, colB, colC, colD = st.columns(4)
+    plaquetas = colA.number_input("Plaquetas (mil/µL)", 0, 1000, 200, 5)
+    fib = colB.number_input("Fibrinógeno (mg/dL)", 0, 1000, 300, 10)
+    sangrado = colC.selectbox("Sangrado activo", ["No", "Sí"])
+    neuro = colD.selectbox("Post-op neuro / riesgo alto", ["No", "Sí"])
+    inr = colA.number_input("INR", 0.8, 5.0, 1.1, 0.1, key="inr_ext")
+    aptt = colB.number_input("aPTT (s)", 20.0, 120.0, 35.0, 1.0, key="aptt_ext")
+    hbpm_12h = colC.selectbox("HBPM en últimas 12h", ["No", "Sí"],
+                               help="Si 'Sí', preferir RCA o iniciar HNF con precaución.")
+    hit_previa = colD.selectbox("Antecedente de HIT", ["No", "Sí"])
+    st.session_state["hit_previa_bool"] = (hit_previa == "Sí")
+
+    usar_rca = (plaquetas < 50 or fib < 150 or sangrado == "Sí" or neuro == "Sí" or
+                inr >= 1.5 or aptt >= 45 or hbpm_12h == "Sí" or hit_previa == "Sí")
+    ac = "RCA (citrato)" if usar_rca else "Heparina no fraccionada (HNF)"
+    st.success(f"Anticoagulación sugerida: **{ac}**")
+    st.caption("RCA es preferente si no hay contraindicaciones. "
+               "Para cálculo detallado de citrato → 🧪 Citrato RCA.")
+
+    if ac.startswith("Heparina"):
+        if hbpm_12h == "Sí":
+            st.warning("HBPM reciente: considerar diferir HNF o iniciar con dosis reducida.")
+        iu_h = peso * 5
+        st.info(f"**Dosis inicial HNF sugerida:** {iu_h:.0f} UI/h (ajustar a aPTT objetivo).")
+        st.session_state["anticoagulacion_tipo"] = "HNF"
+        st.session_state["hnf_ui_h"] = float(iu_h)
+
+        # ── NOMOGRAMA HNF COMPLETO ─────────────────────────────────────────
+        st.divider()
+        st.markdown("### 📊 Nomograma HNF para CRRT")
+        st.caption("Objetivo aPTT en CRRT: **45–80 segundos** (anticoagulación moderada). "
+                   "Más conservador que anticoagulación terapéutica sistémica.")
+
+        hn1, hn2 = st.columns(2)
+        with hn1:
+            aptt_actual = st.number_input("aPTT actual (s)", 20.0, 200.0,
+                                          float(aptt), 1.0, key="hnf_aptt_nom")
+            dosis_actual_hnf = st.number_input("Dosis HNF actual (UI/hr)", 0.0, 5000.0,
+                                               float(iu_h), 50.0, key="hnf_dosis_act")
+        with hn2:
+            tipo_bolo = st.selectbox("¿Incluir bolo inicial?",
+                                     ["No (riesgo de sangrado)", "Sí — 25 UI/kg", "Sí — 50 UI/kg"],
+                                     key="hnf_bolo")
+
+        # Calculate adjustment
+        if aptt_actual < 45:
+            ajuste = "+2–3 UI/kg/hr"
+            delta_ui = 2.5 * peso
+            bolo = ""
+            if aptt_actual < 35:
+                bolo = f"+ Bolo 1,000–2,000 UI"
+            accion = f"⬆️ **AUMENTAR** {delta_ui:.0f} UI/hr (nueva dosis ≈ {dosis_actual_hnf + delta_ui:.0f} UI/hr). {bolo}"
+            color = "warning"
+        elif aptt_actual <= 60:
+            accion = "✅ **MANTENER** dosis actual — aPTT en objetivo bajo (45–60s)"
+            color = "success"
+        elif aptt_actual <= 80:
+            accion = "✅ **MANTENER** dosis actual — aPTT en objetivo óptimo (61–80s)"
+            color = "success"
+        elif aptt_actual <= 100:
+            delta_ui = 1.5 * peso
+            accion = f"⬇️ **REDUCIR** {delta_ui:.0f} UI/hr (nueva dosis ≈ {max(0, dosis_actual_hnf - delta_ui):.0f} UI/hr)"
+            color = "warning"
+        elif aptt_actual <= 120:
+            delta_ui = 2.5 * peso
+            accion = (f"⬇️ **PAUSAR 30 min** → reducir {delta_ui:.0f} UI/hr "
+                     f"(nueva dosis ≈ {max(0, dosis_actual_hnf - delta_ui):.0f} UI/hr). Repetir aPTT en 4h.")
+            color = "error"
+        else:
+            accion = (f"🛑 **PAUSAR 60 min** → reducir {2.5*peso:.0f} UI/hr. "
+                     f"Monitoreo estrecho. Si sangrado activo: protamina.")
+            color = "error"
+
+        if color == "success":
+            st.success(accion)
+        elif color == "warning":
+            st.warning(accion)
+        else:
+            st.error(accion)
+
+        st.markdown("""
+| aPTT (segundos) | Acción | Bolo | Cambio de dosis |
+|----------------|--------|------|----------------|
+| **<35** | Aumentar urgente | 2,000 UI | +3 UI/kg/hr |
+| **35–44** | Aumentar | 1,000 UI | +2 UI/kg/hr |
+| **45–60** | Mantener (objetivo bajo) | No | Sin cambio |
+| **61–80** | Mantener (objetivo óptimo) | No | Sin cambio |
+| **81–100** | Reducir ligeramente | No | −1.5 UI/kg/hr |
+| **101–120** | Pausar + reducir | No | Pausar 30 min; −2.5 UI/kg/hr |
+| **>120** | Pausar + reducir mayor | No | Pausar 60 min; −2.5 UI/kg/hr |
+        """)
+
+        st.markdown("**Frecuencia de monitoreo:**")
+        st.markdown("""
+- Primera aPTT: **4–6 horas** después de iniciar o cambiar dosis
+- Hasta 2 controles consecutivos en rango → cada **12 horas**
+- Estable >24h → cada **24 horas**
+- Siempre post-ajuste: repetir a las **4 horas**
+        """)
+
+        if tipo_bolo != "No (riesgo de sangrado)":
+            bolo_ui = 25 * peso if "25" in tipo_bolo else 50 * peso
+            st.info(f"💉 **Bolo inicial:** {bolo_ui:.0f} UI IV directo, luego iniciar infusión a {iu_h:.0f} UI/hr")
+
+        with st.expander("🔬 Anti-Xa como alternativa al aPTT"):
+            st.markdown(f"""
+**Anti-Xa para monitoreo de HNF en CRRT:**
+- Meta: **0.3–0.7 UI/mL** (anticoagulación moderada para CRRT)
+- Ventaja: No afectado por factor VIII elevado, lupus anticoagulante o coagulopatías
+- Tomar muestra: **4–6h** después de iniciar o cambiar dosis, en estado estable
+- Ajuste: mismo nomograma de aPTT como referencia; usar anti-Xa para confirmar
+
+**Conversión aproximada:**
+- Anti-Xa 0.3 UI/mL ≈ aPTT 45–50s
+- Anti-Xa 0.5 UI/mL ≈ aPTT 60–70s
+- Anti-Xa 0.7 UI/mL ≈ aPTT 80–90s
+            """)
+    else:
+        st.info("💡 Dirígete a la pestaña **🧪 Citrato RCA** para el cálculo completo de tasas y monitoreo.")
+        st.session_state["anticoagulacion_tipo"] = "RCA"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 9: FUNDAMENTO Y CÁLCULOS
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "fund":
+    st.subheader("Fundamento y Cálculos — Transparencia pedagógica")
+    mostrar_ext = bool(st.session_state.get("mostrar_fund_extendido", False))
+    if mostrar_ext:
+        st.info("Vista extendida ACTIVADA (switch global en barra lateral).")
+
+    mod_for_fund, filtro_for_fund, _ = combinar_recomendaciones(escenarios)
+    filtro_for_fund = st.session_state.get("ui_filtro", filtro_for_fund)
+    qp_f, qp_h_f, qe_f, qr_pre_f, qr_post_f, qd_f, ff_f = flows_and_ff(
+        qb, hto, dosis_mlkg, peso, uf, mod_for_fund or "CVVHDF")
+
+    st.markdown("### Fórmulas CRRT (LaTeX)")
+    st.latex(r"Q_p = Q_b \times (1 - Hto)")
+    st.latex(r"Q_{p,h} = Q_p \times 60 \quad \text{(mL/h)}")
+    st.latex(r"Q_e = \text{dosis}_{mL/kg/h} \times \text{peso}_{kg}")
+    st.latex(r"FF = \frac{Q_{r,post} + UF}{Q_{p,h} + Q_{r,pre}} < 25\%")
+    st.latex(r"Q_{r,total} = \min(0.25 \cdot Q_{p,h},\ \max(Q_e - UF, 0)) \times f_{conv}")
+    st.latex(r"Q_d = \max(Q_e - Q_{r,pre} - Q_{r,post} - UF,\ 0)")
+
+    st.markdown("### Citrato RCA")
+    st.latex(r"\dot{V}_{cit} = \frac{D_{obj}[mmol/L] \times Q_b[mL/min] \times 60}{[Cit][mmol/L]}")
+    st.latex(r"\text{Carga al circuito} = \dot{V}_{cit} \times [Cit]/1000 \quad [mmol/h]")
+    st.latex(r"\text{Remoción} = Q_{eff} \times [Cit]_{circuito}/1000 \quad [mmol/h]")
+    st.latex(r"\frac{Ca_{total}}{Ca_{i\acute{o}nico}} > 2.5 \Rightarrow \text{Acumulación de citrato}")
+
+    st.markdown("### HD — Ecuación de Michaels")
+    st.latex(r"K = Q_B \cdot \frac{1 - e^{-\alpha(1-r)}}{1 - r \cdot e^{-\alpha(1-r)}}")
+    st.latex(r"\alpha = KoA/Q_B \quad r = Q_B/Q_D")
+    st.latex(r"Kt/V = K \cdot t_{min} / V_{mL}")
+
+    st.markdown("### Plasmaféresis")
+    st.latex(r"VPE = 65 \times peso \times (1 - Hto)")
+    st.latex(r"C_{res}^{1\,ses} = e^{-n_{recambios}} \times 100\%")
+    st.latex(r"C_{res}^{total} = (0.55 + 0.45 \cdot e^{-n_{rec}})^{n_{ses}} \times 100\%")
+
+    st.markdown("### Sustitución numérica (valores actuales CRRT)")
+    nc1, nc2, nc3 = st.columns(3)
+    with nc1:
+        st.write(f"**Qb** = {int(qb)} mL/min")
+        st.write(f"**Hto** = {hto:.2f}")
+        st.write(f"**Qp** = {int(qp_f)} mL/min")
+        st.write(f"**Qp·h** = {int(qp_h_f)} mL/h")
+    with nc2:
+        st.write(f"**Dosis** = {int(dosis_mlkg)} mL/kg/h")
+        st.write(f"**Peso** = {peso:.1f} kg")
+        st.write(f"**Qe** = {int(qe_f)} mL/h")
+        st.write(f"**UF** = {int(uf)} mL/h")
+    with nc3:
+        st.write(f"**Qr_pre** = {int(qr_pre_f)} mL/h")
+        st.write(f"**Qr_post** = {int(qr_post_f)} mL/h")
+        st.write(f"**Qd** = {int(qd_f)} mL/h")
+        st.write(f"**FF** ≈ {ff_f:.2%}")
+
+    if mostrar_ext:
+        st.divider()
+        st.markdown("### Fundamento clínico extendido")
+        for linea in _fundamento_texto_extendido(
+                na=float(st.session_state.get("na_main", 140.0)),
+                k=float(st.session_state.get("k_main", 4.0)),
+                ph=float(st.session_state.get("ph_main", 7.35)),
+                pam=float(st.session_state.get("pam", 65.0)),
+                vasopresor_alto=st.session_state.get("vaso_alto_sel", "No") == "Sí",
+                lactato_desc=st.session_state.get("lactato_desc_sel", "No") == "Sí",
+                albumina=float(st.session_state.get("alb_main", 3.0)),
+                anticoag_tipo=st.session_state.get("anticoagulacion_tipo", "—"),
+                r_targets=st.session_state.get("rca_targets", {}),
+                filtro_final=filtro_for_fund):
+            if linea:
+                st.write(linea)
+            else:
+                st.markdown("---")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 10: RESUMEN / IMPRESIÓN (unificado: orden enfermería + PDF)
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "resumen":
+    st.subheader("📋 Resumen Clínico / Orden de Enfermería / Impresión")
+    st.caption("Completa todos los campos y luego genera el PDF. "
+               "Este documento integra prescripción, anticoagulación y monitoreo en un solo lugar.")
+
+    # Banner: redirigir al módulo Prescripción para el flujo clínico principal
+    _b1, _b2 = st.columns([5, 1])
+    with _b1:
+        st.info("💡 **¿Solo necesitas la prescripción CRRT?** Usa el módulo dedicado de "
+                "**🩺 Prescripción** (sidebar). Allí puedes seleccionar paciente existente o "
+                "registrar uno nuevo, y guardar la prescripción en el expediente para reimpresión.\n\n"
+                "Este módulo **Resumen / PDF** es para generar un **documento integrado completo** "
+                "que combina prescripción + anticoagulación + monitoreo + orden de enfermería + "
+                "fundamento clínico en un solo PDF de 3 páginas.")
+    with _b2:
+        if st.button("🩺 Ir a Prescripción", width='stretch', key="btn_go_presc"):
+            st.session_state["nav_sel"] = "presc"
+            st.rerun()
+
+    # ── Sección 1: Identificación ─────────────────────────────────────────────
+    st.markdown("### 👤 Identificación del paciente")
+    idU, _ = st.columns([3, 1])
+    with idU:
+        st.text_input("Unidad hospitalaria", key="rx_unidad",
+                      value=st.session_state.get("rx_unidad", ""))
+    id1, id2, id3 = st.columns([2, 1, 1])
+    with id1:
+        st.text_input("Nombre del paciente", key="rx_nombre_paciente",
+                      value=st.session_state.get("rx_nombre_paciente", ""))
+    with id2:
+        st.text_input("Fecha de nacimiento", key="rx_fecha_nac",
+                      value=st.session_state.get("rx_fecha_nac", ""))
+    with id3:
+        st.text_input("Edad", key="rx_edad", value=st.session_state.get("rx_edad", ""))
+    id4, id5 = st.columns([1, 2])
+    with id4:
+        _sxo = ["", "M", "F"]
+        st.selectbox("Sexo", _sxo,
+                     index=_sxo.index(st.session_state.get("rx_sexo", ""))
+                     if st.session_state.get("rx_sexo", "") in _sxo else 0, key="rx_sexo")
+    with id5:
+        st.text_input("Expediente / NSS", key="rx_expediente",
+                      value=st.session_state.get("rx_expediente", ""))
+
+    # ── Sección 2: Prescripción completa ──────────────────────────────────────
+    st.divider()
+    st.markdown("### ⚙️ Prescripción CRRT")
+
+    mod_rs, filtro_rs, coment_rs = combinar_recomendaciones(escenarios)
+    filtro_rs = st.session_state.get("ui_filtro", filtro_rs)
+    qp_rs, qp_h_rs, qe_rs, qr_pre_rs, qr_post_rs, qd_rs, ff_rs = flows_and_ff(
+        qb, hto, dosis_mlkg, peso, uf, mod_rs or "CVVHDF")
+    ff_txt_rs = f"{ff_rs:.1%}" if ff_rs is not None else "—"
+
+    # Citrate adjustment
+    ac_rs = st.session_state.get("anticoagulacion_tipo", "—")
+    v_cit_rs = float(st.session_state.get("rca_citrato_ml_h", 0))
+    ca_ml_rs = float(st.session_state.get("rca_calcio_ml_h", 0))
+    rca_targets_rs = st.session_state.get("rca_targets", {})
+    hnf_rs = float(st.session_state.get("hnf_ui_h", peso * 5))
+
+    if ac_rs == "RCA" and v_cit_rs > 0:
+        qr_pre_sol_rs = max(0.0, qr_pre_rs - v_cit_rs)
+        ff_adj_rs = (qr_post_rs + uf) / max(qp_h_rs + qr_pre_sol_rs + v_cit_rs, 1e-9)
+    else:
+        qr_pre_sol_rs = float(qr_pre_rs)
+        ff_adj_rs = ff_rs
+
+    sc1, sc2, sc3 = st.columns(3)
+    sc1.metric("Modalidad", mod_rs or "—")
+    sc2.metric("Filtro", filtro_rs or "—")
+    sc3.metric("FF efectiva", f"{ff_adj_rs:.1%}" if ff_adj_rs else "—",
+               delta="✅" if ff_adj_rs and ff_adj_rs <= 0.25 else "⚠️ ALTA")
+
+    st.markdown("**Flujos programados en la máquina:**")
+    fm1, fm2, fm3, fm4 = st.columns(4)
+    fm1.metric("QB (mL/min)", qb)
+    fm2.metric("Qe total (mL/hr)", int(qe_rs))
+    fm3.metric("UF neta (mL/hr)", uf)
+    fm4.metric("Qd dialisato (mL/hr)", int(qd_rs))
+
+    fm5, fm6, fm7, fm8 = st.columns(4)
+    if ac_rs == "RCA" and v_cit_rs > 0:
+        fm5.metric("Qr PRE — citrato (mL/hr)", f"{v_cit_rs:.0f}",
+                   help="Citrato va PRE-filtro por bomba de citrato")
+        fm6.metric("Qr PRE — solución (mL/hr)", f"{qr_pre_sol_rs:.0f}",
+                   help=f"Original {qr_pre_rs:.0f} − citrato {v_cit_rs:.0f}")
+    else:
+        fm5.metric("Qr PRE — solución (mL/hr)", f"{qr_pre_rs:.0f}")
+        fm6.metric("Qr PRE — citrato", "No aplica")
+    fm7.metric("Qr POST (mL/hr)", f"{qr_post_rs:.0f}")
+    fm8.metric("Qe efluente = dosis x peso", f"{int(qe_rs)} mL/hr")
+
+    if coment_rs:
+        st.info(coment_rs)
+
+    # ── Sección 3: Anticoagulación (dinámica) ─────────────────────────────────
+    st.divider()
+    st.markdown("### 💊 Anticoagulación")
+
+    if ac_rs == "RCA":
+        num_viales_rs = st.session_state.get("ca_viales", 12)
+        prep_vol_rs = 250 if st.session_state.get("ca_prep_vol", "250 mL") == "250 mL" else 500
+        # AFORO: volumen final = volumen de la bolsa (no se suma el de las ámpulas)
+        vol_total_rs = prep_vol_rs
+        ca_conc_rs = (int(num_viales_rs) * 2.23) / (vol_total_rs / 1000) if vol_total_rs > 0 else 0
+
+        ac1, ac2 = st.columns(2)
+        with ac1:
+            st.markdown("#### 🧪 Citrato")
+            st.markdown(f"""
+| Parámetro | Valor |
+|-----------|-------|
+| Tipo de solución | {st.session_state.get('cit_sol_type', 'Citrato 4%')[:30]} |
+| Dosis objetivo | {st.session_state.get('cit_dose', 3.0):.1f} mmol/L sangre |
+| **Tasa de infusión citrato** | **{v_cit_rs:.0f} mL/hr** (línea arterial PRE-filtro) |
+| iCa post-filtro diana | **0.25–0.40 mmol/L** |
+""")
+        with ac2:
+            st.markdown("#### 🫙 Calcio — reposición sistémica")
+            st.markdown(f"""
+| Parámetro | Valor |
+|-----------|-------|
+| Preparación | {int(num_viales_rs)} ámpulas gluconato Ca 10% en {prep_vol_rs} mL NaCl 0.9% |
+| Volumen total preparado | {vol_total_rs} mL |
+| Concentración resultante | {ca_conc_rs:.1f} mmol/L de Ca elemental |
+| **Tasa de infusión calcio** | **{ca_ml_rs:.0f} mL/hr** (línea sistémica POST-filtro) |
+| iCa sistémico diana | **1.0–1.2 mmol/L** |
+""")
+        st.warning("⚠️ El calcio se infunde **SIEMPRE por línea sistémica post-filtro**, nunca en la línea de citrato ni pre-filtro.")
+
+    elif ac_rs == "HNF":
+        st.markdown(f"""
+| Parámetro | Valor |
+|-----------|-------|
+| Tipo | Heparina No Fraccionada (HNF) |
+| **Dosis inicial** | **{hnf_rs:.0f} UI/hr** en infusión continua |
+| Ajuste | Según aPTT (objetivo: 45–70 s o protocolo institucional) |
+| Frecuencia aPTT | Cada 4–6 hrs |
+""")
+    else:
+        st.info("Sin anticoagulación registrada. Ve a **💊 Anticoagulación** o **🧪 Citrato RCA** para configurarla.")
+
+    # ── Sección 4: Sodio (si relevante) ───────────────────────────────────────
+    na_actual = float(st.session_state.get("na_main", 140.0))
+    if na_actual < 130 or na_actual > 150:
+        st.divider()
+        st.markdown("### 🧂 Sodio — Consideraciones especiales")
+        if na_actual < 130:
+            st.warning(f"**Hiponatremia: Na = {na_actual:.0f} mEq/L** — "
+                       "Corrección máxima: ≤8–10 mEq/L/24h (≤8 si riesgo de ODS). "
+                       "Ajustar [Na] en bolsas o flujo postfiltro. "
+                       "Ve a pestaña 🧂 Sodio CRRT para calcular la estrategia.")
+        elif na_actual > 150:
+            st.warning(f"**Hipernatremia: Na = {na_actual:.0f} mEq/L** — "
+                       "Corrección: ≈0.5 mEq/L/hr (8–10 mEq/día). "
+                       "Usar dializado con Na más alto. "
+                       "Ve a pestaña 🧂 Sodio CRRT para calcular la estrategia.")
+
+    # ── Sección 5: Monitoreo (dinámico) ───────────────────────────────────────
+    st.divider()
+    st.markdown("### 🔬 Monitoreo")
+
+    if ac_rs == "RCA":
+        st.markdown("""
+| Momento | Parámetro | Objetivo / Acción |
+|---------|-----------|-------------------|
+| **Inicio** | Verificar circuito, presiones, flujos | Todo OK antes de conectar |
+| **30 min** | iCa post-filtro + iCa sistémico | Post: 0.25–0.40 / Sist: 1.0–1.2 mmol/L |
+| **1–2 hrs** | iCa ambos | Confirmar estabilidad |
+| **Cada 4–6 hrs** | iCa post + iCa sistémico + Na, K, HCO₃⁻ | Ajuste ±10–20% si fuera de meta |
+| **Cada 12–24 hrs** | Ca total + Ca iónico + Anión gap + pH + lactato | Ratio Ca_total/Ca_iónico: normal <2.5 |
+| **Post-ajuste** | iCa ambos a los 30 min del cambio | Verificar nuevo equilibrio |
+| **Circuito** | Presión transmembrana (PTM), presión de retorno | Alarma → revisar coagulación |
+""")
+        st.error("🚨 **ALERTA DE ACUMULACIÓN:** Si Ca_total/Ca_iónico >2.5 + anión gap elevado + "
+                 "iCa sistémico bajo pese a ↑ calcio → **suspender citrato, cambiar a HNF. Avisar médico URGENTE.**")
+    else:
+        st.markdown("""
+| Momento | Parámetro | Objetivo / Acción |
+|---------|-----------|-------------------|
+| **Inicio** | Verificar circuito y flujos | Todo OK antes de conectar |
+| **Cada 4–6 hrs** | aPTT | Objetivo: 45–70 s (o protocolo institucional) |
+| **Cada 4–6 hrs** | BMP (Na, K, HCO₃⁻, Ca, glucosa) | Ajustar solución según resultados |
+| **Cada 12 hrs** | Plaquetas + TP/INR | Vigilar HIT (↓ plaquetas ≥50%) |
+| **Circuito** | Presión transmembrana (PTM), coágulos | Alarma → revisar HNF |
+""")
+
+    # ── Sección 6: Alertas inmediatas ─────────────────────────────────────────
+    st.divider()
+    st.markdown("### ⚠️ Alertas inmediatas")
+    alertas_txt = [
+        f"**FF >25%:** Reducir UF o Qr_post, ↑ predilución {'(citrato o solución PRE)' if ac_rs == 'RCA' else '(Qr_pre)'}. Avisar médico.",
+        "**Presión transmembrana ↑ sostenida:** Revisar coagulación del circuito. Evaluar cambio de filtro.",
+    ]
+    if ac_rs == "RCA":
+        alertas_txt += [
+            "**iCa post-filtro <0.25:** ↓ Citrato 10–20%. Avisar médico.",
+            "**iCa post-filtro >0.40:** ↑ Citrato 10–20%. Avisar médico.",
+            "**iCa sistémico <1.0:** ↑ Calcio (gluconato) 10–20%. Avisar médico.",
+            "**iCa sistémico >1.2:** ↓ Calcio 10–20%. Avisar médico.",
+            "**Ca_total/Ca_iónico >2.5:** ACUMULACIÓN DE CITRATO. Suspender citrato → HNF. URGENTE.",
+        ]
+    else:
+        alertas_txt += [
+            "**aPTT <45 s:** ↑ HNF según protocolo. Revisar acceso vascular.",
+            "**aPTT >100 s:** ↓ HNF o suspender temporalmente. Vigilar sangrado.",
+            "**Plaquetas ↓ ≥50% del basal:** Sospechar HIT. Suspender HNF. Avisar médico URGENTE.",
+        ]
+
+    k_actual = float(st.session_state.get("k_main", 4.0))
+    ph_actual2 = float(st.session_state.get("ph_main", 7.35))
+    if k_actual >= 6.0:
+        alertas_txt.append(f"**K = {k_actual:.1f} mEq/L ≥6.0:** Dializado K 0–2 mEq/L, ↑ Qd. Re-labs cada 2 h.")
+    if ph_actual2 < 7.20:
+        alertas_txt.append(f"**pH = {ph_actual2:.2f} <7.20:** Confirmar solución con bicarbonato. ↑ Qd.")
+
+    for a in alertas_txt:
+        st.markdown(f"- {a}")
+
+    # ── Sección 7: Electrolitos CRRT ──────────────────────────────────────────
+    st.divider()
+    st.markdown("### ⚗️ Guía rápida de electrolitos en CRRT")
+    k_enf = float(st.session_state.get("k_main", 4.0))
+    ph_enf = float(st.session_state.get("ph_main", 7.35))
+    hco3_enf = float(st.session_state.get("hco3_main", 20.0))
+    if k_enf < 3.0:
+        st.error(f"K = {k_enf:.1f} — Hipocalemia severa: KCl 20–40 mEq/L en bolsas + IV según protocolo.")
+    elif k_enf < 3.5:
+        st.warning(f"K = {k_enf:.1f} — Agregar KCl 10–20 mEq/L a bolsas de reposición.")
+    elif k_enf >= 6.0:
+        st.error(f"K = {k_enf:.1f} — Hipercalemia: bolsas K=0 mEq/L, ↑ Qd 2–3 L/h.")
+    elif k_enf >= 5.5:
+        st.warning(f"K = {k_enf:.1f} — Bolsas K 0–2 mEq/L. Monitoreo cada 2–4h.")
+    else:
+        st.success(f"K = {k_enf:.1f} — Rango aceptable.")
+    if ph_enf < 7.20 or hco3_enf < 15:
+        st.error(f"pH {ph_enf:.2f} / HCO₃⁻ {hco3_enf:.0f} — Acidosis severa: solución con bicarbonato, ↑ Qd.")
+    elif ph_enf > 7.50 or hco3_enf > 30:
+        st.warning(f"pH {ph_enf:.2f} / HCO₃⁻ {hco3_enf:.0f} — Alcalosis: "
+                   f"{'revisar tasa de citrato (genera HCO₃⁻).' if ac_rs == 'RCA' else 'revisar buffer en solución.'}")
+    else:
+        st.success(f"pH {ph_enf:.2f} / HCO₃⁻ {hco3_enf:.0f} — Equilibrio ácido-base aceptable.")
+
+    # ── Sección 8: Médico + comentarios + PDF ─────────────────────────────────
+    st.divider()
+    st.markdown("### ✍️ Médico tratante")
+    pd1, pd2 = st.columns(2)
+    with pd1:
+        st.text_input("Nombre del médico", key="rx_nombre_medico",
+                      value=st.session_state.get("rx_nombre_medico", ""))
+    with pd2:
+        st.text_input("Cédula / Sello", key="rx_sello",
+                      value=st.session_state.get("rx_sello", ""))
+
+    st.text_area("Comentarios clínicos adicionales", key="rx_comentarios",
+                 value=st.session_state.get("rx_comentarios", ""), height=80)
+
+    st.markdown("### 📄 Generar PDF")
+    st.write(f"Modo docente (PDF extendido): **{'Sí ✅' if st.session_state.get('pdf_extendido') else 'No'}**")
+    st.caption("Activa el modo docente en la barra lateral para incluir fundamento clínico extendido.")
+
+    col_pdf, _ = st.columns([1, 3])
+    with col_pdf:
+        if st.button("📄 Generar PDF clínico", key="btn_export_pdf",
+                     type="primary", width='stretch'):
+            try:
+                ts = datetime.now().strftime("%Y-%m-%d_%H-%M")
+                nom = st.session_state.get("rx_nombre_paciente", "").replace(" ", "")
+                safe = "".join(c for c in nom if c.isalnum())
+                fname = f"RenalPro_{safe}_{ts}.pdf" if safe else f"RenalPro_{ts}.pdf"
+                buf = export_pdf_pro()
+                st.download_button("⬇️ Descargar PDF", data=buf, file_name=fname,
+                                   mime="application/pdf", width='stretch',
+                                   key="btn_download_pdf")
+                st.success("✅ PDF generado — 3 páginas: Prescripción · Enfermería · Fundamento")
+            except Exception as e:
+                st.error(f"Error al generar PDF: {e}")
+                st.caption("Si el error persiste, verifica que todos los campos estén completos.")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB: PREMIUM — Pago automático MP + CLABE manual
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "premium":
+    rol_actual = _rol()
+    nombre_actual = _nombre()
+    uid = _user_id()
+    dias = st.session_state.get("sess_dias", 0)
+
+    # ── Ya es Pro/Admin ────────────────────────────────────────────────────────
+    if rol_actual in ("admin", "pro"):
+        st.success(f"✅ **{nombre_actual}** — Acceso Premium activo.")
+        if rol_actual == "pro" and dias:
+            st.info(f"📅 Tu suscripción vence en **{dias} días**.")
+
+        # Historial de pagos
+        if _DB_ON and _db.db_ok() and uid:
+            hist = _cached_payment_history(uid)
+            if hist:
+                st.markdown("### 💳 Historial de pagos")
+                for h in hist:
+                    estado = "✅" if h["status"] == "approved" else "⏳"
+                    st.caption(f"{estado} ${h['amount']:.0f} MXN — {str(h['created_at'])[:10]}")
+
+        if st.button("🔄 Renovar suscripción", key="btn_renew"):
+            st.session_state["_show_payment"] = True
+
+    # ── Free / Trial / Expirado ────────────────────────────────────────────────
+    if rol_actual not in ("admin", "pro") or st.session_state.get("_show_payment"):
+        st.markdown("""
+<div style="background:linear-gradient(135deg,#1E3A8A,#2563EB);border-radius:16px;
+     padding:24px 28px;margin-bottom:16px;text-align:center;">
+  <div style="font-size:32px;font-weight:800;color:#fff;">⭐ RenalPro Pro</div>
+  <div style="color:rgba(255,255,255,0.85);font-size:15px;margin-top:6px;">
+    El asistente clínico de nefrología y terapias extracorpóreas más completo
+  </div>
+  <div style="font-size:40px;font-weight:900;color:#FCD34D;margin:12px 0;">
+    $99 <span style="font-size:18px;font-weight:500;color:rgba(255,255,255,0.8)">MXN / mes</span>
+  </div>
+</div>""", unsafe_allow_html=True)
+
+        pf1, pf2 = st.columns(2)
+        with pf1:
+            st.markdown("**✅ Pro incluye:**")
+            for f in ["Guardar prescripciones ilimitadas",
+                       "Historial clínico por paciente",
+                       "Búsqueda en historial",
+                       "PDF exportable personalizado",
+                       "Todos los módulos clínicos",
+                       "Acceso desde cualquier dispositivo",
+                       "Actualizaciones automáticas",
+                       "Datos preservados 60 días tras vencimiento"]:
+                st.markdown(f"• {f}")
+        with pf2:
+            st.markdown("**❌ Modo libre:**")
+            for l in ["Sin guardar pacientes",
+                       "Sin historial",
+                       "Datos se pierden al cerrar",
+                       "Sin PDF personalizado"]:
+                st.markdown(f"• {l}")
+
+        if rol_actual == "trial":
+            st.warning(f"⏱️ Te quedan **{dias} día(s)** de prueba. Activa Pro para conservar tus datos.")
+        elif rol_actual in ("expirado", "grace"):
+            st.error("⚠️ Tu período expiró. Renueva para recuperar acceso a tus prescripciones guardadas.")
+
+        st.divider()
+        st.markdown("### 💳 Pagar con Mercado Pago")
+
+        # ── Botón de pago MP ──────────────────────────────────────────────────
+        mp_link_directo = ""
+        mp_token = ""
+        try:
+            mp_link_directo = st.secrets.get("MP_LINK_PAGO", "")
+            mp_token = st.secrets.get("MP_ACCESS_TOKEN", "")
+        except Exception:
+            pass
+
+        if mp_link_directo:
+            # Link directo de MP (más simple y confiable)
+            st.markdown(f"""
+<div style="text-align:center;padding:16px;">
+  <a href="{mp_link_directo}" target="_blank"
+     style="background:#009EE3;color:#fff;padding:14px 32px;border-radius:10px;
+            font-weight:700;font-size:16px;text-decoration:none;display:inline-block;">
+    💳 Pagar con Mercado Pago — $99 MXN
+  </a>
+  <p style="color:#64748B;font-size:12px;margin-top:8px;">
+    Acepta: tarjeta, OXXO, transferencia bancaria, efectivo
+  </p>
+</div>""", unsafe_allow_html=True)
+            st.info("✅ Después de pagar, envía tu comprobante por WhatsApp para activar tu cuenta. "
+                    "Activación en menos de 24 horas.")
+
+        elif mp_token and uid:
+            if st.button("🔗 Pagar con Mercado Pago — Tarjeta / OXXO / Transferencia",
+                         type="primary", key="btn_pagar_mp", width='stretch'):
+                with st.spinner("Generando tu link de pago..."):
+                    link = _db.create_mp_preference(uid,
+                           st.session_state.get("sess_user","user")) if _DB_ON else None
+                    if link:
+                        st.markdown(f"""
+<div style="text-align:center;padding:16px;">
+  <a href="{link}" target="_blank"
+     style="background:#009EE3;color:#fff;padding:14px 32px;border-radius:10px;
+            font-weight:700;font-size:16px;text-decoration:none;">
+    Ir a Mercado Pago →
+  </a>
+</div>""", unsafe_allow_html=True)
+                    else:
+                        st.error("No se pudo generar el link. Usa la transferencia bancaria abajo.")
+        else:
+            st.warning("🔧 Configura MP_LINK_PAGO en Streamlit Secrets para habilitar el pago en línea.")
+
+        # ── CLABE manual (siempre disponible como alternativa) ─────────────────
+        with st.expander("📥 Transferencia bancaria / CLABE (alternativa)"):
+            try:
+                clabe   = st.secrets.get("CLABE_BANCARIA", "—")
+                banco   = st.secrets.get("BANCO", "—")
+                titular = st.secrets.get("TITULAR", "Dr. Josué Tapia López")
+                wa      = st.secrets.get("WHATSAPP_CONTACTO", "477XXXXXXX")
+            except Exception:
+                clabe = "—"; banco = "—"; titular = "Dr. Josué Tapia"; wa = "477XXXXXXX"
+
+            st.markdown(f"""
+| | |
+|---|---|
+| **Banco** | {banco} |
+| **Titular** | {titular} |
+| **Monto** | $99 MXN / mes |
+""")
+            st.markdown(f"**CLABE:** {clabe}",
+                        help="Copia este número para tu transferencia")
+            # Also show as selectable text field for easy copy
+            st.text_input("CLABE (toca para copiar)", value=clabe,
+                         key="clabe_display", disabled=True,
+                         label_visibility="collapsed")
+            st.info(f"📱 Envía tu comprobante a WhatsApp **{wa}** con tu usuario. "
+                    f"Activación en <24h.")
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB: ADMIN / MI CUENTA
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "admin":
+    rol_adm = _rol()
+    if rol_adm == "admin":
+        st.subheader("🛡️ Panel de Administrador")
+        _init_db()
+
+        # ── Datos según origen (DB o local) ──────────────────────────────────
+        using_db = _DB_ON and _db.db_ok()
+        if using_db:
+            all_users_db = _cached_all_users()
+        else:
+            all_users_db = []
+        users_adm = st.session_state.get("auth_users", {})
+
+        # ── Resumen ──────────────────────────────────────────────────────────
+        if using_db:
+            total  = len(all_users_db)
+            admins = sum(1 for u in all_users_db if u.get("rol") == "admin")
+            pros   = sum(1 for u in all_users_db if _db.get_effective_rol(u) == "pro")
+            becas  = sum(1 for u in all_users_db if _db.get_effective_rol(u) == "beca")
+            trials = sum(1 for u in all_users_db if _db.get_effective_rol(u) == "trial")
+            exps   = sum(1 for u in all_users_db if _db.get_effective_rol(u) in ("free","grace"))
+        else:
+            total  = len(users_adm)
+            admins = sum(1 for u in users_adm.values() if u["rol"] == "admin")
+            pros   = sum(1 for u in users_adm.values() if _get_role(u) == "pro")
+            becas  = sum(1 for u in users_adm.values() if u.get("rol") == "beca")
+            trials = sum(1 for u in users_adm.values() if _get_role(u) == "trial")
+            exps   = sum(1 for u in users_adm.values() if _get_role(u) == "expirado")
+
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        m1.metric("Total usuarios", total)
+        m2.metric("Admins", admins)
+        m3.metric("⭐ Premium", pros)
+        m4.metric("🎓 Becas", becas)
+        m5.metric("⏱️ Trial", trials)
+        m6.metric("Free/Exp", exps)
+
+        # ═══════════════════════════════════════════════════════════════════
+        # SECCIÓN BECAS
+        # ═══════════════════════════════════════════════════════════════════
+        st.divider()
+        st.markdown("### 🎓 Becas y Acceso Académico")
+        st.caption("Da acceso completo gratuito a residentes, colegas o cualquier persona que elijas.")
+
+        beca_tab1, beca_tab2 = st.tabs(["🎓 Dar beca a usuario existente",
+                                         "➕ Crear cuenta con beca"])
+
+        with beca_tab1:
+            bc1, bc2, bc3 = st.columns([2, 2, 1])
+            with bc1:
+                beca_user = st.text_input("Usuario (ya registrado)", key="beca_user",
+                                          placeholder="nombre_usuario")
+            with bc2:
+                beca_dur = st.selectbox("Duración del acceso",
+                    ["Sin límite (indefinido)", "1 mes", "3 meses",
+                     "6 meses", "1 año"], key="beca_dur")
+            with bc3:
+                st.markdown(" ")
+                st.markdown(" ")
+                dar_beca = st.button("🎓 Dar acceso", key="btn_dar_beca",
+                                     type="primary", width='stretch')
+
+            if dar_beca and beca_user:
+                meses_beca = {"Sin límite (indefinido)": 0, "1 mes": 1,
+                              "3 meses": 3, "6 meses": 6, "1 año": 12}.get(beca_dur, 0)
+
+                if using_db:
+                    target = _db.get_user(beca_user.strip().lower())
+                    if target:
+                        ok = _db.grant_beca(target["id"], meses_beca)
+                        if ok:
+                            dur_txt = "indefinido" if meses_beca == 0 else f"{beca_dur}"
+                            st.success(f"🎓 **{beca_user}** ahora tiene acceso de beca académica — {dur_txt}.")
+                            st.info("El residente verá '🎓 Beca Académica — Dr. Josué Tapia Nefrólogo' al iniciar sesión.")
+                        else:
+                            st.error("Error al otorgar beca. Verifica la conexión con Railway.")
+                    else:
+                        st.error(f"Usuario '{beca_user}' no encontrado en la base de datos.")
+                else:
+                    # Local fallback
+                    uname_b = beca_user.strip().lower()
+                    if uname_b in users_adm:
+                        users_adm[uname_b]["rol"] = "beca"
+                        if meses_beca > 0:
+                            from datetime import date, timedelta
+                            end_d = (date.today() + timedelta(days=30*meses_beca)).strftime("%Y-%m-%d")
+                            users_adm[uname_b]["sub_end"] = end_d
+                        else:
+                            users_adm[uname_b]["sub_end"] = "2099-12-31"
+                        st.success(f"🎓 Beca otorgada a **{beca_user}**.")
+                    else:
+                        st.error(f"Usuario '{beca_user}' no encontrado.")
+
+            # Mostrar becas activas
+            st.markdown("#### Becas activas")
+            if using_db:
+                becados = [u for u in all_users_db if _db.get_effective_rol(u) == "beca"]
+            else:
+                becados = [(k, v) for k, v in users_adm.items() if v.get("rol") == "beca"]
+                becados = [{"username": k, "nombre": v.get("nombre",""), "subscription_end": v.get("sub_end")} for k,v in users_adm.items() if v.get("rol") == "beca"]
+
+            if not becados:
+                st.info("No hay becas activas actualmente.")
+            else:
+                for b in becados:
+                    uname_b = b.get("username","")
+                    nombre_b = b.get("nombre","")
+                    sub_b = b.get("subscription_end")
+                    if sub_b and hasattr(sub_b, 'year') and sub_b.year >= 2099:
+                        dur_b = "Indefinida"
+                    elif sub_b:
+                        dur_b = f"Vence: {str(sub_b)[:10]}"
+                    else:
+                        dur_b = "Indefinida"
+                    col_b1, col_b2 = st.columns([3, 1])
+                    col_b1.markdown(f"🎓 **{uname_b}** — {nombre_b} · {dur_b}")
+                    with col_b2:
+                        if st.button("Revocar", key=f"rev_{uname_b}"):
+                            if using_db and b.get("id"):
+                                _db.revoke_beca(b["id"])
+                            else:
+                                if uname_b in users_adm:
+                                    users_adm[uname_b]["rol"] = "free"
+                                    users_adm[uname_b]["sub_end"] = None
+                            st.warning(f"Beca de {uname_b} revocada.")
+                            st.rerun()
+
+        with beca_tab2:
+            st.caption("Crea la cuenta del residente y dale beca en un solo paso.")
+            nc1, nc2 = st.columns(2)
+            with nc1:
+                nb_nombre = st.text_input("Nombre completo", key="nb_nombre",
+                                          placeholder="Dr. / Dra. Nombre Apellido")
+                nb_user   = st.text_input("Usuario", key="nb_user",
+                                          placeholder="nombre_usuario")
+                nb_pass   = st.text_input("Contraseña temporal", key="nb_pass",
+                                          type="password", placeholder="mínimo 6 caracteres")
+            with nc2:
+                nb_email  = st.text_input("Email (opcional)", key="nb_email")
+                nb_dur    = st.selectbox("Duración de beca",
+                    ["Sin límite (indefinido)", "1 mes", "3 meses", "6 meses", "1 año"],
+                    key="nb_dur")
+                nb_esp    = st.text_input("Especialidad", key="nb_esp",
+                                          placeholder="Residencia/Especialidad")
+
+            if st.button("➕ Crear cuenta con beca", key="btn_crear_beca",
+                         type="primary", width='stretch'):
+                if nb_nombre and nb_user and nb_pass and len(nb_pass) >= 6:
+                    meses_nb = {"Sin límite (indefinido)": 0, "1 mes": 1,
+                                "3 meses": 3, "6 meses": 6, "1 año": 12}.get(nb_dur, 0)
+                    if using_db:
+                        ok, msg = _db.create_user(nb_user.strip().lower(), nb_pass,
+                                                  nb_nombre, nb_email, trial_days=0)
+                        if ok:
+                            new_u = _db.get_user(nb_user.strip().lower())
+                            if new_u:
+                                _db.grant_beca(new_u["id"], meses_nb)
+                            st.success(f"🎓 Cuenta creada con beca para **{nb_nombre}**.")
+                            st.info(f"Usuario: `{nb_user}` · Contraseña temporal: entregada de forma segura")
+                        else:
+                            st.error(f"Error: {msg}")
+                    else:
+                        uname_nb = nb_user.strip().lower()
+                        if uname_nb in users_adm:
+                            st.error("Ese usuario ya existe.")
+                        else:
+                            users_adm[uname_nb] = {
+                                "nombre": nb_nombre, "email": nb_email,
+                                "especialidad": nb_esp,
+                                "password_hash": _hash(nb_pass),
+                                "rol": "beca", "is_active": True,
+                                "trial_end": None, "sub_end": "2099-12-31",
+                                "created": datetime.now().strftime("%Y-%m-%d"), "last_login": None
+                            }
+                            st.success(f"🎓 Cuenta con beca creada para **{nb_nombre}**.")
+                else:
+                    st.warning("Completa nombre, usuario y contraseña (mínimo 6 caracteres).")
+
+        # ═══════════════════════════════════════════════════════════════════
+        # GESTIÓN DE USUARIOS
+        # ═══════════════════════════════════════════════════════════════════
+        # ═══════════════════════════════════════════════════════════════════
+        # GESTIÓN DE USUARIOS — usa Railway DB si está conectado
+        # ═══════════════════════════════════════════════════════════════════
+        st.divider()
+        st.markdown("### 👥 Gestión de usuarios")
+
+        if using_db and all_users_db:
+            # ── Vista Railway DB (usuarios reales) ───────────────────────────
+            buscar_adm = st.text_input("🔍 Buscar usuario", key="adm_buscar",
+                                       placeholder="Nombre o username...")
+            usuarios_filtrados = [u for u in all_users_db
+                if buscar_adm.lower() in (u.get("username","") + u.get("nombre","")).lower()
+            ] if buscar_adm else all_users_db
+
+            for u in usuarios_filtrados:
+                uid_u   = u.get("id")
+                uname_u = u.get("username","")
+                rol_u   = _db.get_effective_rol(u)
+                nom_u   = u.get("nombre","—")
+                av_u    = u.get("avatar","👤")
+                dias_u  = _db.get_dias_restantes(u)
+                icon_m  = {"admin":"🛡️","pro":"⭐","beca":"🎓","trial":"⏱️","free":"👁️"}.get(rol_u,"❓")
+                dias_txt = f" · {dias_u}d" if dias_u and dias_u < 365 else ""
+
+                with st.expander(f"{av_u} {icon_m} **{uname_u}** — {nom_u} ({rol_u}{dias_txt})"):
+                    ci1, ci2 = st.columns([2,1])
+                    with ci1:
+                        st.write(f"**Email:** {u.get('email','—')}")
+                        st.write(f"**Institución:** {u.get('institucion','—')}")
+                        st.write(f"**Rol:** {rol_u}")
+                        st.write(f"**Creado:** {str(u.get('created_at',''))[:10]}")
+                        st.write(f"**Último acceso:** {str(u.get('last_login','Nunca'))[:16] if u.get('last_login') else 'Nunca'}")
+                        if u.get("subscription_end"):
+                            st.write(f"**Acceso hasta:** {str(u['subscription_end'])[:10]}")
+                    with ci2:
+                        if uname_u != st.session_state.get("sess_user"):
+                            # Dar beca
+                            if rol_u != "beca":
+                                if st.button(f"🎓 Dar beca indef.", key=f"beca_db_{uid_u}",
+                                             width='stretch'):
+                                    _db.grant_beca(uid_u, 0)
+                                    _clear_cache()
+                                    st.success(f"🎓 Beca otorgada a {uname_u}")
+                                    st.rerun()
+                            else:
+                                if st.button(f"Revocar beca", key=f"rev_db_{uid_u}",
+                                             width='stretch'):
+                                    _db.revoke_beca(uid_u)
+                                    _clear_cache()
+                                    st.warning(f"Beca revocada de {uname_u}")
+                                    st.rerun()
+                            # Activar Premium
+                            end_d = st.date_input("Premium hasta:", key=f"end_db_{uid_u}")
+                            if st.button(f"⭐ Activar Premium", key=f"pro_db_{uid_u}",
+                                         width='stretch'):
+                                import psycopg2
+                                from datetime import datetime as _dt
+                                conn_adm = _db.get_conn()
+                                if conn_adm:
+                                    try:
+                                        cur_adm = conn_adm.cursor()
+                                        cur_adm.execute("""UPDATE users SET rol='pro',
+                                            subscription_end=%s, grace_until=%s WHERE id=%s""",
+                                            (end_d, end_d, uid_u))
+                                        conn_adm.commit()
+                                        cur_adm.close()
+                                        _clear_cache()
+                                        st.success(f"✅ {uname_u} activado Premium hasta {end_d}")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Error: {e}")
+                            # Hacer admin
+                            if rol_u != "admin":
+                                if st.button(f"🛡️ Hacer admin", key=f"adm_db_{uid_u}",
+                                             width='stretch'):
+                                    conn_adm = _db.get_conn()
+                                    if conn_adm:
+                                        try:
+                                            cur_adm = conn_adm.cursor()
+                                            cur_adm.execute("UPDATE users SET rol='admin' WHERE id=%s", (uid_u,))
+                                            conn_adm.commit()
+                                            cur_adm.close()
+                                            _clear_cache()
+                                            st.success(f"🛡️ {uname_u} ahora es admin")
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.error(f"Error: {e}")
+                        else:
+                            st.caption("Tu propia cuenta")
+        else:
+            # ── Vista local (sin Railway) ─────────────────────────────────────
+            users_adm = st.session_state.get("auth_users", {})
+            for uname_l, udata_l in list(users_adm.items()):
+                rol_l = _get_role(udata_l)
+                with st.expander(f"**{uname_l}** — {udata_l.get('nombre','—')} ({rol_l})"):
+                    st.write(f"**Email:** {udata_l.get('email','—')}")
+                    st.write(f"**Rol:** {rol_l}")
+                    if uname_l != st.session_state.get("sess_user"):
+                        if st.button(f"🎓 Dar beca", key=f"beca_local_{uname_l}"):
+                            udata_l["rol"] = "beca"
+                            udata_l["sub_end"] = "2099-12-31"
+                            st.success(f"🎓 Beca otorgada a {uname_l}")
+                            st.rerun()
+
+elif nav == "micuenta":
+    # ══════════════════════════════════════════════════════════════════════════
+    # MI CUENTA — Perfil, avatar y contraseña
+    # ══════════════════════════════════════════════════════════════════════════
+    if not _is_auth():
+        st.warning("Inicia sesión para ver tu perfil.")
+    else:
+        st.subheader("👤 Mi Cuenta")
+        uid_mc  = _user_id()
+        rol_mc  = _rol()
+        db_mc   = _DB_ON and _db.db_ok() and uid_mc
+
+        AVATARES = [
+            "👨‍⚕️","👩‍⚕️","🧑‍⚕️","👨‍🔬","👩‍🔬","🧑‍💻",
+            "🫀","🩺","🔬","🏥","🩻","💊","🧬","🫁","⚕️","🩸",
+            "😊","😎","🤓","🧐","💪","🌟",
+        ]
+
+        mc1, mc2 = st.columns([1, 2])
+
+        with mc1:
+            st.markdown("### Avatar")
+            av_actual = st.session_state.get("sess_avatar", "👨‍⚕️")
+            st.markdown(f"""
+<div style="background:#1E3A8A;width:100px;height:100px;border-radius:50%;
+     display:flex;align-items:center;justify-content:center;margin:0 auto 12px auto;
+     font-size:52px;">{av_actual}</div>""", unsafe_allow_html=True)
+            st.caption("Selecciona tu avatar:")
+            av_sel = av_actual
+            cols_av = st.columns(6)
+            for i, av in enumerate(AVATARES):
+                with cols_av[i % 6]:
+                    border = "3px solid #2563EB" if av == av_actual else "1px solid #CBD5E1"
+                    if st.button(av, key=f"av_{i}",
+                                 help=f"Seleccionar {av}"):
+                        av_sel = av
+                        st.session_state["sess_avatar"] = av
+
+        with mc2:
+            st.markdown("### Información del perfil")
+            nom_mc  = st.text_input("Nombre completo",
+                                    value=st.session_state.get("sess_nombre",""), key="mc_nombre")
+            email_mc= st.text_input("Email",
+                                    value=st.session_state.get("sess_email",""), key="mc_email")
+            esp_mc  = st.text_input("Especialidad",
+                                    value=st.session_state.get("sess_especialidad",""),
+                                    key="mc_esp", placeholder="Ej: Nefrología")
+            inst_mc = st.text_input("Institución / Hospital",
+                                    value=st.session_state.get("sess_institucion",""),
+                                    key="mc_inst", placeholder="Ej: IMSS CMNO N1, León, Gto.")
+            dom_mc  = st.text_input("Domicilio del consultorio",
+                                    value=st.session_state.get("sess_domicilio",""),
+                                    key="mc_dom", placeholder="Av. Juan Alonso de Torres 1702, León, Gto.")
+            tel_mc  = st.text_input("Teléfono del consultorio",
+                                    value=st.session_state.get("sess_telefono",""),
+                                    key="mc_tel", placeholder="(477) 123-4567")
+
+            st.markdown("---")
+            st.markdown("**Credenciales COFEPRIS**")
+            st.caption("Requeridas para receta médica oficial en México")
+
+            cg1, cg2 = st.columns(2)
+            with cg1:
+                ced_gen_mc = st.text_input("Cédula Medicina General",
+                                           value=st.session_state.get("sess_ced_general",""),
+                                           key="mc_ced_gen", placeholder="Ej: 8765432")
+            with cg2:
+                univ_gen_mc = st.text_input("Universidad (título general)",
+                                            value=st.session_state.get("sess_univ_general",""),
+                                            key="mc_univ_gen", placeholder="Ej: UNAM")
+            ce1, ce2 = st.columns(2)
+            with ce1:
+                ced_esp_mc = st.text_input("Cédula de Especialidad",
+                                           value=st.session_state.get("sess_cedula",""),
+                                           key="mc_cedula", placeholder="Ej: 9940966")
+            with ce2:
+                univ_esp_mc = st.text_input("Universidad (especialidad)",
+                                            value=st.session_state.get("sess_universidad",""),
+                                            key="mc_univ", placeholder="Ej: UNAM")
+
+            cc1, cc2 = st.columns(2)
+            with cc1:
+                consejo_mc = st.text_input("Consejo Mexicano de certificación",
+                                           value=st.session_state.get("sess_consejo_nombre",""),
+                                           key="mc_consejo", placeholder="Ej: Consejo Mexicano de Nefrología")
+            with cc2:
+                consejo_num_mc = st.text_input("Número de certificación",
+                                               value=st.session_state.get("sess_consejo_numero",""),
+                                               key="mc_consejo_num", placeholder="Ej: 1267")
+
+            if st.button("💾 Guardar cambios", type="primary", key="btn_mc_save",
+                         width='stretch'):
+                av_nuevo = st.session_state.get("sess_avatar", av_actual)
+                if db_mc:
+                    try:
+                        ok = _db.update_user_profile(
+                            uid_mc, nom_mc, email_mc, esp_mc, inst_mc, av_nuevo,
+                            cedula     = ced_esp_mc,
+                            universidad= univ_esp_mc,
+                            domicilio  = dom_mc,
+                            telefono   = tel_mc,
+                            cedula_general        = ced_gen_mc,
+                            universidad_general   = univ_gen_mc,
+                            cedula_especialidad   = ced_esp_mc,
+                            universidad_especialidad = univ_esp_mc,
+                            consejo_nombre = consejo_mc,
+                            consejo_numero = consejo_num_mc,
+                        )
+                    except TypeError:
+                        ok = _db.update_user_profile(uid_mc, nom_mc, email_mc,
+                                                     esp_mc, inst_mc, av_nuevo)
+                    if ok:
+                        st.session_state.update({
+                            "sess_nombre":         nom_mc,
+                            "sess_email":          email_mc,
+                            "sess_institucion":    inst_mc,
+                            "sess_especialidad":   esp_mc,
+                            "sess_cedula":         ced_esp_mc,
+                            "sess_universidad":    univ_esp_mc,
+                            "sess_domicilio":      dom_mc,
+                            "sess_telefono":       tel_mc,
+                            "sess_ced_general":    ced_gen_mc,
+                            "sess_univ_general":   univ_gen_mc,
+                            "sess_consejo_nombre": consejo_mc,
+                            "sess_consejo_numero": consejo_num_mc,
+                        })
+                        _clear_cache()
+                        st.success("✅ Perfil actualizado.")
+                    else:
+                        st.error("Error al guardar. Verifica conexión con Railway.")
+                else:
+                    st.session_state.update({
+                        "sess_nombre": nom_mc, "sess_email": email_mc,
+                        "sess_institucion": inst_mc, "sess_especialidad": esp_mc,
+                    })
+                    st.success("✅ Perfil actualizado (sesión actual).")
+        # ── MIS INSTITUCIONES ─────────────────────────────────────────────────
+        st.divider()
+        st.markdown("### 🏥 Mis Instituciones")
+        st.caption("Las instituciones configuradas aquí aparecerán en el selector de la nota de evolución.")
+
+        # Cargar instituciones guardadas (desde session_state o DB)
+        if "mc_instituciones" not in st.session_state:
+            _inst_raw = st.session_state.get("sess_instituciones", "[]")
+            try:
+                import json as _json_inst
+                st.session_state["mc_instituciones"] = _json_inst.loads(_inst_raw) if isinstance(_inst_raw, str) else (_inst_raw or [])
+            except Exception:
+                st.session_state["mc_instituciones"] = []
+
+        _mis_inst = st.session_state["mc_instituciones"]
+
+        # Mostrar instituciones actuales
+        if _mis_inst:
+            for _ii, _inst_i in enumerate(_mis_inst):
+                _ic1, _ic2, _ic3 = st.columns([3, 4, 1])
+                _ic1.markdown(f"**{_inst_i.get('nombre','')}**")
+                _ic2.caption(_inst_i.get("direccion",""))
+                if _ic3.button("🗑️", key=f"del_inst_{_ii}", help="Eliminar"):
+                    st.session_state["mc_instituciones"].pop(_ii)
+                    st.rerun()
+        else:
+            st.info("Sin instituciones configuradas. Agrega la(s) institución(es) donde trabajas.")
+
+        # Agregar nueva institución
+        with st.expander("➕ Agregar institución"):
+            _ai_c1, _ai_c2 = st.columns(2)
+            _ai_nombre = _ai_c1.text_input("Nombre de la institución",
+                placeholder="Ej: Hospital General de León", key="mc_ai_nombre")
+            _ai_dir    = _ai_c2.text_input("Dirección",
+                placeholder="Ej: Blvd. Milenio 1002, León, Gto.", key="mc_ai_dir")
+            if st.button("✅ Agregar", key="mc_ai_add"):
+                if _ai_nombre.strip():
+                    st.session_state["mc_instituciones"].append({
+                        "nombre": _ai_nombre.strip(),
+                        "direccion": _ai_dir.strip(),
+                    })
+                    # Guardar en sess y DB
+                    import json as _json_inst2
+                    _inst_json_str = _json_inst2.dumps(st.session_state["mc_instituciones"],
+                                                       ensure_ascii=False)
+                    st.session_state["sess_instituciones"] = _inst_json_str
+                    if db_mc:
+                        try:
+                            _db.update_user_profile(uid_mc, {
+                                "instituciones_json": _inst_json_str
+                            })
+                        except Exception:
+                            pass  # Guardar en session_state es suficiente si DB no tiene la columna
+                    st.success(f"✅ Institución '{_ai_nombre}' agregada.")
+                    st.rerun()
+                else:
+                    st.warning("El nombre es obligatorio.")
+
+        # Guardar lista actual en DB
+        if st.button("💾 Guardar mis instituciones", key="mc_save_inst"):
+            import json as _json_inst3
+            _inst_json_str2 = _json_inst3.dumps(_mis_inst, ensure_ascii=False)
+            st.session_state["sess_instituciones"] = _inst_json_str2
+            if db_mc:
+                try:
+                    _db.update_user_profile(uid_mc, {"instituciones_json": _inst_json_str2})
+                    st.success("✅ Instituciones guardadas.")
+                except Exception as _e_inst:
+                    st.success("✅ Guardadas en sesión actual.")
+            else:
+                st.success("✅ Guardadas en sesión actual.")
+
+        st.divider()
+        st.markdown("### 🔒 Cambiar contraseña")
+        if db_mc:
+            cp1, cp2, cp3 = st.columns(3)
+            with cp1:
+                pwd_old = st.text_input("Contraseña actual", type="password", key="mc_old_pwd")
+            with cp2:
+                pwd_new = st.text_input("Nueva contraseña (mín. 6 car.)", type="password", key="mc_new_pwd")
+            with cp3:
+                pwd_conf = st.text_input("Confirmar nueva", type="password", key="mc_conf_pwd")
+            if st.button("🔒 Cambiar contraseña", key="btn_mc_pwd"):
+                if not pwd_old or not pwd_new:
+                    st.warning("Completa todos los campos.")
+                elif len(pwd_new) < 6:
+                    st.warning("La nueva contraseña debe tener al menos 6 caracteres.")
+                elif pwd_new != pwd_conf:
+                    st.warning("Las contraseñas no coinciden.")
+                else:
+                    import bcrypt as _bcrypt
+                    new_hash = _bcrypt.hashpw(pwd_new.encode(), _bcrypt.gensalt()).decode()
+                    ok = _db.change_password(uid_mc, pwd_old, new_hash)
+                    if ok:
+                        st.success("✅ Contraseña actualizada correctamente.")
+                    else:
+                        st.error("Contraseña actual incorrecta.")
+        else:
+            st.info("Conecta Railway para cambiar tu contraseña.")
+
+        st.divider()
+        st.markdown("### 🖼️ Logo / Sello del consultorio")
+        st.caption("Se incluirá en la receta médica. JPG o PNG · Máximo 2 MB · Recomendado: 300x300 px")
+        logo_file = st.file_uploader("Subir logo", type=["jpg","jpeg","png"],
+                                     key="mc_logo_upload")
+        if logo_file:
+            if logo_file.size > 2_097_152:
+                st.error("El archivo supera 2 MB. Sube una imagen más pequeña.")
+            else:
+                import base64
+                logo_b64 = base64.b64encode(logo_file.read()).decode()
+                st.session_state["sess_logo_b64"]  = logo_b64
+                st.session_state["sess_logo_mime"] = logo_file.type
+                # Persist to DB
+                if _DB_ON and _db.db_ok():
+                    try:
+                        _db.save_user_logo(_user_id(), logo_b64)
+                    except Exception:
+                        pass
+                st.success("✅ Logo cargado — aparecerá en las recetas.")
+        if st.session_state.get("sess_logo_b64"):
+            import base64
+            logo_data = base64.b64decode(st.session_state["sess_logo_b64"])
+            st.image(logo_data, width=120, caption="Logo actual")
+            if st.button("🗑️ Quitar logo", key="btn_rm_logo"):
+                st.session_state.pop("sess_logo_b64", None)
+                st.session_state.pop("sess_logo_mime", None)
+                st.rerun()
+
+        st.divider()
+        st.markdown("### 📊 Información de cuenta")
+        r1, r2, r3 = st.columns(3)
+        r1.metric("Rol actual", rol_mc)
+        r2.metric("Usuario", st.session_state.get("sess_user","—"))
+        dias_mc = st.session_state.get("sess_dias", 0)
+        r3.metric("Días restantes",
+                  "Indefinido" if rol_mc in ("admin","beca") and dias_mc > 365*5
+                  else str(dias_mc) if dias_mc else "—")
+
+        st.divider()
+        st.markdown("### ➕ Crear usuario manualmente")
+        nc1, nc2 = st.columns(2)
+        with nc1:
+            new_u = st.text_input("Usuario", key="new_u")
+            new_nombre = st.text_input("Nombre completo", key="new_nombre")
+            new_email = st.text_input("Email", key="new_email")
+        with nc2:
+            new_esp = st.selectbox("Especialidad", ["Nefrología", "Medicina Crítica",
+                "Medicina Interna", "Otra"], key="new_esp")
+            new_rol = st.selectbox("Rol inicial", ["trial", "beca", "pro"], key="new_rol",
+                                help="Rol 'admin' solo puede asignarse directamente en DB por seguridad.")
+            new_pass = st.text_input("Contraseña temporal", type="password", key="new_pass")
+        if st.button("Crear usuario", key="btn_create_user", type="primary"):
+            if new_u and new_pass and new_nombre:
+                ok, msg = _do_register(new_u, new_pass, new_nombre, new_email, new_esp)
+                if ok:
+                    if new_rol != "trial":
+                        users_adm[new_u.lower()]["rol"] = new_rol
+                    st.success(f"✅ Usuario {new_u} creado como {new_rol}.")
+                else:
+                    st.error(msg)
+            else:
+                st.error("Completa usuario, nombre y contraseña.")
+
+        st.divider()
+        st.markdown("### 🔑 Cambiar mi contraseña")
+        adm_uname = st.session_state.get("sess_user", "")
+        adm_data = st.session_state.get("auth_users", {}).get(adm_uname, {})
+        acp1, acp2 = st.columns(2)
+        with acp1:
+            old_pa = st.text_input("Contraseña actual", type="password", key="adm_old")
+            new_pa1 = st.text_input("Nueva contraseña (mín. 6 caracteres)", type="password", key="adm_new1")
+            new_pa2 = st.text_input("Confirmar nueva contraseña", type="password", key="adm_new2")
+            if st.button("✅ Actualizar contraseña", key="btn_adm_pass", type="primary"):
+                if _verify(old_pa, adm_data.get("password_hash", "")):
+                    if new_pa1 == new_pa2 and len(new_pa1) >= 6:
+                        adm_data["password_hash"] = _hash(new_pa1)
+                        st.success("✅ Contraseña actualizada correctamente.")
+                    else:
+                        st.error("Las contraseñas no coinciden o tienen menos de 6 caracteres.")
+                else:
+                    st.error("Contraseña actual incorrecta.")
+        with acp2:
+            st.info("💡 **Recuerda:** Si cambias tu contraseña aquí, actualiza también "
+                    "`ADMIN_PASSWORD` en **Streamlit Secrets** para que el cambio persista "
+                    "después de un redeploy.")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 12: REFERENCIAS
+# ══════════════════════════════════════════════════════════════════════════════
+elif nav == "refs":
+    st.subheader("Referencias — filtradas por contexto clínico")
+    escenarios_sel_ref = st.session_state.get("sb_escenarios", [])
+    anticoag_ref = st.session_state.get("anticoagulacion_tipo", "—")
+
+    colf1, colf2 = st.columns([2, 1])
+    query_ref = colf1.text_input("Buscar en títulos/resumen", "")
+    solo_ctx = colf2.checkbox("Solo relevantes al contexto actual", value=True)
+
+    refs = filtrar_refs_por_contexto(escenarios_sel_ref, anticoag_ref) if solo_ctx else BIBLIO
+    if query_ref.strip():
+        ql = query_ref.lower()
+        refs = [r for r in refs if ql in r["title"].lower() or ql in r["blurb"].lower()]
+
+    if not refs:
+        st.info("No hay referencias que coincidan. Amplía la búsqueda.")
+    else:
+        for i, r in enumerate(refs, 1):
+            st.markdown(f"**[{i}] {r['title']}**  \n"
+                        f"*{r['where']}* ({r['yr']}) — {r['blurb']}  \n"
+                        f"[🔗 Ver fuente]({r['url']})")
+            st.markdown("---")
+    st.caption("Las referencias se actualizan al cambiar escenarios o anticoagulación.")
+
+elif nav == "guia":
+    st.title("🎓 Guía Clínica — Marco Teórico y Parámetros")
+    st.caption("Explica el porqué de cada parámetro en la app. Organizado por módulo.")
+
+    tema = st.selectbox("📂 Seleccionar tema", [
+        "🩺 Prescripción CRRT — todos los parámetros",
+        "🧪 Citrato RCA — mecanismo y cálculos",
+        "⚖️ Fracción de filtración (FF)",
+        "💧 Balance hídrico en CRRT",
+        "💊 Anticoagulación — HNF vs Citrato",
+        "📊 Dosis CRRT — evidencia KDIGO",
+        "🔬 Monitoreo iCa en Citrato RCA",
+        "🧂 Electrolitos en CRRT",
+        "🏥 Indicaciones de CRRT / TCRR",
+        "🔴 Acumulación de citrato — diagnóstico y manejo",
+    ], key="guia_tema")
+
+    st.markdown("---")
+
+    if "Prescripción CRRT" in tema:
+        st.markdown("## 🩺 Prescripción CRRT — Parámetros y razonamiento")
+        tabs = st.tabs(["Qb (Flujo sanguíneo)", "Dosis mL/kg/hr", "Modalidad", "UF neta", "Hematocrito"])
+
+        with tabs[0]:
+            st.markdown("""
+### Qb — Flujo sanguíneo (mL/min)
+**¿Qué es?**
+El volumen de sangre que pasa por el circuito extracorpóreo por minuto.
+
+**¿Por qué importa?**
+- Determina cuánta sangre se "procesa" por unidad de tiempo
+- Afecta directamente la **Fracción de Filtración (FF)**
+- Con citrato RCA: Qb determina la tasa de citrato (Qs × 10 con Prismocitrate 18/0)
+
+**Rango típico:** 150–250 mL/min (adulto)
+- **<100 mL/min:** riesgo de coagulación del circuito por bajo flujo
+- **>250 mL/min:** mayor trauma a glóbulos rojos; raro que aporte beneficio adicional
+
+**Evidencia:**
+KDIGO 2012 no especifica Qb óptimo. El consenso ADQI recomienda ≥150 mL/min para CVVHDF.
+En contexto de citrato: Qb más alto = más citrato = más carga hepática para metabolizarlo.
+
+**Regla práctica:** 150–200 mL/min para la mayoría de pacientes adultos.
+            """)
+
+        with tabs[1]:
+            st.markdown("""
+### Dosis CRRT — mL/kg/hr
+**¿Qué es?**
+El volumen de efluente (ultrafiltrado + dializante) generado por kilogramo de peso por hora.
+Es la medida estándar de "intensidad" de la terapia.
+
+**¿Por qué importa?**
+- Determina la **depuración de solutos** (urea, creatinina, electrolitos, mediadores inflamatorios)
+- Más dosis ≠ necesariamente mejor resultado (ver ATN y RENAL trials)
+
+**Evidencia clave:**
+| Estudio | Dosis | Resultado |
+|---|---|---|
+| **ATN Trial** (VA/NIH, 2008) | 20 vs 35 mL/kg/hr | Sin diferencia en mortalidad |
+| **RENAL Trial** (ANZICS, 2009) | 25 vs 40 mL/kg/hr | Sin diferencia en mortalidad |
+| **KDIGO 2012** | ≥20-25 mL/kg/hr | Recomendación clase 1A |
+
+**Rango recomendado:** 20–25 mL/kg/hr mantenimiento
+- **Inicio/sepsis:** puede usarse 25–30 mL/kg/hr las primeras 24-48h
+- **>35 mL/kg/hr:** sin beneficio demostrado; aumenta complicaciones
+
+**Clave:** La dosis **prescrita** vs **entregada** difiere ~15-20% por interrupciones.
+Prescribir 25-30 para entregar realmente ~20-25 mL/kg/hr.
+            """)
+
+        with tabs[2]:
+            st.markdown("""
+### Modalidad — CVVH / CVVHD / CVVHDF
+**¿Qué diferencia hay?**
+
+| Modalidad | Mecanismo principal | Cuándo usarla |
+|---|---|---|
+| **CVVH** | Convección (ultrafiltración) | Mediadores inflamatorios grandes, sobrecarga hídrica |
+| **CVVHD** | Difusión (dializante) | Depuración rápida K, urea, amonio |
+| **CVVHDF** | Convección + difusión | La mayoría de pacientes; más versátil |
+
+**Pre vs postdilución en CVVH/CVVHDF:**
+- **Predilución (PRE):** solución va ANTES del filtro → diluye sangre → protege filtro (↓FF)
+- **Postdilución (POST):** solución va DESPUÉS → mayor depuración por aclaramiento
+- **Con citrato:** citrato ya actúa como predilución PRE → reduce necesidad de solución PRE adicional
+
+**Evidencia:** No hay diferencia clara en outcomes entre modalidades.
+CVVHDF es la más usada en UCI por versatilidad.
+            """)
+
+        with tabs[3]:
+            st.markdown("""
+### UF neta — Retiro de líquido al paciente (mL/hr)
+**¿Qué es?**
+El volumen neto que se elimina del paciente (no del circuito). Es la diferencia entre
+todo lo que sale (efluente) y todo lo que entra (soluciones de reposición + citrato + calcio).
+
+**¿Por qué importa?**
+La sobrecarga hídrica (>10% del peso corporal) en AKI se asocia a:
+- Mayor mortalidad (PICARD study, FACTT trial)
+- Peor función pulmonar (ARDS)
+- Retraso en recuperación renal
+
+**Cómo elegir:**
+| Situación clínica | UF sugerida |
+|---|---|
+| PAM <60 o vasopresor aumentando | 0–50 mL/hr (mínima) |
+| PAM estable (65-70) + lactato en descenso | 100–200 mL/hr |
+| Sobrecarga hídrica severa + PAM estable | 200–300 mL/hr |
+| Anasarca + buena tolerancia hemodinámica | Hasta 500 mL/hr |
+
+**Regla:** La tolerancia a la UF depende más de la **estabilidad hemodinámica** que de la volemia.
+            """)
+
+        with tabs[4]:
+            st.markdown("""
+### Hematocrito (fracción)
+**¿Por qué entra en el cálculo?**
+La CRRT filtra el plasma, no los elementos formes. El **flujo de plasma** (Qp) se calcula como:
+
+```
+Qp = Qb × (1 − Hto)
+```
+
+**Efecto en la FF:**
+- Hto alto → menos plasma disponible → FF más alta para el mismo efluente
+- Hto bajo → más plasma → FF más baja → circuito más seguro
+
+**Implicación práctica:**
+Un paciente con Hto 40% (0.40) y Qb 200 mL/min tiene:
+- Qp = 200 × (1 − 0.40) = 120 mL/min de plasma
+
+El mismo Qb con Hto 25%:
+- Qp = 200 × 0.75 = 150 mL/min → circuito más seguro para el mismo efluente
+
+**Rango habitual en UCI:** 0.25–0.35 (pacientes críticos con anemia)
+            """)
+
+    elif "Citrato RCA" in tema:
+        st.markdown("## 🧪 Citrato RCA — Mecanismo y Parámetros")
+        tabs = st.tabs(["Mecanismo de acción", "Concentración solución", "Target en sangre", "Cálculo de tasa", "Calcio reposición"])
+
+        with tabs[0]:
+            st.markdown("""
+### ¿Cómo funciona el citrato como anticoagulante?
+
+**Mecanismo:**
+El citrato **quela (atrapa) el calcio ionizado (Ca²⁺)** en el circuito extracorpóreo.
+Como la coagulación depende del calcio en múltiples pasos (factores II, VII, IX, X, proteína C),
+sin Ca²⁺ **el circuito no coagula**.
+
+```
+Circuito:  Sangre + Citrato → iCa²⁺ 0.25–0.35 → NO coagula en el filtro
+Paciente:  Citrato llega al hígado → metabolizado → HCO₃⁻ (bicarbonato)
+           iCa sistémico se restaura con infusión de Ca post-filtro
+```
+
+**Ventajas vs heparina (HNF):**
+- Sin anticoagulación sistémica → menos sangrado
+- Mayor vida útil del circuito
+- Sin riesgo de HIT (trombocitopenia inducida por heparina)
+- Primera línea según KDIGO 2012 si no hay contraindicaciones
+
+**Contraindicaciones:**
+- Insuficiencia hepática grave (no metaboliza citrato → acumulación)
+- Alcalosis metabólica severa (citrato → HCO₃⁻ → empeora)
+- Shock severo con bajo gasto hepático
+- No es contraindicación: insuficiencia hepática leve-moderada (con monitoreo)
+            """)
+
+        with tabs[1]:
+            st.markdown("""
+### Soluciones de citrato — ¿cuál usar?
+
+| Solución | Concentración | Regla rápida | Sodio aportado |
+|---|---|---|---|
+| **Prismocitrate 18/0** | 18 mmol/L | Tasa = Qb × **10** | ~100 mEq/L |
+| **Prismocitrate 10/2** | 10 mmol/L | Tasa = Qb × **18** | ~100 mEq/L |
+| **Citrato trisódico 4%** | 136 mmol/L | Tasa = Qb × **1.3** | 408 mEq/L ⚠️ |
+| **ACD-A** | 113 mmol/L | Tasa = Qb × **1.6** | — |
+
+**¿Por qué Prismocitrate 18/0?**
+- Solución lista para usar (no requiere preparación)
+- Concentración baja → flujos altos → mejor predilución → protege el filtro
+- Na similar al plasma → no altera natremia
+- La más usada en protocolos modernos de CKRT
+
+**⚠️ Citrato 4%:** Aporta mucho sodio (408 mEq/L) → vigilar hipernatremia.
+Requiere ajuste del sodio en la solución de reposición y dializante.
+
+**La fórmula universal:**
+```
+Tasa citrato (mL/hr) = Qb (mL/min) × 60 × Target (mmol/L) ÷ Concentración (mmol/L)
+```
+Para Prismocitrate 18 y target 3 mmol/L:
+= Qb × 60 × 3 ÷ 18 = Qb × 10
+            """)
+
+        with tabs[2]:
+            st.markdown("""
+### Target de citrato en sangre — ¿por qué 3 mmol/L?
+
+**El target NO se mide directamente en sangre.**
+Lo que se mide es el **iCa post-filtro** (proxy de la anticoagulación del circuito).
+
+**Relación:**
+```
+Target citrato 3 mmol/L en sangre → iCa post-filtro 0.25–0.35 mmol/L
+```
+
+**¿Por qué 2.5–4 mmol/L?**
+- <2.5 mmol/L: anticoagulación insuficiente → coagulación del filtro
+- 3 mmol/L: dosis estándar de inicio; balance eficacia/seguridad óptimo
+- >4 mmol/L: riesgo de acumulación sistémica si hay disfunción hepática
+
+**Ajuste por iCa post-filtro:**
+| iCa post-filtro | Interpretación | Acción |
+|---|---|---|
+| <0.25 mmol/L | Exceso de citrato | ↓ tasa 10–20% |
+| 0.25–0.35 mmol/L | ✅ Óptimo | Mantener |
+| 0.35–0.45 mmol/L | Anticoagulación límite | ↑ tasa 10% |
+| >0.45 mmol/L | Anticoagulación insuficiente | ↑ tasa 20% + revisar flujos |
+
+**Frecuencia de medición:** cada 6h las primeras 24h → cada 12–24h si estable.
+            """)
+
+        with tabs[3]:
+            st.markdown("""
+### Cálculo de la tasa de citrato — paso a paso
+
+**Fórmula:**
+```
+Tasa citrato (mL/hr) = Qb (mL/min) × 60 min/hr × Target (mmol/L sangre)
+                       ────────────────────────────────────────────────────
+                       Concentración de la solución (mmol/L)
+```
+
+**Ejemplo con tu caso de guardia:**
+- Qb = 120 mL/min
+- Target = 3 mmol/L
+- Solución = Prismocitrate 18/0 → 18 mmol/L
+
+```
+= 120 × 60 × 3 ÷ 18
+= 7,200 × 3 ÷ 18
+= 21,600 ÷ 18
+= 1,200 mL/hr ✅
+```
+
+**Regla de cabecera (solo para Prismocitrate 18/0 + target 3):**
+```
+Tasa (mL/hr) = Qb (mL/min) × 10
+```
+→ 120 × 10 = **1,200 mL/hr**
+
+**¿Por qué el citrato va PRE-filtro?**
+Porque necesita quelar el Ca²⁺ ANTES de que la sangre llegue al filtro.
+Si fuera post-filtro, la sangre ya habría coagulado dentro.
+
+El citrato PRE-filtro actúa como **predilución simultánea**: diluye la sangre
+y anticoagula en un solo flujo → doble función → protege el filtro.
+            """)
+
+        with tabs[4]:
+            st.markdown("""
+### Calcio post-filtro — ¿cuánto reponer?
+
+**¿Por qué reponer calcio?**
+El citrato quelado pasa parcialmente al paciente (el resto es eliminado en el efluente).
+El hígado metaboliza el citrato → HCO₃⁻, pero libera el Ca²⁺ de vuelta.
+Sin embargo, hay pérdida neta de Ca²⁺ que debe reponerse para mantener iCa sistémico normal.
+
+**Fórmula estándar:**
+```
+Ca a reponer (mmol/hr) = Citrato infundido (mmol/hr) × 0.5
+```
+El factor 0.5 representa que aproximadamente el 50% del calcio quelado
+llega al paciente y necesita ser repuesto (el resto se elimina en el efluente).
+
+**Ejemplo:**
+- Citrato infundido = 1,200 mL/hr × 18 mmol/L ÷ 1,000 = 21.6 mmol/hr
+- Ca a reponer = 21.6 × 0.5 = **10.8 mmol/hr**
+- Gluconato Ca 10% = 0.225 mmol/mL
+- Tasa = 10.8 ÷ 0.225 = **~48 mL/hr**
+
+**Ajuste por iCa sistémico:**
+| iCa sistémico | Acción |
+|---|---|
+| <1.0 mmol/L | ↑ infusión de Ca post-filtro |
+| 1.0–1.35 mmol/L | ✅ Mantener |
+| >1.35 mmol/L | ↓ infusión de Ca post-filtro |
+
+**⚠️ CRÍTICO:** El calcio va por una línea **sistémica completamente separada**.
+NUNCA en la misma línea del citrato → precipitación → pérdida del circuito.
+            """)
+
+    elif "Fracción de filtración" in tema:
+        st.markdown("""
+## ⚖️ Fracción de Filtración (FF)
+
+### Definición
+```
+FF = Efluente total / Flujo de plasma = Qe / Qp
+```
+Con predilución (pre-filter replacement):
+```
+FF = Qe / (Qp + Qr_pre)
+```
+
+### ¿Por qué <25–30%?
+Cuando FF es alta, la sangre se **hemoconcentra** dentro del filtro:
+- Proteínas y células se concentran en la salida del filtro
+- Viscosidad aumenta → flujo se vuelve laminar → trombosis del filtro
+- Vida útil del circuito cae de 72h a <24h
+
+**Analogía:** Es como exprimir un limón. Si exprimes demasiado (FF alta),
+el residuo se compacta y obstruye. Si exprimes moderadamente (FF baja),
+el flujo se mantiene fluido.
+
+### Cómo reducir la FF
+| Estrategia | Efecto |
+|---|---|
+| ↑ Qb (flujo sanguíneo) | ↑ denominador → ↓ FF |
+| ↑ Qr_pre (predilución) | ↑ denominador → ↓ FF |
+| ↓ Qe (efluente / dosis) | ↓ numerador → ↓ FF |
+| ↓ UF neta | ↓ numerador → ↓ FF |
+| Citrato como predilución | ↑ denominador → ↓ FF |
+
+### FF con citrato RCA
+El citrato va PRE-filtro y actúa como predilución:
+```
+FF_efectiva = Qe / (Qp + Qr_pre_solución + Qcitrato)
+```
+→ El citrato **reduce** la FF efectiva: doble ventaja (anticoagula + protege filtro)
+        """)
+
+    elif "Balance hídrico" in tema:
+        st.markdown("""
+## 💧 Balance hídrico en CRRT
+
+### ¿Qué es la UF neta?
+UF neta = Volumen que **realmente se retira al paciente**.
+No confundir con el efluente total (que incluye la reposición).
+
+```
+UF neta = Efluente total − Soluciones de reposición − Citrato − Calcio
+```
+
+### Evidencia de daño por sobrecarga hídrica
+- **Sobrecarga >10% peso corporal:** mortalidad x2 en AKI (PICARD)
+- **Cada 1% aumento de sobrecarga:** +3% mortalidad en UCI pediátrica
+- **FACTT trial:** balance neutro/negativo mejor que balance positivo en ARDS + AKI
+
+### Guía de descongestión progresiva
+```
+Día 1-2 (fase resucitación): UF mínima o 0. Prioridad: estabilidad HD
+Día 3-5 (fase optimización): UF 100-200 mL/hr si PAM >65 + lactato ↓
+Día 5+ (fase desescalada): UF agresiva si tolerancia HD. Meta: -1 a -2 L/día
+```
+
+### ¿Cuándo NO retirar líquido?
+- PAM <60 mmHg
+- Vasopresor en aumento (norepinefrina >0.3 mcg/kg/min)
+- Lactato en ascenso
+- Evidencia de compromiso de perfusión de órgano
+        """)
+
+    elif "Anticoagulación" in tema:
+        st.markdown("""
+## 💊 Anticoagulación — HNF vs Citrato
+
+### Comparación directa
+
+| Parámetro | HNF | Citrato RCA |
+|---|---|---|
+| Mecanismo | Inhibe trombina sistémica | Quela Ca²⁺ en circuito |
+| Efecto sistémico | Sí → riesgo sangrado | No → anticoagulación local |
+| Monitoreo | aPTT cada 4–6h | iCa post-filtro cada 6–12h |
+| Contraindicación | Sangrado activo, HIT | Insuf. hepática grave, alcalosis |
+| Vida del circuito | 24–48h | 48–72h (mayor) |
+| Recomendación KDIGO | 2ª línea | **1ª línea** si no contraindicado |
+
+### ¿Cuándo usar HNF?
+- Contraindicación de citrato
+- Sin disponibilidad de citrato
+- Necesidad de anticoagulación sistémica simultánea (TEP, FA)
+- Shock hepático grave
+
+### Dosis HNF en CRRT
+- Inicio: 5–10 UI/kg/hr (sin bolo en críticos)
+- Objetivo aPTT: 45–70 s (1.5–2× normal)
+- Ajustar cada 4–6h hasta aPTT estable → cada 12h
+        """)
+
+    elif "Dosis CRRT" in tema:
+        st.markdown("""
+## 📊 Dosis CRRT — Evidencia y recomendaciones
+
+### Los dos grandes estudios
+**ATN Trial (VA/NIH, NEJM 2008)**
+- 1,124 pacientes, UCI, AKI
+- Dosis intensiva: 35 mL/kg/hr vs convencional: 20 mL/kg/hr
+- **Resultado: Sin diferencia** en mortalidad (53.6% vs 51.5%, p=0.47)
+
+**RENAL Trial (ANZICS, NEJM 2009)**
+- 1,508 pacientes, AUS/NZ
+- Dosis alta: 40 mL/kg/hr vs dosis menor: 25 mL/kg/hr
+- **Resultado: Sin diferencia** en mortalidad (44.7% vs 44.7%)
+
+### ¿Por qué entonces no más dosis?
+La dosis entregada siempre es menor que la prescrita (interrupciones, coágulos, cambios de filtro).
+Con 35 prescrito → se entrega ~27–28 mL/kg/hr real.
+Con 25 prescrito → se entrega ~20 mL/kg/hr real.
+
+**KDIGO 2012 (grado 1A):** ≥20–25 mL/kg/hr de dosis entregada.
+Prescribir 25–30 mL/kg/hr para asegurar 20–25 reales.
+
+### Situaciones que requieren dosis más alta
+- Hiperamonemia (IEM, falla hepática aguda): 50–70+ mL/kg/hr
+- Rabdomiólisis severa: 35–40 mL/kg/hr
+- Síndrome de liberación de citocinas: 35 mL/kg/hr puede considerarse
+        """)
+
+    elif "Monitoreo iCa" in tema:
+        st.markdown("""
+## 🔬 Monitoreo iCa en Citrato RCA
+
+### Dos sitios, dos objetivos distintos
+
+| Muestra | Objetivo | Qué indica |
+|---|---|---|
+| **POST-FILTRO** (línea venosa del circuito) | **0.25–0.35 mmol/L** | Anticoagulación del circuito |
+| **Sistémico** (gasometría arterial/venosa periférica) | **1.0–1.35 mmol/L** | Calcio del paciente |
+
+### Protocolo de medición
+```
+Primeras 24h: cada 6 horas
+24h–72h estable: cada 12 horas
+>72h estable: cada 24 horas
+```
+
+### Algoritmo de ajuste (simplificado)
+```
+iCa post-filtro < 0.25 → ↓ Citrato 10–20% (demasiada anticoagulación)
+iCa post-filtro 0.25–0.35 → ✅ Sin cambios
+iCa post-filtro > 0.35 → ↑ Citrato 10–20% (anticoagulación insuficiente)
+
+iCa sistémico < 1.0 → ↑ Gluconato Ca post-filtro
+iCa sistémico 1.0–1.35 → ✅ Sin cambios
+iCa sistémico > 1.35 → ↓ Gluconato Ca post-filtro
+```
+
+### ⚠️ Acumulación de citrato — detectarla
+```
+Ratio = Ca total sérico / iCa sistémico
+```
+- Normal: <2.5
+- >2.5: ACUMULACIÓN → citrato no se está metabolizando
+
+**Causas:**
+- Insuficiencia hepática (hepatocitos no metabolizan citrato)
+- Bajo gasto cardíaco (hipoperfusión hepática)
+- Dosis de citrato excesiva
+
+**Manejo:**
+1. Reducir tasa de citrato 30–50%
+2. Si grave: cambiar a HNF
+3. Investigar causa (función hepática, gasto cardíaco)
+        """)
+
+    elif "Acumulación de citrato" in tema:
+        st.markdown("""
+## 🔴 Acumulación de citrato — Diagnóstico y manejo
+
+### ¿Qué es?
+El hígado metaboliza el citrato a HCO₃⁻ liberando el Ca²⁺. Si el hígado no puede
+hacerlo (falla hepática, bajo gasto cardíaco), el citrato se acumula sistémicamente.
+
+### Tríada diagnóstica
+```
+1. Ratio Ca total / iCa sistémico > 2.5
+2. Alcalosis metabólica inexplicable (citrato → HCO₃⁻ en exceso)
+3. Hipocalcemia sistémica (iCa sistémico <1.0 a pesar de ↑ infusión Ca)
+```
+
+### Fisiopatología
+```
+Citrato normal → Hígado → HCO₃⁻ + Ca²⁺ libre → iCa sistémico normal
+Citrato acumulado → Quela Ca sistémico → iCa sistémico ↓ → hipocalcemia
+                  → Ca total SUBE (Ca-citrato unido) → ratio Ca/iCa SUBE
+```
+
+**Analogía:** Es como tener dinero bloqueado en una cuenta (Ca unido a citrato)
+vs dinero disponible (Ca iónico libre). El ratio te dice si hay mucho bloqueado.
+
+### Manejo
+| Severidad | Acción |
+|---|---|
+| Ratio 2.5–3.0 | ↓ Tasa citrato 20–30%, vigilar estrechamente |
+| Ratio >3.0 + síntomas | Cambiar a HNF de inmediato |
+| Falla hepática aguda | Citrato contraindicado desde inicio |
+
+### Prevención
+- No usar citrato en CHB aguda, síndrome de Budd-Chiari agudo, shock hepático
+- Monitorear ratio con cada gasometría en pacientes de riesgo
+        """)
+
+    elif "Electrolitos" in tema:
+        st.markdown("""
+## 🧂 Electrolitos en CRRT
+
+### Potasio (K)
+- CRRT elimina K eficientemente → riesgo de hipokalemia
+- Dializantes estándar: K 2–4 mEq/L
+- Si K sérico <3.5: usar dializante K 3–4 mEq/L o suplementar
+- Si K >5.5 (hiperkalemia): dializante K 0–2 mEq/L; ↑ Qd
+
+### Sodio (Na)
+- La corrección de hiponatremia/hipernatremia debe ser GRADUAL
+- Hiponatremia: máximo 8–10 mmol/L/24h (riesgo ODS si más rápido)
+- Ajustar Na en dializante/reposición para controlar velocidad de corrección
+
+### Fósforo (P)
+- CRRT elimina P eficientemente → hipofosfatemia frecuente
+- Monitorear P cada 12–24h
+- Suplementar si P <1.0 mg/dL
+
+### Magnesio (Mg)
+- También se elimina → monitorear
+- Objetivo Mg: 1.7–2.4 mg/dL
+
+### Con citrato RCA — considerar:
+- Citrato 4% aporta Na 408 mEq/L → ajustar Na en soluciones
+- Prismocitrate 18/0: Na ~100 mEq/L → menor impacto en natremia
+- Citrato → HCO₃⁻ → vigilar alcalosis metabólica
+        """)
+
+    elif "Indicaciones" in tema:
+        st.markdown("""
+## 🏥 Indicaciones de CRRT/TCRR
+
+### Indicaciones absolutas (emergentes)
+| Indicación | Umbral / Criterio |
+|---|---|
+| Hiperkalemia grave | K >6.5 con cambios ECG o refractaria a médico |
+| Acidosis metabólica grave | pH <7.15 refractaria a corrección |
+| Sobrecarga hídrica grave | Sin respuesta a diuréticos; SpO₂ comprometida |
+| Uremia sintomática | Encefalopatía, pericarditis, sangrado urémico |
+| Intoxicaciones dializables | Metanol, etilenglicol, litio, salicilatos |
+| Hiperamonemia | Amonio >300 µmol/L (especialmente neonatos/niños) |
+
+### AKI — criterios KDIGO para inicio
+- **Estadio 2–3:** Cr ×2 basal o UO <0.5 mL/kg/hr ×12h (estadio 2)
+- No hay Cr específica que obligue; depende del contexto clínico
+
+### ¿CRRT vs HD intermitente?
+| Parámetro | CRRT | HDI |
+|---|---|---|
+| Estabilidad hemodinámica | Superior (gradual) | Inferior (hipotensión intradialítica) |
+| Control de volumen | Preciso y continuo | Episódico |
+| Depuración de solutos | Continua pero menor por sesión | Alta por sesión |
+| Indicación preferente | Hemodinámicamente inestable | Hemodinámicamente estable |
+| Costo/recurso | Mayor | Menor |
+
+### ¿Cuándo hacer CRRT en vez de HDI?
+- PAM <65 o requiere vasopresores
+- Inestabilidad hemodinámica durante diálisis previa
+- Necesidad de corrección muy gradual (hipernatremia, OHD severa)
+- IRA + sepsis (más difusión de mediadores con CVVHDF)
+        """)
+
+    st.markdown("---")
+    st.caption("Guía basada en: KDIGO AKI 2012, ATN Trial (NEJM 2008), RENAL Trial (NEJM 2009), "
+               "ADQI Consensus, SCCM/ESICM CRRT Guidelines 2016, Kidney International 2019.")
+
+elif nav == "electrolitos":
+    _render_electrolitos_page()
+
+# ── CALCULADORAS DE NEFROLOGÍA ─────────────────────────────────────────────────
+elif nav == "nefro":
+    _render_nefro_page()
 
 elif nav == "complic":
     st.subheader("🔧 Complicaciones del Circuito CRRT & Transición a HD Intermitente")
@@ -12000,12 +12045,12 @@ elif nav == "shr":
             col_r1, col_r2 = st.columns(2)
             with col_r1:
                 if st.button("✅ Cr mejoró (↓ ≥25%) o volvió al basal", key="shr_p1_si",
-                              use_container_width=True):
+                              width='stretch'):
                     _ir(10, respuesta_albumina="mejoro", peso=peso_p1,
                         diagnostico="AKI prerrenal — No SHR")
             with col_r2:
                 if st.button("❌ Cr sin mejora o empeoró", key="shr_p1_no",
-                              use_container_width=True, type="primary"):
+                              width='stretch', type="primary"):
                     _ir(2, respuesta_albumina="no_mejoro", peso=peso_p1)
 
         # ══════════════════════════════════════════════════════════════════
@@ -12525,7 +12570,7 @@ Continuar tratamiento. Meta: Cr <1.5 mg/dL. Mantener dosis actual.
                 data=pdf_bytes,
                 file_name=f"SHR_razonamiento_{__import__('datetime').date.today().strftime('%Y%m%d')}.pdf",
                 mime="application/pdf",
-                use_container_width=True,
+                width='stretch',
                 type="primary",
             )
 
@@ -13130,7 +13175,7 @@ elif nav == "expediente":
                 buscar_p = st.text_input("🔍 Buscar paciente", placeholder="Nombre o expediente...", key="exp_buscar")
             with col_nuevo:
                 st.markdown(" ")
-                if st.button("➕ Nuevo paciente", type="primary", use_container_width=True, key="btn_nuevo_pac"):
+                if st.button("➕ Nuevo paciente", type="primary", width='stretch', key="btn_nuevo_pac"):
                     st.session_state["exp_modo"] = "nuevo"
 
             if st.session_state.get("exp_modo") == "nuevo":
@@ -13279,7 +13324,7 @@ elif nav == "expediente":
                         _eb1, _eb2 = st.columns(2)
                         with _eb1:
                             if st.button("💾 Guardar cambios", type="primary",
-                                          use_container_width=True, key="btn_save_edit"):
+                                          width='stretch', key="btn_save_edit"):
                                 # Reunir datos
                                 if _PATIENT_MODULE and _ed_form:
                                     _ed_nombre = _ed_form.get("nombre_completo", "").strip() or _edit_pac.get("nombre","")
@@ -13321,7 +13366,7 @@ elif nav == "expediente":
                                 except Exception as _ee:
                                     st.error(f"Error al actualizar: {_ee}")
                         with _eb2:
-                            if st.button("✖️ Cancelar", use_container_width=True, key="btn_cancel_edit"):
+                            if st.button("✖️ Cancelar", width='stretch', key="btn_cancel_edit"):
                                 st.session_state.pop("exp_modo", None)
                                 st.session_state.pop("edit_pac_id", None)
                                 st.rerun()
@@ -13344,14 +13389,14 @@ elif nav == "expediente":
                             st.write(f"**Tipo:** {p.get('tipo','—')} · **Peso:** {p.get('peso','—')} kg · **Sexo:** {p.get('sexo','—')}")
                             if p.get("notas"): st.caption(p["notas"])
                         with ec2:
-                            if st.button("📋 Abrir expediente", key=f"abrir_{p['id']}", use_container_width=True):
+                            if st.button("📋 Abrir expediente", key=f"abrir_{p['id']}", width='stretch'):
                                 st.session_state["exp_pac_id"] = p["id"]
                                 st.rerun()
-                            if st.button("✏️ Editar ficha", key=f"edit_{p['id']}", use_container_width=True):
+                            if st.button("✏️ Editar ficha", key=f"edit_{p['id']}", width='stretch'):
                                 st.session_state["exp_modo"] = "editar"
                                 st.session_state["edit_pac_id"] = p["id"]
                                 st.rerun()
-                            if st.button("🗑️ Eliminar", key=f"del_exp_{p['id']}", use_container_width=True):
+                            if st.button("🗑️ Eliminar", key=f"del_exp_{p['id']}", width='stretch'):
                                 _db.delete_patient(p["id"], uid)
                                 _clear_cache(); st.rerun()
             else:
@@ -13643,7 +13688,7 @@ Inducción: {induccion_bg}
 
                 # ── GUARDAR ───────────────────────────────────────────────────
                 if st.button("💾 Guardar registro clínico", type="primary",
-                             key="btn_guardar_rec", use_container_width=True):
+                             key="btn_guardar_rec", width='stretch'):
                     if not nr_titulo and not nr_analisis:
                         st.warning("Agrega al menos un título o análisis.")
                     else:
@@ -13750,7 +13795,7 @@ Inducción: {induccion_bg}
                     with rc1:
                         if rec.get("tipo") == "Nota evolución Post-TR":
                             if st.button("✏️ Editar nota", key=f"edit_nota_evol_{rec['id']}",
-                                          use_container_width=True):
+                                          width='stretch'):
                                 st.session_state["ne_edit_rec_id"] = rec["id"]
                                 st.session_state["nav_sel"] = "nota_evol_tx"
                                 # Limpiar campos previos del formulario
@@ -13761,13 +13806,13 @@ Inducción: {induccion_bg}
                                 st.session_state.pop("_ne_dx_list", None)
                                 st.rerun()
                         else:
-                            if st.button("📄 Generar receta", key=f"receta_{rec['id']}", use_container_width=True):
+                            if st.button("📄 Generar receta", key=f"receta_{rec['id']}", width='stretch'):
                                 st.session_state["receta_pac"] = sel_exp
                                 st.session_state["receta_rec"] = rec
                                 st.session_state["nav_sel"]    = "receta"
                                 st.rerun()
                     with rc2:
-                        if st.button("🖨️ Imprimir nota", key=f"print_rec_{rec['id']}", use_container_width=True):
+                        if st.button("🖨️ Imprimir nota", key=f"print_rec_{rec['id']}", width='stretch'):
                             # ── Receta médica con PDF guardado: descarga el ORIGINAL (formato bonito) ──
                             _has_rx_pdf = (rec.get("tipo") == "Receta médica"
                                            and isinstance(datos_r, dict)
@@ -13882,7 +13927,7 @@ Inducción: {induccion_bg}
                                 except Exception as _e_pdf:
                                     st.error(f"Error al generar PDF: {_e_pdf}")
                     with rc3:
-                        if st.button("🗑️ Eliminar", key=f"del_rec_{rec['id']}", use_container_width=True):
+                        if st.button("🗑️ Eliminar", key=f"del_rec_{rec['id']}", width='stretch'):
                             _db.delete_clinical_record(rec["id"], uid)
                             _clear_cache(); st.rerun()
             if not records:
@@ -14275,10 +14320,10 @@ elif nav == "nota_tx":
 
     _btn_c1, _btn_c2 = st.columns(2)
     _guardar_borrador = _btn_c1.button("💾 Guardar borrador", key="btn_borrador_ntx",
-                                        use_container_width=True,
+                                        width='stretch',
                                         help="Guarda sin marcar como nota final — puedes editar después")
     _guardar_final    = _btn_c2.button("✅ Guardar nota final", type="primary",
-                                        key="btn_save_nota_tx", use_container_width=True)
+                                        key="btn_save_nota_tx", width='stretch')
 
     _estado_nota = "borrador" if (_guardar_borrador or labs_pend) else "final"
 
@@ -15134,7 +15179,7 @@ elif nav == "eval_candidato":
 
         with btn_save_c:
             if st.button("💾 Guardar evaluación completa", type="primary",
-                         use_container_width=True, key="btn_save_ec_full"):
+                         width='stretch', key="btn_save_ec_full"):
                 ec_nombre_s = _ec("nombre")
                 if not ec_nombre_s:
                     st.warning("Completa al menos los datos del candidato (pestaña 👤).")
@@ -15167,7 +15212,7 @@ elif nav == "eval_candidato":
 
         with btn_pdf_c:
             if st.button("📄 Generar documento para Comité", type="primary",
-                         use_container_width=True, key="btn_pdf_comite"):
+                         width='stretch', key="btn_pdf_comite"):
                 try:
                     import io
                     from reportlab.lib.pagesizes import letter
@@ -15640,7 +15685,7 @@ elif nav == "eval_donante_vivo":
     sdv1, sdv2 = st.columns(2)
     with sdv1:
         if st.button("💾 Guardar en expediente", type="primary",
-                     use_container_width=True, key="btn_save_dv"):
+                     width='stretch', key="btn_save_dv"):
             if not dv_nombre:
                 st.warning("El nombre es obligatorio.")
             elif uid_dv and _DB_ON and _db.db_ok():
@@ -15667,7 +15712,7 @@ elif nav == "eval_donante_vivo":
                 except Exception as e:
                     st.error(f"Error: {e}")
     with sdv2:
-        if st.button("📄 Generar PDF", use_container_width=True, key="btn_pdf_dv"):
+        if st.button("📄 Generar PDF", width='stretch', key="btn_pdf_dv"):
             dr_n = st.session_state.get("sess_nombre","")
             contenido_dv = {
                 "Datos del donante": {"Nombre": dv_nombre, "Edad": f"{dv_edad} años",
@@ -16558,7 +16603,7 @@ Injerto renal con buena función → produce EPO
                 gb1, gb2 = st.columns(2)
                 with gb1:
                     if st.button("📄 Generar PDF", type="primary",
-                                 use_container_width=True, key="btn_gen_rx"):
+                                 width='stretch', key="btn_gen_rx"):
                         if not rx_nombre or not rx_body:
                             st.warning("Nombre e indicaciones son obligatorios.")
                         else:
@@ -16595,7 +16640,7 @@ Injerto renal con buena función → produce EPO
                 with gb2:
                     if pac_id_rx and uid_rx and _DB_ON and _db.db_ok():
                         if st.button("💾 Guardar en expediente",
-                                     use_container_width=True, key="btn_save_rx"):
+                                     width='stretch', key="btn_save_rx"):
                             try:
                                 _db.add_clinical_record(pac_id_rx, uid_rx, {
                                     "tipo": "Receta médica",
@@ -17359,7 +17404,7 @@ Las frecuencias usadas son aproximaciones de la tabla de referencia OPTN/NMDP pa
                          for ag in sorted(todos_ags)]
             import pandas as pd
             df_freq = pd.DataFrame(freq_data, columns=["Antígeno", "Frecuencia", "% pool"])
-            st.dataframe(df_freq, use_container_width=True, hide_index=True)
+            st.dataframe(df_freq, width='stretch', hide_index=True)
 
             st.caption("""
 ⚠️ Este cálculo usa frecuencias aproximadas para población Hispana/Latinoamericana basadas en la tabla OPTN/NMDP.
@@ -17469,7 +17514,7 @@ lo reconoce como "extraño" y puede generar anticuerpos contra él (DSA) o activ
             # Detail table
             import pandas as pd
             df_mm = pd.DataFrame(mm_details)
-            st.dataframe(df_mm, use_container_width=True, hide_index=True)
+            st.dataframe(df_mm, width='stretch', hide_index=True)
 
             # Impact table
             st.markdown("#### Impacto clínico de los mismatches DR")
@@ -18791,7 +18836,7 @@ elif nav == "receta":
                 st.divider()
 
                 # ── GENERADOR PDF ─────────────────────────────────────────────
-                if st.button("📄 Generar PDF", type="primary", use_container_width=True, key="btn_gen_rx"):
+                if st.button("📄 Generar PDF", type="primary", width='stretch', key="btn_gen_rx"):
                     if not rx_nombre or not rx_items:
                         st.warning("El nombre del paciente e indicaciones son obligatorios.")
                     else:
@@ -19152,7 +19197,7 @@ elif nav == "receta":
 
                 # Clear prescription button
                 if rx_items:
-                    if st.button("🗑️ Limpiar receta", use_container_width=True, key="btn_clear_rx"):
+                    if st.button("🗑️ Limpiar receta", width='stretch', key="btn_clear_rx"):
                         st.session_state[_PAC_RX_KEY] = []
                         st.rerun()
 
@@ -21913,7 +21958,7 @@ elif nav == "nota_evol_tx":
                         st.caption("**Diuresis 24h (mL) por DPT**")
                         if _df_trend["Diuresis 24h"].notna().sum() > 0:
                             st.line_chart(_df_trend["Diuresis 24h"])
-                    st.dataframe(_df_trend, use_container_width=True)
+                    st.dataframe(_df_trend, width='stretch')
                 except Exception as _eg:
                     st.caption(f"No se pudo graficar: {_eg}")
 
@@ -21928,7 +21973,7 @@ elif nav == "nota_evol_tx":
                 _new_val = st.text_input(" ", placeholder=placeholder,
                                           key=f"{list_key}_input", label_visibility="collapsed")
             with _lc2:
-                if st.button("➕ Agregar", key=f"{list_key}_btn", use_container_width=True):
+                if st.button("➕ Agregar", key=f"{list_key}_btn", width='stretch'):
                     if _new_val.strip():
                         st.session_state[list_key].append(_new_val.strip())
                         if f"{list_key}_input" in st.session_state:
@@ -22391,13 +22436,13 @@ elif nav == "nota_evol_tx":
         # ── Quick fill CMV ────────────────────────────────────────────────────
         st.markdown("**CMV:**")
         _pf_b1, _pf_b2, _pf_b3 = st.columns(3)
-        if _pf_b1.button("D+/R⁻ → 900mg/día × 6m", key="pf_cmv1", use_container_width=True):
+        if _pf_b1.button("D+/R⁻ → 900mg/día × 6m", key="pf_cmv1", width='stretch'):
             st.session_state["ne_pf_cmv"] = "Valganciclovir 900 mg c/24h VO × 6 meses (D+/R-)"
             st.rerun()
-        if _pf_b2.button("R⁺ → 450mg/día × 3m", key="pf_cmv2", use_container_width=True):
+        if _pf_b2.button("R⁺ → 450mg/día × 3m", key="pf_cmv2", width='stretch'):
             st.session_state["ne_pf_cmv"] = "Valganciclovir 450 mg c/24h VO × 3 meses (R+)"
             st.rerun()
-        if _pf_b3.button("D⁻/R⁻ → sin profilaxis", key="pf_cmv3", use_container_width=True):
+        if _pf_b3.button("D⁻/R⁻ → sin profilaxis", key="pf_cmv3", width='stretch'):
             st.session_state["ne_pf_cmv"] = "Sin profilaxis CMV (D-/R-) — vigilancia con PCR"
             st.rerun()
         ne_pf_cmv = st.text_input("Valganciclovir (CMV)", key="ne_pf_cmv",
@@ -22406,10 +22451,10 @@ elif nav == "nota_evol_tx":
         # ── Quick fill PJP ────────────────────────────────────────────────────
         st.markdown("**PJP / Pneumocystis:**")
         _pjp_b1, _pjp_b2 = st.columns(2)
-        if _pjp_b1.button("TMP-SMX estándar × 6m", key="pf_pjp1", use_container_width=True):
+        if _pjp_b1.button("TMP-SMX estándar × 6m", key="pf_pjp1", width='stretch'):
             st.session_state["ne_pf_pjp"] = "TMP-SMX 80/400 mg c/24h VO × 6 meses"
             st.rerun()
-        if _pjp_b2.button("TMP-SMX × 12m (alto riesgo)", key="pf_pjp2", use_container_width=True):
+        if _pjp_b2.button("TMP-SMX × 12m (alto riesgo)", key="pf_pjp2", width='stretch'):
             st.session_state["ne_pf_pjp"] = "TMP-SMX 80/400 mg c/24h VO × 12 meses (alto riesgo inmune)"
             st.rerun()
         ne_pf_pjp = st.text_input("TMP-SMX (Pneumocystis)", key="ne_pf_pjp",
@@ -22419,22 +22464,22 @@ elif nav == "nota_evol_tx":
         st.markdown("**Otras profilaxis:**")
         _op_b1, _op_b2, _op_b3, _op_b4 = st.columns(4)
         _pf_otros_add = []
-        if _op_b1.button("+ Fluconazol", key="pf_fluco", use_container_width=True):
+        if _op_b1.button("+ Fluconazol", key="pf_fluco", width='stretch'):
             _cur = st.session_state.get("ne_pf_otros", "")
             _sep = "\n" if _cur else ""
             st.session_state["ne_pf_otros"] = _cur + _sep + "Fluconazol 100 mg c/24h VO × 1 mes"
             st.rerun()
-        if _op_b2.button("+ Isoniazida (TB)", key="pf_inh", use_container_width=True):
+        if _op_b2.button("+ Isoniazida (TB)", key="pf_inh", width='stretch'):
             _cur = st.session_state.get("ne_pf_otros", "")
             _sep = "\n" if _cur else ""
             st.session_state["ne_pf_otros"] = _cur + _sep + "Isoniazida 300 mg c/24h VO × 9 meses + Piridoxina 50 mg c/24h"
             st.rerun()
-        if _op_b3.button("+ IBP", key="pf_ibp", use_container_width=True):
+        if _op_b3.button("+ IBP", key="pf_ibp", width='stretch'):
             _cur = st.session_state.get("ne_pf_otros", "")
             _sep = "\n" if _cur else ""
             st.session_state["ne_pf_otros"] = _cur + _sep + "Pantoprazol 40 mg c/24h VO"
             st.rerun()
-        if _op_b4.button("+ Nistatina", key="pf_nist", use_container_width=True):
+        if _op_b4.button("+ Nistatina", key="pf_nist", width='stretch'):
             _cur = st.session_state.get("ne_pf_otros", "")
             _sep = "\n" if _cur else ""
             st.session_state["ne_pf_otros"] = _cur + _sep + "Nistatina 500,000 UI enjuague bucal c/8h × 1 mes"
@@ -22510,7 +22555,7 @@ elif nav == "nota_evol_tx":
                       else "💾 Guardar borrador" if ne_borrador
                       else "💾 Actualizar nota" if _edit_data
                       else "📄 Generar nota PDF")
-        if st.button(_btn_label, type="primary", use_container_width=True,
+        if st.button(_btn_label, type="primary", width='stretch',
                       key="btn_gen_evol_tx"):
             if not ne_nombre:
                 st.warning("El nombre del receptor es obligatorio.")
@@ -23464,12 +23509,12 @@ elif nav == "dashboard_tr":
             with col_h1:
                 st.caption(f"Usuario: {st.session_state.get('username', '—')}")
             with col_h2:
-                if st.button("🔄 Refresh", key="dash_refresh", use_container_width=True):
+                if st.button("🔄 Refresh", key="dash_refresh", width='stretch'):
                     _clear_cache()
                     st.rerun()
             with col_h3:
                 _show_agregar = st.button("➕ Marcar TR", key="dash_add",
-                                            use_container_width=True)
+                                            width='stretch')
 
             # ── Cargar cohorte y estadísticas ──────────────────────────────
             try:
@@ -23530,7 +23575,7 @@ elif nav == "dashboard_tr":
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
                             if st.button("✅ Marcar como TR", key="dash_add_confirm",
-                                         use_container_width=True, type="primary"):
+                                         width='stretch', type="primary"):
                                 _pid = _opciones[_sel_nom]
                                 _ok = _db.marcar_paciente_tr(_pid, _uid_dash, {
                                     "fecha_tx": _add_fecha_tx if _add_fecha_tx else None,
@@ -23548,7 +23593,7 @@ elif nav == "dashboard_tr":
                                     st.error("⚠️ Error al marcar. Verifica conexión a BD.")
                         with col_b2:
                             if st.button("❌ Cancelar", key="dash_add_cancel",
-                                         use_container_width=True):
+                                         width='stretch'):
                                 st.session_state.pop("dash_modal_add", None)
                                 st.rerun()
                     st.markdown("---")
@@ -23701,7 +23746,7 @@ elif nav == "dashboard_tr":
                             col_b1, col_b2, col_b3 = st.columns(3)
                             with col_b1:
                                 if st.button("✅ Revisado hoy", key=f"dash_rev_{c['id']}",
-                                              use_container_width=True):
+                                              width='stretch'):
                                     if _db.marcar_visita_revisada(c["id"], _uid_dash):
                                         st.success("Marcado como revisado.")
                                         _clear_cache()
@@ -23709,7 +23754,7 @@ elif nav == "dashboard_tr":
                             with col_b2:
                                 # Botón para ir a generar nota evolución
                                 if st.button("📝 Nota evolución", key=f"dash_note_{c['id']}",
-                                              use_container_width=True):
+                                              width='stretch'):
                                     st.session_state["_ne_paciente_preseleccionado"] = c["id"]
                                     st.session_state["nav"] = "nota_evolucion_post_tr"
                                     st.rerun()
@@ -23717,7 +23762,7 @@ elif nav == "dashboard_tr":
                                 # Desmarcar (solo si manual)
                                 if c.get("es_trasplantado_manual"):
                                     if st.button("🚫 Quitar marca", key=f"dash_unmark_{c['id']}",
-                                                  use_container_width=True):
+                                                  width='stretch'):
                                         if _db.desmarcar_paciente_tr(c["id"], _uid_dash):
                                             st.info("Marca manual quitada (puede seguir apareciendo si tiene notas Post-TR).")
                                             _clear_cache()
@@ -25068,7 +25113,7 @@ elif nav == "aprendizaje":
                 if columnas and filas:
                     import pandas as pd
                     df = pd.DataFrame(filas, columns=columnas)
-                    st.dataframe(df, use_container_width=True, hide_index=True)
+                    st.dataframe(df, width='stretch', hide_index=True)
                 else:
                     st.info("Tabla sin datos.")
 

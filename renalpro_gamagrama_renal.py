@@ -445,7 +445,7 @@ def _tab_simulador():
             capas.append(alt.Chart(pd.DataFrame({"x": [t_diur]})).mark_rule(
                 color="#F59E0B", size=2).encode(x="x:Q"))
         st.altair_chart(alt.layer(*capas).properties(height=340),
-                        use_container_width=True)
+                        width='stretch')
     else:
         pivot = df.pivot_table(index="Tiempo (min)", columns="Curva",
                                values="Actividad (cuentas)")
