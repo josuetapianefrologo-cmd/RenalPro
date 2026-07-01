@@ -92,6 +92,12 @@ try:
 except ImportError:
     _CRRT_CASOS_MODULE = False
 
+try:
+    from renalpro_tx_tools import render as render_tx_tools
+    _TX_TOOLS_MODULE = True
+except ImportError:
+    _TX_TOOLS_MODULE = False
+
 # ── Paquete clinical_data: datos clínicos en JSON (KDIGO, protocolos) ─────────
 try:
     from clinical_data import (get_meta as _cd_meta,
@@ -2284,6 +2290,7 @@ with st.sidebar:
     _navbtn("📅 Seguimiento Post-TR", "seguimiento_tx")
     _navbtn("⏰ Perioperatorio", "periop_tx")
     _navbtn("🩺 Complicaciones Crónicas TR", "complic_cr_tx")
+    _navbtn("🧰 Herramientas TX", "tx_tools")
     _navbtn("🩸 Acceso Vascular", "acceso")
 
     _navsec("DOCUMENTACIÓN")
@@ -25139,6 +25146,13 @@ elif nav == "aprendizaje":
                                 st.caption(f"🎯 {est['relevancia']}")
                             st.markdown("---")
 
+
+elif nav == "tx_tools":
+    if _TX_TOOLS_MODULE:
+        render_tx_tools()
+    else:
+        st.warning("⚠️ Módulo de Herramientas de Trasplante no disponible. Verifica que "
+                   "`renalpro_tx_tools.py` esté en el repositorio.")
 
 elif nav == "gamagrama":
     if _GAMAGRAMA_MODULE:
