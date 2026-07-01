@@ -65,6 +65,18 @@ try:
 except ImportError:
     _GAMAGRAMA_MODULE = False
 
+try:
+    from renalpro_vexus import render as render_vexus
+    _VEXUS_MODULE = True
+except ImportError:
+    _VEXUS_MODULE = False
+
+try:
+    from renalpro_crrt_casos import render_selector_caso
+    _CRRT_CASOS_MODULE = True
+except ImportError:
+    _CRRT_CASOS_MODULE = False
+
 # ── Paquete clinical_data: datos clínicos en JSON (KDIGO, protocolos) ─────────
 try:
     from clinical_data import (get_meta as _cd_meta,
@@ -2223,6 +2235,7 @@ with st.sidebar:
     _navbtn("🔢 Calculadoras Nefro", "nefro")
     _navbtn("🔬 Gamagrama Renal", "gamagrama")
     _navbtn("🫀 Síndrome Cardiorrenal", "scr")
+    _navbtn("🌊 VExUS", "vexus")
     _navbtn("🦴 ERC-MBD", "erc_mbd")
     _navbtn("🩸 HTA en ERC", "hta_erc")
     _navbtn("🔵 Glomerulopatías", "glomerulopatias")
@@ -2810,6 +2823,11 @@ if nav == "scores":
 # ══════════════════════════════════════════════════════════════════════════════
 elif nav == "presc":
     st.subheader("Prescripción CRRT — Recomendación combinada")
+
+    if _CRRT_CASOS_MODULE:
+        with st.expander("🧪 CRRT según el caso clínico  ·  selector, aclaramiento por PM, "
+                         "pesos moleculares y filtros a evitar"):
+            render_selector_caso()
 
     # ── SELECTOR DE PACIENTE (igual que Receta y Nota Evolución) ─────────────
     _pr_pmode = st.radio("", ["🔍 Paciente existente", "✏️ Sin paciente"],
@@ -24999,6 +25017,13 @@ elif nav == "gamagrama":
     else:
         st.warning("⚠️ Módulo de Gamagrama Renal no disponible. Verifica que "
                    "`renalpro_gamagrama_renal.py` esté en el repositorio.")
+
+elif nav == "vexus":
+    if _VEXUS_MODULE:
+        render_vexus()
+    else:
+        st.warning("⚠️ Módulo VExUS no disponible. Verifica que "
+                   "`renalpro_vexus.py` esté en el repositorio.")
 
 
 st.divider()
