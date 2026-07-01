@@ -326,38 +326,13 @@ def _tab_filtros():
                "clínico ni la ficha técnica de cada membrana.")
 
 
-def _tab_personalizar():
-    st.subheader("🎛️ Personalización de la prescripción")
-    c1, c2, c3 = st.columns(3)
-    peso = c1.number_input("Peso (kg)", 30.0, 200.0, 70.0, 1.0)
-    dosis = c2.number_input("Dosis efluente (mL/kg/h)", 15.0, 45.0, 25.0, 1.0)
-    qb = c3.number_input("Flujo de sangre Qb (mL/min)", 80.0, 300.0, 150.0, 10.0)
-    modo = st.radio("Modalidad", ["CVVHD (difusión)", "CVVH (convección)",
-                                  "CVVHDF (ambas)"], horizontal=True)
-    predil = st.slider("Fracción en predilución (%)", 0, 100, 50, 5)
-
-    efluente = peso * dosis            # mL/h
-    st.metric("Efluente total prescrito", f"{efluente:,.0f} mL/h "
-              f"({efluente/1000:.1f} L/h)")
-
-    # Fracción de filtración aproximada (solo convectiva post-dilución)
-    if "CVVH" in modo:
-        qb_mlh = qb * 60
-        uf = efluente                       # aprox para estimación
-        post = uf * (1 - predil / 100)
-        ff = post / (qb_mlh * 0.6) * 100 if qb_mlh else 0   # ~plasma 60%
-        st.metric("Fracción de filtración estimada (post-dil.)", f"{ff:.0f}%")
-        if ff > 25:
-            st.warning("FF > 25%: riesgo de hemoconcentración/coagulación del "
-                       "filtro. Aumenta predilución o Qb, o baja la dosis.")
-    st.caption("Estimaciones para orientar; ajusta según tu equipo y protocolo.")
-
-
 def render_selector_caso():
     """Punto de entrada. Llamar dentro de la página de Prescripción CRRT."""
     st.markdown("### 🧪 CRRT según el caso clínico")
+    st.caption("Apoyo a la decisión. Los parámetros (peso, dosis, Qb, filtro) "
+               "se ajustan abajo en tu prescripción.")
     tabs = st.tabs(["🧭 Por caso", "📉 Aclaramiento", "⚖️ Pesos moleculares",
-                    "⛔ Filtros a evitar", "🎛️ Personalizar"])
+                    "⛔ Filtros a evitar"])
     with tabs[0]:
         _tab_caso()
     with tabs[1]:
@@ -366,8 +341,6 @@ def render_selector_caso():
         _tab_pesos()
     with tabs[3]:
         _tab_filtros()
-    with tabs[4]:
-        _tab_personalizar()
 
 
 if __name__ == "__main__":

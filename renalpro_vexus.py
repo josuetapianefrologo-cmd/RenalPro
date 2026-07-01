@@ -224,7 +224,7 @@ def _tab_calculadora():
             por if ivc_dilatada else "normal", ren if ivc_dilatada else "normal")
         st.markdown(
             f"<div style='padding:14px;border-radius:10px;background:{color}22;"
-            f"border-left:6px solid {color};'>"
+            f"border-left:6px solid {color};color:#1e293b;'>"
             f"<span style='font-size:1.3rem;font-weight:700;color:{color};'>"
             f"{titulo}</span><br>{detalle}</div>",
             unsafe_allow_html=True)
@@ -245,7 +245,7 @@ def _tab_interpretacion():
     for g, c, t, d in filas:
         st.markdown(
             f"<div style='padding:8px 12px;margin-bottom:6px;border-radius:8px;"
-            f"background:{c}1A;border-left:5px solid {c};'>"
+            f"background:{c}1A;border-left:5px solid {c};color:#1e293b;'>"
             f"<b style='color:{c};'>{g} — {t}.</b> {d}</div>",
             unsafe_allow_html=True)
 

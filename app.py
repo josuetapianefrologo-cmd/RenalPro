@@ -38,6 +38,21 @@ try:
 except ImportError:
     _DB_ON = False
 
+# ── Rendimiento: cachear db_ok() para no golpear la BD en cada rerun ─────────
+# Todas las llamadas _db.db_ok() (36 en la app) usan una versión cacheada (TTL
+# corto). Si la conexión está bien, evita ~decenas de comprobaciones por clic.
+if _DB_ON:
+    try:
+        _db_ok_original = _db.db_ok
+
+        @st.cache_data(ttl=15, show_spinner=False)
+        def _db_ok_cached():
+            return _db_ok_original()
+
+        _db.db_ok = _db_ok_cached
+    except Exception:
+        pass
+
 # ── Módulos RenalPro v3.1.0 ────────────────────────────────────────────────
 try:
     from renalpro_patient import (render_patient_form_extended,
