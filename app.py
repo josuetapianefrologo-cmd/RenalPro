@@ -789,7 +789,7 @@ section[data-testid="stSidebar"]{display:none!important;}
                                   label_visibility="collapsed")
                 p = st.text_input("Contraseña", type="password", placeholder="contraseña",
                                   key="li_p", label_visibility="collapsed")
-                submitted = st.form_submit_button("Iniciar sesión →", width='stretch',
+                submitted = st.form_submit_button("Iniciar sesión →", use_container_width=True,
                                                   type="primary")
             if submitted:
                 if u and p:
@@ -801,7 +801,7 @@ section[data-testid="stSidebar"]{display:none!important;}
                 else:
                     st.warning("Ingresa usuario y contraseña.")
             st.markdown("<div style='text-align:center;margin:6px 0;color:rgba(255,255,255,0.5);font-size:12px;'>— o —</div>", unsafe_allow_html=True)
-            if st.button("👁️  Entrar como invitado", width='stretch', key="btn_guest"):
+            if st.button("👁️  Entrar como invitado", use_container_width=True, key="btn_guest"):
                 st.session_state.update({
                     "sess_user": "guest", "sess_rol": "guest",
                     "sess_nombre": "Invitado", "logged_in": True, "consent_ok": True})
@@ -827,7 +827,7 @@ section[data-testid="stSidebar"]{display:none!important;}
   Después continúas como invitado o activas Premium por <strong>$99 MXN/mes</strong>.
 </div>""", unsafe_allow_html=True)
             agree_r = st.checkbox("Acepto que es uso académico y no sustituye el juicio clínico.", key="r_agree")
-            if st.button("Crear cuenta →", width='stretch', type="primary", key="btn_reg"):
+            if st.button("Crear cuenta →", use_container_width=True, type="primary", key="btn_reg"):
                 if not all([nombre_r, u_r, email_r, p_r]):
                     st.error("Completa todos los campos.")
                 elif p_r != p_r2:
@@ -2222,7 +2222,7 @@ with st.sidebar:
     def _navbtn(label, key, icon=""):
         active = st.session_state["nav_sel"] == key
         prefix = "▶ " if active else "   "
-        if st.button(f"{prefix}{label}", key=f"nav_{key}", width='stretch'):
+        if st.button(f"{prefix}{label}", key=f"nav_{key}", use_container_width=True):
             st.session_state["nav_sel"] = key
             st.rerun()
 
@@ -2307,11 +2307,11 @@ with st.sidebar:
     _navbtn("🛡️ Admin" if _rol() == "admin" else "👤 Mi Cuenta", "admin")
     st.sidebar.markdown("---")
     if st.sidebar.button("🔒 Política de Privacidad", key="btn_nav_priv",
-                          width='stretch'):
+                          use_container_width=True):
         st.session_state["nav_sel"] = "privacidad"; st.rerun()
 
     st.markdown("---")
-    if st.button("🚪 Cerrar sesión", key="btn_logout", width='stretch'):
+    if st.button("🚪 Cerrar sesión", key="btn_logout", use_container_width=True):
         for k in ["logged_in", "sess_user", "sess_rol", "sess_nombre", "consent_ok", "nav_sel"]:
             st.session_state.pop(k, None)
         st.rerun()
@@ -2405,7 +2405,7 @@ def _render_presc_page():
                                     max_selections=3,
                                     default=st.session_state.get("sb_escenarios", ["Sepsis / choque séptico"]),
                                     key="sb_escenarios")
-        st.form_submit_button("🔄 Calcular", width='stretch', type="primary")
+        st.form_submit_button("🔄 Calcular", use_container_width=True, type="primary")
 
     # Tras el submit, leer los valores confirmados de session_state
     peso = float(st.session_state.get("sb_peso", 70.0))
@@ -3102,7 +3102,7 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
                 st.info(f"↩️ Actualizando prescripción existente — ID {update_id}. "
                         "Los parámetros se guardarán sobre el registro original.")
                 if st.button("🔄 Actualizar prescripción", type="primary",
-                             key="btn_guardar_presc", width='stretch'):
+                             key="btn_guardar_presc", use_container_width=True):
                     _esc  = list(st.session_state.get("sb_escenarios", []))
                     _mod, _, _ = combinar_recomendaciones(_esc)
                     _qb   = int(st.session_state.get("sb_qb", 200))
@@ -3138,7 +3138,7 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
                     st.rerun()
             else:
                 if st.button("💾 Guardar prescripción", type="primary",
-                             key="btn_guardar_presc", width='stretch'):
+                             key="btn_guardar_presc", use_container_width=True):
                     _esc  = list(st.session_state.get("sb_escenarios", []))
                     _mod, _, _ = combinar_recomendaciones(_esc)
                     _qb   = int(st.session_state.get("sb_qb", 200))
@@ -6476,7 +6476,7 @@ elif nav == "resumen":
                 "que combina prescripción + anticoagulación + monitoreo + orden de enfermería + "
                 "fundamento clínico en un solo PDF de 3 páginas.")
     with _b2:
-        if st.button("🩺 Ir a Prescripción", width='stretch', key="btn_go_presc"):
+        if st.button("🩺 Ir a Prescripción", use_container_width=True, key="btn_go_presc"):
             st.session_state["nav_sel"] = "presc"
             st.rerun()
 
@@ -6726,7 +6726,7 @@ elif nav == "resumen":
     col_pdf, _ = st.columns([1, 3])
     with col_pdf:
         if st.button("📄 Generar PDF clínico", key="btn_export_pdf",
-                     type="primary", width='stretch'):
+                     type="primary", use_container_width=True):
             try:
                 ts = datetime.now().strftime("%Y-%m-%d_%H-%M")
                 nom = st.session_state.get("rx_nombre_paciente", "").replace(" ", "")
@@ -6734,7 +6734,7 @@ elif nav == "resumen":
                 fname = f"RenalPro_{safe}_{ts}.pdf" if safe else f"RenalPro_{ts}.pdf"
                 buf = export_pdf_pro()
                 st.download_button("⬇️ Descargar PDF", data=buf, file_name=fname,
-                                   mime="application/pdf", width='stretch',
+                                   mime="application/pdf", use_container_width=True,
                                    key="btn_download_pdf")
                 st.success("✅ PDF generado — 3 páginas: Prescripción · Enfermería · Fundamento")
             except Exception as e:
@@ -6838,7 +6838,7 @@ elif nav == "premium":
 
         elif mp_token and uid:
             if st.button("🔗 Pagar con Mercado Pago — Tarjeta / OXXO / Transferencia",
-                         type="primary", key="btn_pagar_mp", width='stretch'):
+                         type="primary", key="btn_pagar_mp", use_container_width=True):
                 with st.spinner("Generando tu link de pago..."):
                     link = _db.create_mp_preference(uid,
                            st.session_state.get("sess_user","user")) if _DB_ON else None
@@ -6948,7 +6948,7 @@ elif nav == "admin":
                 st.markdown(" ")
                 st.markdown(" ")
                 dar_beca = st.button("🎓 Dar acceso", key="btn_dar_beca",
-                                     type="primary", width='stretch')
+                                     type="primary", use_container_width=True)
 
             if dar_beca and beca_user:
                 meses_beca = {"Sin límite (indefinido)": 0, "1 mes": 1,
@@ -7034,7 +7034,7 @@ elif nav == "admin":
                                           placeholder="Residencia/Especialidad")
 
             if st.button("➕ Crear cuenta con beca", key="btn_crear_beca",
-                         type="primary", width='stretch'):
+                         type="primary", use_container_width=True):
                 if nb_nombre and nb_user and nb_pass and len(nb_pass) >= 6:
                     meses_nb = {"Sin límite (indefinido)": 0, "1 mes": 1,
                                 "3 meses": 3, "6 meses": 6, "1 año": 12}.get(nb_dur, 0)
@@ -7108,14 +7108,14 @@ elif nav == "admin":
                             # Dar beca
                             if rol_u != "beca":
                                 if st.button(f"🎓 Dar beca indef.", key=f"beca_db_{uid_u}",
-                                             width='stretch'):
+                                             use_container_width=True):
                                     _db.grant_beca(uid_u, 0)
                                     _clear_cache()
                                     st.success(f"🎓 Beca otorgada a {uname_u}")
                                     st.rerun()
                             else:
                                 if st.button(f"Revocar beca", key=f"rev_db_{uid_u}",
-                                             width='stretch'):
+                                             use_container_width=True):
                                     _db.revoke_beca(uid_u)
                                     _clear_cache()
                                     st.warning(f"Beca revocada de {uname_u}")
@@ -7123,7 +7123,7 @@ elif nav == "admin":
                             # Activar Premium
                             end_d = st.date_input("Premium hasta:", key=f"end_db_{uid_u}")
                             if st.button(f"⭐ Activar Premium", key=f"pro_db_{uid_u}",
-                                         width='stretch'):
+                                         use_container_width=True):
                                 import psycopg2
                                 from datetime import datetime as _dt
                                 conn_adm = _db.get_conn()
@@ -7143,7 +7143,7 @@ elif nav == "admin":
                             # Hacer admin
                             if rol_u != "admin":
                                 if st.button(f"🛡️ Hacer admin", key=f"adm_db_{uid_u}",
-                                             width='stretch'):
+                                             use_container_width=True):
                                     conn_adm = _db.get_conn()
                                     if conn_adm:
                                         try:
@@ -7264,7 +7264,7 @@ elif nav == "micuenta":
                                                key="mc_consejo_num", placeholder="Ej: 1267")
 
             if st.button("💾 Guardar cambios", type="primary", key="btn_mc_save",
-                         width='stretch'):
+                         use_container_width=True):
                 av_nuevo = st.session_state.get("sess_avatar", av_actual)
                 if db_mc:
                     try:
@@ -12052,12 +12052,12 @@ elif nav == "shr":
             col_r1, col_r2 = st.columns(2)
             with col_r1:
                 if st.button("✅ Cr mejoró (↓ ≥25%) o volvió al basal", key="shr_p1_si",
-                              width='stretch'):
+                              use_container_width=True):
                     _ir(10, respuesta_albumina="mejoro", peso=peso_p1,
                         diagnostico="AKI prerrenal — No SHR")
             with col_r2:
                 if st.button("❌ Cr sin mejora o empeoró", key="shr_p1_no",
-                              width='stretch', type="primary"):
+                              use_container_width=True, type="primary"):
                     _ir(2, respuesta_albumina="no_mejoro", peso=peso_p1)
 
         # ══════════════════════════════════════════════════════════════════
@@ -12577,7 +12577,7 @@ Continuar tratamiento. Meta: Cr <1.5 mg/dL. Mantener dosis actual.
                 data=pdf_bytes,
                 file_name=f"SHR_razonamiento_{__import__('datetime').date.today().strftime('%Y%m%d')}.pdf",
                 mime="application/pdf",
-                width='stretch',
+                use_container_width=True,
                 type="primary",
             )
 
@@ -13182,7 +13182,7 @@ elif nav == "expediente":
                 buscar_p = st.text_input("🔍 Buscar paciente", placeholder="Nombre o expediente...", key="exp_buscar")
             with col_nuevo:
                 st.markdown(" ")
-                if st.button("➕ Nuevo paciente", type="primary", width='stretch', key="btn_nuevo_pac"):
+                if st.button("➕ Nuevo paciente", type="primary", use_container_width=True, key="btn_nuevo_pac"):
                     st.session_state["exp_modo"] = "nuevo"
 
             if st.session_state.get("exp_modo") == "nuevo":
@@ -13331,7 +13331,7 @@ elif nav == "expediente":
                         _eb1, _eb2 = st.columns(2)
                         with _eb1:
                             if st.button("💾 Guardar cambios", type="primary",
-                                          width='stretch', key="btn_save_edit"):
+                                          use_container_width=True, key="btn_save_edit"):
                                 # Reunir datos
                                 if _PATIENT_MODULE and _ed_form:
                                     _ed_nombre = _ed_form.get("nombre_completo", "").strip() or _edit_pac.get("nombre","")
@@ -13373,7 +13373,7 @@ elif nav == "expediente":
                                 except Exception as _ee:
                                     st.error(f"Error al actualizar: {_ee}")
                         with _eb2:
-                            if st.button("✖️ Cancelar", width='stretch', key="btn_cancel_edit"):
+                            if st.button("✖️ Cancelar", use_container_width=True, key="btn_cancel_edit"):
                                 st.session_state.pop("exp_modo", None)
                                 st.session_state.pop("edit_pac_id", None)
                                 st.rerun()
@@ -13396,14 +13396,14 @@ elif nav == "expediente":
                             st.write(f"**Tipo:** {p.get('tipo','—')} · **Peso:** {p.get('peso','—')} kg · **Sexo:** {p.get('sexo','—')}")
                             if p.get("notas"): st.caption(p["notas"])
                         with ec2:
-                            if st.button("📋 Abrir expediente", key=f"abrir_{p['id']}", width='stretch'):
+                            if st.button("📋 Abrir expediente", key=f"abrir_{p['id']}", use_container_width=True):
                                 st.session_state["exp_pac_id"] = p["id"]
                                 st.rerun()
-                            if st.button("✏️ Editar ficha", key=f"edit_{p['id']}", width='stretch'):
+                            if st.button("✏️ Editar ficha", key=f"edit_{p['id']}", use_container_width=True):
                                 st.session_state["exp_modo"] = "editar"
                                 st.session_state["edit_pac_id"] = p["id"]
                                 st.rerun()
-                            if st.button("🗑️ Eliminar", key=f"del_exp_{p['id']}", width='stretch'):
+                            if st.button("🗑️ Eliminar", key=f"del_exp_{p['id']}", use_container_width=True):
                                 _db.delete_patient(p["id"], uid)
                                 _clear_cache(); st.rerun()
             else:
@@ -13695,7 +13695,7 @@ Inducción: {induccion_bg}
 
                 # ── GUARDAR ───────────────────────────────────────────────────
                 if st.button("💾 Guardar registro clínico", type="primary",
-                             key="btn_guardar_rec", width='stretch'):
+                             key="btn_guardar_rec", use_container_width=True):
                     if not nr_titulo and not nr_analisis:
                         st.warning("Agrega al menos un título o análisis.")
                     else:
@@ -13802,7 +13802,7 @@ Inducción: {induccion_bg}
                     with rc1:
                         if rec.get("tipo") == "Nota evolución Post-TR":
                             if st.button("✏️ Editar nota", key=f"edit_nota_evol_{rec['id']}",
-                                          width='stretch'):
+                                          use_container_width=True):
                                 st.session_state["ne_edit_rec_id"] = rec["id"]
                                 st.session_state["nav_sel"] = "nota_evol_tx"
                                 # Limpiar campos previos del formulario
@@ -13813,13 +13813,13 @@ Inducción: {induccion_bg}
                                 st.session_state.pop("_ne_dx_list", None)
                                 st.rerun()
                         else:
-                            if st.button("📄 Generar receta", key=f"receta_{rec['id']}", width='stretch'):
+                            if st.button("📄 Generar receta", key=f"receta_{rec['id']}", use_container_width=True):
                                 st.session_state["receta_pac"] = sel_exp
                                 st.session_state["receta_rec"] = rec
                                 st.session_state["nav_sel"]    = "receta"
                                 st.rerun()
                     with rc2:
-                        if st.button("🖨️ Imprimir nota", key=f"print_rec_{rec['id']}", width='stretch'):
+                        if st.button("🖨️ Imprimir nota", key=f"print_rec_{rec['id']}", use_container_width=True):
                             # ── Receta médica con PDF guardado: descarga el ORIGINAL (formato bonito) ──
                             _has_rx_pdf = (rec.get("tipo") == "Receta médica"
                                            and isinstance(datos_r, dict)
@@ -13934,7 +13934,7 @@ Inducción: {induccion_bg}
                                 except Exception as _e_pdf:
                                     st.error(f"Error al generar PDF: {_e_pdf}")
                     with rc3:
-                        if st.button("🗑️ Eliminar", key=f"del_rec_{rec['id']}", width='stretch'):
+                        if st.button("🗑️ Eliminar", key=f"del_rec_{rec['id']}", use_container_width=True):
                             _db.delete_clinical_record(rec["id"], uid)
                             _clear_cache(); st.rerun()
             if not records:
@@ -14327,10 +14327,10 @@ elif nav == "nota_tx":
 
     _btn_c1, _btn_c2 = st.columns(2)
     _guardar_borrador = _btn_c1.button("💾 Guardar borrador", key="btn_borrador_ntx",
-                                        width='stretch',
+                                        use_container_width=True,
                                         help="Guarda sin marcar como nota final — puedes editar después")
     _guardar_final    = _btn_c2.button("✅ Guardar nota final", type="primary",
-                                        key="btn_save_nota_tx", width='stretch')
+                                        key="btn_save_nota_tx", use_container_width=True)
 
     _estado_nota = "borrador" if (_guardar_borrador or labs_pend) else "final"
 
@@ -15186,7 +15186,7 @@ elif nav == "eval_candidato":
 
         with btn_save_c:
             if st.button("💾 Guardar evaluación completa", type="primary",
-                         width='stretch', key="btn_save_ec_full"):
+                         use_container_width=True, key="btn_save_ec_full"):
                 ec_nombre_s = _ec("nombre")
                 if not ec_nombre_s:
                     st.warning("Completa al menos los datos del candidato (pestaña 👤).")
@@ -15219,7 +15219,7 @@ elif nav == "eval_candidato":
 
         with btn_pdf_c:
             if st.button("📄 Generar documento para Comité", type="primary",
-                         width='stretch', key="btn_pdf_comite"):
+                         use_container_width=True, key="btn_pdf_comite"):
                 try:
                     import io
                     from reportlab.lib.pagesizes import letter
@@ -15692,7 +15692,7 @@ elif nav == "eval_donante_vivo":
     sdv1, sdv2 = st.columns(2)
     with sdv1:
         if st.button("💾 Guardar en expediente", type="primary",
-                     width='stretch', key="btn_save_dv"):
+                     use_container_width=True, key="btn_save_dv"):
             if not dv_nombre:
                 st.warning("El nombre es obligatorio.")
             elif uid_dv and _DB_ON and _db.db_ok():
@@ -15719,7 +15719,7 @@ elif nav == "eval_donante_vivo":
                 except Exception as e:
                     st.error(f"Error: {e}")
     with sdv2:
-        if st.button("📄 Generar PDF", width='stretch', key="btn_pdf_dv"):
+        if st.button("📄 Generar PDF", use_container_width=True, key="btn_pdf_dv"):
             dr_n = st.session_state.get("sess_nombre","")
             contenido_dv = {
                 "Datos del donante": {"Nombre": dv_nombre, "Edad": f"{dv_edad} años",
@@ -16610,7 +16610,7 @@ Injerto renal con buena función → produce EPO
                 gb1, gb2 = st.columns(2)
                 with gb1:
                     if st.button("📄 Generar PDF", type="primary",
-                                 width='stretch', key="btn_gen_rx"):
+                                 use_container_width=True, key="btn_gen_rx"):
                         if not rx_nombre or not rx_body:
                             st.warning("Nombre e indicaciones son obligatorios.")
                         else:
@@ -16647,7 +16647,7 @@ Injerto renal con buena función → produce EPO
                 with gb2:
                     if pac_id_rx and uid_rx and _DB_ON and _db.db_ok():
                         if st.button("💾 Guardar en expediente",
-                                     width='stretch', key="btn_save_rx"):
+                                     use_container_width=True, key="btn_save_rx"):
                             try:
                                 _db.add_clinical_record(pac_id_rx, uid_rx, {
                                     "tipo": "Receta médica",
@@ -17411,7 +17411,7 @@ Las frecuencias usadas son aproximaciones de la tabla de referencia OPTN/NMDP pa
                          for ag in sorted(todos_ags)]
             import pandas as pd
             df_freq = pd.DataFrame(freq_data, columns=["Antígeno", "Frecuencia", "% pool"])
-            st.dataframe(df_freq, width='stretch', hide_index=True)
+            st.dataframe(df_freq, use_container_width=True, hide_index=True)
 
             st.caption("""
 ⚠️ Este cálculo usa frecuencias aproximadas para población Hispana/Latinoamericana basadas en la tabla OPTN/NMDP.
@@ -17521,7 +17521,7 @@ lo reconoce como "extraño" y puede generar anticuerpos contra él (DSA) o activ
             # Detail table
             import pandas as pd
             df_mm = pd.DataFrame(mm_details)
-            st.dataframe(df_mm, width='stretch', hide_index=True)
+            st.dataframe(df_mm, use_container_width=True, hide_index=True)
 
             # Impact table
             st.markdown("#### Impacto clínico de los mismatches DR")
@@ -18843,7 +18843,7 @@ elif nav == "receta":
                 st.divider()
 
                 # ── GENERADOR PDF ─────────────────────────────────────────────
-                if st.button("📄 Generar PDF", type="primary", width='stretch', key="btn_gen_rx"):
+                if st.button("📄 Generar PDF", type="primary", use_container_width=True, key="btn_gen_rx"):
                     if not rx_nombre or not rx_items:
                         st.warning("El nombre del paciente e indicaciones son obligatorios.")
                     else:
@@ -19204,7 +19204,7 @@ elif nav == "receta":
 
                 # Clear prescription button
                 if rx_items:
-                    if st.button("🗑️ Limpiar receta", width='stretch', key="btn_clear_rx"):
+                    if st.button("🗑️ Limpiar receta", use_container_width=True, key="btn_clear_rx"):
                         st.session_state[_PAC_RX_KEY] = []
                         st.rerun()
 
@@ -21965,7 +21965,7 @@ elif nav == "nota_evol_tx":
                         st.caption("**Diuresis 24h (mL) por DPT**")
                         if _df_trend["Diuresis 24h"].notna().sum() > 0:
                             st.line_chart(_df_trend["Diuresis 24h"])
-                    st.dataframe(_df_trend, width='stretch')
+                    st.dataframe(_df_trend, use_container_width=True)
                 except Exception as _eg:
                     st.caption(f"No se pudo graficar: {_eg}")
 
@@ -21980,7 +21980,7 @@ elif nav == "nota_evol_tx":
                 _new_val = st.text_input(" ", placeholder=placeholder,
                                           key=f"{list_key}_input", label_visibility="collapsed")
             with _lc2:
-                if st.button("➕ Agregar", key=f"{list_key}_btn", width='stretch'):
+                if st.button("➕ Agregar", key=f"{list_key}_btn", use_container_width=True):
                     if _new_val.strip():
                         st.session_state[list_key].append(_new_val.strip())
                         if f"{list_key}_input" in st.session_state:
@@ -22443,13 +22443,13 @@ elif nav == "nota_evol_tx":
         # ── Quick fill CMV ────────────────────────────────────────────────────
         st.markdown("**CMV:**")
         _pf_b1, _pf_b2, _pf_b3 = st.columns(3)
-        if _pf_b1.button("D+/R⁻ → 900mg/día × 6m", key="pf_cmv1", width='stretch'):
+        if _pf_b1.button("D+/R⁻ → 900mg/día × 6m", key="pf_cmv1", use_container_width=True):
             st.session_state["ne_pf_cmv"] = "Valganciclovir 900 mg c/24h VO × 6 meses (D+/R-)"
             st.rerun()
-        if _pf_b2.button("R⁺ → 450mg/día × 3m", key="pf_cmv2", width='stretch'):
+        if _pf_b2.button("R⁺ → 450mg/día × 3m", key="pf_cmv2", use_container_width=True):
             st.session_state["ne_pf_cmv"] = "Valganciclovir 450 mg c/24h VO × 3 meses (R+)"
             st.rerun()
-        if _pf_b3.button("D⁻/R⁻ → sin profilaxis", key="pf_cmv3", width='stretch'):
+        if _pf_b3.button("D⁻/R⁻ → sin profilaxis", key="pf_cmv3", use_container_width=True):
             st.session_state["ne_pf_cmv"] = "Sin profilaxis CMV (D-/R-) — vigilancia con PCR"
             st.rerun()
         ne_pf_cmv = st.text_input("Valganciclovir (CMV)", key="ne_pf_cmv",
@@ -22458,10 +22458,10 @@ elif nav == "nota_evol_tx":
         # ── Quick fill PJP ────────────────────────────────────────────────────
         st.markdown("**PJP / Pneumocystis:**")
         _pjp_b1, _pjp_b2 = st.columns(2)
-        if _pjp_b1.button("TMP-SMX estándar × 6m", key="pf_pjp1", width='stretch'):
+        if _pjp_b1.button("TMP-SMX estándar × 6m", key="pf_pjp1", use_container_width=True):
             st.session_state["ne_pf_pjp"] = "TMP-SMX 80/400 mg c/24h VO × 6 meses"
             st.rerun()
-        if _pjp_b2.button("TMP-SMX × 12m (alto riesgo)", key="pf_pjp2", width='stretch'):
+        if _pjp_b2.button("TMP-SMX × 12m (alto riesgo)", key="pf_pjp2", use_container_width=True):
             st.session_state["ne_pf_pjp"] = "TMP-SMX 80/400 mg c/24h VO × 12 meses (alto riesgo inmune)"
             st.rerun()
         ne_pf_pjp = st.text_input("TMP-SMX (Pneumocystis)", key="ne_pf_pjp",
@@ -22471,22 +22471,22 @@ elif nav == "nota_evol_tx":
         st.markdown("**Otras profilaxis:**")
         _op_b1, _op_b2, _op_b3, _op_b4 = st.columns(4)
         _pf_otros_add = []
-        if _op_b1.button("+ Fluconazol", key="pf_fluco", width='stretch'):
+        if _op_b1.button("+ Fluconazol", key="pf_fluco", use_container_width=True):
             _cur = st.session_state.get("ne_pf_otros", "")
             _sep = "\n" if _cur else ""
             st.session_state["ne_pf_otros"] = _cur + _sep + "Fluconazol 100 mg c/24h VO × 1 mes"
             st.rerun()
-        if _op_b2.button("+ Isoniazida (TB)", key="pf_inh", width='stretch'):
+        if _op_b2.button("+ Isoniazida (TB)", key="pf_inh", use_container_width=True):
             _cur = st.session_state.get("ne_pf_otros", "")
             _sep = "\n" if _cur else ""
             st.session_state["ne_pf_otros"] = _cur + _sep + "Isoniazida 300 mg c/24h VO × 9 meses + Piridoxina 50 mg c/24h"
             st.rerun()
-        if _op_b3.button("+ IBP", key="pf_ibp", width='stretch'):
+        if _op_b3.button("+ IBP", key="pf_ibp", use_container_width=True):
             _cur = st.session_state.get("ne_pf_otros", "")
             _sep = "\n" if _cur else ""
             st.session_state["ne_pf_otros"] = _cur + _sep + "Pantoprazol 40 mg c/24h VO"
             st.rerun()
-        if _op_b4.button("+ Nistatina", key="pf_nist", width='stretch'):
+        if _op_b4.button("+ Nistatina", key="pf_nist", use_container_width=True):
             _cur = st.session_state.get("ne_pf_otros", "")
             _sep = "\n" if _cur else ""
             st.session_state["ne_pf_otros"] = _cur + _sep + "Nistatina 500,000 UI enjuague bucal c/8h × 1 mes"
@@ -22562,7 +22562,7 @@ elif nav == "nota_evol_tx":
                       else "💾 Guardar borrador" if ne_borrador
                       else "💾 Actualizar nota" if _edit_data
                       else "📄 Generar nota PDF")
-        if st.button(_btn_label, type="primary", width='stretch',
+        if st.button(_btn_label, type="primary", use_container_width=True,
                       key="btn_gen_evol_tx"):
             if not ne_nombre:
                 st.warning("El nombre del receptor es obligatorio.")
@@ -23516,12 +23516,12 @@ elif nav == "dashboard_tr":
             with col_h1:
                 st.caption(f"Usuario: {st.session_state.get('username', '—')}")
             with col_h2:
-                if st.button("🔄 Refresh", key="dash_refresh", width='stretch'):
+                if st.button("🔄 Refresh", key="dash_refresh", use_container_width=True):
                     _clear_cache()
                     st.rerun()
             with col_h3:
                 _show_agregar = st.button("➕ Marcar TR", key="dash_add",
-                                            width='stretch')
+                                            use_container_width=True)
 
             # ── Cargar cohorte y estadísticas ──────────────────────────────
             try:
@@ -23582,7 +23582,7 @@ elif nav == "dashboard_tr":
                         col_b1, col_b2 = st.columns(2)
                         with col_b1:
                             if st.button("✅ Marcar como TR", key="dash_add_confirm",
-                                         width='stretch', type="primary"):
+                                         use_container_width=True, type="primary"):
                                 _pid = _opciones[_sel_nom]
                                 _ok = _db.marcar_paciente_tr(_pid, _uid_dash, {
                                     "fecha_tx": _add_fecha_tx if _add_fecha_tx else None,
@@ -23600,7 +23600,7 @@ elif nav == "dashboard_tr":
                                     st.error("⚠️ Error al marcar. Verifica conexión a BD.")
                         with col_b2:
                             if st.button("❌ Cancelar", key="dash_add_cancel",
-                                         width='stretch'):
+                                         use_container_width=True):
                                 st.session_state.pop("dash_modal_add", None)
                                 st.rerun()
                     st.markdown("---")
@@ -23753,7 +23753,7 @@ elif nav == "dashboard_tr":
                             col_b1, col_b2, col_b3 = st.columns(3)
                             with col_b1:
                                 if st.button("✅ Revisado hoy", key=f"dash_rev_{c['id']}",
-                                              width='stretch'):
+                                              use_container_width=True):
                                     if _db.marcar_visita_revisada(c["id"], _uid_dash):
                                         st.success("Marcado como revisado.")
                                         _clear_cache()
@@ -23761,7 +23761,7 @@ elif nav == "dashboard_tr":
                             with col_b2:
                                 # Botón para ir a generar nota evolución
                                 if st.button("📝 Nota evolución", key=f"dash_note_{c['id']}",
-                                              width='stretch'):
+                                              use_container_width=True):
                                     st.session_state["_ne_paciente_preseleccionado"] = c["id"]
                                     st.session_state["nav"] = "nota_evolucion_post_tr"
                                     st.rerun()
@@ -23769,7 +23769,7 @@ elif nav == "dashboard_tr":
                                 # Desmarcar (solo si manual)
                                 if c.get("es_trasplantado_manual"):
                                     if st.button("🚫 Quitar marca", key=f"dash_unmark_{c['id']}",
-                                                  width='stretch'):
+                                                  use_container_width=True):
                                         if _db.desmarcar_paciente_tr(c["id"], _uid_dash):
                                             st.info("Marca manual quitada (puede seguir apareciendo si tiene notas Post-TR).")
                                             _clear_cache()
@@ -25120,7 +25120,7 @@ elif nav == "aprendizaje":
                 if columnas and filas:
                     import pandas as pd
                     df = pd.DataFrame(filas, columns=columnas)
-                    st.dataframe(df, width='stretch', hide_index=True)
+                    st.dataframe(df, use_container_width=True, hide_index=True)
                 else:
                     st.info("Tabla sin datos.")
 

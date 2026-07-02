@@ -634,14 +634,14 @@ def render_consultation_complete(conn, user_id, patient_id, patient_data, user_d
     record_id = st.session_state.get(f"{kp}_saved_id")
 
     with col_save:
-        if st.button("💾 Guardar Consulta", width='stretch',
+        if st.button("💾 Guardar Consulta", use_container_width=True,
                      key=f"{kp}_save", type="primary"):
             rid = save_consultation_record(conn, user_id, patient_id, consulta_data)
             st.session_state[f"{kp}_saved_id"] = rid
             st.success(f"✅ Consulta guardada correctamente (ID #{rid})")
 
     with col_pdf:
-        if st.button("🖨️ Imprimir Resumen Médico", width='stretch',
+        if st.button("🖨️ Imprimir Resumen Médico", use_container_width=True,
                      key=f"{kp}_pdf"):
             # Guardar automáticamente antes de imprimir
             rid = save_consultation_record(conn, user_id, patient_id, consulta_data)
@@ -657,7 +657,7 @@ def render_consultation_complete(conn, user_id, patient_id, patient_data, user_d
                 data=pdf_bytes,
                 file_name=nombre_archivo,
                 mime="application/pdf",
-                width='stretch',
+                use_container_width=True,
             )
 
 
