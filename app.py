@@ -459,6 +459,32 @@ div[data-testid="stAlert"][kind="error"],
     background: #F8FAFC !important;
 }
 
+/* st.table (stTable NO es markdown — sin esto, con el navegador en modo
+   oscuro Streamlit pinta su texto en blanco sobre el fondo claro forzado) */
+[data-testid="stTable"] table {
+    background: #FFFFFF !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+}
+[data-testid="stTable"] thead th {
+    background: #2563EB !important;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+}
+[data-testid="stTable"] tbody th,
+[data-testid="stTable"] tbody td {
+    color: #1E293B !important;
+    -webkit-text-fill-color: #1E293B !important;
+    background: #FFFFFF !important;
+    border-bottom: 1px solid #F1F5F9 !important;
+}
+[data-testid="stTable"] tbody tr:nth-child(even) th,
+[data-testid="stTable"] tbody tr:nth-child(even) td {
+    background: #F8FAFC !important;
+}
+
 /* ── TABS ────────────────────────────────────────────────────────────────── */
 .stTabs [data-baseweb="tab-list"] {
     background-color: #FFFFFF !important;
@@ -3494,7 +3520,7 @@ Con {cit_inf_presc:.0f} mL/hr × {cit_conc_presc:.0f} mmol/L = {cit_inf_presc * 
                                f"{_efluente_na:.0f}", "—"],
             "Na (mEq/hr)":   [f"+{na_de_citrato:.1f}", f"+{na_de_rep_pre:.1f}",
                                f"+{na_de_rep_post:.1f}", f"+{na_de_dializado:.1f}",
-                               f"−{na_out_efluente:.1f}", f"**{na_balance:+.1f}**"],
+                               f"−{na_out_efluente:.1f}", f"{na_balance:+.1f}"],
         })
 
         if na < 130 and delta_na_24h < 0:
