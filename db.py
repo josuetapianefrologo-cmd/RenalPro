@@ -31,7 +31,15 @@ def _get_conn_resource():
         # Railway public endpoint requiere SSL
         if "sslmode" not in db_url:
             db_url += ("&sslmode=require" if "?" in db_url else "?sslmode=require")
-        conn = psycopg2.connect(db_url, cursor_factory=psycopg2.extras.RealDictCursor)
+        # connect_timeout: si la BD está dormida/inaccesible, fallar en ~5 s en vez
+        # de colgar la carga de la app (pantalla en blanco). statement_timeout evita
+        # que una query se cuelgue sobre una conexión medio-abierta.
+        conn = psycopg2.connect(
+            db_url,
+            cursor_factory=psycopg2.extras.RealDictCursor,
+            connect_timeout=5,
+            options="-c statement_timeout=8000",
+        )
         return conn
     except Exception:
         return None
