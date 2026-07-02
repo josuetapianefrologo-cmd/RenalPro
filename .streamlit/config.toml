@@ -1,1 +1,6 @@
-
+# Tema base claro FIJO: todo el CSS de app.py asume fondos claros. Sin esto,
+# un navegador en modo oscuro activa el tema oscuro de Streamlit y los widgets
+# sin CSS propio (st.table, st.dataframe, popovers) quedan con texto blanco
+# sobre fondo claro (invisible).
+[theme]
+base = "light"
