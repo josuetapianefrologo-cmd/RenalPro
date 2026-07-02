@@ -8,6 +8,8 @@ import psycopg2.extras
 import bcrypt
 import json
 import os
+import threading
+import time
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 
@@ -21,16 +23,34 @@ PRIVACY_MODE = os.environ.get("RENALPRO_PRIVACY_MODE", "1") not in ("0", "false"
 
 
 # ── CONEXIÓN ──────────────────────────────────────────────────────────────────
-# Endurecimiento (2026-07): el login NUNCA debe colgarse por la BD. Toda la
-# cadena de conexión/ping falla en ~3 s garantizado gracias a connect_timeout +
-# keepalives a nivel de socket. Si la BD no responde, la app degrada a modo
-# memoria (admin/invitado siguen funcionando) en lugar de quedar en blanco.
+# Endurecimiento (2026-07): el login NUNCA debe colgarse por la BD.
+# Tres capas de protección:
+#   1. connect_timeout=3 + keepalives → falla rápido en sockets muertos.
+#   2. tcp_user_timeout=3000 + statement_timeout=3000 → una query sobre un
+#      socket estancado (paquetes perdidos) aborta en ~3 s en vez de esperar
+#      los reintentos TCP del kernel (que pueden tardar minutos).
+#   3. Timeout duro a NIVEL DE HILO (_DB_TIMEOUT_S): la conexión y el ping de
+#      disponibilidad corren en un hilo aparte con join(timeout). Esto cubre
+#      lo que los timeouts de socket no cubren (p. ej. resolución DNS colgada,
+#      que connect_timeout NO limita). Si la BD no responde, la app degrada a
+#      modo memoria (admin/invitado siguen funcionando).
+
+_DB_TIMEOUT_S = 4.0  # tope duro total por operación de conexión/ping
+
+
+# ¿Existe algún secrets.toml? Si no, NO tocar st.secrets: aun dentro de un
+# try/except, Streamlit pinta el aviso "No secrets found" en pantalla.
+_HAS_SECRETS_FILE = any(
+    os.path.exists(os.path.join(base, ".streamlit", "secrets.toml"))
+    for base in (os.path.expanduser("~"), os.getcwd())
+)
+
 
 def _resolve_db_url() -> str:
     """Obtiene DATABASE_URL de os.environ (Railway) o st.secrets (Streamlit
     Cloud). Devuelve cadena vacía si no está configurada — sin lanzar warning."""
     db_url = os.environ.get("DATABASE_URL", "")
-    if not db_url:
+    if not db_url and _HAS_SECRETS_FILE:
         try:
             db_url = st.secrets.get("DATABASE_URL", "")
         except Exception:
@@ -38,44 +58,101 @@ def _resolve_db_url() -> str:
     return db_url or ""
 
 
+def _with_sslmode(db_url: str) -> str:
+    # Railway public endpoint requiere SSL
+    if db_url and "sslmode" not in db_url:
+        db_url += ("&sslmode=require" if "?" in db_url else "?sslmode=require")
+    return db_url
+
+
+def _raw_connect(db_url: str):
+    """Conexión psycopg2 pura (sin tocar Streamlit — segura desde hilos).
+    Lanza excepción si falla; los timeouts de socket acotan cada intento."""
+    kwargs = dict(
+        cursor_factory=psycopg2.extras.RealDictCursor,
+        connect_timeout=3,
+        keepalives=1,
+        keepalives_idle=5,
+        keepalives_interval=2,
+        keepalives_count=2,
+        options="-c statement_timeout=3000",
+    )
+    try:
+        # tcp_user_timeout: máximo de ms que un dato enviado puede quedar sin
+        # ACK antes de matar la conexión. Sin esto, una query sobre un socket
+        # estancado espera los reintentos TCP del kernel (minutos). Ignorado
+        # en plataformas sin soporte (p. ej. Windows en desarrollo local).
+        return psycopg2.connect(db_url, tcp_user_timeout=3000, **kwargs)
+    except psycopg2.ProgrammingError:
+        # libpq local no reconoce el parámetro — reintentar sin él.
+        return psycopg2.connect(db_url, **kwargs)
+
+
+def _run_with_deadline(fn, timeout_s: float = _DB_TIMEOUT_S):
+    """Ejecuta fn() en un hilo daemon con tope duro de tiempo. Devuelve el
+    resultado, o None si fn lanzó excepción o no terminó a tiempo. fn NO debe
+    tocar Streamlit (session_state/cache) porque corre fuera del hilo del
+    script."""
+    holder = {}
+
+    def _work():
+        try:
+            holder["result"] = fn()
+        except Exception:
+            pass
+
+    t = threading.Thread(target=_work, daemon=True, name="db-deadline")
+    t.start()
+    t.join(timeout_s)
+    if t.is_alive():
+        return None  # el hilo colgado muere solo (daemon); no bloquea la app
+    return holder.get("result")
+
+
+# Momento del último intento de conexión fallido — evita que get_conn()
+# reintente (y pague otros ~4 s) en cada llamada mientras la BD siga caída.
+_LAST_CONN_FAIL = [0.0]
+_CONN_RETRY_INTERVAL_S = 15.0
+
+
 @st.cache_resource
 def _get_conn_resource():
     """Conexión cacheada a Railway. None si DATABASE_URL no está configurado
-    o si la BD no responde dentro de los timeouts de socket."""
+    o si la BD no responde dentro del tope duro de _DB_TIMEOUT_S."""
     try:
-        db_url = _resolve_db_url()
+        db_url = _with_sslmode(_resolve_db_url())
         if not db_url:
             return None
-        # Railway public endpoint requiere SSL
-        if "sslmode" not in db_url:
-            db_url += ("&sslmode=require" if "?" in db_url else "?sslmode=require")
-        # Timeouts DUROS de socket: si la BD está dormida, saturada o el egress
-        # público está lento, la conexión (y el posterior ping) fallan en ~3 s en
-        # vez de colgar el login. Los keepalives detectan un socket muerto rápido.
-        conn = psycopg2.connect(
-            db_url,
-            cursor_factory=psycopg2.extras.RealDictCursor,
-            connect_timeout=3,
-            keepalives=1,
-            keepalives_idle=5,
-            keepalives_interval=2,
-            keepalives_count=2,
-            options="-c statement_timeout=3000",
-        )
+        conn = _run_with_deadline(lambda: _raw_connect(db_url))
+        if conn is None:
+            _LAST_CONN_FAIL[0] = time.time()
         return conn
     except Exception:
+        _LAST_CONN_FAIL[0] = time.time()
         return None
 
 
 def get_conn():
-    """Retorna conexión activa o la reconecta si está cerrada. Nunca bloquea
-    más allá de los timeouts de socket (~3 s)."""
+    """Retorna conexión activa o la reconecta si está cerrada. La creación de
+    la conexión tiene tope duro; las queries están acotadas por
+    statement_timeout (servidor) y tcp_user_timeout (cliente)."""
     conn = _get_conn_resource()
     if conn is None:
-        return None
+        if not _resolve_db_url():
+            return None
+        # Un intento anterior falló y cache_resource memorizó None; la BD pudo
+        # recuperarse (db_ok() sondea con conexión propia y puede volver a dar
+        # True). Reintentar una vez — acotado por el deadline de conexión —
+        # pero no más seguido que _CONN_RETRY_INTERVAL_S.
+        if time.time() - _LAST_CONN_FAIL[0] < _CONN_RETRY_INTERVAL_S:
+            return None
+        _get_conn_resource.clear()
+        conn = _get_conn_resource()
+        if conn is None:
+            return None
     try:
         if conn.closed:
-            st.cache_resource.clear()
+            _get_conn_resource.clear()
             conn = _get_conn_resource()
             if conn is None:
                 return None
@@ -88,7 +165,7 @@ def get_conn():
     except Exception:
         # Un solo reintento; si vuelve a fallar, degradar a modo sin-BD.
         try:
-            st.cache_resource.clear()
+            _get_conn_resource.clear()
             conn = _get_conn_resource()
             if conn is None:
                 return None
@@ -101,13 +178,37 @@ def get_conn():
             return None
 
 
+def _probe_db(db_url: str) -> bool:
+    """Conecta + SELECT 1 + cierra, con conexión propia. Puro (sin Streamlit)
+    para poder correr completo dentro de un hilo con deadline."""
+    conn = None
+    try:
+        conn = _raw_connect(db_url)
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.fetchone()
+        cur.close()
+        return True
+    except Exception:
+        return False
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 @st.cache_data(ttl=15, show_spinner=False)
 def _db_ok_cached() -> bool:
-    """Resultado de disponibilidad de la BD, cacheado 15 s. Cortocircuita de
-    inmediato si no hay DATABASE_URL, evitando cualquier intento de red."""
-    if not _resolve_db_url():
+    """Disponibilidad de la BD, cacheada 15 s. Cortocircuita de inmediato si
+    no hay DATABASE_URL. El sondeo completo (conexión + ping) corre en un hilo
+    con tope duro de _DB_TIMEOUT_S: ni DNS ni un socket estancado pueden
+    bloquear el hilo de Streamlit más de ~4 s."""
+    db_url = _with_sslmode(_resolve_db_url())
+    if not db_url:
         return False
-    return get_conn() is not None
+    return bool(_run_with_deadline(lambda: _probe_db(db_url)))
 
 
 def db_ok() -> bool:
@@ -120,15 +221,56 @@ def db_ok() -> bool:
 
 
 # ── INICIALIZAR TABLAS ────────────────────────────────────────────────────────
+_INIT_TABLES_LOCK = threading.Lock()
+_INIT_TABLES_STARTED = False
+
+
 def init_tables() -> bool:
-    """Crea las tablas si no existen. Ejecutar al inicio de la app.
-    Cortocircuito: si no hay DATABASE_URL, no intenta nada (evita bloquear el
-    login/arranque cuando la app corre en modo sin-BD)."""
-    if not _resolve_db_url():
+    """Crea las tablas si no existen — SIN bloquear el arranque ni el login.
+    El DDL (decenas de statements sobre el egress público, que puede tardar
+    minutos si la BD está lenta) corre en un hilo de fondo con conexión
+    propia, una sola vez por proceso. El login no depende de que termine: si
+    las tablas aún no existen, las queries fallan y la app cae al modo
+    memoria. Cortocircuito: sin DATABASE_URL no intenta nada."""
+    global _INIT_TABLES_STARTED
+    db_url = _with_sslmode(_resolve_db_url())
+    if not db_url:
         return False
-    conn = get_conn()
-    if not conn:
-        return False
+    with _INIT_TABLES_LOCK:
+        if _INIT_TABLES_STARTED:
+            return True
+        _INIT_TABLES_STARTED = True
+    threading.Thread(target=_init_tables_worker, args=(db_url,),
+                     daemon=True, name="init-tables").start()
+    return True
+
+
+def _init_tables_worker(db_url: str) -> None:
+    """Hilo de fondo: conexión propia + autocommit, para que un statement
+    fallido no envenene la transacción del resto (los DDL son idempotentes).
+    Si falla por completo, libera la bandera para reintentar después."""
+    global _INIT_TABLES_STARTED
+    conn = None
+    ok = False
+    try:
+        conn = _raw_connect(db_url)
+        conn.autocommit = True
+        ok = _create_schema(conn)
+    except Exception:
+        ok = False
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        if not ok:
+            with _INIT_TABLES_LOCK:
+                _INIT_TABLES_STARTED = False
+
+
+def _create_schema(conn) -> bool:
+    """Ejecuta el DDL de todas las tablas/índices sobre la conexión dada."""
     try:
         cur = conn.cursor()
         cur.execute("""

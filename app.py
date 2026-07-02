@@ -38,20 +38,8 @@ try:
 except ImportError:
     _DB_ON = False
 
-# ── Rendimiento: cachear db_ok() para no golpear la BD en cada rerun ─────────
-# Todas las llamadas _db.db_ok() (36 en la app) usan una versión cacheada (TTL
-# corto). Si la conexión está bien, evita ~decenas de comprobaciones por clic.
-if _DB_ON:
-    try:
-        _db_ok_original = _db.db_ok
-
-        @st.cache_data(ttl=15, show_spinner=False)
-        def _db_ok_cached():
-            return _db_ok_original()
-
-        _db.db_ok = _db_ok_cached
-    except Exception:
-        pass
+# NOTA: db.db_ok() ya viene cacheado (ttl=15 s) y con cortocircuito sin
+# DATABASE_URL desde db.py — no envolver aquí otra vez.
 
 # ── Módulos RenalPro v3.1.0 ────────────────────────────────────────────────
 try:
@@ -604,6 +592,13 @@ def _hash(pwd: str) -> str:
 def _verify(pwd: str, h: str) -> bool:
     return _hash(pwd) == h
 
+# ¿Existe algún secrets.toml? Si no, NO tocar st.secrets: aun dentro de un
+# try/except, Streamlit pinta el aviso "No secrets found" en pantalla.
+_HAS_SECRETS_FILE = any(
+    os.path.exists(os.path.join(base, ".streamlit", "secrets.toml"))
+    for base in (os.path.expanduser("~"), os.getcwd())
+)
+
 def _secret(key: str, default: str = "") -> str:
     """Lee configuración: primero os.environ (Railway), luego st.secrets
     (Streamlit Cloud). Evita el warning 'No secrets found' cuando no existe
@@ -611,6 +606,8 @@ def _secret(key: str, default: str = "") -> str:
     val = os.environ.get(key)
     if val is not None and val != "":
         return val
+    if not _HAS_SECRETS_FILE:
+        return default
     try:
         return st.secrets.get(key, default)
     except Exception:
@@ -5499,13 +5496,8 @@ elif nav == "premium":
         st.markdown("### 💳 Pagar con Mercado Pago")
 
         # ── Botón de pago MP ──────────────────────────────────────────────────
-        mp_link_directo = ""
-        mp_token = ""
-        try:
-            mp_link_directo = st.secrets.get("MP_LINK_PAGO", "")
-            mp_token = st.secrets.get("MP_ACCESS_TOKEN", "")
-        except Exception:
-            pass
+        mp_link_directo = _secret("MP_LINK_PAGO", "")
+        mp_token = _secret("MP_ACCESS_TOKEN", "")
 
         if mp_link_directo:
             # Link directo de MP (más simple y confiable)
@@ -5545,13 +5537,10 @@ elif nav == "premium":
 
         # ── CLABE manual (siempre disponible como alternativa) ─────────────────
         with st.expander("📥 Transferencia bancaria / CLABE (alternativa)"):
-            try:
-                clabe   = st.secrets.get("CLABE_BANCARIA", "—")
-                banco   = st.secrets.get("BANCO", "—")
-                titular = st.secrets.get("TITULAR", "Dr. Josué Tapia López")
-                wa      = st.secrets.get("WHATSAPP_CONTACTO", "477XXXXXXX")
-            except Exception:
-                clabe = "—"; banco = "—"; titular = "Dr. Josué Tapia"; wa = "477XXXXXXX"
+            clabe   = _secret("CLABE_BANCARIA", "—")
+            banco   = _secret("BANCO", "—")
+            titular = _secret("TITULAR", "Dr. Josué Tapia López")
+            wa      = _secret("WHATSAPP_CONTACTO", "477XXXXXXX")
 
             st.markdown(f"""
 | | |
