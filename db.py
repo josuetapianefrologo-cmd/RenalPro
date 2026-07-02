@@ -25,7 +25,14 @@ PRIVACY_MODE = os.environ.get("RENALPRO_PRIVACY_MODE", "1") not in ("0", "false"
 def _get_conn_resource():
     """Conexión cacheada a Railway. None si DATABASE_URL no está configurado."""
     try:
-        db_url = st.secrets.get("DATABASE_URL", "")
+        # Railway usa variables de entorno; Streamlit Cloud usa st.secrets.
+        # Se lee primero el env var (Railway) y luego los secrets (Streamlit Cloud).
+        db_url = os.environ.get("DATABASE_URL", "")
+        if not db_url:
+            try:
+                db_url = st.secrets.get("DATABASE_URL", "")
+            except Exception:
+                db_url = ""
         if not db_url:
             return None
         # Railway public endpoint requiere SSL
