@@ -21,38 +21,55 @@ PRIVACY_MODE = os.environ.get("RENALPRO_PRIVACY_MODE", "1") not in ("0", "false"
 
 
 # ── CONEXIÓN ──────────────────────────────────────────────────────────────────
+# Endurecimiento (2026-07): el login NUNCA debe colgarse por la BD. Toda la
+# cadena de conexión/ping falla en ~3 s garantizado gracias a connect_timeout +
+# keepalives a nivel de socket. Si la BD no responde, la app degrada a modo
+# memoria (admin/invitado siguen funcionando) en lugar de quedar en blanco.
+
+def _resolve_db_url() -> str:
+    """Obtiene DATABASE_URL de os.environ (Railway) o st.secrets (Streamlit
+    Cloud). Devuelve cadena vacía si no está configurada — sin lanzar warning."""
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        try:
+            db_url = st.secrets.get("DATABASE_URL", "")
+        except Exception:
+            db_url = ""
+    return db_url or ""
+
+
 @st.cache_resource
 def _get_conn_resource():
-    """Conexión cacheada a Railway. None si DATABASE_URL no está configurado."""
+    """Conexión cacheada a Railway. None si DATABASE_URL no está configurado
+    o si la BD no responde dentro de los timeouts de socket."""
     try:
-        # Railway usa variables de entorno; Streamlit Cloud usa st.secrets.
-        # Se lee primero el env var (Railway) y luego los secrets (Streamlit Cloud).
-        db_url = os.environ.get("DATABASE_URL", "")
-        if not db_url:
-            try:
-                db_url = st.secrets.get("DATABASE_URL", "")
-            except Exception:
-                db_url = ""
+        db_url = _resolve_db_url()
         if not db_url:
             return None
         # Railway public endpoint requiere SSL
         if "sslmode" not in db_url:
             db_url += ("&sslmode=require" if "?" in db_url else "?sslmode=require")
-        # connect_timeout: si la BD está dormida/inaccesible, fallar en ~5 s en vez
-        # de colgar la carga de la app (pantalla en blanco). statement_timeout evita
-        # que una query se cuelgue sobre una conexión medio-abierta.
+        # Timeouts DUROS de socket: si la BD está dormida, saturada o el egress
+        # público está lento, la conexión (y el posterior ping) fallan en ~3 s en
+        # vez de colgar el login. Los keepalives detectan un socket muerto rápido.
         conn = psycopg2.connect(
             db_url,
             cursor_factory=psycopg2.extras.RealDictCursor,
-            connect_timeout=5,
-            options="-c statement_timeout=8000",
+            connect_timeout=3,
+            keepalives=1,
+            keepalives_idle=5,
+            keepalives_interval=2,
+            keepalives_count=2,
+            options="-c statement_timeout=3000",
         )
         return conn
     except Exception:
         return None
 
+
 def get_conn():
-    """Retorna conexión activa o la reconecta si está cerrada."""
+    """Retorna conexión activa o la reconecta si está cerrada. Nunca bloquea
+    más allá de los timeouts de socket (~3 s)."""
     conn = _get_conn_resource()
     if conn is None:
         return None
@@ -60,24 +77,55 @@ def get_conn():
         if conn.closed:
             st.cache_resource.clear()
             conn = _get_conn_resource()
-        # Ping
-        conn.cursor().execute("SELECT 1")
+            if conn is None:
+                return None
+        # Ping con statement_timeout aplicado por la propia conexión (3 s).
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.fetchone()
+        cur.close()
         return conn
     except Exception:
+        # Un solo reintento; si vuelve a fallar, degradar a modo sin-BD.
         try:
             st.cache_resource.clear()
-            return _get_conn_resource()
+            conn = _get_conn_resource()
+            if conn is None:
+                return None
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            cur.fetchone()
+            cur.close()
+            return conn
         except Exception:
             return None
 
-def db_ok() -> bool:
-    """True si la DB está disponible y conectada."""
+
+@st.cache_data(ttl=15, show_spinner=False)
+def _db_ok_cached() -> bool:
+    """Resultado de disponibilidad de la BD, cacheado 15 s. Cortocircuita de
+    inmediato si no hay DATABASE_URL, evitando cualquier intento de red."""
+    if not _resolve_db_url():
+        return False
     return get_conn() is not None
+
+
+def db_ok() -> bool:
+    """True si la DB está disponible. Cacheado y con cortocircuito: si no hay
+    DATABASE_URL configurada, retorna False al instante sin tocar la red."""
+    try:
+        return _db_ok_cached()
+    except Exception:
+        return False
 
 
 # ── INICIALIZAR TABLAS ────────────────────────────────────────────────────────
 def init_tables() -> bool:
-    """Crea las tablas si no existen. Ejecutar al inicio de la app."""
+    """Crea las tablas si no existen. Ejecutar al inicio de la app.
+    Cortocircuito: si no hay DATABASE_URL, no intenta nada (evita bloquear el
+    login/arranque cuando la app corre en modo sin-BD)."""
+    if not _resolve_db_url():
+        return False
     conn = get_conn()
     if not conn:
         return False
