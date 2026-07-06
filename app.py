@@ -9662,7 +9662,8 @@ o rechazo por niveles subterapéuticos.
             st.caption("Ref: Vanhoof J et al. Drug interactions with tacrolimus. Transplant Rev 2019. "
                        "Shuker N et al. Drug Metab Rev 2014.")
 
-
+    # ── TACROLIMUS ─────────────────────────────────────────────────────────────
+    elif "Tacrolimus" in tx_modo:
         st.markdown("### 💊 Tacrolimus — Inhibidor de Calcineurina")
         st.info("**Presentaciones:** Prograf® (IR c/12h) · Advagraf®/Envarsus® (LP c/24h). Metabolismo CYP3A4/P-gp.")
 
